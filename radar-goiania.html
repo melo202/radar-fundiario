@@ -100,6 +100,9 @@
 
   .results{flex:1;overflow-y:auto;padding:6px 0}
   .count{padding:12px 22px 4px;font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .count .csv{float:right;margin-top:-6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);
+    font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;padding:6px 9px;border-radius:2px;cursor:pointer}
+  .count .csv:hover{border-color:var(--accent);color:var(--accent)}
   .card{margin:8px 16px;background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--lot);
     border-radius:2px;padding:13px 14px;cursor:pointer;transition:border-color .12s,transform .05s}
   .card:hover{border-left-color:var(--accent);border-color:var(--muted)}
@@ -135,6 +138,7 @@
   .detail .dgrid .cell .k{font:600 9px/1 "IBM Plex Mono";letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   .detail .dgrid .cell .v{font:700 15px/1 "IBM Plex Sans"}
   .detail .dgrid .cell.hl .v{color:var(--accent)}
+  .detail .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -198,36 +202,37 @@
       </div>
 
       <div id="needBairro">
-        <label>Setor / Bairro</label>
+        <label for="bairroInput">Setor / Bairro</label>
         <div class="combo">
-          <input id="bairroInput" placeholder="digite: faiçalville, oeste, marista…" autocomplete="off">
-          <div class="combo-list" id="bairroList"></div>
+          <input id="bairroInput" placeholder="digite: faiçalville, oeste, marista…" autocomplete="off"
+            role="combobox" aria-expanded="false" aria-controls="bairroList" aria-autocomplete="list">
+          <div class="combo-list" id="bairroList" role="listbox"></div>
         </div>
         <input type="hidden" id="bairro" value="">
       </div>
 
       <div id="paneQL">
         <div class="ql">
-          <div><label>Quadra</label><input id="quadra" placeholder="ex.: 246" autocomplete="off"></div>
-          <div><label>Lote</label><input id="lote" placeholder="ex.: 21" autocomplete="off"></div>
+          <div><label for="quadra">Quadra</label><input id="quadra" placeholder="ex.: 246" autocomplete="off"></div>
+          <div><label for="lote">Lote</label><input id="lote" placeholder="ex.: 21" autocomplete="off"></div>
         </div>
       </div>
 
       <div id="paneAddr" style="display:none">
-        <label>Logradouro (rua / avenida)</label>
+        <label for="rua">Logradouro (rua / avenida)</label>
         <input id="rua" placeholder="ex.: 135, 85, portugal" autocomplete="off">
-        <label>Número</label>
+        <label for="numero">Número</label>
         <input id="numero" placeholder="ex.: 582" autocomplete="off">
       </div>
 
       <div id="paneUnit">
-        <label>Apto / unidade <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, se for prédio</span></label>
+        <label for="apto">Apto / unidade <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, se for prédio</span></label>
         <input id="apto" placeholder="ex.: 1901 (vazio = prédio todo)" autocomplete="off">
         <label class="chk"><input type="checkbox" id="hideGar" checked> ocultar garagens e boxes</label>
       </div>
 
       <div id="paneIN" style="display:none">
-        <label>Inscrição cadastral (CI)</label>
+        <label for="insc">Inscrição cadastral (CI)</label>
         <input id="insc" placeholder="ex.: 3020150346" autocomplete="off" inputmode="numeric">
       </div>
 
@@ -241,7 +246,7 @@
         <input type="range" id="coef" min="1" max="6" step="0.1" value="3" oninput="onCoef()">
         <div class="coefval" id="coefVal">3.0×</div>
       </div>
-      <small>Estimativa = valor venal × coeficiente. Não é dado oficial — o venal é subavaliado; ajuste o multiplicador pela sua leitura da região. O R$/m² aparece em cada imóvel para calibrar.</small>
+      <small>Estimativa = valor venal × coeficiente. Não é dado oficial — o venal é subavaliado; ajuste o multiplicador pela sua leitura da região. O R$/m² aparece em cada imóvel para calibrar. O ajuste fica <b>salvo por setor</b> neste navegador.</small>
     </div>
 
     <div class="results" id="results">
@@ -265,6 +270,7 @@
       <h3 id="dAddr"></h3>
       <div class="insc" id="dInsc"></div>
       <div class="dgrid" id="dGrid"></div>
+      <div class="dnote" id="dNote"></div>
       <div class="acts" id="dActs"></div>
     </div>
   </div>
@@ -285,12 +291,26 @@ const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Púb
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const clean=v=>String(v==null?"":v).trim();
 const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const fmtDt=s=>{s=clean(s);return /^\d{8}$/.test(s)&&s!=="00000000"?s.slice(6)+"/"+s.slice(4,6)+"/"+s.slice(0,4):null;};
 /* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
 const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
 let COEF=3.0, MODE='ql', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
 
+/* coeficiente de mercado salvo POR SETOR neste navegador */
+const COEFS=(()=>{try{return JSON.parse(localStorage.getItem("radar_coefs")||"{}");}catch(e){return {};}})();
+function saveCoef(b){if(!b)return;COEFS[b]=COEF;try{localStorage.setItem("radar_coefs",JSON.stringify(COEFS));}catch(e){}}
+function applyCoefFor(b){const c=COEFS[b];
+  if(c&&c!==COEF){COEF=c;document.getElementById("coef").value=c;document.getElementById("coefVal").textContent=c.toFixed(1)+"×";}}
+
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
-function jsonp(params){
+/* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
+async function jsonp(params,retries=1){
+  for(;;){
+    try{return await jsonpOnce(params);}
+    catch(e){if(retries-->0){await new Promise(r=>setTimeout(r,900));continue;}throw e;}
+  }
+}
+function jsonpOnce(params){
   return new Promise((res,rej)=>{
     const cb="cb_"+Math.random().toString(36).slice(2);
     const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
@@ -359,16 +379,18 @@ async function loadBairros(){
   }catch(e){inp.placeholder="erro ao carregar — recarregue a página";}
 }
 
+function comboExpanded(v){document.getElementById("bairroInput").setAttribute("aria-expanded",v?"true":"false");}
 function filterCombo(qtext){
   const q=norm(qtext);
   const list=document.getElementById("bairroList");
+  comboExpanded(true);
   let hits = q? COMBO.filter(b=>b.search.includes(q)) : COMBO.slice();
   // prioriza quem começa com o termo
   if(q) hits.sort((a,b)=>{const ai=a.search.indexOf(q),bi=b.search.indexOf(q);return ai-bi||a.disp.localeCompare(b.disp,"pt");});
   hits=hits.slice(0,50);
   comboActive=-1;
   if(!hits.length){list.innerHTML='<div class="combo-empty">nenhum setor com esse nome</div>';list.classList.add("show");return;}
-  list.innerHTML=hits.map(b=>`<div class="combo-item" data-code="${b.code}" onclick="pickBairro('${b.code}')">
+  list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" data-code="${b.code}" onclick="pickBairro('${b.code}')">
     <span class="code">${b.code}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
   list.classList.add("show");
 }
@@ -377,6 +399,7 @@ function pickBairro(code){
   document.getElementById("bairro").value=code;
   document.getElementById("bairroInput").value=b.disp;
   document.getElementById("bairroList").classList.remove("show");
+  comboExpanded(false);
 }
 function resolveBairro(){
   // se o usuário digitou mas não clicou, tenta casar o melhor
@@ -402,7 +425,7 @@ function setMode(m){
 }
 function onCoef(){COEF=parseFloat(document.getElementById("coef").value);
   document.getElementById("coefVal").textContent=COEF.toFixed(1)+"×";
-  if(LAST.length)render(LAST);
+  if(LAST.length){saveCoef(LAST[0].cdbairro);render(LAST);}
   if(sel!=null&&LAST[sel]){
     const c=document.querySelector(`.card[data-i="${sel}"]`);if(c)c.classList.add("sel");
     const a=LAST[sel];
@@ -518,6 +541,7 @@ function finish(items){
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
       return;}
+    applyCoefFor(units[0].cdbairro);
     render(units);
     plot(units);
     if(isMobile())setView("mapa");
@@ -544,7 +568,7 @@ function render(list){
   const box=document.getElementById("results");
   const cnt={};list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;});
   const noun=list.length>1?"unidades":"unidade";
-  let html=`<div class="count">${list.length} ${noun} · ref. ${COEF.toFixed(1)}× venal</div>`;
+  let html=`<div class="count">${list.length} ${noun} · ref. ${COEF.toFixed(1)}× venal<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">⬇ CSV</button></div>`;
   let lastCi=null;
   list.forEach((a,i)=>{
     const ci=clean(a.ci);
@@ -628,6 +652,9 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">Valor venal</div><div class="v">${brl(a.vlvenal)}</div></div>
     <div class="cell hl"><div class="k">Ref. mercado (${COEF.toFixed(1)}×)</div><div class="v">${ref?brl(ref):"—"}</div></div>
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>`;
+  const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
+  document.getElementById("dNote").textContent=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
+    "A referência de mercado é estimativa — não substitui avaliação profissional (NBR 14653).";
   const [lat,lon]=ll;
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
@@ -646,6 +673,30 @@ function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
     .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
 }
+
+/* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */
+const csvCell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+const csvNum=v=>v?String(v).replace(".",","):"";
+function exportCSV(){
+  if(!LAST.length)return;
+  const head=["inscricao","ci","bairro","quadra","lote","endereco","complemento","edificio","uso",
+    "area_terreno_m2","area_construida_m2","valor_venal","ref_mercado_"+COEF.toFixed(1)+"x","rs_m2","lat","lon"];
+  const lines=[head.join(";")];
+  LAST.forEach(a=>{
+    const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim()+(clean(a.nrimovel)?", "+clean(a.nrimovel):"");
+    const ref=refPrice(a), pm2=unitLabel(a)?m2Edif(a):m2Terr(a);
+    let lat="",lon="";
+    if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);lat=csvNum(ll[0].toFixed(6));lon=csvNum(ll[1].toFixed(6));}
+    lines.push([clean(a.nrinscr),clean(a.ci),clean(a.nmbairro),clean(a.nrquadra),clean(a.nrlote),addr,
+      clean(a.incompl),clean(a.nmedificio),USO[a.uso]||"",csvNum(a.areaterr),csvNum(a.areaedif),
+      csvNum(a.vlvenal),ref?Math.round(ref):"",pm2?Math.round(pm2):"",lat,lon].map(csvCell).join(";"));
+  });
+  const blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const u=URL.createObjectURL(blob), el=document.createElement("a");
+  el.href=u;el.download="radar-fundiario.csv";document.body.appendChild(el);el.click();el.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),5000);
+  toast(LAST.length+" linhas exportadas para CSV.");
+}
 function closeDetail(){document.getElementById("detail").classList.remove("show");}
 
 /* ---------------- init ---------------- */
@@ -654,6 +705,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
 
 /* bottom sheet: arrastar a alça para baixo fecha o detalhe */
 (function(){
@@ -679,13 +731,13 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
       if(comboActive>=0&&items[comboActive]){pickBairro(items[comboActive].dataset.code);document.getElementById("quadra").focus();}
       else if(resolveBairro()){document.getElementById("quadra").focus();}
       return;}
-    else if(e.key==="Escape"){list.classList.remove("show");return;}
+    else if(e.key==="Escape"){list.classList.remove("show");comboExpanded(false);return;}
     else return;
     items.forEach((it,i)=>it.classList.toggle("active",i===comboActive));
     if(items[comboActive])items[comboActive].scrollIntoView({block:"nearest"});
   });
   /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção */
-  document.addEventListener("pointerdown",e=>{if(!e.target.closest(".combo"))list.classList.remove("show");});
+  document.addEventListener("pointerdown",e=>{if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}});
 })();
 </script>
 </body>
