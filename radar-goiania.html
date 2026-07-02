@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script src="caixa-goiania.js" onerror="void 0"></script>
 <style>
   :root{
     --ink:#141a1f;        /* quase-preto azulado, tinta de nanquim cartográfico */
@@ -157,6 +158,16 @@
   .cmp .pos b{color:var(--accent)}
   .cmp .mkt{font:500 11px/1.5 "IBM Plex Sans";color:var(--muted);margin-top:5px}
   .cmp-load{font:500 12px/1.4 "IBM Plex Sans";color:var(--muted);padding:8px 2px}
+  /* camada Caixa */
+  .caixabtn{width:100%;margin-top:12px;border:1.5px solid var(--gold);background:var(--paper);color:var(--gold);
+    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
+  .caixabtn:hover,.caixabtn.on{background:var(--gold);color:#fff}
+  .cxp{font:500 12px/1.5 "IBM Plex Sans";max-width:230px}
+  .cxp .tt{font:700 12px/1.3 "IBM Plex Sans"}
+  .cxp .pr{font:800 15px/1.2 "IBM Plex Sans";color:var(--accent)}
+  .cxp .dc{display:inline-block;background:var(--lot);color:#fff;font:700 10px/1 "IBM Plex Mono";padding:3px 5px;border-radius:2px}
+  .cxp .ap{color:var(--muted);font-size:10.5px}
+  .cxp a{color:var(--accent);font-weight:700}
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -256,6 +267,7 @@
 
       <button class="go" id="btnGo" onclick="buscar()">Localizar no mapa</button>
       <p class="hint">💡 ou <b>clique direto no mapa</b> sobre o imóvel para identificar o lote</p>
+      <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Oportunidades Caixa (<span id="caixaN">0</span>)</button>
     </div>
 
     <div class="calib">
@@ -272,7 +284,7 @@
     </div>
 
     <div class="foot">
-      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. O nome do titular não é lido por aqui — é consultado por você, manualmente, no portal oficial.
+      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. O nome do titular não é lido por aqui — é consultado por você, manualmente, no portal oficial.
     </div>
   </aside>
 
@@ -678,8 +690,11 @@ function showDetail(a,ll){
   document.getElementById("dComps").innerHTML=
     (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
-  document.getElementById("dNote").textContent=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
+  let nota=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
     "A referência de mercado é estimativa — não substitui avaliação profissional (NBR 14653).";
+  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  if(fxCx)nota+=" Laudos da Caixa neste setor sugerem ~"+fxCx.fator.toFixed(1).replace(".",",")+"× o venal (n="+fxCx.n+").";
+  document.getElementById("dNote").textContent=nota;
   const [lat,lon]=ll;
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
@@ -792,6 +807,48 @@ async function renderComps(box,r,myPm2,radius,isU){
   </div>`;
 }
 
+/* ---------------- camada Caixa (dados estáticos de caixa-goiania.js, gerado por atualizar-caixa.py) ---------------- */
+let caixaLayer=null,caixaOn=false;
+function initCaixa(){
+  if(!window.CAIXA||!CAIXA.imoveis)return;
+  const pl=CAIXA.imoveis.filter(i=>i.x&&i.y);
+  if(!pl.length)return;
+  document.getElementById("caixaN").textContent=pl.length;
+  document.getElementById("btnCaixa").style.display="block";
+}
+function caixaPopup(i){
+  return `<div class="cxp">
+    <div class="tt">${esc(i.t)} — ${esc(i.b)}</div>
+    <div>${esc(i.e)}</div>
+    <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}%</span>`:""}</div>
+    <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
+    <div>${esc(i.m)}</div>
+    ${i.pr==="r"?'<div class="ap">pino aproximado pela rua</div>':""}
+    <a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>
+  </div>`;
+}
+function toggleCaixa(){
+  if(!window.CAIXA)return;
+  caixaOn=!caixaOn;
+  document.getElementById("btnCaixa").classList.toggle("on",caixaOn);
+  if(!caixaLayer){
+    caixaLayer=L.layerGroup();
+    CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
+      L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95})
+        .bindPopup(caixaPopup(i)).addTo(caixaLayer);
+    });
+  }
+  if(caixaOn){
+    caixaLayer.addTo(map);
+    if(isMobile())setView("mapa");
+    if(!LAST.length){
+      const pts=CAIXA.imoveis.filter(i=>i.x&&i.y).map(i=>toWGS(i.x,i.y));
+      map.fitBounds(L.latLngBounds(pts).pad(.15));
+    }
+    toast("Imóveis da Caixa à venda (lista de "+(CAIXA.gerado||"?")+"). Toque num pino dourado.");
+  }else map.removeLayer(caixaLayer);
+}
+
 /* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */
 const csvCell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
 const csvNum=v=>v?String(v).replace(".",","):"";
@@ -821,7 +878,7 @@ function closeDetail(){document.getElementById("detail").classList.remove("show"
 document.body.dataset.view="busca";
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
-}else{initMap();loadBairros();}
+}else{initMap();loadBairros();initCaixa();}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
 
