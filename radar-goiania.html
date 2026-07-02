@@ -139,6 +139,24 @@
   .detail .dgrid .cell .v{font:700 15px/1 "IBM Plex Sans"}
   .detail .dgrid .cell.hl .v{color:var(--accent)}
   .detail .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
+  /* comparáveis da vizinhança */
+  .dcomps{margin:0 0 12px}
+  .cmpbtn{width:100%;border:1.5px solid var(--lot);background:var(--paper);color:var(--lot);
+    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
+  .cmpbtn:hover{background:var(--lot);color:var(--paper-2)}
+  .cmp{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:11px 12px}
+  .cmp .h{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+  .cmp .h .badge{float:right;font:700 9px/1 "IBM Plex Mono";padding:3px 6px;border-radius:2px;letter-spacing:.06em}
+  .badge.alta{background:var(--lot);color:#fff}.badge.media{background:var(--gold);color:#fff}.badge.baixa{background:var(--accent);color:#fff}
+  .cmp .bar{position:relative;height:14px;background:var(--grid);border-radius:7px;margin:16px 4px 4px}
+  .cmp .bar .iqr{position:absolute;top:0;bottom:0;background:var(--lot-bright);opacity:.45;border-radius:7px}
+  .cmp .bar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+  .cmp .bar .me{position:absolute;top:-7px;width:0;height:0;border:8px solid transparent;border-top-color:var(--accent);transform:translateX(-8px)}
+  .cmp .lbl{display:flex;justify-content:space-between;font:600 9.5px/1 "IBM Plex Mono";color:var(--muted);margin:6px 2px 0}
+  .cmp .pos{font:600 12px/1.45 "IBM Plex Sans";margin-top:9px}
+  .cmp .pos b{color:var(--accent)}
+  .cmp .mkt{font:500 11px/1.5 "IBM Plex Sans";color:var(--muted);margin-top:5px}
+  .cmp-load{font:500 12px/1.4 "IBM Plex Sans";color:var(--muted);padding:8px 2px}
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -270,6 +288,7 @@
       <h3 id="dAddr"></h3>
       <div class="insc" id="dInsc"></div>
       <div class="dgrid" id="dGrid"></div>
+      <div class="dcomps" id="dComps"></div>
       <div class="dnote" id="dNote"></div>
       <div class="acts" id="dActs"></div>
     </div>
@@ -651,7 +670,13 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${brl(a.vlvenal)}</div></div>
     <div class="cell hl"><div class="k">Ref. mercado (${COEF.toFixed(1)}×)</div><div class="v">${ref?brl(ref):"—"}</div></div>
-    <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>`;
+    <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
+    <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
+    <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
+    <div class="cell"><div class="k">Unid. no lote</div><div class="v">${a.ttsublot||"—"}</div></div>`;
+  DCUR=a;
+  document.getElementById("dComps").innerHTML=
+    (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
   document.getElementById("dNote").textContent=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
     "A referência de mercado é estimativa — não substitui avaliação profissional (NBR 14653).";
@@ -672,6 +697,99 @@ function showDetail(a,ll){
 function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
     .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
+}
+
+/* ---------------- comparáveis da vizinhança (metodologia: mediana + Q1-Q3, Tukey, n>=5) ---------------- */
+let DCUR=null;
+const CMPCACHE={};
+function quant(sorted,p){const i=p*(sorted.length-1),lo=Math.floor(i),hi=Math.ceil(i);
+  return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
+async function compare(){
+  const a=DCUR;if(!a||!a.x_coord||!a.y_coord)return;
+  const box=document.getElementById("dComps");
+  const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
+  const areaField=isU?"areaedif":"areaterr";
+  const myArea=a[areaField]||0, myVal=a.vlvenal||0;
+  if(!(myArea>0&&myVal>0)){box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
+  const myPm2=myVal/myArea;
+  box.innerHTML='<div class="cmp-load">⏳ analisando a vizinhança…</div>';
+  try{
+    let res=null,radius=0;
+    for(const r of [400,800]){
+      radius=r;
+      const key=clean(a.ci)+"|"+areaField+"|"+r;
+      res=CMPCACHE[key]||(CMPCACHE[key]=await compsStats(a,areaField,myArea,r));
+      if(res.n>=3)break;
+    }
+    if(!res||res.n<3){box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(res?res.n:0)+' em '+radius+' m).</div>';return;}
+    await renderComps(box,res,myPm2,radius,isU);
+  }catch(e){box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
+}
+function compsBase(a,areaField,myArea,radius){
+  /* NBR 14653-2: comparável com área entre 0,5x e 2x a do alvo, mesmo uso */
+  let where=`vlvenal>0 AND ${areaField}>=${(myArea*0.5).toFixed(1)} AND ${areaField}<=${(myArea*2).toFixed(1)}`;
+  if(a.uso)where+=` AND uso=${a.uso}`;
+  return {geometry:`${a.x_coord.toFixed(2)},${a.y_coord.toFixed(2)}`,geometryType:"esriGeometryPoint",
+    inSR:"31982",distance:radius,units:"esriSRUnit_Meter",spatialRel:"esriSpatialRelIntersects",
+    where,returnGeometry:"false",f:"json"};
+}
+async function compsStats(a,areaField,myArea,radius){
+  const base=compsBase(a,areaField,myArea,radius);
+  const cnt=await jsonp(Object.assign({},base,{returnCountOnly:"true"}));
+  const n=cnt.count||0;
+  if(n<3)return {n};
+  if(n<=800){
+    const d=await jsonp(Object.assign({},base,{outFields:"*",resultRecordCount:1000}));
+    let vals=(d.features||[]).map(f=>f.attributes)
+      .map(x=>x[areaField]>0?x.vlvenal/x[areaField]:null)
+      .filter(v=>v&&isFinite(v)).sort((p,q)=>p-q);
+    if(vals.length<3)return {n:vals.length};
+    /* cerca de Tukey remove outliers antes da faixa */
+    const q1=quant(vals,.25),q3=quant(vals,.75),iqr=q3-q1;
+    vals=vals.filter(v=>v>=q1-1.5*iqr&&v<=q3+1.5*iqr);
+    return {n:vals.length,exact:true,vals,
+      min:vals[0],max:vals[vals.length-1],q1:quant(vals,.25),med:quant(vals,.5),q3:quant(vals,.75)};
+  }
+  /* vizinhança grande: percentis por busca binária de contagens (aritmética no WHERE) */
+  const pct=async p=>{
+    let lo=50,hi=40000;
+    for(let i=0;i<9;i++){
+      const mid=(lo+hi)/2;
+      const c=await jsonp(Object.assign({},base,
+        {where:base.where+` AND vlvenal/${areaField}<${mid.toFixed(2)}`,returnCountOnly:"true"}));
+      if((c.count||0)<n*p)lo=mid;else hi=mid;
+    }
+    return (lo+hi)/2;
+  };
+  const [q1,med,q3]=await Promise.all([pct(.25),pct(.5),pct(.75)]);
+  return {n,exact:false,q1,med,q3,min:Math.max(50,q1-1.5*(q3-q1)),max:q3+1.5*(q3-q1)};
+}
+async function renderComps(box,r,myPm2,radius,isU){
+  let below;
+  if(r.exact){below=r.vals.filter(v=>v<myPm2).length/r.vals.length;}
+  else{try{const a=DCUR,areaField=isU?"areaedif":"areaterr";
+    const base=compsBase(a,areaField,a[areaField],radius);
+    const c=await jsonp(Object.assign({},base,
+      {where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
+    below=(c.count||0)/r.n;}catch(e){below=null;}}
+  const amp=(r.q3-r.q1)/r.med;
+  const conf=r.n<5?["baixa","amostra pequena"]:amp<=.3?["alta","confiança alta"]:amp<=.4?["media","confiança média"]:["baixa","dispersão alta"];
+  const span=Math.max(r.max-r.min,1);
+  const px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100));
+  const pctl=below==null?null:Math.round(below*100);
+  const fx=v=>brl(v);
+  box.innerHTML=`<div class="cmp">
+    <div class="h">${r.n} comparáveis em ${radius} m · R$/m² ${isU?"construído":"terreno"} (venal)
+      <span class="badge ${conf[0]}">${conf[1]}</span></div>
+    <div class="bar">
+      <div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div>
+      <div class="med" style="left:${px(r.med)}%"></div>
+      <div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div>
+    </div>
+    <div class="lbl"><span>${fx(r.min)}</span><span>med ${fx(r.med)}</span><span>${fx(r.max)}</span></div>
+    <div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — percentil <b>${pctl}</b> da vizinhança`:""}${pctl!=null&&pctl<=25?" · 🔻 abaixo da faixa típica":pctl!=null&&pctl>=75?" · 🔺 acima da faixa típica":""}</div>
+    <div class="mkt">Faixa típica (Q1–Q3): ${fx(r.q1)}–${fx(r.q3)}/m² venal · ref. mercado ${COEF.toFixed(1)}×: ${fx(r.q1*COEF)}–${fx(r.q3*COEF)}/m². Posição relativa é imune à defasagem da planta de valores; a conversão a mercado depende do coeficiente.</div>
+  </div>`;
 }
 
 /* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */

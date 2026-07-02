@@ -86,11 +86,11 @@ Ver análise no fim. `index.html` (redirecionamento) já criado; manifest/sw/íc
 
 ## P2 — Backlog estruturado
 
-15. ⬜ **Metodologia do valor de referência.** O coeficiente único é grosseiro e o slider global mistura setores. Caminho defensável, em ordem de esforço:
-    a. Exibir **data-base do venal** (campo `dtultalter`/vigência IPTU) e reforçar o rótulo "estimativa, não é avaliação (PTAM)".
-    b. Coeficiente **por setor** (persistido em `localStorage`), calibrado pelo usuário com 3–5 anúncios reais do setor.
-    c. Normalizar por **R$/m² mediano do setor+uso** (computável da própria base venal via uma varredura offline) e mostrar faixa (± incerteza), não número seco.
-    d. Investigar valor de referência do **ITBI** de Goiânia como âncora de mercado (não há API pública conhecida — recon).
+15. **Metodologia do valor de referência** — evoluída para o plano de inteligência (ver `INTELIGENCIA-radar.md`, baseado em pesquisa de 10 frentes em 02/07/2026):
+    a. ✅ Data-base do venal no detalhe + aviso NBR 14653/PTAM.
+    b. ✅ Coeficiente **por setor** (localStorage), reaplicado automaticamente.
+    c. ✅ **Comparáveis da vizinhança** (I1): raio 400/800 m, mesmo uso, área 0,5–2×, mediana+Q1–Q3 com cerca de Tukey; vizinhanças grandes via busca binária de contagens (aritmética no WHERE — descoberta da pesquisa). Percentil do imóvel + selo de confiança + faixa convertida a mercado.
+    d. ❌ ITBI de Goiânia **não é público** (verificado) — caminho: pedido via LAI (I8). ~~vllanc98 como histórico~~ (provado: campo = venal atual).
 16. ⬜ **Cache/banco local.** Curto prazo: cache de sessão por consulta (Map em memória) — barato. Estrutural: espelho da base em IndexedDB (ou SQLite via ferramenta externa) alimentado por varredura paginada offline → busca instantânea, filtros pesados, modo offline. Respeitar o servidor (varrer de madrugada, 1 vez por mês).
 17. ⬜ **Multi-cidade.** Extrair objeto de configuração: `{nome, endpoint, epsg/proj4, mapaDeCampos, prefixosSetor, urlsOficiais(titular/venal), quirks(outFields, jsonp)}`. Recon mínimo por cidade: achar a camada de cadastro, projeção, campos equivalentes e política CORS/JSONP. (Goiânia aberta; Aparecida = Geopixel com login; Senador Canedo sem mapa.)
 18. ⬜ **Testes automatizados.** Extrair as funções puras (`norm`, `likeTerm`, `displayName`, `matchApto`, `isGarage`, filtros de quadra/lote/endereço, `toWGS`) para testá-las com Node + fixtures JSON reais gravadas do endpoint. Casos que travam regressão: zona UTM 22 (o bug do "pino na Bahia"), lote "20/21", quadra "10E", apto "1901" vs "19", padding de espaços.
