@@ -71,6 +71,30 @@ Pedido LAI ao e-SIC de Goiânia: base mensal anonimizada de guias de ITBI (bairr
 - ~~Score por padrão construtivo~~ (`cdpadrao` só 14% preenchido, `conserva` ~tudo igual).
 - ~~AVM de preço absoluto~~ (sem ITBI aberto, seria chute; força do app é análise RELATIVA).
 
+## Princípio: SEM IA no app
+
+Decisão do dono do projeto (02/07/2026): **o app não embute IA** — nenhum modelo, nenhuma API de LLM, nenhum "assistente". Toda a camada de "inteligência" é **estatística determinística** (mediana, quartis, contagens, distância euclidiana) sobre **dados públicos**, auditável linha a linha. IA é usada apenas no *desenvolvimento* (pesquisa, código), nunca no produto. Na UI, preferir os termos "análise"/"estatística" a "inteligência".
+
+## Fontes públicas adicionais (2ª rodada, 02/07/2026)
+
+**Verificadas hoje:**
+
+| Fonte | O quê | Status | Valor para o app |
+|---|---|---|---|
+| **Caixa — Lista de Imóveis GO** (`venda-imoveis.caixa.gov.br/listaweb/Lista_imoveis_GO.csv`) | CSV diário: 4.529 imóveis em GO, **178 em Goiânia** hoje; bairro, endereço **com QD/LT**, preço, **valor de avaliação (laudo)**, % desconto (média 16%), link | ✅ verificado (segue redirect, precisa User-Agent; sem CORS → snapshot estático ou download manual) | Camada "Oportunidades Caixa" no mapa (o QD/LT permite cruzar com o cadastro e plotar); e **pares laudo×venal** para calibrar o coeficiente por bairro com dado real e legal |
+| **IBGE CNEFE 2022** (`ftp.ibge.gov.br/.../Arquivos_CNEFE/CSV/UF/52_GO.zip`) | Cadastro Nacional de Endereços: todos os endereços de Goiânia geocodificados | ✅ existe (arquivo grande — pipeline offline) | Melhorar a busca por endereço (validação/autocomplete de logradouros) sem depender do campo `nmlogradou` do cadastro |
+
+**Candidatas a verificar (promissoras, ainda não confirmadas):**
+
+- **TJGO — leilões judiciais de imóveis**: dado público do Judiciário; lista de imóveis em hasta em Goiânia = fonte de oportunidades. Verificar se há listagem estruturada ou só editais.
+- **SSP-GO / Observatório de Segurança**: estatísticas criminais — verificar se a granularidade desce de município para bairro/AISP (se sim, vira indicador de contexto; exibir com cautela e fonte).
+- **SGB/CPRM — cartas de suscetibilidade** (inundação, movimento de massa) + camadas ambientais do próprio portalmapa (APPs, córregos) + dataset "erosões" do CKAN municipal → **badge de risco ambiental do lote** (fator de desvalorização que corretor precisa saber).
+- **Receita Federal — CNPJ aberto**: base pública de empresas com endereço; densidade de CNPJs ativos por bairro = termômetro de dinamismo comercial (pipeline offline; dado de pessoa jurídica, sem risco LGPD).
+- **INEP — IDEB por escola**: qualidade (não só presença) das escolas próximas — complementa o score de amenidades do I5.
+- **INCRA/SIGEF + CAR**: parcelas rurais georreferenciadas na borda urbana — cruzar com as macrozonas de expansão do Plano Diretor para radar de "terra que vai virar cidade" (aderente ao nome do projeto).
+
+**Descartadas nesta rodada:** dívida ativa/protestos (risco LGPD), Inside Airbnb (não cobre Goiânia), GTFS RMTC (não é aberto — já constatado).
+
 ## Regras de exibição (fixas)
 
 - `dtnascimen`: **nunca** exibir/exportar (dado pessoal).
