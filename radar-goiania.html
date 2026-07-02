@@ -57,7 +57,7 @@
   .moderow button.on{background:var(--ink);color:var(--paper-2)}
   label{display:block;font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
   select,input{width:100%;background:var(--paper);border:1.5px solid var(--line);color:var(--ink);
-    font:500 15px/1 "IBM Plex Sans";padding:10px 11px;border-radius:2px;margin-bottom:12px}
+    font:500 16px/1 "IBM Plex Sans";padding:10px 11px;border-radius:2px;margin-bottom:12px}
   select:focus,input:focus{outline:none;border-color:var(--accent)}
   .ql{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   /* combobox de setor */
@@ -249,6 +249,9 @@ const SVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaSer
 const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const clean=v=>String(v==null?"":v).trim();
+const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+/* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
+const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
 let COEF=3.0, MODE='ql', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
 
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
@@ -259,7 +262,7 @@ function jsonp(params){
     const s=document.createElement("script");
     const t=setTimeout(()=>{cleanup();rej(new Error("timeout"));},30000);
     function cleanup(){clearTimeout(t);delete window[cb];s.remove();}
-    window[cb]=d=>{cleanup();res(d);};
+    window[cb]=d=>{cleanup();if(d&&d.error)rej(new Error(d.error.message||"erro do servidor"));else res(d);};
     s.onerror=()=>{cleanup();rej(new Error("network"));};
     s.src=SVC+"?"+qs+"&callback="+cb;
     document.body.appendChild(s);
@@ -283,7 +286,7 @@ async function onMapClick(e){
     const [x,y]=proj4("EPSG:4326","EPSG:31982",[e.latlng.lng,e.latlng.lat]);
     const d=await jsonp({geometry:`${x.toFixed(2)},${y.toFixed(2)}`,geometryType:"esriGeometryPoint",
       inSR:"31982",spatialRel:"esriSpatialRelIntersects",outFields:"*",returnGeometry:"false",
-      resultRecordCount:400,f:"json"});
+      resultRecordCount:2000,f:"json"});
     const items=(d.features||[]).map(f=>f.attributes);
     if(!items.length){toast("Nenhum lote nesse ponto. Clique sobre o imóvel.");return;}
     finish(items);
@@ -330,8 +333,8 @@ function filterCombo(qtext){
   hits=hits.slice(0,50);
   comboActive=-1;
   if(!hits.length){list.innerHTML='<div class="combo-empty">nenhum setor com esse nome</div>';list.classList.add("show");return;}
-  list.innerHTML=hits.map((b,i)=>`<div class="combo-item" data-code="${b.code}" data-disp="${b.disp.replace(/"/g,'&quot;')}" onclick="pickBairro('${b.code}')">
-    <span class="code">${b.code}</span>${b.disp}<span class="raw">${b.raw}</span></div>`).join("");
+  list.innerHTML=hits.map(b=>`<div class="combo-item" data-code="${b.code}" onclick="pickBairro('${b.code}')">
+    <span class="code">${b.code}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
   list.classList.add("show");
 }
 function pickBairro(code){
@@ -364,20 +367,28 @@ function setMode(m){
 }
 function onCoef(){COEF=parseFloat(document.getElementById("coef").value);
   document.getElementById("coefVal").textContent=COEF.toFixed(1)+"×";
-  if(LAST.length)render(LAST);}
+  if(LAST.length)render(LAST);
+  if(sel!=null&&LAST[sel]){
+    const c=document.querySelector(`.card[data-i="${sel}"]`);if(c)c.classList.add("sel");
+    const a=LAST[sel];
+    if(a.x_coord&&a.y_coord&&document.getElementById("detail").classList.contains("show"))showDetail(a,toWGS(a.x_coord,a.y_coord));
+  }}
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3600);}
 function loading(on,msg){const l=document.getElementById("loading");
   if(msg)document.getElementById("loadmsg").textContent=msg;l.classList.toggle("show",on);}
 
-async function fetchBairro(b){
-  let all=[],offset=0,page=2000,guard=0;
-  while(guard++<6){
-    const d=await jsonp({where:`cdbairro=${b} AND vlvenal>0`,outFields:"*",returnGeometry:"false",
+async function fetchWhere(where){
+  let all=[],offset=0,page=2000,guard=0,truncated=false;
+  while(true){
+    const d=await jsonp({where,outFields:"*",returnGeometry:"false",
       resultOffset:offset,resultRecordCount:page,orderByFields:"OBJECTID",f:"json"});
     const fs=d.features||[];all=all.concat(fs);
-    if(fs.length<page)break;offset+=page;
+    if(fs.length<page)break;
+    offset+=page;
+    if(++guard>=30){truncated=true;break;}
   }
+  if(truncated)toast("Resultado muito grande — a lista pode estar incompleta. Refine a busca.");
   return all.map(f=>f.attributes);
 }
 
@@ -386,10 +397,12 @@ async function buscar(){
   try{
     let items=[];
     if(MODE==="insc"){
-      const ci=clean(document.getElementById("insc").value);
+      const ci=clean(document.getElementById("insc").value).replace(/\D/g,"");
       if(!ci){toast("Digite a inscrição cadastral.");return;}
       loading(true,"consultando inscrição…");
-      const d=await jsonp({where:`ci='${ci.replace(/'/g,"")}'`,outFields:"*",returnGeometry:"false",resultRecordCount:400,f:"json"});
+      /* 14 dígitos = inscrição da unidade (nrinscr); 10 = inscrição do lote (ci) */
+      const field=ci.length>10?"nrinscr":"ci";
+      const d=await jsonp({where:`${field}='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
       items=(d.features||[]).map(f=>f.attributes);
     }else if(MODE==="addr"){
       const okB=resolveBairro();
@@ -398,9 +411,15 @@ async function buscar(){
       const num=clean(document.getElementById("numero").value);
       if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
       if(!rua){toast("Digite a rua/avenida.");return;}
-      loading(true,"varrendo o setor…");
-      const all=await fetchBairro(b);
+      loading(true,"consultando o endereço…");
       const rN=norm(rua), rD=rua.replace(/\D/g,""), nN=num.replace(/\D/g,"");
+      let whereA=`cdbairro=${b} AND vlvenal>0`;
+      if(nN)whereA+=` AND nrimovel LIKE '%${nN}%'`;
+      else if(rD)whereA+=` AND nmlogradou LIKE '%${rD}%'`;
+      else whereA+=` AND UPPER(nmlogradou) LIKE '%${rN.replace(/'/g,"")}%'`;
+      let all=await fetchWhere(whereA);
+      /* rua com acento no cadastro pode não casar o LIKE — cai para a varredura do setor */
+      if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`);
       items=all.filter(a=>{
         const log=norm(a.nmlogradou);
         const okR=log.includes(rN)||(rD&&(log.match(/\d+/g)||[]).includes(rD));
@@ -414,8 +433,11 @@ async function buscar(){
       const l=clean(document.getElementById("lote").value);
       if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
       if(!q&&!l){toast("Digite ao menos a quadra.");return;}
-      loading(true,"varrendo o setor…");
-      const all=await fetchBairro(b);
+      loading(true,"consultando a quadra…");
+      let whereQ=`cdbairro=${b} AND vlvenal>0`;
+      if(q)whereQ+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
+      if(l)whereQ+=` AND UPPER(nrlote) LIKE '%${likeTerm(l)}%'`;
+      const all=await fetchWhere(whereQ);
       const qU=q.toUpperCase(), lU=l.toUpperCase();
       items=all.filter(a=>{
         const nq=clean(a.nrquadra).toUpperCase();
@@ -439,7 +461,7 @@ function finish(items){
     const cntCi={};units.forEach(a=>{const k=clean(a.ci);cntCi[k]=(cntCi[k]||0)+1;});
     if(apto){
       units=units.filter(a=>matchApto(a,apto));
-    }else if(hideGar){
+    }else if(hideGar&&MODE!=="insc"){
       units=units.filter(a=>cntCi[clean(a.ci)]<=1||!isGarage(a));
     }
     units.sort((x,y)=>{const cx=clean(x.ci),cy=clean(y.ci);
@@ -483,8 +505,8 @@ function render(list){
     if(ci!==lastCi){
       lastCi=ci;
       if(cnt[ci]>1){
-        const ed=clean(a.nmedificio)||"Edifício";
-        html+=`<div class="bldg-head"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${clean(a.nrquadra)} · L ${clean(a.nrlote)} · ${cnt[ci]} unidades listadas</div></div>`;
+        const ed=esc(a.nmedificio)||"Edifício";
+        html+=`<div class="bldg-head"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} unidades listadas</div></div>`;
       }
     }
     html+=cardHTML(a,i,cnt[ci]>1);
@@ -495,9 +517,9 @@ function cardHTML(a,i,isUnit){
   const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim()+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
   const ref=refPrice(a), pm2=isUnit?m2Edif(a):m2Terr(a), ul=unitLabel(a);
   return `<div class="card" data-i="${i}" onclick="pick(${i})">
-      ${isUnit&&ul?`<div class="unit">${ul}</div>`:""}
-      <div class="ql-tag">Q ${clean(a.nrquadra)||"—"} · L ${clean(a.nrlote)||"—"}${isUnit?" · insc "+clean(a.nrinscr):""}</div>
-      <div class="addr">${addr||"Endereço não cadastrado"}</div>
+      ${isUnit&&ul?`<div class="unit">${esc(ul)}</div>`:""}
+      <div class="ql-tag">Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}${isUnit?" · insc "+esc(a.nrinscr):""}</div>
+      <div class="addr">${esc(addr)||"Endereço não cadastrado"}</div>
       <div class="grid2">
         <div>${isUnit?"Área const.":"Terreno"} <b>${isUnit?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</b></div>
         <div>${isUnit?"Terreno":"Construção"} <b>${isUnit?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</b></div>
@@ -563,19 +585,26 @@ function showDetail(a,ll){
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gearth=`https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}`;
-  const iptu="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020f0.asp";
-  const inscUse=insc||ci;
+  /* guia de IPTU (siptu00200) é a candidata a exibir "Contribuinte: NOME"; siptu00020 só traz características */
+  const iptu="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00200f0.asp";
+  const inscUse=esc(insc||ci);
   document.getElementById("dActs").innerHTML=`
     <a class="primary" href="${gmaps}" target="_blank" rel="noopener">Google Maps ↗</a>
     <a href="${gsv}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="${gearth}" target="_blank" rel="noopener">Earth ↗</a>
-    <a href="${iptu}" target="_blank" rel="noopener" title="Digite a inscrição ${inscUse} na consulta oficial para ver o titular">Titular oficial ↗</a>`;
+    <a href="${iptu}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre a consulta oficial — cole lá e resolva o CAPTCHA para ver o contribuinte">Titular oficial ⧉↗</a>`;
   d.classList.add("show");
+}
+function copyInsc(v){
+  if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
+    .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
 }
 function closeDetail(){document.getElementById("detail").classList.remove("show");}
 
 /* ---------------- init ---------------- */
-initMap();loadBairros();
+if(!window.L||!window.proj4){
+  document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
+}else{initMap();loadBairros();}
 document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
 
 /* combobox de setor: digitar, navegar, fechar */
@@ -596,7 +625,8 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
     items.forEach((it,i)=>it.classList.toggle("active",i===comboActive));
     if(items[comboActive])items[comboActive].scrollIntoView({block:"nearest"});
   });
-  document.addEventListener("click",e=>{if(!e.target.closest(".combo"))list.classList.remove("show");});
+  /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção */
+  document.addEventListener("pointerdown",e=>{if(!e.target.closest(".combo"))list.classList.remove("show");});
 })();
 </script>
 </body>
