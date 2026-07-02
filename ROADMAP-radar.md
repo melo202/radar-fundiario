@@ -50,18 +50,19 @@ Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
 
 ---
 
-## P0 — Mobile premium (M1–M8 do briefing) — ⬜ próxima onda
+## P0 — Mobile premium (M1–M8 do briefing) — implementado em 02/07/2026
 
-Ordem sugerida (menor risco → maior):
-- **M2 primeiro** (anti-zoom 16px ✅ já feito; teclado: `inputmode="numeric"` onde couber — atenção: quadra/lote aceitam letra, ex. "10E"; usar `inputmode="text"` neles e numérico só em número/inscrição).
-- **M1** autocomplete no toque (🔶 acima; validar no aparelho).
-- **M4** detalhe como bottom sheet arrastável (hoje cobre o mapa).
-- **M3** mapa em primeiro plano com alternância Busca⇄Mapa + tap-to-identify.
-- **M5** alvos de toque ≥44px (cards, botões do detalhe, ×).
-- **M6** safe-area/notch (`env(safe-area-inset-*)`).
-- **M7** performance 4G: com o filtro server-side (P0) o payload por busca caiu de ~12k para dezenas/centenas de registros — reavaliar se ainda há gargalo; cache de sessão por consulta é o próximo passo barato.
-- **M8** PWA (manifest + service worker cache de app shell). Requer HTTPS → GitHub Pages resolve.
-- Checklist de aceite no aparelho (iPhone + Android).
+- ✅ **M2** anti-zoom (`font-size:16px` nos inputs) + `inputmode="numeric"` na inscrição. Quadra/lote/número ficam com teclado de texto **de propósito** — aceitam letra ("10E", "08E").
+- 🔶 **M1** autocomplete no toque: fechamento por `pointerdown` + anti-zoom. **Validar no iPhone real.**
+- ✅ **M4** detalhe vira **bottom sheet** no mobile: ancorado acima da barra, cantos arredondados, rolagem interna, alça com **arrastar-para-baixo fecha**.
+- ✅ **M3** telas **Busca ⇄ Mapa** com barra fixa inferior (56px); busca com resultado troca sozinha para o mapa; tap no card idem; `map.invalidateSize()` ao exibir (senão o Leaflet renderiza cinza).
+- ✅ **M5** alvos ≥44px: barra 56px, botão × 44px, ações do detalhe 44px, itens do combo e modos maiores.
+- ✅ **M6** safe-area/notch: `viewport-fit=cover` + `env(safe-area-inset-bottom)` na barra, no sheet e no loading.
+- ✅ **M7** performance 4G: resolvida na prática pelo filtro server-side (payload caiu ~99% no caso típico). Cache de sessão fica no backlog (item 16).
+- ✅ **M8** PWA: `manifest.json`, `sw.js` (cache do app shell + CDNs; consultas e tiles sempre na rede), ícones gerados (192/512/apple-touch 180), registro condicional a HTTPS — ativa sozinho quando hospedar no GitHub Pages. `index.html` de redirecionamento criado.
+- ⬜ Checklist de aceite no aparelho (iPhone + Android): autocomplete, teclado, sheet, instalação PWA, notch.
+
+Verificado em preview 375×812: busca Q128/L08E no Bueno → 26 unidades, auto-switch pro mapa, sheet com dados completos; desktop 1280px sem regressão.
 
 ---
 
@@ -77,9 +78,9 @@ Ordem sugerida (menor risco → maior):
 
 ---
 
-## P1 — Publicação (GitHub Pages) — ⬜
+## P1 — Publicação (GitHub Pages) — pronto para subir
 
-Ver análise no fim. Passos: repositório GitHub → renomear/copiar para `index.html` (ou apontar o link direto para o arquivo) → Settings ▸ Pages ▸ Deploy from branch. Zero mudança de código necessária.
+Ver análise no fim. `index.html` (redirecionamento) já criado; manifest/sw/ícones idem. Falta só: criar o repositório no GitHub → `git push` → Settings ▸ Pages ▸ Deploy from branch ▸ `master` / root.
 
 ---
 

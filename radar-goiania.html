@@ -2,7 +2,10 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#141a1f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Radar Fundiário · Goiânia</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -40,7 +43,7 @@
     background-size:44px 44px;opacity:.35;
   }
   .wrap{position:relative;z-index:1;display:grid;grid-template-columns:390px 1fr;height:100vh}
-  @media(max-width:820px){.wrap{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto;min-height:100vh}}
+  .viewbar{display:none}
 
   /* ---------- painel esquerdo ---------- */
   .panel{background:var(--paper-2);border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow-y:auto}
@@ -120,7 +123,6 @@
   /* ---------- mapa ---------- */
   .mapwrap{position:relative}
   #map{position:absolute;inset:0;background:var(--paper)}
-  @media(max-width:820px){.mapwrap{height:60vh;min-height:420px}#map{position:relative;height:100%}}
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
     border:2px solid var(--ink);border-radius:3px;padding:16px 18px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none}
   .detail.show{display:block}
@@ -149,6 +151,33 @@
   @keyframes sp{to{transform:rotate(360deg)}}
   .loading span{font:600 12px/1 "IBM Plex Mono";letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   .leaflet-container{font-family:"IBM Plex Sans",sans-serif}
+
+  /* ---------- mobile: telas Busca⇄Mapa, bottom sheet, alvos ≥44px, safe-area ---------- */
+  @media(max-width:820px){
+    .wrap{display:block;height:100vh;height:100dvh;overflow:hidden}
+    .panel,.mapwrap{height:calc(100vh - 56px);height:calc(100dvh - 56px - env(safe-area-inset-bottom))}
+    .panel{border-right:0}
+    body[data-view="busca"] .mapwrap{display:none}
+    body[data-view="mapa"] .panel{display:none}
+    .viewbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:800;background:var(--ink);
+      padding-bottom:env(safe-area-inset-bottom);border-top:2px solid var(--ink)}
+    .viewbar button{flex:1;min-height:56px;border:0;background:transparent;color:var(--line);
+      font:700 14px/1 "IBM Plex Sans";letter-spacing:.04em;cursor:pointer}
+    .viewbar button.on{background:var(--accent);color:#fff}
+    .toast{position:fixed}
+    .loading{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom))}
+    .moderow button{padding:13px 6px}
+    .combo-item{padding:13px 12px}
+    .go{padding:16px}
+    .detail{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;
+      border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:6px}
+    .detail .grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px;cursor:grab;touch-action:none}
+    .detail .grab::before{content:"";display:block;position:relative;top:-14px;height:34px;margin:0 -60px}
+    .detail .x{width:44px;height:44px;top:2px;right:2px;font-size:24px}
+    .detail .dgrid{grid-template-columns:repeat(2,1fr)}
+    .detail .acts a{min-height:44px;display:flex;align-items:center;justify-content:center}
+  }
+  @media(min-width:821px){.detail .grab{display:none}}
 </style>
 </head>
 <body>
@@ -199,7 +228,7 @@
 
       <div id="paneIN" style="display:none">
         <label>Inscrição cadastral (CI)</label>
-        <input id="insc" placeholder="ex.: 3020150346" autocomplete="off">
+        <input id="insc" placeholder="ex.: 3020150346" autocomplete="off" inputmode="numeric">
       </div>
 
       <button class="go" id="btnGo" onclick="buscar()">Localizar no mapa</button>
@@ -230,6 +259,7 @@
     <div class="toast" id="toast"></div>
     <div class="loading" id="loading"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
     <div class="detail" id="detail">
+      <div class="grab" id="grab"></div>
       <button class="x" onclick="closeDetail()">×</button>
       <div class="dtag" id="dTag"></div>
       <h3 id="dAddr"></h3>
@@ -238,6 +268,11 @@
       <div class="acts" id="dActs"></div>
     </div>
   </div>
+
+  <nav class="viewbar" id="viewbar">
+    <button id="vbBusca" class="on" onclick="setView('busca')">🔍 Busca</button>
+    <button id="vbMapa" onclick="setView('mapa')">🗺️ Mapa</button>
+  </nav>
 </div>
 
 <script>
@@ -378,6 +413,16 @@ function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t
 function loading(on,msg){const l=document.getElementById("loading");
   if(msg)document.getElementById("loadmsg").textContent=msg;l.classList.toggle("show",on);}
 
+/* ---------------- telas mobile: Busca ⇄ Mapa ---------------- */
+const isMobile=()=>window.matchMedia("(max-width:820px)").matches;
+function setView(v){
+  document.body.dataset.view=v;
+  document.getElementById("vbBusca").classList.toggle("on",v==="busca");
+  document.getElementById("vbMapa").classList.toggle("on",v==="mapa");
+  /* o Leaflet precisa remedir o container quando ele volta a ficar visível */
+  if(v==="mapa"&&map)setTimeout(()=>map.invalidateSize(),60);
+}
+
 async function fetchWhere(where){
   let all=[],offset=0,page=2000,guard=0,truncated=false;
   while(true){
@@ -475,6 +520,7 @@ function finish(items){
       return;}
     render(units);
     plot(units);
+    if(isMobile())setView("mapa");
 }
 
 /* ---------------- render lista ---------------- */
@@ -557,6 +603,7 @@ function plot(list){
 /* ---------------- selecionar ---------------- */
 function pick(i){
   const a=LAST[i];if(!a)return;sel=i;
+  if(isMobile())setView("mapa");
   document.querySelectorAll(".card").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
@@ -602,9 +649,21 @@ function copyInsc(v){
 function closeDetail(){document.getElementById("detail").classList.remove("show");}
 
 /* ---------------- init ---------------- */
+document.body.dataset.view="busca";
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();}
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+/* bottom sheet: arrastar a alça para baixo fecha o detalhe */
+(function(){
+  const d=document.getElementById("detail"),g=document.getElementById("grab");
+  let y0=null;
+  g.addEventListener("pointerdown",e=>{y0=e.clientY;g.setPointerCapture(e.pointerId);});
+  g.addEventListener("pointermove",e=>{if(y0==null)return;const dy=Math.max(0,e.clientY-y0);d.style.transform=`translateY(${dy}px)`;});
+  g.addEventListener("pointerup",e=>{const dy=y0==null?0:e.clientY-y0;y0=null;d.style.transform="";if(dy>70)closeDetail();});
+  g.addEventListener("pointercancel",()=>{y0=null;d.style.transform="";});
+})();
 document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
 
 /* combobox de setor: digitar, navegar, fechar */
