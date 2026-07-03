@@ -184,6 +184,8 @@
   @keyframes sp{to{transform:rotate(360deg)}}
   .loading span{font:600 12px/1 "IBM Plex Mono";letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   .leaflet-container{font-family:"IBM Plex Sans",sans-serif}
+  .leaflet-tooltip{font:500 11.5px/1.5 "IBM Plex Sans";border:1.5px solid var(--ink);border-radius:2px;
+    background:var(--paper-2);color:var(--ink);box-shadow:0 3px 10px rgba(20,26,31,.2)}
 
   /* ---------- mobile: telas Busca⇄Mapa, bottom sheet, alvos ≥44px, safe-area ---------- */
   @media(max-width:820px){
@@ -317,6 +319,7 @@
 proj4.defs("EPSG:31982","+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
 const toWGS = (x,y)=>{const [lon,lat]=proj4("EPSG:31982","EPSG:4326",[x,y]);return [lat,lon];};
 const SVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/3/query";
+const LOTSVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/0/query";
 
 const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
@@ -335,13 +338,13 @@ function applyCoefFor(b){const c=COEFS[b];
 
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
-async function jsonp(params,retries=1){
+async function jsonp(params,retries=1,url=SVC){
   for(;;){
-    try{return await jsonpOnce(params);}
+    try{return await jsonpOnce(params,url);}
     catch(e){if(retries-->0){await new Promise(r=>setTimeout(r,900));continue;}throw e;}
   }
 }
-function jsonpOnce(params){
+function jsonpOnce(params,url=SVC){
   return new Promise((res,rej)=>{
     const cb="cb_"+Math.random().toString(36).slice(2);
     const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
@@ -350,7 +353,7 @@ function jsonpOnce(params){
     function cleanup(){clearTimeout(t);delete window[cb];s.remove();}
     window[cb]=d=>{cleanup();if(d&&d.error)rej(new Error(d.error.message||"erro do servidor"));else res(d);};
     s.onerror=()=>{cleanup();rej(new Error("network"));};
-    s.src=SVC+"?"+qs+"&callback="+cb;
+    s.src=url+"?"+qs+"&callback="+cb;
     document.body.appendChild(s);
   });
 }
@@ -363,6 +366,70 @@ function initMap(){
   }).addTo(map);
   layerGroup=L.layerGroup().addTo(map);
   map.on("click",onMapClick);
+  initLots();
+}
+
+/* ---------------- divisas de lote (camada 0): desenha os lotes no zoom próximo ----------------
+   hover = tooltip com resumo do cadastro (carregado 1x por lote); clique atravessa
+   para o identificador de ponto já existente (onMapClick). */
+const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOpacity:.05};
+const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
+let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
+const LOTINFO={};
+function initLots(){
+  map.createPane("lots").style.zIndex=380; /* abaixo do overlayPane (400): pinos de resultado ficam por cima */
+  lotLayer=L.layerGroup();
+  map.on("moveend",refreshLots);
+}
+function lotInfo(ci){
+  if(!LOTINFO[ci])LOTINFO[ci]=jsonp({where:`ci='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"})
+    .then(d=>{
+      const its=(d.features||[]).map(f=>f.attributes);
+      if(!its.length)return "Lote "+esc(ci);
+      const a=its[0];
+      const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim();
+      let h=`<b>Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</b> · ${esc(a.nmbairro)}<br>${esc(addr)||"sem logradouro"}`;
+      if(its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${its.length} unidades · <b>clique para abrir</b>`;
+      else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${brl(a.vlvenal)} · <b>clique p/ detalhe</b>`;
+      return h;
+    }).catch(e=>{delete LOTINFO[ci];return "não foi possível carregar";});
+  return LOTINFO[ci];
+}
+async function refreshLots(){
+  if(!map)return;
+  const sz=map.getSize();
+  if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
+  if(map.getZoom()<17){
+    LOTTOKEN++; /* invalida qualquer consulta pendente — senão ela re-adiciona a camada */
+    if(map.hasLayer(lotLayer)){map.removeLayer(lotLayer);lotLayer.clearLayers();}
+    return;
+  }
+  const tk=++LOTTOKEN;
+  const b=map.getBounds();
+  const p1=proj4("EPSG:4326","EPSG:31982",[b.getWest(),b.getSouth()]);
+  const p2=proj4("EPSG:4326","EPSG:31982",[b.getEast(),b.getNorth()]);
+  let d;
+  try{
+    d=await jsonp({geometry:`${p1[0].toFixed(1)},${p1[1].toFixed(1)},${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,
+      geometryType:"esriGeometryEnvelope",inSR:"31982",spatialRel:"esriSpatialRelIntersects",
+      outFields:"ci",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC);
+  }catch(e){return;}
+  if(tk!==LOTTOKEN)return; /* o mapa já se moveu de novo */
+  lotLayer.clearLayers();
+  (d.features||[]).forEach(f=>{
+    const g=f.geometry;if(!g||!g.rings||!g.rings.length)return;
+    const ci=clean(f.attributes&&f.attributes.ci);
+    const poly=L.polygon(g.rings.map(rg=>rg.map(pt=>toWGS(pt[0],pt[1]))),LOT_STYLE);
+    poly.bindTooltip("carregando…",{sticky:true,direction:"top",opacity:.96});
+    let hv=null;
+    poly.on("mouseover",()=>{poly.setStyle(LOT_HOVER);
+      hv=setTimeout(async()=>{const h=await lotInfo(ci);poly.setTooltipContent(h);},140);});
+    poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(LOT_STYLE);});
+    poly.addTo(lotLayer);
+  });
+  if(!map.hasLayer(lotLayer))lotLayer.addTo(map);
+  if(!LOTHINT&&(d.features||[]).length){LOTHINT=true;
+    toast("Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
 }
 
 /* clicar no mapa -> identifica o lote naquele ponto (consulta espacial) */
@@ -474,7 +541,7 @@ function setView(v){
   document.getElementById("vbBusca").classList.toggle("on",v==="busca");
   document.getElementById("vbMapa").classList.toggle("on",v==="mapa");
   /* o Leaflet precisa remedir o container quando ele volta a ficar visível */
-  if(v==="mapa"&&map)setTimeout(()=>map.invalidateSize(),60);
+  if(v==="mapa"&&map)setTimeout(()=>{map.invalidateSize();refreshLots();},60);
 }
 
 async function fetchWhere(where){
@@ -702,14 +769,14 @@ function showDetail(a,ll){
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gearth=`https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}`;
-  /* guia de IPTU (siptu00200) é a candidata a exibir "Contribuinte: NOME"; siptu00020 só traz características */
-  const iptu="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00200f0.asp";
+  /* Portal de Tributos (OutSystems): consulta por inscrição -> contribuinte/CPF e 2ª via. Sem automação: só copia a inscrição. */
+  const iptu="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos";
   const inscUse=esc(insc||ci);
   document.getElementById("dActs").innerHTML=`
     <a class="primary" href="${gmaps}" target="_blank" rel="noopener">Google Maps ↗</a>
     <a href="${gsv}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="${gearth}" target="_blank" rel="noopener">Earth ↗</a>
-    <a href="${iptu}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre a consulta oficial — cole lá e resolva o CAPTCHA para ver o contribuinte">Titular oficial ⧉↗</a>`;
+    <a href="${iptu}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre o Portal de Tributos — cole na consulta para ver o contribuinte e emitir a 2ª via">Titular / 2ª via ⧉↗</a>`;
   d.classList.add("show");
 }
 function copyInsc(v){
