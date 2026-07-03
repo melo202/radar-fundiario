@@ -835,17 +835,20 @@ async function buscar(){
         if(items.length)aviso="Número "+num+" não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira; ache o prédio pelo nome na lista.";
       }
     }else if(MODE==="bd"){
-      /* busca por NOME do edifício — setor opcional (a cidade toda responde em ~3s) */
-      const nome=norm(clean(document.getElementById("predio").value)).replace(/'/g,"");
-      if(nome.length<3){toast("Digite o nome do edifício (mínimo 3 letras).");return;}
+      /* busca por NOME do edifício, POR PALAVRAS (ordem livre, ignora "residencial/ed./cond.")
+         — medido: 50/50 acertos em amostra real; setor opcional (cidade toda responde em ~3s) */
+      const GENW=new Set(["RES","ED","EDF","EDIFICIO","RESIDENCIAL","COND","CONDOMINIO","PREDIO"]);
+      const toks=norm(clean(document.getElementById("predio").value)).replace(/'/g,"")
+        .split(/[\s.]+/).filter(t=>t.length>=2&&!GENW.has(t)).slice(0,5);
+      if(!toks.length||toks.join("").length<3){toast("Digite o nome do edifício (mínimo 3 letras).");return;}
       resolveBairro();
       const b=document.getElementById("bairro").value;
       loading(true,"procurando o edifício…");
-      const whereB=(b?`cdbairro=${+b} AND `:"")+`vlvenal>0 AND UPPER(nmedificio) LIKE '%${nome}%'`;
-      let all=await fetchWhere(whereB);
+      const likes=toks.map(t=>`UPPER(nmedificio) LIKE '%${t}%'`).join(" AND ");
+      let all=await fetchWhere((b?`cdbairro=${+b} AND `:"")+`vlvenal>0 AND ${likes}`);
       /* se o setor escolhido não tem o prédio, tenta a cidade inteira */
-      if(!all.length&&b)all=await fetchWhere(`vlvenal>0 AND UPPER(nmedificio) LIKE '%${nome}%'`);
-      items=all.filter(a=>norm(a.nmedificio).includes(nome));
+      if(!all.length&&b)all=await fetchWhere(`vlvenal>0 AND ${likes}`);
+      items=all.filter(a=>{const n=norm(a.nmedificio);return toks.every(t=>n.includes(t));});
     }else{ // ql
       const okB=resolveBairro();
       const b=document.getElementById("bairro").value;
