@@ -1493,8 +1493,8 @@ let CALC=null;
 function abrirCustos(){
   const a=DCUR;if(!a)return;
   const est=mercadoEstimado(a);
-  const mercadoCentral=est?Math.round((est.lo+est.hi)/2):0;
-  const negocio=Math.max(a.vlvenal||0,mercadoCentral);
+  /* sugere a estimativa de mercado (proxy do preço real); se não houver, cai no venal como palpite */
+  const negocio=est?Math.round((est.lo+est.hi)/2):(a.vlvenal||0);
   CALC={a,venal:a.vlvenal||0,negocio,cartorio:null,financiado:false};
   CRET=document.activeElement;
   document.getElementById("calc").hidden=false;
@@ -1505,8 +1505,10 @@ function fecharCustos(){document.getElementById("calc").hidden=true;CALC=null;if
 function renderCustos(){
   if(!CALC)return;
   const a=CALC.a;
-  const base=Math.max(CALC.negocio||0,CALC.venal||0); /* ITBI: base nunca inferior ao venal */
-  const itbi=base*0.02;
+  /* ITBI sobre o VALOR DA TRANSAÇÃO declarado (STJ Tema 1.113) — NÃO sobre o venal.
+     Se o declarado ficar abaixo do venal, alertamos: a Prefeitura costuma resistir. */
+  const itbi=(CALC.negocio||0)*0.02;
+  const abaixoVenal=(CALC.negocio||0)>0&&(CALC.negocio||0)<(CALC.venal||0);
   const cart=CALC.cartorio!=null?CALC.cartorio:null;
   const total=(CALC.negocio||0)+itbi+(cart||0);
   const pct=CALC.negocio>0?((itbi+(cart||0))/CALC.negocio*100):0;
@@ -1514,14 +1516,15 @@ function renderCustos(){
   const linkCartorio="https://registrosdegoias.com.br/custas-e-emolumentos/";
   document.getElementById("calcBody").innerHTML=`
     <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
-    <span class="clabel">Valor do negócio (R$)</span>
+    <span class="clabel">Valor da transação (R$)</span>
     <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
-    <div class="wsub" style="margin:6px 0 0">Sugerido: maior entre o venal (${brl(CALC.venal)}) e a estimativa de mercado. Edite pelo preço real.</div>
+    <div class="wsub" style="margin:6px 0 0">O ITBI incide sobre o valor real da compra e venda. Sugerido pela estimativa; edite pelo preço fechado.</div>
 
     <div class="crow exato">
-      <div class="ck">ITBI (2%)<small>Sobre o maior entre venal e negócio — base ${brl(base)} (LC 344/2021)</small></div>
+      <div class="ck">ITBI (2%)<small>Sobre o valor declarado da transação — presunção de boa-fé (STJ Tema 1.113)</small></div>
       <div class="cv">${brlExato(itbi)}</div>
     </div>
+    ${abaixoVenal?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> o valor informado (${brl(CALC.negocio)}) está abaixo do venal (${brl(CALC.venal)}). Pelo Tema 1.113/STJ o ITBI é sobre o valor real da compra, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode ser preciso contestar administrativamente/judicialmente para pagar sobre o declarado.</div>`:""}
 
     <span class="clabel">Cartório — escritura + registro</span>
     <div class="cseg">
@@ -1545,10 +1548,10 @@ function renderCustos(){
 }
 function copiarCustos(){
   if(!CALC)return;
-  const a=CALC.a, base=Math.max(CALC.negocio||0,CALC.venal||0), itbi=base*0.02, cart=CALC.cartorio;
+  const a=CALC.a, itbi=(CALC.negocio||0)*0.02, cart=CALC.cartorio;
   const total=(CALC.negocio||0)+itbi+(cart||0);
   const L=["Custos de compra — Q "+clean(a.nrquadra)+" L "+clean(a.nrlote)+" · "+clean(a.nmbairro),
-    (clean(a.nmedificio)?clean(a.nmedificio)+"\n":"")+"Valor do negócio: "+brl(CALC.negocio),
+    (clean(a.nmedificio)?clean(a.nmedificio)+"\n":"")+"Valor da transação: "+brl(CALC.negocio),
     "ITBI (2%): "+brlExato(itbi),
     "Cartório (escritura+registro): "+(cart!=null?brl(cart):"a confirmar no cartório"),
     "CUSTO TOTAL: "+brl(total)+(cart==null?" (fora o cartório)":""),
