@@ -85,10 +85,12 @@
   .chk{display:flex;align-items:center;gap:8px;font:500 12px/1 "IBM Plex Sans"!important;letter-spacing:0!important;
     text-transform:none!important;color:var(--muted)!important;cursor:pointer;margin:4px 0 0!important}
   .chk input{width:auto;margin:0;accent-color:var(--accent)}
-  .chkmap{display:none;margin-top:9px!important} /* só faz sentido no mobile (no desktop o mapa já fica visível ao lado) */
   .bldg-head{margin:8px 16px 2px;padding:10px 12px;background:var(--ink);color:var(--paper-2);border-radius:2px}
-  .bldg-head .nm{font:700 13px/1.2 "IBM Plex Sans"}
-  .bldg-head .sub{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--line);margin-top:5px}
+  .bldg-head .nm{font:700 13px/1.2 "IBM Plex Sans";display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .bldg-head .tomap{flex:none;border:1px solid var(--paper-2);background:transparent;color:var(--paper-2);
+    font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.03em;padding:7px 9px;border-radius:2px;cursor:pointer;white-space:nowrap}
+  .bldg-head .tomap:hover{background:var(--paper-2);color:var(--ink)}
+  .bldg-head .sub{font:500 11px/1.3 "IBM Plex Mono",monospace;color:var(--line);margin-top:6px}
   .bldg-head.flash{animation:bldgflash 1.1s ease}
   @keyframes bldgflash{0%,100%{background:var(--ink)}25%{background:var(--accent);box-shadow:0 0 0 3px var(--accent)}}
   .card .unit{font:700 12px/1 "IBM Plex Mono",monospace;color:var(--accent);letter-spacing:.02em;margin-bottom:4px}
@@ -355,10 +357,10 @@
   .detail .acts a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .detail .acts a.primary:hover{background:#9c3a18}
 
-  .toast{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:600;background:var(--ink);color:var(--paper-2);
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
   .toast.show{display:block}
-  .loading{position:absolute;inset:0;z-index:550;background:rgba(233,228,216,.85);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+  .loading{position:fixed;inset:0;z-index:850;background:rgba(233,228,216,.85);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
   .loading.show{display:flex}
   .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -387,7 +389,6 @@
     .count .csv{padding:11px 14px;font-size:11px;margin-top:-9px}
     .pgrid .rm{width:32px;height:32px}
     .chk{min-height:44px}
-    .chkmap{display:flex}
     .detail{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;
       border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:0}
     /* cabeçalho do sheet fica GRUDADO no topo — alça e × sempre visíveis mesmo rolando */
@@ -445,7 +446,7 @@
       </div>
 
       <div id="paneUnit">
-        <label for="apto">Apto / unidade <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, se for prédio</span></label>
+        <label for="apto">Apartamento <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, só se for prédio</span></label>
         <input id="apto" placeholder="ex.: 1901 (vazio = prédio todo)" autocomplete="off">
         <label class="chk"><input type="checkbox" id="hideGar" checked> ocultar garagens e boxes</label>
       </div>
@@ -461,13 +462,12 @@
       </div>
 
       <button class="go" id="btnGo" onclick="buscar()">Buscar</button>
-      <label class="chk chkmap"><input type="checkbox" id="autoMapa"> ao buscar, abrir direto no mapa no ponto</label>
       <p class="hint">💡 ou <b>clique direto no mapa</b> sobre o imóvel para identificar o lote</p>
       <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Oportunidades Caixa (<span id="caixaN">0</span>)</button>
     </div>
 
     <div class="results" id="results">
-      <div class="empty"><div class="big">Comece pela busca</div>Escolha o setor, digite a quadra e o lote. O app varre o cadastro oficial e planta os pontos no mapa.</div>
+      <div class="empty"><div class="big">Encontre qualquer imóvel de Goiânia</div>Veja na hora o <b>preço estimado</b>, gere um <b>laudo em PDF</b> e descubra <b>oportunidades da Caixa</b> por perto.<br><br>Comece escolhendo o <b>setor</b> acima e informe a quadra e o lote — ou troque o modo para <b>Endereço</b>, <b>Prédio</b> ou <b>Inscrição</b>. Você também pode clicar direto no mapa sobre o imóvel.</div>
     </div>
 
     <details class="foot">
@@ -479,8 +479,6 @@
   <!-- MAPA -->
   <div class="mapwrap">
     <div id="map"></div>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="loading" id="loading" aria-live="polite"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
     <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
       <div class="shead">
         <div class="grab" id="grab" aria-hidden="true"></div>
@@ -498,8 +496,13 @@
     </div>
   </div>
 
+  <!-- toast/loading ficam FORA do .mapwrap: no mobile o mapa some na aba Consulta,
+       e antes as validações e o spinner ficavam invisíveis junto com ele -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="loading" id="loading" aria-live="polite"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
+
   <nav class="viewbar" id="viewbar">
-    <button id="vbBusca" class="on" onclick="setView('busca')">🔍 Busca</button>
+    <button id="vbBusca" class="on" onclick="setView('busca')">🔍 Consulta</button>
     <button id="vbMapa" onclick="setView('mapa')">🗺️ Mapa</button>
   </nav>
 </div>
@@ -621,7 +624,7 @@ function lotInfo(ci){
       const a=its[0], nun=(a.ttsublot||its.length);
       const addr=logradouroDe(a);
       let h=`<b>Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</b> · ${esc(a.nmbairro)}<br>${esc(addr)||"sem logradouro"}`;
-      if(nun>1||its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${nun} unidades · <b>toque para abrir</b>`;
+      if(nun>1||its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${nun} imóveis · <b>toque para abrir</b>`;
       else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${brl(a.vlvenal)} · <b>toque p/ detalhe</b>`;
       return h;
     }).catch(e=>{delete LOTINFO[ci];return "não foi possível carregar";});
@@ -968,7 +971,7 @@ function finish(items){
     if(!units.length){
       const msg=(MODE==="bd")?"Nenhum edifício com esse nome no cadastro. Tente parte do nome (ex.: só \"riviera\").":
         (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua — ou, se for prédio, use o modo \"Prédio\" com o nome do edifício.":
-        (MODE!=="insc"&&document.getElementById("apto").value?"Nenhuma unidade com esse número. Tente sem o apto para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
+        (MODE!=="insc"&&document.getElementById("apto").value?"Nenhum imóvel com esse número. Tente sem o apartamento para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
       return;}
@@ -976,24 +979,18 @@ function finish(items){
     plot(units);
     const nLotes=new Set(units.map(a=>clean(a.ci))).size;
     const ehPredio=units.length>1&&nLotes===1;
-    const tgl=document.getElementById("autoMapa");
-    const autoMapa=!!(tgl&&tgl.checked); /* toggle: abrir direto no mapa no ponto */
     if(isMobile()){
-      if(autoMapa){
-        /* corretor pediu para pular a lista e cair direto no mapa, no ponto */
-        setView("mapa");
-        if(ehPredio)toast("🏢 "+units.length+" apartamentos — toque no pino para ver a lista.");
-      }else if(ehPredio){
+      if(ehPredio){
         /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
         setView("busca");
-        toast("🏢 "+units.length+" apartamentos deste prédio listados abaixo ⬇");
+        toast("🏢 "+units.length+" imóveis deste prédio listados abaixo ⬇");
       }else{
         setView("mapa");
-        if(units.length>1)toast(units.length+" unidades no mapa — a lista completa está na aba Busca.");
+        if(units.length>1)toast(units.length+" imóveis no mapa — a lista completa está na aba Consulta.");
       }
     }else if(ehPredio){
       /* desktop: a lista completa já está na coluna da esquerda — avisa para não parecer "só 1 apto" */
-      toast("🏢 "+units.length+" apartamentos neste prédio — lista completa na coluna ao lado.");
+      toast("🏢 "+units.length+" imóveis neste prédio — lista completa na coluna ao lado.");
     }
 }
 
@@ -1063,16 +1060,16 @@ function render(list){
   const cnt={},nomeEd={};
   list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;
     if(!nomeEd[k]&&clean(a.nmedificio))nomeEd[k]=clean(a.nmedificio);});
-  const noun=list.length>1?"unidades":"unidade";
-  let html=`<div class="count">${list.length} ${noun}<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">⬇ CSV</button></div>`;
+  const noun=list.length>1?"imóveis":"imóvel";
+  let html=`<div class="count">${list.length} ${noun}<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">⬇ Baixar planilha</button></div>`;
   let lastCi=null;
   list.slice(0,RENDN).forEach((a,i)=>{
     const ci=clean(a.ci);
     if(ci!==lastCi){
       lastCi=ci;
       if(cnt[ci]>1){
-        const ed=esc(nomeEd[ci])||"Unidades no mesmo lote"; /* galerias/salas costumam não ter nome no cadastro */
-        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} unidades — toque numa abaixo para abrir a ficha ⬇</div></div>`;
+        const ed=esc(nomeEd[ci])||"Imóveis no mesmo lote"; /* galerias/salas costumam não ter nome no cadastro */
+        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa('${esc(ci)}')" title="Centralizar este prédio no mapa">no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div></div>`;
       }
     }
     html+=cardHTML(a,i,cnt[ci]>1);
@@ -1142,6 +1139,18 @@ function flashList(ci){
 }
 /* prédio clicado NO MAPA (pino): joga o corretor para a lista de apartamentos daquele lote. */
 function revealList(ci){if(isMobile())setView("busca");flashList(ci);}
+/* botão "no mapa ↗" do cabeçalho do prédio: leva ao mapa e centraliza/pisca o pino do lote.
+   É a contrapartida do revealList — decisão contextual, no momento em que o corretor tem o prédio à frente. */
+function verNoMapa(ci){
+  const a=(LAST||[]).find(x=>clean(x.ci)===clean(ci)&&x.x_coord&&x.y_coord);
+  if(!a){toast("Este prédio não tem coordenada no cadastro.");return;}
+  const ll=toWGS(a.x_coord,a.y_coord);
+  const go=()=>{map.setView(ll,18);
+    const mk=markers[LAST.indexOf(a)];
+    if(mk){mk.setStyle({radius:13,fillColor:"#c9691f"});
+      setTimeout(()=>{try{mk.setStyle({radius:8,fillColor:"#b5451f"});}catch(e){}},1300);}};
+  if(isMobile()){setView("mapa");setTimeout(go,80);}else go(); /* espera o mapa remedir ao voltar a ficar visível */
+}
 
 /* ---------------- selecionar ---------------- */
 function pick(i){
@@ -1179,7 +1188,7 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
     <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
-    <div class="cell"><div class="k">Unid. no lote</div><div class="v">${a.ttsublot||"—"}</div></div>`;
+    <div class="cell"><div class="k">Imóveis no lote</div><div class="v">${a.ttsublot||"—"}</div></div>`;
   const compsBox=document.getElementById("dComps");
   const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
   if(DCUR!==a)d.scrollTop=0; /* imóvel novo: sheet abre no topo (senão o × fica fora da tela) */
@@ -1710,10 +1719,6 @@ function closeDetail(){document.getElementById("detail").classList.remove("show"
 /* ---------------- init ---------------- */
 document.body.dataset.view="busca";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
-/* toggle "abrir direto no mapa": lembra a preferência entre sessões */
-(function(){const t=document.getElementById("autoMapa");if(!t)return;
-  try{t.checked=localStorage.getItem("radar_autoMapa")==="1";}catch(e){}
-  t.addEventListener("change",()=>{try{localStorage.setItem("radar_autoMapa",t.checked?"1":"0");}catch(e){}});})();
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
