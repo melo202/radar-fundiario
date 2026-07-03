@@ -1,9 +1,16 @@
 # Como publicar o Radar Fundiário no GitHub Pages
 
-> ✅ **JÁ PUBLICADO em 02/07/2026:** https://melo202.github.io/radar-fundiario/
-> (repositório `melo202/radar-fundiario`, Pages servido pelo branch `gh-pages`).
+> ✅ **JÁ PUBLICADO:** https://melo202.github.io/radar-fundiario/
+> (repositório `melo202/radar-fundiario`).
 > Os passos 1–4 abaixo ficam como registro; o que importa no dia a dia é a
 > seção **"Como atualizar depois"**.
+
+> 🔧 **RECOMENDADO (uma vez, ~30s): ative o deploy por GitHub Actions.**
+> O projeto já tem o workflow `.github/workflows/pages.yml`, que corrige as
+> falhas intermitentes de deploy e publica só os arquivos do app (os documentos
+> internos deixam de ficar públicos). Para ligar: **Settings ▸ Pages ▸ Source:
+> "GitHub Actions"**. Depois disso, atualizar o site passa a ser um simples
+> **`git push`** (sem o `master:gh-pages`).
 
 Tempo estimado: 10 minutos. Faz uma vez só — depois, atualizar é 1 comando.
 
