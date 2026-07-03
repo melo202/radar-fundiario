@@ -923,6 +923,9 @@ function finish(items){
    atualizar 1-2x/ano); 2) laudos reais da Caixa no setor; 3) multiplicador manual. */
 /* NBR 14653-2, fator oferta: preço ANUNCIADO -> preço esperado de FECHAMENTO (anúncio costuma vir inflado) */
 const FATOR_OFERTA=0.90;
+/* a área construída do CADASTRO em apartamento é a TOTAL tributável (privativa + quota de comum + vaga);
+   o R$/m² de mercado é cotado por área PRIVATIVA. Razão privativa/total típica medida: ~0,55–0,70. */
+const FATOR_PRIV=0.60;
 const M2_MERCADO={ref:"FipeZap/imprensa 2025-26",bairros:{
   "14":10800, /* Setor Marista */
   "16":9400,  /* Setor Bueno */
@@ -937,15 +940,19 @@ const M2_MERCADO={ref:"FipeZap/imprensa 2025-26",bairros:{
 }};
 const brlC=n=>n==null?"—":n>=995000?"R$ "+(n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi"
   :n>=1000?"R$ "+Math.round(n/1e3).toLocaleString("pt-BR")+" mil":brl(n);
-function mercadoEstimado(a){
+function mercadoEstimado(a,privReal){
   const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
   /* tabela FipeZap é residencial: só apto residencial (uso 1/misto 5), nunca sala/loja/box */
   const podeTabela=isU&&m2b&&a.areaedif>0&&(a.uso===1||a.uso===5)&&!isGarage(a);
   if(podeTabela){
-    const v=a.areaedif*m2b*FATOR_OFERTA;
+    /* R$/m² de anúncio é por área PRIVATIVA; a área do cadastro é a TOTAL (c/ comum e vaga) */
+    const priv=privReal>0?privReal:a.areaedif*FATOR_PRIV;
+    const v=priv*m2b*FATOR_OFERTA;
     return {lo:v*.88,hi:v*1.12,
-      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m² anunciado, "+M2_MERCADO.ref+", com fator oferta 0,90 da NBR 14653-2 — anúncio costuma vir acima do fechamento)"};
+      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m² anunciado, "+M2_MERCADO.ref+", fator oferta 0,90 da NBR 14653-2) sobre "+(privReal>0
+        ?("a área privativa informada de "+Math.round(privReal)+" m²")
+        :("área privativa estimada de ~"+Math.round(priv)+" m² (60% da área total do cadastro, que inclui comum e vaga — informe a privativa real no laudo para refinar)"))};
   }
   const vv=a.vlvenal||0;if(!vv)return null;
   const fx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
@@ -1069,7 +1076,7 @@ function showDetail(a,ll){
   document.getElementById("dInsc").textContent="Inscrição "+(insc||ci||"—")+(ul&&ci?"  ·  lote "+ci:"");
   const pm2=m2Edif(a),pm2t=m2Terr(a),isU=!!ul;
   document.getElementById("dGrid").innerHTML=`
-    <div class="cell"><div class="k">${isU?"Área construída":"Terreno"}</div><div class="v">${isU?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</div></div>
+    <div class="cell"><div class="k">${isU?"Área total (c/ comum)":"Terreno"}</div><div class="v">${isU?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${brl(a.vlvenal)}</div></div>
@@ -1215,7 +1222,7 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
   /* fator: ancora na tabela de mercado do bairro (se houver), senão laudos Caixa, senão o manual */
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
-  const cEff=(isU&&m2b&&r.med>0)?m2b*FATOR_OFERTA/r.med:(fxCx?fxCx.fator:AUTO_COEF);
+  const cEff=(isU&&m2b&&r.med>0)?m2b*FATOR_OFERTA*FATOR_PRIV/r.med:(fxCx?fxCx.fator:AUTO_COEF);
   box.innerHTML=`<div class="cmp">
     <div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m
       <span class="badge ${conf[0]}">${conf[1]}</span></div>
@@ -1241,7 +1248,7 @@ function abrirLaudo(){
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
   const hojeISO=new Date().toISOString().slice(0,10);
   LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null,
-      vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra"};
+      vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",privativa:null};
   const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
   getComps(DCUR).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   WIZRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
@@ -1296,7 +1303,8 @@ function wizRender(){
       <div class="seg"><button aria-pressed="${LZ.vistoria}" class="${LZ.vistoria?'on':''}" onclick="wizSet('vistoria',true)">Vistoriei o imóvel</button><button aria-pressed="${!LZ.vistoria}" class="${!LZ.vistoria?'on':''}" onclick="wizSet('vistoria',false)">Sem vistoria</button></div>
       ${LZ.vistoria?`<input class="winput" style="margin-top:10px" type="date" value="${LZ.dataVist}" oninput="LZ.dataVist=this.value">`:""}`;
   }else if(LZ.step===1){
-    const est=mercadoEstimado(a);
+    const isUw=!!unitLabel(a)||(a.cdedificio||0)>0;
+    const est=mercadoEstimado(a,LZ.privativa);
     const fc=FATOR_CONSERV[LZ.conserv]||1;
     const g=LZ.comps;
     /* âncora relativa: um imóvel acima/abaixo da mediana venal da vizinhança carrega essa posição p/ o mercado */
@@ -1308,6 +1316,9 @@ function wizRender(){
     b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">Sugerido pela análise — ajuste pelo seu conhecimento.</div>
       <div class="wcard">${est?`Faixa estimada: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem estimativa disponível para este imóvel."}
         ${g&&g.res&&g.res.n>=3?`<br><br>Vizinhança: <b>${g.res.n} imóveis parecidos</b> em ${g.radius} m · meio da faixa ${brl(g.res.med)}/m² (base cadastro)`:(g===null?"":"<br><br>⏳ analisando a vizinhança…")}</div>
+      ${isUw?`<span class="wlabel">Área privativa (m²) — refina muito o valor</span>
+      <input class="winput" inputmode="numeric" placeholder="ex.: 84 — o cadastro traz a área TOTAL (${a.areaedif?Math.round(a.areaedif)+" m²":"?"}), com comum e vaga"
+        value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null" onchange="wizRender()">`:""}
       ${fc!==1?`<div class="wsub" style="margin:8px 0 0">Ajuste pelo estado "${esc(LZ.conserv)}": ${fc>1?"+":""}${Math.round((fc-1)*100)}%.</div>`:""}
       ${rel!==1?`<div class="wsub" style="margin:4px 0 0">Ajuste pela posição do imóvel na vizinhança: ${rel>1?"+":""}${Math.round((rel-1)*100)}%.</div>`:""}
       <span class="wlabel">Valor de venda sugerido (R$)</span>
@@ -1346,7 +1357,7 @@ function wizNext(){
   montarLaudo();
 }
 function montarLaudo(){
-  const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a),g=LZ.comps,ul=unitLabel(a);
+  const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a,LZ.privativa),g=LZ.comps,ul=unitLabel(a);
   const hoje=new Date().toLocaleDateString("pt-BR");
   const addr=addrDe(a);
   const comCreci=!!(p.creci||"").trim();
@@ -1363,7 +1374,8 @@ function montarLaudo(){
     ul?["Unidade",esc(ul)+(clean(a.nmedificio)?" — "+esc(a.nmedificio):"")]:null,
     ["Uso",USO[a.uso]||"—"],
     ["Área do terreno",a.areaterr?Math.round(a.areaterr)+" m²"+(ul?" (fração ideal)":""):"—"],
-    ["Área construída",a.areaedif?Math.round(a.areaedif)+" m²":"—"],
+    ["Área construída (total, cadastro)",a.areaedif?Math.round(a.areaedif)+" m²"+(ul?" — inclui área comum e vaga":""):"—"],
+    LZ.privativa?["Área privativa (informada)",Math.round(LZ.privativa)+" m²"]:null,
     ["No cadastro municipal desde",fmtDt(a.dtinclusao)||"—"],
     ["IPTU lançado (exercício)",a.vlimp98?brl(a.vlimp98):"—"],
     ["Valor venal (base fiscal)",brl(a.vlvenal)],

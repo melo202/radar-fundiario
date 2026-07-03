@@ -97,6 +97,8 @@ Decisão do dono do projeto (02/07/2026): **o app não embute IA** — nenhum mo
 
 ## Regras de exibição (fixas)
 
+- **`areaedif` de apartamento é a área TOTAL tributável** (privativa + quota de comum + vaga) — comprovado em 03/07/2026 no Near Easy Style (privativas reais 63–84 m² vs areaedif 112–187 m²; `areatest` é a testada do lote e `areattedif` é o prédio inteiro). O R$/m² de mercado é por privativa: toda conversão usa `FATOR_PRIV=0,60` (declarado na UI) ou a **privativa informada pelo corretor no laudo**, que tem precedência.
+
 - `dtnascimen`: **nunca** exibir/exportar (dado pessoal).
 - Venal = referência **relativa** (posição na vizinhança), imune à defasagem da PGV; conversão a mercado sempre como **faixa** via coeficiente por setor.
 - Atribuições no rodapé quando usar: © OpenStreetMap contributors (ODbL), IBGE, INEP, Fipe/FipeZap, ABECIP, Prefeitura de Goiânia.
