@@ -84,6 +84,21 @@ Ver análise no fim. `index.html` (redirecionamento) já criado; manifest/sw/íc
 
 ---
 
+## P1 — Laudo de avaliação automatizado (pedido em 03/07/2026) — ⬜
+
+Gerador de **Relatório de Referência de Mercado / PTAM** para o corretor, 100% client-side e sem IA:
+- **Wizard estilo iOS**: passos curtos, um assunto por tela, campos grandes, toque simples — estado de conservação, diferenciais (armários, reforma, andar, sol), fotos opcionais, dados do solicitante. Tudo que o app já sabe vem **pré-preenchido** (cadastro, áreas, IPTU, comparáveis da vizinhança, faixa de mercado, mini-mapa do lote).
+- **Saída**: PDF bonito e timbrável (nome/CRECI/logo do corretor), com metodologia declarada (comparativo de mercado, mediana e faixa, fontes com data) e disclaimer correto (PTAM é ato de corretor inscrito — Res. COFECI 1.066/2007; sem CRECI, o documento sai como "relatório de referência").
+- Geração de PDF no navegador (ex.: via `window.print()` com folha de estilo dedicada, ou jsPDF) — continua funcionando offline.
+
+## Regra de qualidade das âncoras de preço (03/07/2026)
+
+Toda calibração de mercado (tabela por bairro, futuros ajustes) segue:
+- **Mediana de imóvel USADO** — nunca preço de **lançamento** (padrão construtivo fora da curva da vizinhança) nem **anúncio isolado** (corretor inexperiente infla preço).
+- Outliers cortados (cerca de Tukey/MAD) antes de qualquer média/mediana — já aplicado nos comparáveis.
+- Fonte + data sempre declaradas na interface.
+- A régua manual de coeficiente foi **removida da UI** (03/07/2026): o app escolhe sozinho a melhor fonte (tabela do bairro → laudos Caixa → estimativa genérica com faixa larga e aviso de baixa precisão).
+
 ## P2 — Backlog estruturado
 
 15. **Metodologia do valor de referência** — evoluída para o plano de inteligência (ver `INTELIGENCIA-radar.md`, baseado em pesquisa de 10 frentes em 02/07/2026):
