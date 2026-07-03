@@ -1,5 +1,10 @@
 # Pedido LAI — Microdados anonimizados do ITBI de Goiânia
 
+> ✅ **PROTOCOLADO em 03/07/2026 — Protocolo nº 2026077355667003**
+> Prazo de resposta: **23/07/2026** (20 dias) · com prorrogação: **02/08/2026**
+> Se vier negativa: recurso em **10 dias** (me mande o texto que eu redijo).
+> Se vier a base: me mande o arquivo que eu pluggo no Radar (preço real de cartório).
+
 > **Como protocolar:** acesse https://www.goiania.go.gov.br/ouvidoria-e-sic/servico-informacao-cidadao/
 > e clique em **"Fazer uma solicitação"** (e-SIC eletrônico). Identifique-se com CPF,
 > cole o texto abaixo no campo da solicitação e envie. **Guarde o número de protocolo.**

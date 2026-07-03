@@ -103,6 +103,9 @@
   .count .csv{float:right;margin-top:-6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);
     font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;padding:6px 9px;border-radius:2px;cursor:pointer}
   .count .csv:hover{border-color:var(--accent);color:var(--accent)}
+  .mais{display:block;width:calc(100% - 32px);margin:10px 16px 14px;border:1.5px dashed var(--line);background:var(--paper);
+    color:var(--muted);font:600 12px/1.4 "IBM Plex Sans";padding:12px;border-radius:2px;cursor:pointer;min-height:44px}
+  .mais:hover{border-color:var(--accent);color:var(--accent)}
   .card{margin:8px 16px;background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--lot);
     border-radius:2px;padding:13px 14px;cursor:pointer;transition:border-color .12s,transform .05s}
   .card:hover{border-left-color:var(--accent);border-color:var(--muted)}
@@ -784,7 +787,7 @@ async function buscar(){
   const tk=++SEARCHTOKEN;
   btn.disabled=true;closeDetail();
   try{
-    let items=[];
+    let items=[],aviso=null;
     if(MODE==="insc"){
       const ci=clean(document.getElementById("insc").value).replace(/\D/g,"");
       if(!ci){toast("Digite a inscrição cadastral.");return;}
@@ -809,12 +812,22 @@ async function buscar(){
       let all=await fetchWhere(whereA);
       /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
       if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`,8);
+      const casaRua=a=>{const log=norm(a.nmlogradou);
+        return log.includes(rN)||(rD&&(log.match(/\d+/g)||[]).includes(rD));};
       items=all.filter(a=>{
-        const log=norm(a.nmlogradou);
-        const okR=log.includes(rN)||(rD&&(log.match(/\d+/g)||[]).includes(rD));
         const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
-        return okR&&okN;
+        return casaRua(a)&&okN;
       });
+      /* prédios costumam estar SEM número no cadastro (nrimovel vazio/"S/N"):
+         se o número não casar, mostra a rua inteira em vez de "nada encontrado" */
+      if(!items.length&&nN){
+        loading(true,"número não achado — varrendo a rua…");
+        let all2;
+        if(rD)all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND nmlogradou LIKE '%${rD}%'`);
+        else all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND UPPER(nmlogradou) LIKE '%${rN.replace(/'/g,"")}%'`,8);
+        items=all2.filter(casaRua);
+        if(items.length)aviso="Número "+num+" não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira.";
+      }
     }else if(MODE==="bd"){
       /* busca por NOME do edifício — setor opcional (a cidade toda responde em ~3s) */
       const nome=norm(clean(document.getElementById("predio").value)).replace(/'/g,"");
@@ -854,6 +867,7 @@ async function buscar(){
     }
     if(tk!==SEARCHTOKEN)return;
     finish(items);
+    if(aviso&&items.length)setTimeout(()=>toast(aviso),450); /* depois do toast do finish */
   }catch(e){
     if(tk===SEARCHTOKEN)toast(navigator.onLine?"Falha ao consultar o cadastro. Tente de novo.":"Você está offline — a busca precisa de internet.");
   }finally{if(tk===SEARCHTOKEN){loading(false);btn.disabled=false;}}
@@ -872,7 +886,7 @@ function finish(items){
     }
     units.sort((x,y)=>{const cx=clean(x.ci),cy=clean(y.ci);
       return cx<cy?-1:cx>cy?1:(x.insubprinc||0)-(y.insubprinc||0);});
-    LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;
+    LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;RENDN=300;
     if(!units.length){
       const msg=(MODE==="bd")?"Nenhum edifício com esse nome no cadastro. Tente parte do nome (ex.: só \"riviera\").":
         (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua e o número.":
@@ -948,23 +962,28 @@ function unitLabel(a){
   return s;
 }
 
+let RENDN=300; /* teto de cards por render — listas gigantes não travam o iPhone */
 function render(list){
   const box=document.getElementById("results");
-  const cnt={};list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;});
+  const cnt={},nomeEd={};
+  list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;
+    if(!nomeEd[k]&&clean(a.nmedificio))nomeEd[k]=clean(a.nmedificio);});
   const noun=list.length>1?"unidades":"unidade";
   let html=`<div class="count">${list.length} ${noun}<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">⬇ CSV</button></div>`;
   let lastCi=null;
-  list.forEach((a,i)=>{
+  list.slice(0,RENDN).forEach((a,i)=>{
     const ci=clean(a.ci);
     if(ci!==lastCi){
       lastCi=ci;
       if(cnt[ci]>1){
-        const ed=esc(a.nmedificio)||"Edifício";
+        const ed=esc(nomeEd[ci])||"Unidades no mesmo lote"; /* galerias/salas costumam não ter nome no cadastro */
         html+=`<div class="bldg-head"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} unidades listadas</div></div>`;
       }
     }
     html+=cardHTML(a,i,cnt[ci]>1);
   });
+  if(list.length>RENDN)
+    html+=`<button class="mais" onclick="RENDN+=500;render(LAST)">Mostrar mais (${(list.length-RENDN).toLocaleString("pt-BR")} restantes) — o CSV e o mapa já incluem todos</button>`;
   box.innerHTML=html;
 }
 function cardHTML(a,i,isUnit){
