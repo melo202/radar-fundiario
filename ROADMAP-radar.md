@@ -42,9 +42,8 @@ Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
 
 ## P0 — Bugs conhecidos do briefing
 
-5. 🔶 **Botão "titular" apontava para a página errada** (`siptu00020` = características, não o dono).
-   Implementado: o botão agora **copia a inscrição para a área de transferência** (toast confirma) e abre a **Consulta e Emissão de Guia** (`siptu00200f0.asp`), candidata a exibir "Contribuinte: NOME".
-   **Pendente (manual, exige CAPTCHA):** confirmar se a guia exibe mesmo o contribuinte; a alternativa é a Certidão de Detalhamento Cadastral (`saces00000f0.asp?sigla=sccer`). Se for a certidão, trocar 1 linha (constante `iptu`).
+5. ✅ **Titular — RESOLVIDO em 03/07/2026 (definição do usuário): é pela CND.**
+   O botão "Titular (CND)" copia a inscrição e abre `goiania.go.gov.br/asp/certidao/cer02f.asp` (Certidão Negativa de Débitos IPTU-ITU/Taxas) — a certidão emitida traz o nome do titular. Formulário testado: POST + CAPTCHA, campo `insc`; **ignora querystring** (verificado com `?insc=...`), então pré-preenchimento por URL é impossível — o fluxo de copiar a inscrição é o máximo permitido sem automação.
 6. 🔶 **iOS — autocomplete de setor não abre ao digitar.** Aplicadas as correções padrão: fechamento da lista por `pointerdown` (em vez de `click`, que no Safari engolia o toque) e `font-size: 16px` nos inputs (mata o auto-zoom do iOS, suspeito de bagunçar o foco). **Pendente: teste no iPhone real** — se persistir, investigar com Safari remoto.
 7. ✅ **Deixar explícito que o app não devolve o dono**: já coberto no rodapé + title do botão titular.
 

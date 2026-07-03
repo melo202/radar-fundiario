@@ -366,7 +366,7 @@
     </div>
 
     <div class="foot">
-      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (Fipe/MySide/imprensa, 07/2026). O nome do titular não é lido por aqui — é consultado por você, manualmente, no portal oficial.
+      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (FipeZap/imprensa 2025-26), ajustados pelo fator oferta 0,90 (NBR 14653-2). O nome do titular não é lido por aqui — é consultado por você, manualmente, na CND oficial.
     </div>
   </aside>
 
@@ -756,12 +756,19 @@ function finish(items){
 /* ---------------- estimativa de mercado (melhor fonte disponível) ----------------
    Prioridade: 1) R$/m² de mercado do bairro (fontes públicas, transcrição manual —
    atualizar 1-2x/ano); 2) laudos reais da Caixa no setor; 3) multiplicador manual. */
-const M2_MERCADO={ref:"07/2026",bairros:{
-  "14":10700, /* Setor Marista  — MySide/Secovi 2026 */
-  "16":9300,  /* Setor Bueno */
+/* NBR 14653-2, fator oferta: preço ANUNCIADO -> preço esperado de FECHAMENTO (anúncio costuma vir inflado) */
+const FATOR_OFERTA=0.90;
+const M2_MERCADO={ref:"FipeZap/imprensa 2025-26",bairros:{
+  "14":10800, /* Setor Marista */
+  "16":9400,  /* Setor Bueno */
   "72":9300,  /* Jardim Goiás */
-  "17":8000,  /* Jardim América */
-  "15":7850   /* Setor Pedro Ludovico */
+  "3":8350,   /* Setor Oeste */
+  "17":7990,  /* Jardim América */
+  "15":7840,  /* Setor Pedro Ludovico */
+  "63":6870,  /* Parque Amazônia */
+  "19":6450,  /* Bairro Nova Suíça */
+  "20":5600,  /* Setor Sudoeste */
+  "1":5150    /* Setor Central */
 }};
 const brlC=n=>n==null?"—":n>=995000?"R$ "+(n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi"
   :n>=1000?"R$ "+Math.round(n/1e3).toLocaleString("pt-BR")+" mil":brl(n);
@@ -769,9 +776,9 @@ function mercadoEstimado(a){
   const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
   if(isU&&m2b&&a.areaedif>0){
-    const v=a.areaedif*m2b;
-    return {lo:v*.85,hi:v*1.15,
-      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m², fontes públicas "+M2_MERCADO.ref+")"};
+    const v=a.areaedif*m2b*FATOR_OFERTA;
+    return {lo:v*.88,hi:v*1.12,
+      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m² anunciado, "+M2_MERCADO.ref+", com fator oferta 0,90 da NBR 14653-2 — anúncio costuma vir acima do fechamento)"};
   }
   const vv=a.vlvenal||0;if(!vv)return null;
   const fx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
@@ -906,14 +913,15 @@ function showDetail(a,ll){
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gearth=`https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}`;
-  /* Portal de Tributos (OutSystems): consulta por inscrição -> contribuinte/CPF e 2ª via. Sem automação: só copia a inscrição. */
-  const iptu="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos";
+  /* CND da prefeitura (cer02f.asp): informe a inscrição + CAPTCHA e a certidão sai com o nome do titular.
+     A página ignora querystring (testado) — sem pré-preenchimento possível; copiamos a inscrição. */
+  const cnd="https://www.goiania.go.gov.br/asp/certidao/cer02f.asp";
   const inscUse=esc(insc||ci);
   document.getElementById("dActs").innerHTML=`
     <a class="primary" href="${gmaps}" target="_blank" rel="noopener">Google Maps ↗</a>
     <a href="${gsv}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="${gearth}" target="_blank" rel="noopener">Earth ↗</a>
-    <a href="${iptu}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre o Portal de Tributos — cole na consulta para ver o contribuinte e emitir a 2ª via">Titular / 2ª via ⧉↗</a>`;
+    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre a CND da prefeitura — cole no campo, resolva o CAPTCHA e a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>`;
   d.classList.add("show");
 }
 function copyInsc(v){
@@ -1016,7 +1024,7 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
   /* fator: ancora na tabela de mercado do bairro (se houver), senão laudos Caixa, senão o manual */
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
-  const cEff=(isU&&m2b&&r.med>0)?m2b/r.med:(fxCx?fxCx.fator:AUTO_COEF);
+  const cEff=(isU&&m2b&&r.med>0)?m2b*FATOR_OFERTA/r.med:(fxCx?fxCx.fator:AUTO_COEF);
   box.innerHTML=`<div class="cmp">
     <div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m
       <span class="badge ${conf[0]}">${conf[1]}</span></div>
@@ -1033,6 +1041,8 @@ async function renderComps(box,r,myPm2,radius,isU,a){
 
 /* ---------------- laudo de avaliação: wizard iOS-style + PDF via impressão ---------------- */
 const CONSERVS=["Novo","Ótimo","Bom","Regular","Precisa reforma"];
+/* ajuste do valor sugerido pelo estado declarado (depreciação simplificada) */
+const FATOR_CONSERV={"Novo":1.06,"Ótimo":1.03,"Bom":1,"Regular":0.93,"Precisa reforma":0.85};
 const DIFS=["Reformado","Armários planejados","Área gourmet","Piscina","Esquina","Sol da manhã","Andar alto","Vaga extra","Quintal amplo","Documentação ok"];
 let LZ=null;
 function abrirLaudo(){
@@ -1073,11 +1083,15 @@ function wizRender(){
       <div class="chips">${DIFS.map(d=>`<button class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>`;
   }else if(LZ.step===1){
     const est=mercadoEstimado(a);
-    if(LZ.valor==null&&est)LZ.valor=Math.round((est.lo+est.hi)/2/1000)*1000;
+    const fc=FATOR_CONSERV[LZ.conserv]||1;
+    const sug=est?Math.round((est.lo+est.hi)/2*fc/1000)*1000:null;
+    if(LZ.valor==null||LZ.valor===LZ.valorAuto)LZ.valor=sug; /* só sobrescreve se o usuário não editou */
+    LZ.valorAuto=sug;
     const g=LZ.comps;
     b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">Sugerido pela análise — ajuste pelo seu conhecimento.</div>
       <div class="wcard">${est?`Faixa estimada: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem estimativa disponível para este imóvel."}
         ${g&&g.res&&g.res.n>=3?`<br><br>Vizinhança: <b>${g.res.n} imóveis parecidos</b> em ${g.radius} m · meio da faixa ${brl(g.res.med)}/m² (base cadastro)`:(g===null?"":"<br><br>⏳ analisando a vizinhança…")}</div>
+      ${fc!==1?`<div class="wsub" style="margin:8px 0 0">Ajuste pelo estado "${esc(LZ.conserv)}": ${fc>1?"+":""}${Math.round((fc-1)*100)}%.</div>`:""}
       <span class="wlabel">Valor de venda sugerido (R$)</span>
       <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null">
       <span class="wlabel">Observações (opcional)</span>
@@ -1160,7 +1174,7 @@ function montarLaudo(){
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</section>
     ${LZ.fotos.length?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.map(f=>`<img src="${f}">`).join("")}</div></section>`:""}
     <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
-      <p class="lmiudo">Método comparativo direto de dados de mercado: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), com conversão a mercado por referências públicas de R$/m² por bairro (Fipe/MySide/imprensa, ${M2_MERCADO.ref}) e, quando disponíveis, laudos públicos de avaliação da CAIXA. A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra. Este documento expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Emitido como PTAM na forma da Resolução COFECI nº 1.066/2007.":" A emissão de PTAM é privativa de corretor inscrito no CRECI (Res. COFECI nº 1.066/2007)."}</p>
+      <p class="lmiudo">Método comparativo direto de dados de mercado: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), com conversão a mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra. Este documento expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Emitido como PTAM na forma da Resolução COFECI nº 1.066/2007.":" A emissão de PTAM é privativa de corretor inscrito no CRECI (Res. COFECI nº 1.066/2007)."}</p>
       <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}</div></section>`;
   document.body.classList.add("print-laudo");
   const done=()=>{document.body.classList.remove("print-laudo");window.removeEventListener("afterprint",done);};
