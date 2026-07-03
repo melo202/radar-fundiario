@@ -1489,6 +1489,11 @@ function montarLaudo(){
    ITBI é EXATO (2% sobre o maior entre venal e valor do negócio — LC 344/2021 Goiânia).
    Cartório (escritura+registro) é tabela oficial em degraus (TJGO): campo editável + calculadora oficial. */
 const brlExato=n=>n==null?"—":Number(n).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
+/* Tabelas oficiais TJGO 2026 (reajuste Prov. 179/2025). Coluna TOTAL (emolumento + ISSQN 5% + fundos).
+   [teto do valor declarado, total a pagar]. REGISTRO: item 76 do PDF oficial RI-GO. ESCRITURA: ato 63A notas (CNB-GO). */
+const REGISTRO_GO=[[653.80,79.57],[1307.62,120.62],[2615.24,153.98],[5230.47,223.29],[10460.94,438.86],[15691.43,469.63],[26152.37,597.96],[39228.54,757.09],[52304.74,1003.46],[65380.92,1193.35],[104609.47,1673.27],[156914.21,2515.05],[261523.68,3387.62],[375536.58,4447.54],[523047.35,5240.56],[784571.03,6290.21],[1176856.54,7537.47],[1569142.07,8764.20],[Infinity,9573.97]];
+const ESCRITURA_GO=[[653.80,168.89],[1307.62,226.42],[2615.24,285.81],[5230.47,376.71],[10460.94,694.05],[15691.43,738.58],[26152.37,920.44],[39228.54,1148.69],[52304.74,1514.27],[65380.92,1787.04],[104609.47,2330.77],[156914.21,3466.45],[172643.46,4223.57],[261523.68,4281.08],[287739.06,5038.22],[392285.51,5153.33],[523047.35,5910.44],[575478.22,6292.72],[1150956.52,6407.89],[Infinity,6637.98]];
+const emolumento=(tab,v)=>{for(const[teto,tot]of tab)if((v||0)<=teto)return tot;return tab[tab.length-1][1];};
 let CALC=null;
 function abrirCustos(){
   const a=DCUR;if(!a)return;
@@ -1507,55 +1512,65 @@ function renderCustos(){
   const a=CALC.a;
   /* ITBI sobre o VALOR DA TRANSAÇÃO declarado (STJ Tema 1.113) — NÃO sobre o venal.
      Se o declarado ficar abaixo do venal, alertamos: a Prefeitura costuma resistir. */
-  const itbi=(CALC.negocio||0)*0.02;
-  const abaixoVenal=(CALC.negocio||0)>0&&(CALC.negocio||0)<(CALC.venal||0);
-  const cart=CALC.cartorio!=null?CALC.cartorio:null;
-  const total=(CALC.negocio||0)+itbi+(cart||0);
-  const pct=CALC.negocio>0?((itbi+(cart||0))/CALC.negocio*100):0;
-  /* calculadora oficial do cartório de RI de Goiás */
+  const v=CALC.negocio||0;
+  const itbi=v*0.02;
+  const abaixoVenal=v>0&&v<(CALC.venal||0);
+  /* cartório EXATO pelas tabelas oficiais TJGO 2026. Financiado (SFH): contrato do banco dispensa a escritura. */
+  const escritura=CALC.financiado?0:emolumento(ESCRITURA_GO,v);
+  const registro=emolumento(REGISTRO_GO,v);
+  const cart=escritura+registro;
+  const total=v+itbi+cart;
+  const custos=itbi+cart;
+  const pct=v>0?(custos/v*100):0;
   const linkCartorio="https://registrosdegoias.com.br/custas-e-emolumentos/";
   document.getElementById("calcBody").innerHTML=`
     <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
     <span class="clabel">Valor da transação (R$)</span>
     <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
-    <div class="wsub" style="margin:6px 0 0">O ITBI incide sobre o valor real da compra e venda. Sugerido pela estimativa; edite pelo preço fechado.</div>
+    <div class="wsub" style="margin:6px 0 0">Todos os custos incidem sobre o valor real da compra e venda. Sugerido pela estimativa; edite pelo preço fechado.</div>
 
-    <div class="crow exato">
-      <div class="ck">ITBI (2%)<small>Sobre o valor declarado da transação — presunção de boa-fé (STJ Tema 1.113)</small></div>
-      <div class="cv">${brlExato(itbi)}</div>
-    </div>
-    ${abaixoVenal?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> o valor informado (${brl(CALC.negocio)}) está abaixo do venal (${brl(CALC.venal)}). Pelo Tema 1.113/STJ o ITBI é sobre o valor real da compra, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode ser preciso contestar administrativamente/judicialmente para pagar sobre o declarado.</div>`:""}
-
-    <span class="clabel">Cartório — escritura + registro</span>
     <div class="cseg">
       <button class="${!CALC.financiado?'on':''}" onclick="CALC.financiado=false;renderCustos()">À vista</button>
       <button class="${CALC.financiado?'on':''}" onclick="CALC.financiado=true;renderCustos()">Financiado</button>
     </div>
-    ${CALC.financiado?`<div class="wsub" style="margin:8px 0 0">No financiamento bancário o contrato já vale como escritura (instrumento particular com força de escritura pública) — costuma <b>dispensar a escritura no tabelião</b>, pagando só o registro. Confirme com o banco/cartório.</div>`:""}
-    <input class="cinput" style="margin-top:10px" inputmode="numeric" placeholder="informe o valor do cartório"
-      value="${CALC.cartorio!=null?CALC.cartorio:""}" oninput="CALC.cartorio=this.value.replace(/\\D/g,'')?parseInt(this.value.replace(/\\D/g,''),10):null;renderCustos()">
-    <a class="cmini" href="${linkCartorio}" target="_blank" rel="noopener">Calcular no cartório oficial (RI-GO) ↗</a>
-    <div class="wsub" style="margin:6px 0 0">Emolumentos são tabelados por faixa de valor (TJGO). Pegue o valor exato na calculadora oficial e informe acima${cart==null?" — o total abaixo já soma ITBI e negócio":""}.</div>
+    ${CALC.financiado?`<div class="wsub" style="margin:8px 0 0">No financiamento o contrato do banco vale como escritura — <b>dispensa a escritura no tabelião</b>, paga-se só o registro.</div>`:""}
+
+    <div class="crow exato">
+      <div class="ck">ITBI (2%)<small>Sobre o valor declarado (STJ Tema 1.113), não o venal</small></div>
+      <div class="cv">${brlExato(itbi)}</div>
+    </div>
+    ${abaixoVenal?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> abaixo do venal (${brl(CALC.venal)}). O Tema 1.113/STJ garante o ITBI sobre o valor real, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode exigir contestação.</div>`:""}
+    ${CALC.financiado?"":`<div class="crow exato">
+      <div class="ck">Escritura pública (tabelião)<small>Tabela TJGO 2026 · dispensada no financiamento</small></div>
+      <div class="cv">${brlExato(escritura)}</div>
+    </div>`}
+    <div class="crow exato">
+      <div class="ck">Registro do imóvel<small>Tabela oficial RI-GO 2026 (item 76)</small></div>
+      <div class="cv">${brlExato(registro)}</div>
+    </div>
 
     <div class="crow total">
-      <div class="ck">Custo total de aquisição${cart==null?" (sem cartório)":""}</div>
+      <div class="ck">Custo total de aquisição</div>
       <div class="cv">${brl(total)}</div>
     </div>
-    <div class="wsub" style="margin:6px 2px 0">Custos além do preço: <b>${brl(itbi+(cart||0))}</b>${cart!=null?` (${pct.toFixed(1).replace(".",",")}% do valor)`:""}.</div>
+    <div class="wsub" style="margin:6px 2px 0">Custos além do preço: <b>${brl(custos)}</b> (${pct.toFixed(1).replace(".",",")}% do valor).</div>
 
     <button class="cmini" style="border-color:var(--accent);color:var(--accent)" onclick="copiarCustos()">⧉ Copiar resumo para o cliente</button>
-    <div class="cnote"><b>ITBI é exato</b> (regra municipal). O cartório é <b>estimativa a confirmar</b> na fonte oficial — não é avaliação nem cobrança. Não inclui financiamento, avaliação bancária nem taxas de condomínio.</div>`;
+    <a class="cmini" href="${linkCartorio}" target="_blank" rel="noopener">Conferir na tabela oficial do cartório ↗</a>
+    <div class="cnote">Valores das <b>tabelas oficiais TJGO 2026</b> (Prov. 179/2025): ITBI 2% municipal, escritura (notas) e registro (RI-GO) por faixa de valor. Pequenas taxas de protocolo/certidões e a avaliação bancária no financiamento não estão inclusas. Estimativa — confira na fonte antes de fechar.</div>`;
 }
 function copiarCustos(){
   if(!CALC)return;
-  const a=CALC.a, itbi=(CALC.negocio||0)*0.02, cart=CALC.cartorio;
-  const total=(CALC.negocio||0)+itbi+(cart||0);
+  const a=CALC.a, v=CALC.negocio||0, itbi=v*0.02;
+  const escritura=CALC.financiado?0:emolumento(ESCRITURA_GO,v), registro=emolumento(REGISTRO_GO,v);
+  const total=v+itbi+escritura+registro;
   const L=["Custos de compra — Q "+clean(a.nrquadra)+" L "+clean(a.nrlote)+" · "+clean(a.nmbairro),
-    (clean(a.nmedificio)?clean(a.nmedificio)+"\n":"")+"Valor da transação: "+brl(CALC.negocio),
+    (clean(a.nmedificio)?clean(a.nmedificio)+"\n":"")+"Valor da transação: "+brl(v)+(CALC.financiado?" (financiado)":" (à vista)"),
     "ITBI (2%): "+brlExato(itbi),
-    "Cartório (escritura+registro): "+(cart!=null?brl(cart):"a confirmar no cartório"),
-    "CUSTO TOTAL: "+brl(total)+(cart==null?" (fora o cartório)":""),
-    "— estimativa; ITBI exato, cartório a confirmar. Radar Fundiário."].join("\n");
+    CALC.financiado?null:"Escritura (tabelião): "+brlExato(escritura),
+    "Registro do imóvel: "+brlExato(registro),
+    "CUSTO TOTAL: "+brl(total),
+    "— tabelas oficiais TJGO 2026; estimativa, confira na fonte. Radar Fundiário."].filter(Boolean).join("\n");
   if(navigator.clipboard)navigator.clipboard.writeText(L).then(()=>toast("Resumo copiado — cole no WhatsApp."),()=>{});
 }
 
