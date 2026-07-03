@@ -284,7 +284,7 @@
         <input type="range" id="coef" min="1" max="6" step="0.1" value="3" oninput="onCoef()">
         <div class="coefval" id="coefVal">3.0×</div>
       </div>
-      <small>Estimativa = valor venal × coeficiente. Não é dado oficial — o venal é subavaliado; ajuste o multiplicador pela sua leitura da região. O R$/m² aparece em cada imóvel para calibrar. O ajuste fica <b>salvo por setor</b> neste navegador.</small>
+      <small>Usado quando não há referência melhor (tabela de mercado do bairro ou laudos da Caixa). Multiplica o valor venal — que é defasado — para chegar perto do preço real. Ajuste pelo que você conhece da região; fica <b>salvo por setor</b> neste navegador.</small>
     </div>
 
     <div class="results" id="results">
@@ -292,7 +292,7 @@
     </div>
 
     <div class="foot">
-      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. O nome do titular não é lido por aqui — é consultado por você, manualmente, no portal oficial.
+      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (Fipe/MySide/imprensa, 07/2026). O nome do titular não é lido por aqui — é consultado por você, manualmente, no portal oficial.
     </div>
   </aside>
 
@@ -673,6 +673,34 @@ function finish(items){
     if(isMobile())setView("mapa");
 }
 
+/* ---------------- estimativa de mercado (melhor fonte disponível) ----------------
+   Prioridade: 1) R$/m² de mercado do bairro (fontes públicas, transcrição manual —
+   atualizar 1-2x/ano); 2) laudos reais da Caixa no setor; 3) multiplicador manual. */
+const M2_MERCADO={ref:"07/2026",bairros:{
+  "14":10700, /* Setor Marista  — MySide/Secovi 2026 */
+  "16":9300,  /* Setor Bueno */
+  "72":9300,  /* Jardim Goiás */
+  "17":8000,  /* Jardim América */
+  "15":7850   /* Setor Pedro Ludovico */
+}};
+const brlC=n=>n==null?"—":n>=995000?"R$ "+(n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi"
+  :n>=1000?"R$ "+Math.round(n/1e3).toLocaleString("pt-BR")+" mil":brl(n);
+function mercadoEstimado(a){
+  const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
+  const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
+  if(isU&&m2b&&a.areaedif>0){
+    const v=a.areaedif*m2b;
+    return {lo:v*.85,hi:v*1.15,
+      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m², fontes públicas "+M2_MERCADO.ref+")"};
+  }
+  const vv=a.vlvenal||0;if(!vv)return null;
+  const fx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  if(fx)return {lo:vv*fx.fator*.85,hi:vv*fx.fator*1.15,
+    metodo:"laudos reais da Caixa neste setor ("+fx.n+" laudos)"};
+  return {lo:vv*COEF*.8,hi:vv*COEF*1.2,
+    metodo:"multiplicador manual de "+COEF.toFixed(1).replace(".",",")+"× sobre o venal (ajuste no painel à esquerda)"};
+}
+
 /* ---------------- render lista ---------------- */
 function refPrice(a){const vv=a.vlvenal||0;return vv>0?vv*COEF:null;}
 function m2Terr(a){const vv=a.vlvenal||0,at=a.areaterr||0;return (vv>0&&at>0)?vv/at:null;}
@@ -778,7 +806,7 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${brl(a.vlvenal)}</div></div>
-    <div class="cell hl"><div class="k">Ref. mercado (${COEF.toFixed(1)}×)</div><div class="v">${ref?brl(ref):"—"}</div></div>
+    <div class="cell hl"><div class="k">Mercado (estimado)</div><div class="v">${(()=>{const e=mercadoEstimado(a);return e?brlC(e.lo)+"–"+brlC(e.hi):"—";})()}</div></div>
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
     <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
@@ -791,10 +819,9 @@ function showDetail(a,ll){
   else compsBox.innerHTML=
     (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
-  let nota=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
-    "A referência de mercado é estimativa — não substitui avaliação profissional (NBR 14653).";
-  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
-  if(fxCx)nota+=" Laudos da Caixa neste setor sugerem ~"+fxCx.fator.toFixed(1).replace(".",",")+"× o venal (n="+fxCx.n+").";
+  const estM=mercadoEstimado(a);
+  let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
+  if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
   document.getElementById("dNote").textContent=nota;
   const [lat,lon]=ll;
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
@@ -898,22 +925,26 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   }
   if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio */
   const amp=(r.q3-r.q1)/r.med;
-  const conf=r.n<5?["baixa","amostra pequena"]:amp<=.3?["alta","confiança alta"]:amp<=.4?["media","confiança média"]:["baixa","dispersão alta"];
+  const conf=r.n<5?["baixa","poucos vizinhos"]:amp<=.3?["alta","faixa confiável"]:amp<=.4?["media","faixa aproximada"]:["baixa","imóveis muito variados"];
   const span=Math.max(r.max-r.min,1);
   const px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100));
   const pctl=below==null?null:Math.round(below*100);
   const fx=v=>brl(v);
+  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  /* fator: ancora na tabela de mercado do bairro (se houver), senão laudos Caixa, senão o manual */
+  const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
+  const cEff=(isU&&m2b&&r.med>0)?m2b/r.med:(fxCx?fxCx.fator:COEF);
   box.innerHTML=`<div class="cmp">
-    <div class="h">${r.n} comparáveis em ${radius} m · R$/m² ${isU?"construído":"terreno"} (venal)
+    <div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m
       <span class="badge ${conf[0]}">${conf[1]}</span></div>
     <div class="bar">
       <div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div>
       <div class="med" style="left:${px(r.med)}%"></div>
       <div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div>
     </div>
-    <div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>med ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div>
-    <div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — percentil <b>${pctl}</b> da vizinhança`:""}${pctl!=null&&pctl<=25?" · 🔻 abaixo da faixa típica":pctl!=null&&pctl>=75?" · 🔺 acima da faixa típica":""}</div>
-    <div class="mkt">Faixa típica (Q1–Q3): ${fx(r.q1)}–${fx(r.q3)}/m² venal · ref. mercado ${COEF.toFixed(1)}×: ${fx(r.q1*COEF)}–${fx(r.q3*COEF)}/m². Posição relativa é imune à defasagem da planta de valores; a conversão a mercado depende do coeficiente.</div>
+    <div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div>
+    <div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — mais caro que <b>${pctl}%</b> dos vizinhos`:""}${pctl!=null&&pctl<=25?" · 💰 entre os mais baratos":pctl!=null&&pctl>=75?" · entre os mais caros":""}</div>
+    <div class="mkt">Preço de mercado estimado na vizinhança: <b>${fx(r.q1*cEff)}–${fx(r.q3*cEff)}/m²</b>. Base: cadastro da prefeitura — estimativa, não avaliação.</div>
   </div>`;
 }
 
