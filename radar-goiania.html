@@ -272,10 +272,18 @@
     #laudo .lbar .med{position:absolute;top:-2pt;bottom:-2pt;width:1.6pt;background:#141a1f}
     #laudo .lbar .me{position:absolute;top:-6.5pt;width:0;height:0;border:6pt solid transparent;border-top-color:#b5451f;transform:translateX(-6pt)}
     #laudo .llbl{display:flex;justify-content:space-between;font:600 8pt/1 "IBM Plex Mono",monospace;color:#6b6353;margin:4pt 6pt 0}
+    #laudo .lcover{margin:0 0 14pt}
+    #laudo .lcover img{width:100%;height:200pt;object-fit:cover;display:block}
     #laudo .destaque{background:#141a1f;color:#f2eee4;border-radius:8pt;padding:13pt 16pt;margin:14pt 0;text-align:center}
     #laudo .destaque .dk{font:700 8pt/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:#c9691f}
     #laudo .destaque .dv{font:800 22pt/1.15 "IBM Plex Sans";margin-top:5pt}
-    #laudo .destaque .df{font-size:8.5pt;color:#c3b9a3;margin-top:4pt}
+    #laudo .lgauge{margin:12pt 4pt 2pt}
+    #laudo .lgbar{position:relative;height:7pt;border-radius:4pt;background:linear-gradient(90deg,#3f7a63,#a8842c,#b5451f)}
+    #laudo .lgfill{display:none}
+    #laudo .lgmark{position:absolute;top:-3pt;width:3pt;height:13pt;background:#f2eee4;border:1pt solid #141a1f;border-radius:1pt;transform:translateX(-1.5pt)}
+    #laudo .lgends{display:flex;justify-content:space-between;margin-top:5pt;font:700 8.5pt/1.3 "IBM Plex Sans";color:#f2eee4}
+    #laudo .lgends i{display:block;font:600 6.5pt/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#c3b9a3;font-style:normal;margin-top:2pt}
+    #laudo .lgends span:last-child{text-align:right}
     #laudo .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6pt;margin-top:8pt}
     #laudo .lfotos img{width:100%;height:140pt;object-fit:cover;border-radius:4pt}
     #laudo .lmiudo{font-size:8pt;color:#6b6353;line-height:1.55;text-align:justify}
@@ -314,10 +322,18 @@
   #laudoView .lbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:#141a1f}
   #laudoView .lbar .me{position:absolute;top:-8px;width:0;height:0;border:7px solid transparent;border-top-color:#b5451f;transform:translateX(-7px)}
   #laudoView .llbl{display:flex;justify-content:space-between;font:600 11px/1 "IBM Plex Mono",monospace;color:#6b6353;margin:5px 8px 0}
+  #laudoView .lcover{margin:0 0 16px}
+  #laudoView .lcover img{width:100%;height:210px;object-fit:cover;display:block}
   #laudoView .destaque{background:#141a1f;color:#f2eee4;border-radius:9px;padding:15px 18px;margin:16px 0;text-align:center}
   #laudoView .destaque .dk{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:#c9691f}
   #laudoView .destaque .dv{font:800 27px/1.15 "IBM Plex Sans";margin-top:6px}
-  #laudoView .destaque .df{font-size:11px;color:#c3b9a3;margin-top:5px}
+  #laudoView .lgauge{margin:14px 4px 2px}
+  #laudoView .lgbar{position:relative;height:9px;border-radius:5px;background:linear-gradient(90deg,#3f7a63,#a8842c,#b5451f)}
+  #laudoView .lgfill{display:none}
+  #laudoView .lgmark{position:absolute;top:-4px;width:4px;height:17px;background:#f2eee4;border:1px solid #141a1f;border-radius:2px;transform:translateX(-2px)}
+  #laudoView .lgends{display:flex;justify-content:space-between;margin-top:6px;font:700 12px/1.3 "IBM Plex Sans";color:#f2eee4}
+  #laudoView .lgends i{display:block;font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#c3b9a3;font-style:normal;margin-top:2px}
+  #laudoView .lgends span:last-child{text-align:right}
   #laudoView .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
   #laudoView .lfotos img{width:100%;height:110px;object-fit:cover;border-radius:4px}
   #laudoView .lmiudo{font-size:11px;color:#6b6353;line-height:1.55;text-align:justify}
@@ -1438,12 +1454,13 @@ function montarLaudo(){
   const isU2=!!ul, pm2L=isU2?m2Edif(a):m2Terr(a);
   const m2bL=M2_MERCADO.bairros[String(a.cdbairro)];
   const regiaoHtml=`<p>O imóvel situa-se no bairro ${esc(a.nmbairro)}, Goiânia/GO${g&&g.res&&g.res.n>=3?`, região com ${g.res.n} imóveis de perfil semelhante cadastrados em raio de ${g.radius} m`:""}${m2bL?`, com referência pública de mercado de R$ ${m2bL.toLocaleString("pt-BR")}/m² (anunciado, ${M2_MERCADO.ref})`:""}.</p>`;
-  const nSec=LZ.fotos.length?4:3;
+  const nSec=LZ.fotos.length>1?4:3; /* seção de fotos só existe com >1 foto (a 1ª vira capa) */
   const foraFaixa=est&&LZ.valor&&(LZ.valor<est.lo*0.97||LZ.valor>est.hi*1.03);
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
     <div class="lhead"><div class="eye">Radar Fundiário · Cadastro Imobiliário de Goiânia</div><h1>${titulo}</h1>
       <div class="lsub">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?" · "+esc(p.contato):""} — Goiânia/GO, ${hoje}</div></div>
+    ${LZ.fotos.length?`<div class="lcover"><img src="${esc(LZ.fotos[0])}" alt="Fachada do imóvel"></div>`:""}
     <div class="lkpis">
       <div class="kpi"><div class="kk">Valor venal (fiscal)</div><div class="kv">${brl(a.vlvenal)}</div></div>
       <div class="kpi"><div class="kk">R$/m² ${isU2?"construído":"terreno"}</div><div class="kv">${pm2L?brl(pm2L):"—"}</div></div>
@@ -1456,11 +1473,15 @@ function montarLaudo(){
       ${compsHtml}
       ${est?`<p>Fonte principal da estimativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
       ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
-      <div class="destaque"><div class="dk">Valor de venda sugerido</div><div class="dv">${LZ.valor?brl(LZ.valor):"—"}</div>
-        ${est?`<div class="df">faixa de referência: ${brl(est.lo)} – ${brl(est.hi)}</div>`:""}</div>
+      ${(()=>{const vs=LZ.valor||0;
+        const gmin=est?Math.min(est.lo,vs*0.96):vs*0.96, gmax=est?Math.max(est.hi,vs*1.08):vs*1.10;
+        const gp=gmax>gmin?Math.min(94,Math.max(6,(vs-gmin)/(gmax-gmin)*100)):50;
+        return `<div class="destaque"><div class="dk">Valor de venda sugerido</div><div class="dv">${vs?brl(vs):"—"}</div>
+        ${vs?`<div class="lgauge"><div class="lgbar"><div class="lgfill" style="width:${gp}%"></div><div class="lgmark" style="left:${gp}%"></div></div>
+          <div class="lgends"><span>${brl(gmin)}<i>maior liquidez</i></span><span>${brl(gmax)}<i>menor liquidez</i></span></div></div>`:""}</div>`;})()}
       ${foraFaixa?`<p class="lmiudo">Valor arbitrado pelo subscritor com base em vistoria, diferenciais e observações, divergindo justificadamente da faixa estatística de referência.</p>`:""}
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</section>
-    ${LZ.fotos.length?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+1} do imóvel">`).join("")}</div></section>`:""}
+    ${LZ.fotos.length>1?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></section>`:""}
     <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
       <p class="lmiudo">Abordagem comparativa simplificada: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base fiscal pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), convertida a valores de mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra.</p>
       <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características conforme o cadastro municipal, podendo divergir da matrícula do imóvel. O subscritor declara não possuir interesse presente ou futuro no imóvel avaliado nem vínculo que comprometa sua isenção; as informações prestadas por terceiros foram assumidas como verdadeiras. Este documento é indivisível e destina-se exclusivamente à finalidade de ${esc(LZ.finalidade).toLowerCase()}. Expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Parecer emitido por corretor de imóveis; a menção à Resolução COFECI nº 1.066/2007 pressupõe inscrição do subscritor no CNAI." : " A emissão de PTAM é privativa de corretor inscrito no CRECI e no CNAI (Res. COFECI nº 1.066/2007); na ausência dessa inscrição, este documento constitui relatório de referência de mercado, sem natureza de laudo ou parecer técnico oficial."}</p>
