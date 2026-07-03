@@ -171,11 +171,42 @@
   .cxp .dc{display:inline-block;background:var(--lot);color:#fff;font:700 10px/1 "IBM Plex Mono";padding:3px 5px;border-radius:2px}
   .cxp .ap{color:var(--muted);font-size:10.5px}
   .cxp a{color:var(--accent);font-weight:700}
-  /* laudo: botão de entrada */
-  .dlaudo{margin:0 0 12px}
+  /* laudo + custos: botões de entrada */
+  .dlaudo{margin:0 0 12px;display:flex;flex-direction:column;gap:8px}
   .laudobtn{width:100%;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper-2);
     font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
   .laudobtn:hover{background:var(--accent);border-color:var(--accent)}
+  .custosbtn{width:100%;border:1.5px solid var(--gold);background:var(--paper);color:#7d621f;
+    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
+  .custosbtn:hover{background:var(--gold);color:#fff}
+  /* calculadora de custos (overlay) */
+  .calc{position:fixed;inset:0;z-index:2000;background:var(--paper-2);display:flex;flex-direction:column}
+  .calc[hidden]{display:none}
+  .calctop{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+    padding-top:calc(10px + env(safe-area-inset-top));border-bottom:1px solid var(--line)}
+  .calch{font:800 18px/1 "IBM Plex Sans"}
+  .calcx{width:44px;height:44px;border:0;background:transparent;font-size:26px;color:var(--accent);cursor:pointer}
+  .calcbody{flex:1;overflow-y:auto;padding:16px 22px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:560px;margin:0 auto}
+  .clabel{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:block}
+  .cinput{width:100%;font:700 20px/1.3 "IBM Plex Sans";padding:14px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+  .cinput:focus{outline:none;border-color:var(--accent)}
+  .crow{display:flex;justify-content:space-between;align-items:baseline;padding:12px 2px;border-bottom:1px dashed var(--line);gap:12px}
+  .crow .ck{font:500 14px/1.4 "IBM Plex Sans"}
+  .crow .ck small{display:block;color:var(--muted);font-size:11.5px;line-height:1.4;margin-top:2px}
+  .crow .cv{font:800 17px/1 "IBM Plex Sans";white-space:nowrap}
+  .crow.exato .cv{color:var(--lot)}
+  .crow.total{border-bottom:0;border-top:2px solid var(--ink);margin-top:6px;padding-top:14px}
+  .crow.total .ck{font-weight:800;font-size:15px}
+  .crow.total .cv{font-size:22px;color:var(--accent)}
+  .cmini{width:100%;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);text-decoration:none;text-align:center;
+    display:block;font:600 12px/1.3 "IBM Plex Sans";padding:11px;border-radius:2px;margin-top:8px;min-height:44px;box-sizing:border-box}
+  .cmini:hover{background:var(--ink);color:var(--paper-2)}
+  .cnote{font:500 11.5px/1.5 "IBM Plex Sans";color:var(--muted);margin-top:14px}
+  .cnote b{color:var(--ink)}
+  .cseg{display:flex;gap:8px;margin-top:8px}
+  .cseg button{flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--line);background:var(--paper);
+    font:600 13px/1 "IBM Plex Sans";color:var(--ink);cursor:pointer;min-height:44px}
+  .cseg button.on{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
   /* wizard estilo iOS */
   .wiz{position:fixed;inset:0;z-index:2000;background:var(--paper-2);display:flex;flex-direction:column}
   .wiz[hidden]{display:none}
@@ -432,7 +463,8 @@
       <div class="insc" id="dInsc"></div>
       <div class="dgrid" id="dGrid"></div>
       <div class="dcomps" id="dComps"></div>
-      <div class="dlaudo"><button class="laudobtn" onclick="abrirLaudo()">📄 Gerar laudo de avaliação (PDF)</button></div>
+      <div class="dlaudo"><button class="custosbtn" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
+        <button class="laudobtn" onclick="abrirLaudo()">📄 Gerar laudo de avaliação (PDF)</button></div>
       <div class="dnote" id="dNote"></div>
       <div class="acts" id="dActs"></div>
     </div>
@@ -465,6 +497,15 @@
     <button onclick="document.getElementById('laudoView').hidden=true" aria-label="Fechar">×</button>
   </div>
   <div class="lvbody" id="laudoViewBody"></div>
+</div>
+
+<!-- CALCULADORA DE CUSTOS DE COMPRA -->
+<div class="calc" id="calc" hidden role="dialog" aria-modal="true" aria-label="Custos de compra">
+  <div class="calctop">
+    <div class="calch">Custos de compra</div>
+    <button class="calcx" onclick="fecharCustos()" aria-label="Fechar">×</button>
+  </div>
+  <div class="calcbody" id="calcBody"></div>
 </div>
 
 <script>
@@ -1444,6 +1485,77 @@ function montarLaudo(){
   setTimeout(()=>window.print(),150);
 }
 
+/* ---------------- calculadora de custos de compra ----------------
+   ITBI é EXATO (2% sobre o maior entre venal e valor do negócio — LC 344/2021 Goiânia).
+   Cartório (escritura+registro) é tabela oficial em degraus (TJGO): campo editável + calculadora oficial. */
+const brlExato=n=>n==null?"—":Number(n).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
+let CALC=null;
+function abrirCustos(){
+  const a=DCUR;if(!a)return;
+  const est=mercadoEstimado(a);
+  const mercadoCentral=est?Math.round((est.lo+est.hi)/2):0;
+  const negocio=Math.max(a.vlvenal||0,mercadoCentral);
+  CALC={a,venal:a.vlvenal||0,negocio,cartorio:null,financiado:false};
+  CRET=document.activeElement;
+  document.getElementById("calc").hidden=false;
+  renderCustos();
+}
+let CRET=null;
+function fecharCustos(){document.getElementById("calc").hidden=true;CALC=null;if(CRET&&CRET.focus){try{CRET.focus();}catch(e){}}}
+function renderCustos(){
+  if(!CALC)return;
+  const a=CALC.a;
+  const base=Math.max(CALC.negocio||0,CALC.venal||0); /* ITBI: base nunca inferior ao venal */
+  const itbi=base*0.02;
+  const cart=CALC.cartorio!=null?CALC.cartorio:null;
+  const total=(CALC.negocio||0)+itbi+(cart||0);
+  const pct=CALC.negocio>0?((itbi+(cart||0))/CALC.negocio*100):0;
+  /* calculadora oficial do cartório de RI de Goiás */
+  const linkCartorio="https://registrosdegoias.com.br/custas-e-emolumentos/";
+  document.getElementById("calcBody").innerHTML=`
+    <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
+    <span class="clabel">Valor do negócio (R$)</span>
+    <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
+    <div class="wsub" style="margin:6px 0 0">Sugerido: maior entre o venal (${brl(CALC.venal)}) e a estimativa de mercado. Edite pelo preço real.</div>
+
+    <div class="crow exato">
+      <div class="ck">ITBI (2%)<small>Sobre o maior entre venal e negócio — base ${brl(base)} (LC 344/2021)</small></div>
+      <div class="cv">${brlExato(itbi)}</div>
+    </div>
+
+    <span class="clabel">Cartório — escritura + registro</span>
+    <div class="cseg">
+      <button class="${!CALC.financiado?'on':''}" onclick="CALC.financiado=false;renderCustos()">À vista</button>
+      <button class="${CALC.financiado?'on':''}" onclick="CALC.financiado=true;renderCustos()">Financiado</button>
+    </div>
+    ${CALC.financiado?`<div class="wsub" style="margin:8px 0 0">No financiamento bancário o contrato já vale como escritura (instrumento particular com força de escritura pública) — costuma <b>dispensar a escritura no tabelião</b>, pagando só o registro. Confirme com o banco/cartório.</div>`:""}
+    <input class="cinput" style="margin-top:10px" inputmode="numeric" placeholder="informe o valor do cartório"
+      value="${CALC.cartorio!=null?CALC.cartorio:""}" oninput="CALC.cartorio=this.value.replace(/\\D/g,'')?parseInt(this.value.replace(/\\D/g,''),10):null;renderCustos()">
+    <a class="cmini" href="${linkCartorio}" target="_blank" rel="noopener">Calcular no cartório oficial (RI-GO) ↗</a>
+    <div class="wsub" style="margin:6px 0 0">Emolumentos são tabelados por faixa de valor (TJGO). Pegue o valor exato na calculadora oficial e informe acima${cart==null?" — o total abaixo já soma ITBI e negócio":""}.</div>
+
+    <div class="crow total">
+      <div class="ck">Custo total de aquisição${cart==null?" (sem cartório)":""}</div>
+      <div class="cv">${brl(total)}</div>
+    </div>
+    <div class="wsub" style="margin:6px 2px 0">Custos além do preço: <b>${brl(itbi+(cart||0))}</b>${cart!=null?` (${pct.toFixed(1).replace(".",",")}% do valor)`:""}.</div>
+
+    <button class="cmini" style="border-color:var(--accent);color:var(--accent)" onclick="copiarCustos()">⧉ Copiar resumo para o cliente</button>
+    <div class="cnote"><b>ITBI é exato</b> (regra municipal). O cartório é <b>estimativa a confirmar</b> na fonte oficial — não é avaliação nem cobrança. Não inclui financiamento, avaliação bancária nem taxas de condomínio.</div>`;
+}
+function copiarCustos(){
+  if(!CALC)return;
+  const a=CALC.a, base=Math.max(CALC.negocio||0,CALC.venal||0), itbi=base*0.02, cart=CALC.cartorio;
+  const total=(CALC.negocio||0)+itbi+(cart||0);
+  const L=["Custos de compra — Q "+clean(a.nrquadra)+" L "+clean(a.nrlote)+" · "+clean(a.nmbairro),
+    (clean(a.nmedificio)?clean(a.nmedificio)+"\n":"")+"Valor do negócio: "+brl(CALC.negocio),
+    "ITBI (2%): "+brlExato(itbi),
+    "Cartório (escritura+registro): "+(cart!=null?brl(cart):"a confirmar no cartório"),
+    "CUSTO TOTAL: "+brl(total)+(cart==null?" (fora o cartório)":""),
+    "— estimativa; ITBI exato, cartório a confirmar. Radar Fundiário."].join("\n");
+  if(navigator.clipboard)navigator.clipboard.writeText(L).then(()=>toast("Resumo copiado — cole no WhatsApp."),()=>{});
+}
+
 /* ---------------- camada Caixa (dados estáticos de caixa-goiania.js, gerado por atualizar-caixa.py) ---------------- */
 let caixaLayer=null,caixaOn=false;
 function initCaixa(){
@@ -1540,7 +1652,8 @@ document.addEventListener("focusin",e=>{
     setTimeout(()=>e.target.scrollIntoView({block:"center",behavior:"smooth"}),250);
 });
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
-  if(!document.getElementById("wiz").hidden)fecharLaudo();else closeDetail();}); /* combo dá stopPropagation no seu Esc */
+  if(!document.getElementById("calc").hidden)fecharCustos();
+  else if(!document.getElementById("wiz").hidden)fecharLaudo();else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
 /* bottom sheet: tocar na alça fecha; arrastar para baixo também */
 (function(){
