@@ -62,7 +62,7 @@
 
   .search{padding:18px 22px;border-bottom:1px dashed var(--line)}
   .moderow{display:flex;gap:6px;margin-bottom:14px;background:var(--paper);border:1px solid var(--line);padding:3px;border-radius:2px}
-  .moderow button{flex:1;border:0;background:transparent;font:600 12px/1 "IBM Plex Sans";color:var(--muted);padding:8px 6px;cursor:pointer;border-radius:1px}
+  .moderow button{flex:1;border:0;background:transparent;font:600 11.5px/1 "IBM Plex Sans";color:var(--muted);padding:8px 2px;cursor:pointer;border-radius:1px;white-space:nowrap}
   .moderow button.on{background:var(--ink);color:var(--paper-2)}
   label{display:block;font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
   select,input{width:100%;background:var(--paper);border:1.5px solid var(--line);color:var(--ink);
@@ -322,7 +322,7 @@
     .viewbar button.on{background:var(--accent);color:#fff}
     .toast{position:fixed;top:calc(16px + env(safe-area-inset-top))} /* não fica sob o Dynamic Island */
     .loading{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom))}
-    .moderow button{padding:13px 6px}
+    .moderow button{padding:13px 2px}
     .combo-item{padding:13px 12px}
     .go{padding:16px}
     .count .csv{padding:11px 14px;font-size:11px;margin-top:-9px}
@@ -354,8 +354,9 @@
 
     <div class="search">
       <div class="moderow">
-        <button id="mQL" class="on" onclick="setMode('ql')">Quadra+Lote</button>
+        <button id="mQL" class="on" onclick="setMode('ql')">Q + Lote</button>
         <button id="mAD" onclick="setMode('addr')">Endereço</button>
+        <button id="mBD" onclick="setMode('bd')">Prédio</button>
         <button id="mIN" onclick="setMode('insc')">Inscrição</button>
       </div>
 
@@ -387,6 +388,11 @@
         <label for="apto">Apto / unidade <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, se for prédio</span></label>
         <input id="apto" placeholder="ex.: 1901 (vazio = prédio todo)" autocomplete="off">
         <label class="chk"><input type="checkbox" id="hideGar" checked> ocultar garagens e boxes</label>
+      </div>
+
+      <div id="paneBD" style="display:none">
+        <label for="predio">Nome do edifício <span style="text-transform:none;font-weight:400;color:var(--muted)">— setor acima é opcional</span></label>
+        <input id="predio" placeholder="ex.: sumer park, riviera, absolut…" autocomplete="off">
       </div>
 
       <div id="paneIN" style="display:none">
@@ -734,12 +740,13 @@ function resolveBairro(){
 /* ---------------- busca ---------------- */
 function setMode(m){
   MODE=m;
-  [["mQL","ql"],["mAD","addr"],["mIN","insc"]].forEach(([id,v])=>{
+  [["mQL","ql"],["mAD","addr"],["mBD","bd"],["mIN","insc"]].forEach(([id,v])=>{
     const b=document.getElementById(id);b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",m===v);});
-  document.getElementById("needBairro").style.display=(m==="ql"||m==="addr")?"block":"none";
+  document.getElementById("needBairro").style.display=(m==="ql"||m==="addr"||m==="bd")?"block":"none";
   document.getElementById("paneQL").style.display=m==="ql"?"block":"none";
   document.getElementById("paneAddr").style.display=m==="addr"?"block":"none";
-  document.getElementById("paneUnit").style.display=(m==="ql"||m==="addr")?"block":"none";
+  document.getElementById("paneBD").style.display=m==="bd"?"block":"none";
+  document.getElementById("paneUnit").style.display=(m==="ql"||m==="addr"||m==="bd")?"block":"none";
   document.getElementById("paneIN").style.display=m==="insc"?"block":"none";
 }
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
@@ -808,6 +815,18 @@ async function buscar(){
         const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
         return okR&&okN;
       });
+    }else if(MODE==="bd"){
+      /* busca por NOME do edifício — setor opcional (a cidade toda responde em ~3s) */
+      const nome=norm(clean(document.getElementById("predio").value)).replace(/'/g,"");
+      if(nome.length<3){toast("Digite o nome do edifício (mínimo 3 letras).");return;}
+      resolveBairro();
+      const b=document.getElementById("bairro").value;
+      loading(true,"procurando o edifício…");
+      const whereB=(b?`cdbairro=${+b} AND `:"")+`vlvenal>0 AND UPPER(nmedificio) LIKE '%${nome}%'`;
+      let all=await fetchWhere(whereB);
+      /* se o setor escolhido não tem o prédio, tenta a cidade inteira */
+      if(!all.length&&b)all=await fetchWhere(`vlvenal>0 AND UPPER(nmedificio) LIKE '%${nome}%'`);
+      items=all.filter(a=>norm(a.nmedificio).includes(nome));
     }else{ // ql
       const okB=resolveBairro();
       const b=document.getElementById("bairro").value;
@@ -842,7 +861,7 @@ async function buscar(){
 
 /* aplica filtro de apto/garagem, ordena, renderiza e plota */
 function finish(items){
-    const apto=(MODE==="ql"||MODE==="addr")?clean(document.getElementById("apto").value):"";
+    const apto=(MODE==="ql"||MODE==="addr"||MODE==="bd")?clean(document.getElementById("apto").value):"";
     const hideGar=document.getElementById("hideGar").checked;
     let units=items.slice();
     const cntCi={};units.forEach(a=>{const k=clean(a.ci);cntCi[k]=(cntCi[k]||0)+1;});
@@ -855,7 +874,8 @@ function finish(items){
       return cx<cy?-1:cx>cy?1:(x.insubprinc||0)-(y.insubprinc||0);});
     LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;
     if(!units.length){
-      const msg=(MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua e o número.":
+      const msg=(MODE==="bd")?"Nenhum edifício com esse nome no cadastro. Tente parte do nome (ex.: só \"riviera\").":
+        (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua e o número.":
         (MODE!=="insc"&&document.getElementById("apto").value?"Nenhuma unidade com esse número. Tente sem o apto para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
@@ -863,8 +883,15 @@ function finish(items){
     render(units);
     plot(units);
     if(isMobile()){
-      setView("mapa");
-      if(units.length>1)toast(units.length+" unidades no mapa — a lista completa está na aba Busca.");
+      const nLotes=new Set(units.map(a=>clean(a.ci))).size;
+      if(units.length>1&&nLotes===1){
+        /* UM prédio com várias unidades: fica na LISTA (é ela que interessa), pino já está no mapa */
+        setView("busca");
+        toast(units.length+" unidades listadas — o pino do prédio está na aba Mapa.");
+      }else{
+        setView("mapa");
+        if(units.length>1)toast(units.length+" unidades no mapa — a lista completa está na aba Busca.");
+      }
     }
 }
 
@@ -979,7 +1006,9 @@ function plot(list){
     }
   });
   markers=list.map(a=>byCi[clean(a.ci)]||null);
-  if(pts.length===1){map.setView(pts[0],18);pick(list.findIndex(a=>a.x_coord&&a.y_coord));}
+  if(pts.length===1){map.setView(pts[0],18);
+    /* prédio no mobile: não auto-abre a ficha de uma unidade (a lista é o destino) */
+    if(!(isMobile()&&list.length>1))pick(list.findIndex(a=>a.x_coord&&a.y_coord));}
   else if(pts.length>1){map.fitBounds(L.latLngBounds(pts).pad(.3));}
   else toast("Encontrado, mas sem coordenada cadastrada.");
 }
@@ -1489,7 +1518,7 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
     g.addEventListener("touchend",e=>{const dy=y0==null?0:(e.changedTouches[0].clientY-y0);y0=null;d.style.transform="";if(dy>70)closeDetail();});
   }
 })();
-document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
+document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero,#predio").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
 
 /* combobox de setor: digitar, navegar, fechar */
 (function(){
