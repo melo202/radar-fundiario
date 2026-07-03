@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- CSP: contém o raio de dano de um XSS. JSONP exige o host da prefeitura em script-src; tiles/imagens do CARTO em img-src. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#141a1f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -10,9 +12,9 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Radar Fundiário · Goiânia</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" integrity="sha512-iJs/hgHOlo6Eo8i+nYtuEPa+CZ6E3C2Z0s1LkSuvLtclMQlqmxPjP6XaXDi0Ki6NsUuQ2Zmo0UeFOLSgjbv5+A==" crossorigin="anonymous"></script>
 <script src="caixa-goiania.js" onerror="void 0"></script>
 <style>
   :root{
@@ -328,6 +330,9 @@
     .moderow button{padding:13px 6px}
     .combo-item{padding:13px 12px}
     .go{padding:16px}
+    .count .csv{padding:11px 14px;font-size:11px;margin-top:-9px}
+    .pgrid .rm{width:32px;height:32px}
+    .chk{min-height:44px}
     .detail{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;
       border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:0}
     /* cabeçalho do sheet fica GRUDADO no topo — alça e × sempre visíveis mesmo rolando */
@@ -411,12 +416,12 @@
   <!-- MAPA -->
   <div class="mapwrap">
     <div id="map"></div>
-    <div class="toast" id="toast"></div>
-    <div class="loading" id="loading"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
-    <div class="detail" id="detail">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="loading" id="loading" aria-live="polite"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
+    <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
       <div class="shead">
-        <div class="grab" id="grab"></div>
-        <button class="x" onclick="closeDetail()">×</button>
+        <div class="grab" id="grab" aria-hidden="true"></div>
+        <button class="x" onclick="closeDetail()" aria-label="Fechar detalhe">×</button>
       </div>
       <div class="dtag" id="dTag"></div>
       <h3 id="dAddr"></h3>
@@ -438,9 +443,9 @@
 <!-- WIZARD DO LAUDO (estilo iOS: um assunto por tela, campos grandes) -->
 <div class="wiz" id="wiz" hidden>
   <div class="wtop">
-    <button class="wback" id="wBack" onclick="wizBack()">‹</button>
+    <button class="wback" id="wBack" onclick="wizBack()" aria-label="Voltar">‹</button>
     <div class="wdots" id="wDots"></div>
-    <button class="wclose" onclick="fecharLaudo()">×</button>
+    <button class="wclose" onclick="fecharLaudo()" aria-label="Fechar laudo">×</button>
   </div>
   <div class="wbody" id="wBody"></div>
   <div class="wfoot"><button class="wnext" id="wNext" onclick="wizNext()">Continuar</button></div>
@@ -523,21 +528,23 @@ const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOp
 const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
 let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
 const LOTINFO={};
+let LOTDEB=null,LOTLAST=null;
 function initLots(){
   map.createPane("lots").style.zIndex=380; /* abaixo do overlayPane (400): pinos de resultado ficam por cima */
   lotLayer=L.layerGroup();
-  map.on("moveend",refreshLots);
+  map.on("moveend",()=>{clearTimeout(LOTDEB);LOTDEB=setTimeout(refreshLots,250);}); /* debounce: pan/zoom rápido não refaz tudo */
 }
 function lotInfo(ci){
-  if(!LOTINFO[ci])LOTINFO[ci]=jsonp({where:`ci='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"})
+  /* resultRecordCount:2 basta para saber se é prédio (usamos ttsublot p/ a contagem) — hover leve */
+  if(!LOTINFO[ci])LOTINFO[ci]=jsonp({where:`ci='${String(ci).replace(/\D/g,"")}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2,f:"json"})
     .then(d=>{
       const its=sanitiza((d.features||[]).map(f=>f.attributes));
       if(!its.length)return "Lote "+esc(ci);
-      const a=its[0];
+      const a=its[0], nun=(a.ttsublot||its.length);
       const addr=logradouroDe(a);
       let h=`<b>Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</b> · ${esc(a.nmbairro)}<br>${esc(addr)||"sem logradouro"}`;
-      if(its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${its.length} unidades · <b>clique para abrir</b>`;
-      else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${brl(a.vlvenal)} · <b>clique p/ detalhe</b>`;
+      if(nun>1||its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${nun} unidades · <b>toque para abrir</b>`;
+      else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${brl(a.vlvenal)} · <b>toque p/ detalhe</b>`;
       return h;
     }).catch(e=>{delete LOTINFO[ci];return "não foi possível carregar";});
   return LOTINFO[ci];
@@ -548,9 +555,12 @@ async function refreshLots(){
   if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
   if(map.getZoom()<17){
     LOTTOKEN++; /* invalida qualquer consulta pendente — senão ela re-adiciona a camada */
+    LOTLAST=null;
     if(map.hasLayer(lotLayer)){map.removeLayer(lotLayer);lotLayer.clearLayers();}
     return;
   }
+  /* se a vista atual está contida na última busca bem-sucedida, não refaz (ex.: pan curto, pick->setView) */
+  if(LOTLAST&&LOTLAST.contains(map.getBounds())&&map.hasLayer(lotLayer))return;
   const tk=++LOTTOKEN;
   const b=map.getBounds();
   const p1=proj4("EPSG:4326","EPSG:31982",[b.getWest(),b.getSouth()]);
@@ -576,8 +586,9 @@ async function refreshLots(){
     poly.addTo(lotLayer);
   });
   if(!map.hasLayer(lotLayer))lotLayer.addTo(map);
+  LOTLAST=map.getBounds(); /* memoriza a vista coberta — pans curtos não refazem a consulta */
   if(!LOTHINT&&(d.features||[]).length){LOTHINT=true;
-    toast("Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
+    toast(matchMedia("(hover:none)").matches?"Lotes delimitados — toque num lote para abrir os dados.":"Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
 }
 
 /* token de busca: respostas concorrentes (buscar/onMapClick/loadCi) não se sobrescrevem */
@@ -886,7 +897,7 @@ function render(list){
 function cardHTML(a,i,isUnit){
   const addr=addrDe(a);
   const est=mercadoEstimado(a), pm2=isUnit?m2Edif(a):m2Terr(a), ul=unitLabel(a);
-  return `<div class="card" data-i="${i}" onclick="pick(${i})">
+  return `<div class="card" data-i="${i}" role="button" tabindex="0" onclick="pick(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pick(${i})}">
       ${isUnit&&ul?`<div class="unit">${esc(ul)}</div>`:""}
       <div class="ql-tag">Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}${isUnit?" · insc "+esc(a.nrinscr):""}</div>
       <div class="addr">${esc(addr)||"Endereço não cadastrado"}</div>
@@ -1188,7 +1199,7 @@ function wizRender(){
     b.innerHTML=`<div class="wh1">Fotos</div><div class="wsub">Opcional — até 8, direto da galeria ou câmera.</div>
       <button class="waddph" onclick="document.getElementById('wFile').click()">＋ Adicionar fotos</button>
       <input id="wFile" type="file" accept="image/*" multiple hidden onchange="wizFoto(this)">
-      <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${f}"><button class="rm" onclick="wizRmFoto(${i})">×</button></div>`).join("")}</div>`;
+      <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${esc(f)}" alt="Foto ${i+1}"><button class="rm" onclick="wizRmFoto(${i})" aria-label="Remover foto ${i+1}">×</button></div>`).join("")}</div>`;
   }else{
     const p=LZ.prof;
     const FINS=["Venda / compra","Locação","Partilha ou inventário","Garantia","Instrução judicial","Outra"];
