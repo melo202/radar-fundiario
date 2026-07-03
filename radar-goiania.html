@@ -913,15 +913,15 @@ function showDetail(a,ll){
   const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
   const gearth=`https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}`;
-  /* CND da prefeitura (cer02f.asp): informe a inscrição + CAPTCHA e a certidão sai com o nome do titular.
-     A página ignora querystring (testado) — sem pré-preenchimento possível; copiamos a inscrição. */
-  const cnd="https://www.goiania.go.gov.br/asp/certidao/cer02f.asp";
+  /* CND da prefeitura (sccer00202f0): aceita a inscrição via querystring (testado) —
+     abre JÁ PREENCHIDA; o usuário só resolve o CAPTCHA e a certidão sai com o titular. */
   const inscUse=esc(insc||ci);
+  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(clean(insc||ci).replace(/\D/g,""));
   document.getElementById("dActs").innerHTML=`
     <a class="primary" href="${gmaps}" target="_blank" rel="noopener">Google Maps ↗</a>
     <a href="${gsv}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="${gearth}" target="_blank" rel="noopener">Earth ↗</a>
-    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Copia a inscrição ${inscUse} e abre a CND da prefeitura — cole no campo, resolva o CAPTCHA e a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>`;
+    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>`;
   d.classList.add("show");
 }
 function copyInsc(v){
