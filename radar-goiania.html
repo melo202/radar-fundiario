@@ -485,7 +485,8 @@ const sanitiza=arr=>{arr.forEach(a=>SENS.forEach(k=>{if(k in a)delete a[k];}));r
 const fmtDt=s=>{s=clean(s);return /^\d{8}$/.test(s)&&s!=="00000000"?s.slice(6)+"/"+s.slice(4,6)+"/"+s.slice(0,4):null;};
 /* monta o logradouro sem duplicar o tipo ("AV" + "AV T4" -> "AV T4") */
 const logradouroDe=a=>{const tp=clean(a.tplogradou),nm=clean(a.nmlogradou);
-  return (!tp||norm(nm).startsWith(norm(tp)+" ")||norm(nm)===norm(tp))?nm:(tp+" "+nm).trim();};
+  const s=(!tp||norm(nm).startsWith(norm(tp)+" ")||norm(nm)===norm(tp))?nm:(tp+" "+nm);
+  return s.replace(/\s+/g," ").trim();};
 const addrDe=a=>logradouroDe(a)+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
 /* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
 const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
@@ -638,7 +639,10 @@ const PFX={RES:"Residencial",JD:"Jardim",VI:"Vila",VL:"Vila",VILA:"Vila",VLG:"Vi
   LOT:"Loteamento",PRQ:"Parque",PQ:"Parque",BRO:"Bairro",CH:"Chácara",FAZ:"Fazenda",CONJ:"Conjunto",
   COD:"Condomínio",SIT:"Sítio",GRJ:"Granja",AER:"Aeroporto",DIS:"Distrito",REC:"Recanto",ZON:"Zona",
   AREA:"Área",ESP:"Espaço"};
-const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
+const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim();
+/* n\u00facleo do nome da rua: sem acento, sem "RUA/AV/R." na frente \u2014 o cadastro embute o tipo no nome ("R  MARAJO") */
+const TIPOVIA=/^(RUA|R|AVENIDA|AVN?|ALAMEDA|AL|TRAVESSA|TV|PRACA|PC|ESTRADA|EST|RODOVIA|ROD|VIELA|VIA)\.?\s+/;
+const ruaCore=s=>norm(s).replace(/'/g,"").replace(TIPOVIA,"");
 const titano=s=>s.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 function displayName(raw){
   const p=raw.trim().split(/\s+/);
@@ -804,16 +808,18 @@ async function buscar(){
       if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
       if(!rua){toast("Digite a rua/avenida.");return;}
       loading(true,"consultando o endereço…");
-      const rN=norm(rua), rD=rua.replace(/\D/g,""), nN=num.replace(/\D/g,"");
+      /* rCore ignora "rua/av/r." e espaços duplicados — o cadastro grava tipo dentro do nome ("R  MARAJO") */
+      const rCore=ruaCore(rua), rD=rCore.replace(/\D/g,""), nN=num.replace(/\D/g,"");
+      if(!rCore&&!rD){toast("Digite o nome da rua (além de \"rua/av\").");return;}
       let whereA=`cdbairro=${b} AND vlvenal>0`;
       if(nN)whereA+=` AND nrimovel LIKE '%${nN}%'`;
       else if(rD)whereA+=` AND nmlogradou LIKE '%${rD}%'`;
-      else whereA+=` AND UPPER(nmlogradou) LIKE '%${rN.replace(/'/g,"")}%'`;
+      else whereA+=` AND UPPER(nmlogradou) LIKE '%${rCore}%'`;
       let all=await fetchWhere(whereA);
       /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
       if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`,8);
-      const casaRua=a=>{const log=norm(a.nmlogradou);
-        return log.includes(rN)||(rD&&(log.match(/\d+/g)||[]).includes(rD));};
+      const casaRua=a=>{const log=ruaCore(a.nmlogradou);
+        return log.includes(rCore)||(rD&&(log.match(/\d+/g)||[]).includes(rD));};
       items=all.filter(a=>{
         const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
         return casaRua(a)&&okN;
@@ -824,9 +830,9 @@ async function buscar(){
         loading(true,"número não achado — varrendo a rua…");
         let all2;
         if(rD)all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND nmlogradou LIKE '%${rD}%'`);
-        else all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND UPPER(nmlogradou) LIKE '%${rN.replace(/'/g,"")}%'`,8);
+        else all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND UPPER(nmlogradou) LIKE '%${rCore}%'`,8);
         items=all2.filter(casaRua);
-        if(items.length)aviso="Número "+num+" não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira.";
+        if(items.length)aviso="Número "+num+" não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira; ache o prédio pelo nome na lista.";
       }
     }else if(MODE==="bd"){
       /* busca por NOME do edifício — setor opcional (a cidade toda responde em ~3s) */
@@ -889,7 +895,7 @@ function finish(items){
     LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;RENDN=300;
     if(!units.length){
       const msg=(MODE==="bd")?"Nenhum edifício com esse nome no cadastro. Tente parte do nome (ex.: só \"riviera\").":
-        (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua e o número.":
+        (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua — ou, se for prédio, use o modo \"Prédio\" com o nome do edifício.":
         (MODE!=="insc"&&document.getElementById("apto").value?"Nenhuma unidade com esse número. Tente sem o apto para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
