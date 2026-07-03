@@ -173,15 +173,15 @@ def main():
                 if at.get("x_coord") and at.get("y_coord"):
                     im["x"] = round(at["x_coord"], 2)
                     im["y"] = round(at["y_coord"], 2)
-                    im["pr"] = prec  # q = lote/quadra, r = aproximado pela rua
                     ok += 1
-                    # fator laudo/venal: so casa/terreno em lote de unidade unica,
-                    # e com quadra E lote EXATOS (LIKE serve p/ pino, nao p/ estatistica)
+                    # quadra E lote EXATOS confirmam o pino; LIKE parcial vira "r" (app avisa "aproximado")
                     def _dig(v):
                         return re.sub(r"\D", "", str(v or ""))
                     exato = (mq and ml and _dig(mq.group(1)) and _dig(ml.group(1))
                              and _dig(mq.group(1)).lstrip("0") == _dig(at.get("nrquadra")).lstrip("0")
                              and _dig(ml.group(1)).lstrip("0") == _dig(at.get("nrlote")).lstrip("0"))
+                    im["pr"] = "q" if (prec == "q" and exato) else "r"
+                    # fator laudo/venal: so casa/terreno em lote de unidade unica e casamento exato
                     if (prec == "q" and exato and im["t"].upper().startswith(("CASA", "TERRENO"))
                             and im.get("a") and (at.get("ttsublot") or 0) <= 1 and at.get("vlvenal")):
                         fat.setdefault(code, []).append(im["a"] / at["vlvenal"])

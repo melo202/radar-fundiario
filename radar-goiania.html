@@ -48,7 +48,7 @@
       linear-gradient(90deg,var(--grid) 1px,transparent 1px);
     background-size:44px 44px;opacity:.35;
   }
-  .wrap{position:relative;z-index:1;display:grid;grid-template-columns:390px 1fr;height:100vh}
+  .wrap{position:relative;z-index:1;display:grid;grid-template-columns:390px 1fr;height:100vh;height:100dvh}
   .viewbar{display:none}
 
   /* ---------- painel esquerdo ---------- */
@@ -107,7 +107,7 @@
     border-radius:2px;padding:13px 14px;cursor:pointer;transition:border-color .12s,transform .05s}
   .card:hover{border-left-color:var(--accent);border-color:var(--muted)}
   .card.sel{border-left-color:var(--accent);border-color:var(--ink);background:var(--paper-2)}
-  .card .ql-tag{font:700 12px/1 "IBM Plex Mono",monospace;color:var(--lot-bright);letter-spacing:.04em}
+  .card .ql-tag{font:700 12px/1 "IBM Plex Mono",monospace;color:var(--lot);letter-spacing:.04em} /* contraste AA */
   .card .addr{font:600 14px/1.25 "IBM Plex Sans";margin:5px 0 8px}
   .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--muted)}
   .card .grid2 b{color:var(--ink);font-weight:600}
@@ -127,7 +127,8 @@
   .mapwrap{position:relative}
   #map{position:absolute;inset:0;background:var(--paper)}
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
-    border:2px solid var(--ink);border-radius:3px;padding:16px 18px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none}
+    border:2px solid var(--ink);border-radius:3px;padding:16px 18px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none;
+    max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto} /* iPhone paisagem cai no desktop: precisa rolar */
   .detail.show{display:block}
   .detail .x{position:absolute;top:10px;right:12px;border:0;background:transparent;font-size:20px;color:var(--muted);cursor:pointer;line-height:1}
   .detail .dtag{font:700 12px/1 "IBM Plex Mono";color:var(--lot-bright);letter-spacing:.06em}
@@ -147,7 +148,7 @@
   .cmp{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:11px 12px}
   .cmp .h{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
   .cmp .h .badge{float:right;font:700 9px/1 "IBM Plex Mono";padding:3px 6px;border-radius:2px;letter-spacing:.06em}
-  .badge.alta{background:var(--lot);color:#fff}.badge.media{background:var(--gold);color:#fff}.badge.baixa{background:var(--accent);color:#fff}
+  .badge.alta{background:var(--lot);color:#fff}.badge.media{background:#8a6a1e;color:#fff}.badge.baixa{background:var(--accent);color:#fff}
   .cmp .bar{position:relative;height:14px;background:var(--grid);border-radius:7px;margin:16px 4px 4px}
   .cmp .bar .iqr{position:absolute;top:0;bottom:0;background:var(--lot-bright);opacity:.45;border-radius:7px}
   .cmp .bar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
@@ -158,8 +159,8 @@
   .cmp .mkt{font:500 11px/1.5 "IBM Plex Sans";color:var(--muted);margin-top:5px}
   .cmp-load{font:500 12px/1.4 "IBM Plex Sans";color:var(--muted);padding:8px 2px}
   /* camada Caixa */
-  .caixabtn{width:100%;margin-top:12px;border:1.5px solid var(--gold);background:var(--paper);color:var(--gold);
-    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
+  .caixabtn{width:100%;margin-top:12px;border:1.5px solid var(--gold);background:var(--paper);color:#7d621f;
+    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px} /* texto dourado escurecido: contraste AA */
   .caixabtn:hover,.caixabtn.on{background:var(--gold);color:#fff}
   .cxp{font:500 12px/1.5 "IBM Plex Sans";max-width:230px}
   .cxp .tt{font:700 12px/1.3 "IBM Plex Sans"}
@@ -319,7 +320,7 @@
     .viewbar button{flex:1;min-height:56px;border:0;background:transparent;color:var(--line);
       font:700 14px/1 "IBM Plex Sans";letter-spacing:.04em;cursor:pointer}
     .viewbar button.on{background:var(--accent);color:#fff}
-    .toast{position:fixed}
+    .toast{position:fixed;top:calc(16px + env(safe-area-inset-top))} /* não fica sob o Dynamic Island */
     .loading{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom))}
     .moderow button{padding:13px 6px}
     .combo-item{padding:13px 12px}
@@ -435,7 +436,7 @@
 </div>
 
 <!-- WIZARD DO LAUDO (estilo iOS: um assunto por tela, campos grandes) -->
-<div class="wiz" id="wiz" hidden>
+<div class="wiz" id="wiz" hidden role="dialog" aria-modal="true" aria-label="Laudo de avaliação">
   <div class="wtop">
     <button class="wback" id="wBack" onclick="wizBack()" aria-label="Voltar">‹</button>
     <div class="wdots" id="wDots"></div>
@@ -522,6 +523,8 @@ const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOp
 const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
 let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
 const LOTINFO={};
+/* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
+function capCache(o,max){const k=Object.keys(o);if(k.length>max)delete o[k[0]];}
 let LOTDEB=null,LOTLAST=null;
 function initLots(){
   map.createPane("lots").style.zIndex=380; /* abaixo do overlayPane (400): pinos de resultado ficam por cima */
@@ -530,6 +533,7 @@ function initLots(){
 }
 function lotInfo(ci){
   /* resultRecordCount:2 basta para saber se é prédio (usamos ttsublot p/ a contagem) — hover leve */
+  capCache(LOTINFO,300);
   if(!LOTINFO[ci])LOTINFO[ci]=jsonp({where:`ci='${String(ci).replace(/\D/g,"")}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2,f:"json"})
     .then(d=>{
       const its=sanitiza((d.features||[]).map(f=>f.attributes));
@@ -660,7 +664,7 @@ function filterCombo(qtext){
   hits=hits.slice(0,50);
   comboActive=-1;
   if(!hits.length){list.innerHTML='<div class="combo-empty">nenhum setor com esse nome</div>';list.classList.add("show");return;}
-  list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" data-code="${b.code}" onclick="pickBairro('${b.code}')">
+  list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" id="opt-${String(b.code).replace(/\D/g,"")}" aria-selected="false" data-code="${b.code}" onclick="pickBairro('${b.code}')">
     <span class="code">${b.code}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
   list.classList.add("show");
 }
@@ -688,9 +692,8 @@ function resolveBairro(){
 /* ---------------- busca ---------------- */
 function setMode(m){
   MODE=m;
-  document.getElementById("mQL").classList.toggle("on",m==="ql");
-  document.getElementById("mAD").classList.toggle("on",m==="addr");
-  document.getElementById("mIN").classList.toggle("on",m==="insc");
+  [["mQL","ql"],["mAD","addr"],["mIN","insc"]].forEach(([id,v])=>{
+    const b=document.getElementById(id);b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",m===v);});
   document.getElementById("needBairro").style.display=(m==="ql"||m==="addr")?"block":"none";
   document.getElementById("paneQL").style.display=m==="ql"?"block":"none";
   document.getElementById("paneAddr").style.display=m==="addr"?"block":"none";
@@ -706,8 +709,8 @@ function loading(on,msg){const l=document.getElementById("loading");
 const isMobile=()=>window.matchMedia("(max-width:820px)").matches;
 function setView(v){
   document.body.dataset.view=v;
-  document.getElementById("vbBusca").classList.toggle("on",v==="busca");
-  document.getElementById("vbMapa").classList.toggle("on",v==="mapa");
+  [["vbBusca","busca"],["vbMapa","mapa"]].forEach(([id,x])=>{
+    const b=document.getElementById(id);b.classList.toggle("on",v===x);b.setAttribute("aria-pressed",v===x);});
   /* o Leaflet precisa remedir o container quando ele volta a ficar visível */
   if(v==="mapa"&&map)setTimeout(()=>{map.invalidateSize();refreshLots();},60);
 }
@@ -813,7 +816,10 @@ function finish(items){
       return;}
     render(units);
     plot(units);
-    if(isMobile())setView("mapa");
+    if(isMobile()){
+      setView("mapa");
+      if(units.length>1)toast(units.length+" unidades no mapa — a lista completa está na aba Busca.");
+    }
 }
 
 /* ---------------- estimativa de mercado (melhor fonte disponível) ----------------
@@ -934,12 +940,18 @@ function plot(list){
 /* ---------------- selecionar ---------------- */
 function pick(i){
   const a=LAST[i];if(!a)return;sel=i;
-  if(isMobile())setView("mapa");
   document.querySelectorAll(".card").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
   markers.forEach(m=>{if(m&&!done.has(m)){done.add(m);m.setStyle({radius:m===selMk?12:8,fillColor:m===selMk?"#c9691f":"#b5451f"});}});
-  if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);showDetail(a,ll);}
+  if(isMobile())setView("mapa"); /* o sheet mora na tela do mapa */
+  if(a.x_coord&&a.y_coord){
+    const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);showDetail(a,ll);
+  }else{
+    /* sem coordenada: abre a ficha mesmo assim — laudo e CND continuam acessíveis */
+    toast("Imóvel sem coordenada no cadastro — abrindo a ficha.");
+    showDetail(a,null);
+  }
 }
 
 function showDetail(a,ll){
@@ -974,18 +986,18 @@ function showDetail(a,ll){
   let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
   if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
   document.getElementById("dNote").textContent=nota;
-  const [lat,lon]=ll;
-  const gmaps=`https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`;
-  const gsv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}`;
-  const gearth=`https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}`;
   /* CND da prefeitura (sccer00202f0): aceita a inscrição via querystring (testado) —
      abre JÁ PREENCHIDA; o usuário só resolve o CAPTCHA e a certidão sai com o titular. */
   const inscUse=esc(insc||ci);
   const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(clean(insc||ci).replace(/\D/g,""));
-  document.getElementById("dActs").innerHTML=`
-    <a class="primary" href="${gmaps}" target="_blank" rel="noopener">Google Maps ↗</a>
-    <a href="${gsv}" target="_blank" rel="noopener">Street View ↗</a>
-    <a href="${gearth}" target="_blank" rel="noopener">Earth ↗</a>
+  let mapLinks="";
+  if(ll){ /* imóvel sem coordenada abre a ficha mesmo assim — só perde os links de mapa */
+    const [lat,lon]=ll;
+    mapLinks=`<a class="primary" href="https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Google Maps ↗</a>
+    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Street View ↗</a>
+    <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
+  }
+  document.getElementById("dActs").innerHTML=mapLinks+`
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>`;
   d.classList.add("show");
 }
@@ -1009,6 +1021,7 @@ async function getComps(a){
     radius=r;
     /* chave inclui a UNIDADE, a área e o uso — unidades do mesmo prédio (mesmo ci) não colidem */
     const key=clean(a.nrinscr||a.ci)+"|"+areaField+"|"+Math.round(myArea)+"|"+(a.uso||0)+"|"+isU+"|"+r;
+    capCache(CMPCACHE,150);
     if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r,isU).catch(err=>{delete CMPCACHE[key];throw err;});
     res=await CMPCACHE[key];
     if(res.n>=3)break;
@@ -1103,8 +1116,8 @@ async function renderComps(box,r,myPm2,radius,isU,a){
     <div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m
       <span class="badge ${conf[0]}">${conf[1]}</span></div>
     <div class="bar">
-      <div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div>
-      <div class="med" style="left:${px(r.med)}%"></div>
+      ${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div>
+      <div class="med" style="left:${px(r.med)}%"></div>`:""}
       <div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div>
     </div>
     <div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div>
@@ -1127,10 +1140,13 @@ function abrirLaudo(){
       vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra"};
   const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
   getComps(DCUR).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
+  WIZRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
   document.getElementById("wiz").hidden=false;
   wizRender();
 }
-function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;}
+let WIZRET=null;
+function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;
+  if(WIZRET&&WIZRET.focus){try{WIZRET.focus();}catch(e){}}WIZRET=null;}
 function wizBack(){if(LZ&&LZ.step>0){LZ.step--;wizRender();}}
 function wizSet(k,v){if(!LZ)return;LZ[k]=v;wizRender();}
 function wizDif(d){if(!LZ)return;const i=LZ.difs.indexOf(d);i<0?LZ.difs.push(d):LZ.difs.splice(i,1);wizRender();}
@@ -1160,6 +1176,7 @@ function wizRender(){
   document.getElementById("wDots").innerHTML=[0,1,2,3].map(i=>`<i class="${i===LZ.step?'on':''}"></i>`).join("");
   document.getElementById("wBack").disabled=LZ.step===0;
   document.getElementById("wNext").textContent=LZ.step===3?"Gerar PDF":"Continuar";
+  const stepMudou=LZ._st!==LZ.step;LZ._st=LZ.step;
   const addr=logradouroDe(a);
   if(LZ.step===0){
     b.innerHTML=`<div class="wh1">O imóvel</div><div class="wsub">Confira os dados e marque o estado.</div>
@@ -1168,23 +1185,27 @@ function wizRender(){
         Inscrição ${esc(clean(a.nrinscr)||clean(a.ci))}<br>
         ${a.areaedif?"Construído: "+Math.round(a.areaedif)+" m² · ":""}${a.areaterr?"Terreno: "+Math.round(a.areaterr)+" m²":""}</div>
       <span class="wlabel">Estado de conservação</span>
-      <div class="seg">${CONSERVS.map(c=>`<button class="${LZ.conserv===c?'on':''}" onclick="wizSet('conserv','${c}')">${c}</button>`).join("")}</div>
+      <div class="seg">${CONSERVS.map(c=>`<button aria-pressed="${LZ.conserv===c}" class="${LZ.conserv===c?'on':''}" onclick="wizSet('conserv','${c}')">${c}</button>`).join("")}</div>
       <span class="wlabel">Diferenciais (toque para marcar)</span>
-      <div class="chips">${DIFS.map(d=>`<button class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>
+      <div class="chips">${DIFS.map(d=>`<button aria-pressed="${LZ.difs.includes(d)}" class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>
       <span class="wlabel">Vistoria</span>
-      <div class="seg"><button class="${LZ.vistoria?'on':''}" onclick="wizSet('vistoria',true)">Vistoriei o imóvel</button><button class="${!LZ.vistoria?'on':''}" onclick="wizSet('vistoria',false)">Sem vistoria</button></div>
+      <div class="seg"><button aria-pressed="${LZ.vistoria}" class="${LZ.vistoria?'on':''}" onclick="wizSet('vistoria',true)">Vistoriei o imóvel</button><button aria-pressed="${!LZ.vistoria}" class="${!LZ.vistoria?'on':''}" onclick="wizSet('vistoria',false)">Sem vistoria</button></div>
       ${LZ.vistoria?`<input class="winput" style="margin-top:10px" type="date" value="${LZ.dataVist}" oninput="LZ.dataVist=this.value">`:""}`;
   }else if(LZ.step===1){
     const est=mercadoEstimado(a);
     const fc=FATOR_CONSERV[LZ.conserv]||1;
-    const sug=est?Math.round((est.lo+est.hi)/2*fc/1000)*1000:null;
+    const g=LZ.comps;
+    /* âncora relativa: um imóvel acima/abaixo da mediana venal da vizinhança carrega essa posição p/ o mercado */
+    let rel=1;
+    if(g&&g.res&&g.res.n>=5&&g.res.med>0&&g.myPm2)rel=Math.min(1.4,Math.max(0.7,g.myPm2/g.res.med));
+    const sug=est?Math.round((est.lo+est.hi)/2*fc*rel/1000)*1000:null;
     if(LZ.valor==null||LZ.valor===LZ.valorAuto)LZ.valor=sug; /* só sobrescreve se o usuário não editou */
     LZ.valorAuto=sug;
-    const g=LZ.comps;
     b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">Sugerido pela análise — ajuste pelo seu conhecimento.</div>
       <div class="wcard">${est?`Faixa estimada: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem estimativa disponível para este imóvel."}
         ${g&&g.res&&g.res.n>=3?`<br><br>Vizinhança: <b>${g.res.n} imóveis parecidos</b> em ${g.radius} m · meio da faixa ${brl(g.res.med)}/m² (base cadastro)`:(g===null?"":"<br><br>⏳ analisando a vizinhança…")}</div>
       ${fc!==1?`<div class="wsub" style="margin:8px 0 0">Ajuste pelo estado "${esc(LZ.conserv)}": ${fc>1?"+":""}${Math.round((fc-1)*100)}%.</div>`:""}
+      ${rel!==1?`<div class="wsub" style="margin:4px 0 0">Ajuste pela posição do imóvel na vizinhança: ${rel>1?"+":""}${Math.round((rel-1)*100)}%.</div>`:""}
       <span class="wlabel">Valor de venda sugerido (R$)</span>
       <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null">
       <span class="wlabel">Observações (opcional)</span>
@@ -1209,6 +1230,8 @@ function wizRender(){
       <span class="wlabel">Telefone / e-mail (opcional)</span>
       <input class="winput" value="${esc(p.contato||"")}" oninput="LZ.prof.contato=this.value">`;
   }
+  /* leitor de tela: anuncia a troca de passo focando o título (só quando o passo muda) */
+  if(stepMudou){const h=b.querySelector(".wh1");if(h){h.tabIndex=-1;h.focus({preventScroll:true});}b.scrollTop=0;}
 }
 function wizNext(){
   if(!LZ)return;
@@ -1245,7 +1268,7 @@ function montarLaudo(){
     ["Vistoria",vist]
   ].filter(Boolean);
   let barHtml="";
-  if(g&&g.res&&g.res.n>=3){
+  if(g&&g.res&&g.res.n>=5){ /* gráfico só com amostra decente — Q1-Q3 com n=3-4 é artefato */
     const r=g.res,span=Math.max(r.max-r.min,1);
     const px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100)).toFixed(1);
     barHtml=`<div class="lbar"><div class="iqr" style="left:${px(r.q1)}%;width:${(px(r.q3)-px(r.q1)).toFixed(1)}%"></div>
@@ -1328,14 +1351,14 @@ function caixaPopup(i){
     <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}%</span>`:""}</div>
     <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
     <div>${esc(i.m)}</div>
-    ${i.pr==="r"?'<div class="ap">pino aproximado pela rua</div>':""}
+    ${i.pr!=="q"?'<div class="ap">pino aproximado</div>':""}
     ${/^https:\/\//.test(i.u||"")?`<a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>`:""}
   </div>`;
 }
 function toggleCaixa(){
   if(!window.CAIXA)return;
   caixaOn=!caixaOn;
-  document.getElementById("btnCaixa").classList.toggle("on",caixaOn);
+  const bC=document.getElementById("btnCaixa");bC.classList.toggle("on",caixaOn);bC.setAttribute("aria-pressed",caixaOn);
   if(!caixaLayer){
     caixaLayer=L.layerGroup();
     CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
@@ -1381,6 +1404,7 @@ function closeDetail(){document.getElementById("detail").classList.remove("show"
 
 /* ---------------- init ---------------- */
 document.body.dataset.view="busca";
+setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
@@ -1388,6 +1412,17 @@ if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostnam
   navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
 /* offline -> online: recarrega a lista de setores se ela não tiver vindo */
 window.addEventListener("online",()=>{if(!COMBO.length)loadBairros();});
+/* teclado do iOS não redimensiona layout fixo: empurra o conteúdo do wizard p/ cima do teclado */
+if(window.visualViewport){
+  visualViewport.addEventListener("resize",()=>{
+    const kb=Math.max(0,window.innerHeight-visualViewport.height);
+    const wb=document.querySelector(".wbody");if(wb)wb.style.paddingBottom=(kb?kb+16:20)+"px";
+  });
+}
+document.addEventListener("focusin",e=>{
+  if(e.target.classList&&e.target.classList.contains("winput"))
+    setTimeout(()=>e.target.scrollIntoView({block:"center",behavior:"smooth"}),250);
+});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
   if(!document.getElementById("wiz").hidden)fecharLaudo();else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
@@ -1412,7 +1447,9 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
 /* combobox de setor: digitar, navegar, fechar */
 (function(){
   const inp=document.getElementById("bairroInput"), list=document.getElementById("bairroList");
-  inp.addEventListener("input",()=>{document.getElementById("bairro").value="";filterCombo(inp.value);});
+  let deb=null;
+  inp.addEventListener("input",()=>{document.getElementById("bairro").value="";
+    clearTimeout(deb);deb=setTimeout(()=>filterCombo(inp.value),120);});
   inp.addEventListener("focus",()=>{if(COMBO.length)filterCombo(inp.value);});
   inp.addEventListener("keydown",e=>{
     const items=[...list.querySelectorAll(".combo-item")];
@@ -1424,8 +1461,10 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
       return;}
     else if(e.key==="Escape"){e.stopPropagation();list.classList.remove("show");comboExpanded(false);return;}
     else return;
-    items.forEach((it,i)=>it.classList.toggle("active",i===comboActive));
-    if(items[comboActive])items[comboActive].scrollIntoView({block:"nearest"});
+    items.forEach((it,i)=>{const on=i===comboActive;it.classList.toggle("active",on);it.setAttribute("aria-selected",on);});
+    if(items[comboActive]){items[comboActive].scrollIntoView({block:"nearest"});
+      inp.setAttribute("aria-activedescendant",items[comboActive].id);}
+    else inp.removeAttribute("aria-activedescendant");
   });
   /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção */
   const DOWNEV=window.PointerEvent?"pointerdown":"touchstart";

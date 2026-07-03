@@ -72,7 +72,7 @@ Verificado em preview 375×812: busca Q128/L08E no Bueno → 26 unidades, auto-s
 10. ✅ **Coeficiente atualiza o painel de detalhe aberto** (antes ficava com o valor antigo) e preserva a seleção do card.
 11. ✅ **Filtro de garagem não se aplica à busca por inscrição** (quem busca a inscrição exata de um box quer vê-lo).
 12. ✅ Código morto removido (`data-disp`).
-13. ⬜ Retry/backoff nas chamadas JSONP (1 retry com backoff curto resolve os 502 esporádicos).
+13. ✅ Retry/backoff nas chamadas JSONP (retry de 900ms no app; backoff exponencial + Retry-After no atualizar-caixa.py — 03/07/2026).
 14. ⬜ **JSONP em si**: aceitável para uso próprio (TLS protege o canal; a confiança é no servidor da prefeitura). Se um dia virar produto: proxy próprio (ex.: Cloudflare Worker gratuito) fazendo o fetch e devolvendo JSON com CORS — elimina execução de script remoto e ainda permite cache.
 
 ---
@@ -106,15 +106,15 @@ Toda calibração de mercado (tabela por bairro, futuros ajustes) segue:
 
 15. **Metodologia do valor de referência** — evoluída para o plano de inteligência (ver `INTELIGENCIA-radar.md`, baseado em pesquisa de 10 frentes em 02/07/2026):
     a. ✅ Data-base do venal no detalhe + aviso NBR 14653/PTAM.
-    b. ✅ Coeficiente **por setor** (localStorage), reaplicado automaticamente.
+    b. ✅→♻️ Coeficiente por setor substituído pela **escolha automática de fonte** (tabela do bairro → laudos Caixa → genérico com aviso); a régua manual foi removida da UI em 03/07/2026.
     c. ✅ **Comparáveis da vizinhança** (I1): raio 400/800 m, mesmo uso, área 0,5–2×, mediana+Q1–Q3 com cerca de Tukey; vizinhanças grandes via busca binária de contagens (aritmética no WHERE — descoberta da pesquisa). Percentil do imóvel + selo de confiança + faixa convertida a mercado.
     d. ❌ ITBI de Goiânia **não é público** (verificado) — caminho: pedido via LAI (I8). ~~vllanc98 como histórico~~ (provado: campo = venal atual).
 16. ⬜ **Cache/banco local.** Curto prazo: cache de sessão por consulta (Map em memória) — barato. Estrutural: espelho da base em IndexedDB (ou SQLite via ferramenta externa) alimentado por varredura paginada offline → busca instantânea, filtros pesados, modo offline. Respeitar o servidor (varrer de madrugada, 1 vez por mês).
 17. ⬜ **Multi-cidade.** Extrair objeto de configuração: `{nome, endpoint, epsg/proj4, mapaDeCampos, prefixosSetor, urlsOficiais(titular/venal), quirks(outFields, jsonp)}`. Recon mínimo por cidade: achar a camada de cadastro, projeção, campos equivalentes e política CORS/JSONP. (Goiânia aberta; Aparecida = Geopixel com login; Senador Canedo sem mapa.)
 18. ⬜ **Testes automatizados.** Extrair as funções puras (`norm`, `likeTerm`, `displayName`, `matchApto`, `isGarage`, filtros de quadra/lote/endereço, `toWGS`) para testá-las com Node + fixtures JSON reais gravadas do endpoint. Casos que travam regressão: zona UTM 22 (o bug do "pino na Bahia"), lote "20/21", quadra "10E", apto "1901" vs "19", padding de espaços.
 19. ⬜ **Refinar o fuzzy** (falso positivo): número do imóvel casar por igualdade de dígitos primeiro e substring só como fallback sinalizado; rua casar por fronteira de palavra ("135" não casar "1350"); ordenar resultados por qualidade do match.
-20. ⬜ **Acessibilidade:** `for=`/`id` nos labels, ARIA no combobox (`role="combobox"`/`listbox`), `Esc` fecha o detalhe, foco visível, contraste AA.
-21. ⬜ **Exportar ficha/planilha** (CSV dos resultados; ficha do imóvel em PDF).
+20. ✅ **Acessibilidade (03/07/2026):** labels com `for=`, combobox com ARIA completo (activedescendant/aria-selected), live regions no toast/loading, cards por teclado, wizard como dialog com gestão de foco, aria-pressed nos toggles, contraste AA nos textos coloridos, Esc em camadas.
+21. ✅ **Exportar (03/07/2026):** CSV dos resultados (Excel pt-BR, lat/lon 6 casas) e laudo/ficha em PDF via wizard.
 22. ⬜ **Offline total** (depende de 16 + M8).
 
 ---
