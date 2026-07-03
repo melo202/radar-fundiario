@@ -254,6 +254,44 @@
       font:600 7.5pt/1 "IBM Plex Mono",monospace;color:#8a8271;border-top:.6pt solid #c3b9a3;padding-top:4pt}
     #laudo section{page-break-inside:avoid}
   }
+  /* visão em tela do laudo (PWA standalone iOS) — espelha o visual do PDF */
+  #laudoView{position:fixed;inset:0;z-index:2100;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #laudoView[hidden]{display:none}
+  #laudoView .lvbar{position:sticky;top:0;display:flex;gap:10px;align-items:center;justify-content:space-between;
+    background:var(--ink);color:var(--paper-2);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+    font:500 12px/1.4 "IBM Plex Sans"}
+  #laudoView .lvbar button{width:40px;height:40px;flex:none;border:0;background:transparent;color:#fff;font-size:24px;cursor:pointer}
+  #laudoView .lvbody{max-width:720px;margin:0 auto;padding:0 0 40px;color:#141a1f;font:400 14px/1.55 "IBM Plex Sans",sans-serif}
+  #laudoView .lrun{display:none}
+  #laudoView .lhead{background:#141a1f;color:#f2eee4;padding:18px 22px 15px;border-top:6px solid #b5451f}
+  #laudoView .lhead .eye{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.22em;color:#c9691f;text-transform:uppercase;margin-bottom:7px}
+  #laudoView .lhead h1{font:800 22px/1.15 "IBM Plex Sans";margin:0}
+  #laudoView .lhead .lsub{font-size:12px;color:#c3b9a3;margin-top:6px}
+  #laudoView .lkpis{display:flex;border:1.5px solid #141a1f;border-top:0;margin-bottom:16px}
+  #laudoView .lkpis .kpi{flex:1;padding:11px 14px;border-right:1px solid #d8d0be}
+  #laudoView .lkpis .kpi:last-child{border-right:0}
+  #laudoView .lkpis .kk{font:700 9px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:#6b6353;margin-bottom:5px}
+  #laudoView .lkpis .kv{font:800 15px/1.15 "IBM Plex Sans"}
+  #laudoView .lkpis .kpi.hl .kv{color:#b5451f}
+  #laudoView section{padding:0 22px}
+  #laudoView h2{font:800 14px/1.3 "IBM Plex Sans";margin:18px 0 9px;padding-left:9px;border-left:6px solid #b5451f;text-transform:uppercase;letter-spacing:.05em}
+  #laudoView table{width:100%;border-collapse:collapse;font-size:13px}
+  #laudoView td{padding:6px 10px;border-bottom:1px solid #e4ddcc;vertical-align:top}
+  #laudoView td.k{width:33%;font-weight:700;color:#4a443a}
+  #laudoView .lbar{position:relative;height:14px;background:#e4ddcc;border-radius:7px;margin:16px 6px 5px}
+  #laudoView .lbar .iqr{position:absolute;top:0;bottom:0;background:#3f7a63;opacity:.55;border-radius:7px}
+  #laudoView .lbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:#141a1f}
+  #laudoView .lbar .me{position:absolute;top:-8px;width:0;height:0;border:7px solid transparent;border-top-color:#b5451f;transform:translateX(-7px)}
+  #laudoView .llbl{display:flex;justify-content:space-between;font:600 11px/1 "IBM Plex Mono",monospace;color:#6b6353;margin:5px 8px 0}
+  #laudoView .destaque{background:#141a1f;color:#f2eee4;border-radius:9px;padding:15px 18px;margin:16px 0;text-align:center}
+  #laudoView .destaque .dk{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:#c9691f}
+  #laudoView .destaque .dv{font:800 27px/1.15 "IBM Plex Sans";margin-top:6px}
+  #laudoView .destaque .df{font-size:11px;color:#c3b9a3;margin-top:5px}
+  #laudoView .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  #laudoView .lfotos img{width:100%;height:110px;object-fit:cover;border-radius:4px}
+  #laudoView .lmiudo{font-size:11px;color:#6b6353;line-height:1.55;text-align:justify}
+  #laudoView .lass{margin-top:40px;text-align:center;font-size:14px}
+  #laudoView .lass .linha{border-top:1.5px solid #141a1f;width:58%;margin:0 auto 6px}
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -411,6 +449,15 @@
 <!-- LAUDO (só aparece na impressão/PDF) -->
 <div id="laudo"></div>
 
+<!-- Visão em tela do laudo (fallback do PWA standalone no iOS, onde window.print não abre) -->
+<div id="laudoView" hidden>
+  <div class="lvbar">
+    <span>Toque em <b>Compartilhar ⬆</b> → <b>Imprimir</b> e pince para gerar o PDF — ou abra no Safari.</span>
+    <button onclick="document.getElementById('laudoView').hidden=true" aria-label="Fechar">×</button>
+  </div>
+  <div class="lvbody" id="laudoViewBody"></div>
+</div>
+
 <script>
 /* ---------------- config ---------------- */
 proj4.defs("EPSG:31982","+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
@@ -421,7 +468,10 @@ const LOTSVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/Mapa
 const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const clean=v=>String(v==null?"":v).trim();
-const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+/* remove campos pessoais do titular já na entrada (defesa em profundidade — LGPD) */
+const SENS=["dtnascimen","cpf","cnpj","nmcontrib","nmproprie","nome"];
+const sanitiza=arr=>{arr.forEach(a=>SENS.forEach(k=>{if(k in a)delete a[k];}));return arr;};
 const fmtDt=s=>{s=clean(s);return /^\d{8}$/.test(s)&&s!=="00000000"?s.slice(6)+"/"+s.slice(4,6)+"/"+s.slice(0,4):null;};
 /* monta o logradouro sem duplicar o tipo ("AV" + "AV T4" -> "AV T4") */
 const logradouroDe=a=>{const tp=clean(a.tplogradou),nm=clean(a.nmlogradou);
@@ -481,7 +531,7 @@ function initLots(){
 function lotInfo(ci){
   if(!LOTINFO[ci])LOTINFO[ci]=jsonp({where:`ci='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"})
     .then(d=>{
-      const its=(d.features||[]).map(f=>f.attributes);
+      const its=sanitiza((d.features||[]).map(f=>f.attributes));
       if(!its.length)return "Lote "+esc(ci);
       const a=its[0];
       const addr=logradouroDe(a);
@@ -530,32 +580,38 @@ async function refreshLots(){
     toast("Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
 }
 
+/* token de busca: respostas concorrentes (buscar/onMapClick/loadCi) não se sobrescrevem */
+let SEARCHTOKEN=0;
 /* clicar num lote desenhado -> carrega direto pela inscrição do lote */
 async function loadCi(ci){
   if(!ci)return;
+  const tk=++SEARCHTOKEN;
   loading(true,"carregando lote…");
   try{
-    const d=await jsonp({where:`ci='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
-    const items=(d.features||[]).map(f=>f.attributes);
+    const d=await jsonp({where:`ci='${String(ci).replace(/\D/g,"")}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
+    if(tk!==SEARCHTOKEN)return;
+    const items=sanitiza((d.features||[]).map(f=>f.attributes));
     if(!items.length){toast("Lote sem registro no cadastro.");return;}
     finish(items);
-  }catch(err){toast("Falha ao carregar o lote. Tente de novo.");}
-  finally{loading(false);}
+  }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao carregar o lote. Tente de novo.");}
+  finally{if(tk===SEARCHTOKEN)loading(false);}
 }
 
 /* clicar no mapa -> identifica o lote naquele ponto (consulta espacial) */
 async function onMapClick(e){
+  const tk=++SEARCHTOKEN;
   loading(true,"identificando lote…");
   try{
     const [x,y]=proj4("EPSG:4326","EPSG:31982",[e.latlng.lng,e.latlng.lat]);
     const d=await jsonp({geometry:`${x.toFixed(2)},${y.toFixed(2)}`,geometryType:"esriGeometryPoint",
       inSR:"31982",spatialRel:"esriSpatialRelIntersects",outFields:"*",returnGeometry:"false",
       resultRecordCount:2000,f:"json"});
-    const items=(d.features||[]).map(f=>f.attributes);
+    if(tk!==SEARCHTOKEN)return;
+    const items=sanitiza((d.features||[]).map(f=>f.attributes));
     if(!items.length){toast("Nenhum lote nesse ponto. Clique sobre o imóvel.");return;}
     finish(items);
-  }catch(err){toast("Falha ao identificar o ponto. Tente de novo.");}
-  finally{loading(false);}
+  }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao identificar o ponto. Tente de novo.");}
+  finally{if(tk===SEARCHTOKEN)loading(false);}
 }
 
 /* ---------------- setores: expansão de prefixo + busca ---------------- */
@@ -662,12 +718,13 @@ async function fetchWhere(where,maxPages=30){
     if(++guard>=maxPages){truncated=true;break;}
   }
   if(truncated)toast("Resultado muito grande — a lista pode estar incompleta. Refine a busca.");
-  return all.map(f=>f.attributes);
+  return sanitiza(all.map(f=>f.attributes));
 }
 
 async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
+  const tk=++SEARCHTOKEN;
   btn.disabled=true;closeDetail();
   try{
     let items=[];
@@ -678,7 +735,7 @@ async function buscar(){
       /* 14 dígitos = inscrição da unidade (nrinscr); 10 = inscrição do lote (ci) */
       const field=ci.length>10?"nrinscr":"ci";
       const d=await jsonp({where:`${field}='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
-      items=(d.features||[]).map(f=>f.attributes);
+      items=sanitiza((d.features||[]).map(f=>f.attributes));
     }else if(MODE==="addr"){
       const okB=resolveBairro();
       const b=document.getElementById("bairro").value;
@@ -722,10 +779,11 @@ async function buscar(){
         return okQ&&okL;
       });
     }
+    if(tk!==SEARCHTOKEN)return;
     finish(items);
   }catch(e){
-    toast("Falha ao consultar o cadastro. Verifique a internet e tente de novo.");
-  }finally{loading(false);btn.disabled=false;}
+    if(tk===SEARCHTOKEN)toast(navigator.onLine?"Falha ao consultar o cadastro. Tente de novo.":"Você está offline — a busca precisa de internet.");
+  }finally{if(tk===SEARCHTOKEN){loading(false);btn.disabled=false;}}
 }
 
 /* aplica filtro de apto/garagem, ordena, renderiza e plota */
@@ -741,10 +799,10 @@ function finish(items){
     }
     units.sort((x,y)=>{const cx=clean(x.ci),cy=clean(y.ci);
       return cx<cy?-1:cx>cy?1:(x.insubprinc||0)-(y.insubprinc||0);});
-    LAST=units;
+    LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;
     if(!units.length){
       const msg=(MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua e o número.":
-        (document.getElementById("apto").value?"Nenhuma unidade com esse número. Tente sem o apto para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
+        (MODE!=="insc"&&document.getElementById("apto").value?"Nenhuma unidade com esse número. Tente sem o apto para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
       return;}
@@ -775,7 +833,9 @@ const brlC=n=>n==null?"—":n>=995000?"R$ "+(n/1e6).toLocaleString("pt-BR",{maxi
 function mercadoEstimado(a){
   const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
-  if(isU&&m2b&&a.areaedif>0){
+  /* tabela FipeZap é residencial: só apto residencial (uso 1/misto 5), nunca sala/loja/box */
+  const podeTabela=isU&&m2b&&a.areaedif>0&&(a.uso===1||a.uso===5)&&!isGarage(a);
+  if(podeTabela){
     const v=a.areaedif*m2b*FATOR_OFERTA;
     return {lo:v*.88,hi:v*1.12,
       metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m² anunciado, "+M2_MERCADO.ref+", com fator oferta 0,90 da NBR 14653-2 — anúncio costuma vir acima do fechamento)"};
@@ -942,9 +1002,9 @@ async function getComps(a){
   let res=null,radius=0;
   for(const r of [400,800]){
     radius=r;
-    const key=clean(a.ci)+"|"+areaField+"|"+r;
-    /* cacheia a PROMISE: clique duplo não dispara consultas duplicadas */
-    if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r).catch(err=>{delete CMPCACHE[key];throw err;});
+    /* chave inclui a UNIDADE, a área e o uso — unidades do mesmo prédio (mesmo ci) não colidem */
+    const key=clean(a.nrinscr||a.ci)+"|"+areaField+"|"+Math.round(myArea)+"|"+(a.uso||0)+"|"+isU+"|"+r;
+    if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r,isU).catch(err=>{delete CMPCACHE[key];throw err;});
     res=await CMPCACHE[key];
     if(res.n>=3)break;
   }
@@ -963,16 +1023,20 @@ async function compare(){
     await renderComps(box,g.res,g.myPm2,g.radius,g.isU,a);
   }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
 }
-function compsBase(a,areaField,myArea,radius){
-  /* NBR 14653-2: comparável com área entre 0,5x e 2x a do alvo, mesmo uso */
+function compsBase(a,areaField,myArea,radius,isU){
+  /* NBR 14653-2: área entre 0,5x e 2x a do alvo, mesmo uso; exclui o PRÓPRIO imóvel;
+     segmenta tipologia (apto vs casa/terreno) — venal de casa embute o terreno e inflaria o R$/m² */
   let where=`vlvenal>0 AND ${areaField}>=${(myArea*0.5).toFixed(1)} AND ${areaField}<=${(myArea*2).toFixed(1)}`;
-  if(a.uso)where+=` AND uso=${a.uso}`;
+  if(a.uso)where+=` AND uso=${+a.uso||0}`;
+  where+=isU?" AND cdedificio>0":" AND (cdedificio=0 OR cdedificio IS NULL)";
+  const insc=clean(a.nrinscr).replace(/\D/g,"");
+  if(insc)where+=` AND nrinscr<>'${insc}'`;
   return {geometry:`${a.x_coord.toFixed(2)},${a.y_coord.toFixed(2)}`,geometryType:"esriGeometryPoint",
     inSR:"31982",distance:radius,units:"esriSRUnit_Meter",spatialRel:"esriSpatialRelIntersects",
     where,returnGeometry:"false",f:"json"};
 }
-async function compsStats(a,areaField,myArea,radius){
-  const base=compsBase(a,areaField,myArea,radius);
+async function compsStats(a,areaField,myArea,radius,isU){
+  const base=compsBase(a,areaField,myArea,radius,isU);
   const cnt=await jsonp(Object.assign({},base,{returnCountOnly:"true"}));
   const n=cnt.count||0;
   if(n<3)return {n};
@@ -983,36 +1047,41 @@ async function compsStats(a,areaField,myArea,radius){
       .map(x=>x[areaField]>0?x.vlvenal/x[areaField]:null)
       .filter(v=>v&&isFinite(v)).sort((p,q)=>p-q);
     if(vals.length<3)return {n:vals.length};
-    /* cerca de Tukey remove outliers antes da faixa */
-    const q1=quant(vals,.25),q3=quant(vals,.75),iqr=q3-q1;
-    vals=vals.filter(v=>v>=q1-1.5*iqr&&v<=q3+1.5*iqr);
+    /* Tukey só com amostra >=8: com n baixo a cerca remove sinal, não ruído */
+    if(vals.length>=8){const q1=quant(vals,.25),q3=quant(vals,.75),iqr=q3-q1;
+      vals=vals.filter(v=>v>=q1-1.5*iqr&&v<=q3+1.5*iqr);}
     return {n:vals.length,exact:true,vals,
       min:vals[0],max:vals[vals.length-1],q1:quant(vals,.25),med:quant(vals,.5),q3:quant(vals,.75)};
   }
-  /* vizinhança grande: percentis por busca binária de contagens (aritmética no WHERE) */
+  /* vizinhança grande: percentis por busca binária de contagens, em escala LOG
+     (erro relativo uniforme; sem o piso artificial de ~206 R$/m² da escala linear) */
+  const memo={};
+  const cnt2=t=>memo[t]||(memo[t]=jsonp(Object.assign({},base,
+    {where:base.where+` AND vlvenal/${areaField}<${t.toFixed(2)}`,returnCountOnly:"true"})).then(c=>c.count||0));
   const pct=async p=>{
-    let lo=50,hi=40000;
-    for(let i=0;i<7;i++){
-      const mid=(lo+hi)/2;
-      const c=await jsonp(Object.assign({},base,
-        {where:base.where+` AND vlvenal/${areaField}<${mid.toFixed(2)}`,returnCountOnly:"true"}));
-      if((c.count||0)<n*p)lo=mid;else hi=mid;
+    let lo=20,hi=60000;
+    for(let i=0;i<12&&hi/lo>1.03;i++){
+      const mid=Math.sqrt(lo*hi);
+      if(await cnt2(mid)<n*p)lo=mid;else hi=mid;
     }
-    return (lo+hi)/2;
+    return Math.sqrt(lo*hi);
   };
-  const [q1,med,q3]=await Promise.all([pct(.25),pct(.5),pct(.75)]);
-  return {n,exact:false,q1,med,q3,min:Math.max(50,q1-1.5*(q3-q1)),max:q3+1.5*(q3-q1)};
+  const q1=await pct(.25),med=await pct(.5),q3=await pct(.75);
+  return {n,exact:false,q1,med,q3,min:Math.max(20,q1-1.5*(q3-q1)),max:q3+1.5*(q3-q1)};
 }
 async function renderComps(box,r,myPm2,radius,isU,a){
-  let below=r.below!==undefined?r.below:null;
-  if(r.below===undefined){
+  /* percentil memoizado POR VALOR (mapa), não no objeto compartilhado do cache */
+  const bkey=myPm2.toFixed(2);
+  r._below=r._below||{};
+  let below=r._below[bkey];
+  if(below===undefined){
     if(r.exact){below=r.vals.filter(v=>v<myPm2).length/r.vals.length;}
     else{try{const areaField=isU?"areaedif":"areaterr";
-      const base=compsBase(a,areaField,a[areaField],radius);
+      const base=compsBase(a,areaField,a[areaField],radius,isU);
       const c=await jsonp(Object.assign({},base,
         {where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
       below=(c.count||0)/r.n;}catch(e){below=null;}}
-    r.below=below; /* memoriza: re-render (ex.: troca de coeficiente) não repete a consulta */
+    r._below[bkey]=below;
   }
   if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio */
   const amp=(r.q3-r.q1)/r.med;
@@ -1049,7 +1118,8 @@ function abrirLaudo(){
   if(!DCUR)return;
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
   LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null};
-  getComps(DCUR).then(g=>{if(LZ){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{});
+  const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
+  getComps(DCUR).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   document.getElementById("wiz").hidden=false;
   wizRender();
 }
@@ -1057,9 +1127,22 @@ function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;}
 function wizBack(){if(LZ&&LZ.step>0){LZ.step--;wizRender();}}
 function wizSet(k,v){if(!LZ)return;LZ[k]=v;wizRender();}
 function wizDif(d){if(!LZ)return;const i=LZ.difs.indexOf(d);i<0?LZ.difs.push(d):LZ.difs.splice(i,1);wizRender();}
+/* redimensiona a foto do iPhone (3-8 MB) para ~1600px JPEG — evita estourar a memória do Safari */
+function downscale(file){
+  return new Promise(res=>{
+    const fr=new FileReader();
+    fr.onload=()=>{const img=new Image();
+      img.onload=()=>{const M=1600,s=Math.min(1,M/Math.max(img.width,img.height));
+        const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        try{res(c.toDataURL("image/jpeg",0.8));}catch(e){res(fr.result);}};
+      img.onerror=()=>res(fr.result);img.src=fr.result;};
+    fr.onerror=()=>res(null);fr.readAsDataURL(file);
+  });
+}
 function wizFoto(inp){
   [...inp.files].slice(0,Math.max(0,8-LZ.fotos.length)).forEach(f=>{
-    const r=new FileReader();r.onload=()=>{if(LZ){LZ.fotos.push(r.result);wizRender();}};r.readAsDataURL(f);
+    const lz0=LZ;downscale(f).then(u=>{if(u&&LZ===lz0){LZ.fotos.push(u);wizRender();}});
   });
   inp.value="";
 }
@@ -1176,10 +1259,23 @@ function montarLaudo(){
     <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
       <p class="lmiudo">Método comparativo direto de dados de mercado: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), com conversão a mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra. Este documento expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Emitido como PTAM na forma da Resolução COFECI nº 1.066/2007.":" A emissão de PTAM é privativa de corretor inscrito no CRECI (Res. COFECI nº 1.066/2007)."}</p>
       <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}</div></section>`;
-  document.body.classList.add("print-laudo");
-  const done=()=>{document.body.classList.remove("print-laudo");window.removeEventListener("afterprint",done);};
-  window.addEventListener("afterprint",done);
   fecharLaudo();
+  /* iOS PWA standalone: window.print() é no-op — mostra o laudo em tela cheia com instrução */
+  const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
+  if(standalone){
+    document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+    document.getElementById("laudo").innerHTML="";
+    document.getElementById("laudoView").hidden=false;
+    document.getElementById("laudoView").scrollTop=0;
+    return;
+  }
+  document.body.classList.add("print-laudo");
+  const done=()=>{document.body.classList.remove("print-laudo");
+    document.getElementById("laudo").innerHTML="";  /* libera as fotos do DOM após o PDF */
+    window.removeEventListener("afterprint",done);};
+  window.addEventListener("afterprint",done);
+  const mq=matchMedia("print");mq.addEventListener&&mq.addEventListener("change",e=>{if(!e.matches)done();});
+  window.addEventListener("focus",done,{once:true}); /* rede de segurança se afterprint não vier (iOS) */
   setTimeout(()=>window.print(),150);
 }
 
@@ -1200,7 +1296,7 @@ function caixaPopup(i){
     <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
     <div>${esc(i.m)}</div>
     ${i.pr==="r"?'<div class="ap">pino aproximado pela rua</div>':""}
-    <a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>
+    ${/^https:\/\//.test(i.u||"")?`<a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>`:""}
   </div>`;
 }
 function toggleCaixa(){
@@ -1237,7 +1333,7 @@ function exportCSV(){
     const addr=addrDe(a);
     const est=mercadoEstimado(a), pm2=unitLabel(a)?m2Edif(a):m2Terr(a);
     let lat="",lon="";
-    if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);lat=csvNum(ll[0].toFixed(6));lon=csvNum(ll[1].toFixed(6));}
+    if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);lat=ll[0].toFixed(6).replace(".",",");lon=ll[1].toFixed(6).replace(".",",");}
     lines.push([clean(a.nrinscr),clean(a.ci),clean(a.nmbairro),clean(a.nrquadra),clean(a.nrlote),addr,
       clean(a.incompl),clean(a.nmedificio),USO[a.uso]||"",csvNum(a.areaterr),csvNum(a.areaedif),
       csvNum(a.vlvenal),est?Math.round(est.lo):"",est?Math.round(est.hi):"",pm2?Math.round(pm2):"",lat,lon].map(csvCell).join(";"));
@@ -1255,7 +1351,10 @@ document.body.dataset.view="busca";
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"))
+  navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
+/* offline -> online: recarrega a lista de setores se ela não tiver vindo */
+window.addEventListener("online",()=>{if(!COMBO.length)loadBairros();});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
   if(!document.getElementById("wiz").hidden)fecharLaudo();else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 

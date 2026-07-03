@@ -3,13 +3,17 @@
    manifest) — o cache é só fallback offline, nunca congela versão.
    CACHE-FIRST apenas para bibliotecas de CDN e ícones (imutáveis).
    Consultas ao ArcGIS (JSONP) e tiles do mapa NÃO passam por aqui: dado vivo. */
-const CACHE = "radar-v2";
-const SHELL = [
+const CACHE = "radar-v3";
+const LOCAL = [
   "./",
   "./radar-goiania.html",
+  "./caixa-goiania.js",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
+  "./apple-touch-icon.png"
+];
+const CDN = [
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"
@@ -17,7 +21,10 @@ const SHELL = [
 const NETWORK_FIRST = /(\/$|\.html$|caixa-goiania\.js$|manifest\.json$)/;
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  /* same-origin é obrigatório; CDN é best-effort (não deixa o install inteiro falhar se o cdnjs oscilar) */
+  e.waitUntil(caches.open(CACHE).then(c =>
+    c.addAll(LOCAL).then(() => Promise.allSettled(CDN.map(u => fetch(u).then(r => r.ok && c.put(u, r)))))
+  ).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {

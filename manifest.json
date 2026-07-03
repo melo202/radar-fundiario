@@ -2,13 +2,16 @@
   "name": "Radar Fundiário · Goiânia",
   "short_name": "Radar",
   "description": "Busca de imóveis de Goiânia por quadra e lote sobre o cadastro imobiliário público",
+  "id": "./",
+  "scope": "./",
   "start_url": "./radar-goiania.html",
   "display": "standalone",
   "background_color": "#e9e4d8",
   "theme_color": "#141a1f",
   "lang": "pt-BR",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
