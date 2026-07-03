@@ -88,6 +88,8 @@
   .bldg-head{margin:8px 16px 2px;padding:10px 12px;background:var(--ink);color:var(--paper-2);border-radius:2px}
   .bldg-head .nm{font:700 13px/1.2 "IBM Plex Sans"}
   .bldg-head .sub{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--line);margin-top:5px}
+  .bldg-head.flash{animation:bldgflash 1.1s ease}
+  @keyframes bldgflash{0%,100%{background:var(--ink)}25%{background:var(--accent);box-shadow:0 0 0 3px var(--accent)}}
   .card .unit{font:700 12px/1 "IBM Plex Mono",monospace;color:var(--accent);letter-spacing:.02em;margin-bottom:4px}
   .go{width:100%;background:var(--accent);color:#fff;border:0;font:700 14px/1 "IBM Plex Sans";letter-spacing:.02em;
     padding:13px;border-radius:2px;cursor:pointer;box-shadow:var(--shadow);transition:transform .05s,background .15s}
@@ -962,16 +964,20 @@ function finish(items){
       return;}
     render(units);
     plot(units);
+    const nLotes=new Set(units.map(a=>clean(a.ci))).size;
+    const ehPredio=units.length>1&&nLotes===1;
     if(isMobile()){
-      const nLotes=new Set(units.map(a=>clean(a.ci))).size;
-      if(units.length>1&&nLotes===1){
-        /* UM prédio com várias unidades: fica na LISTA (é ela que interessa), pino já está no mapa */
+      if(ehPredio){
+        /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
         setView("busca");
-        toast(units.length+" unidades listadas — o pino do prédio está na aba Mapa.");
+        toast("🏢 "+units.length+" apartamentos deste prédio listados abaixo ⬇");
       }else{
         setView("mapa");
         if(units.length>1)toast(units.length+" unidades no mapa — a lista completa está na aba Busca.");
       }
+    }else if(ehPredio){
+      /* desktop: a lista completa já está na coluna da esquerda — avisa para não parecer "só 1 apto" */
+      toast("🏢 "+units.length+" apartamentos neste prédio — lista completa na coluna ao lado.");
     }
 }
 
@@ -1050,7 +1056,7 @@ function render(list){
       lastCi=ci;
       if(cnt[ci]>1){
         const ed=esc(nomeEd[ci])||"Unidades no mesmo lote"; /* galerias/salas costumam não ter nome no cadastro */
-        html+=`<div class="bldg-head"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} unidades listadas</div></div>`;
+        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}</div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} unidades — toque numa abaixo para abrir a ficha ⬇</div></div>`;
       }
     }
     html+=cardHTML(a,i,cnt[ci]>1);
@@ -1083,27 +1089,43 @@ function cardHTML(a,i,isUnit){
 function plot(list){
   layerGroup.clearLayers();
   if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;} /* tira a divisa do setor ao plotar resultados */
-  const byCi={},pts=[];
+  const byCi={},pts=[],cntCi={};
+  list.forEach(a=>{const k=clean(a.ci);cntCi[k]=(cntCi[k]||0)+1;});
   list.forEach((a,i)=>{
     if(!a.x_coord||!a.y_coord)return;
     const ci=clean(a.ci);
     if(byCi[ci]===undefined){
       const ll=toWGS(a.x_coord,a.y_coord);pts.push(ll);
-      const idx=i;
+      const idx=i, predio=cntCi[ci]>1;
       /* bubblingMouseEvents:false — sem isso o clique no pino também dispara o
          clique do mapa (identificar lote), que apagava a lista de resultados */
       const mk=L.circleMarker(ll,{radius:8,color:"#141a1f",weight:2,fillColor:"#b5451f",fillOpacity:.9,bubblingMouseEvents:false})
-        .addTo(layerGroup).on("click",()=>pick(idx));
+        /* pino de prédio abre a LISTA de unidades; pino de imóvel único abre a ficha */
+        .addTo(layerGroup).on("click",()=>predio?revealList(ci):pick(idx));
       byCi[ci]=mk;
     }
   });
   markers=list.map(a=>byCi[clean(a.ci)]||null);
   if(pts.length===1){map.setView(pts[0],18);
-    /* prédio no mobile: não auto-abre a ficha de uma unidade (a lista é o destino) */
-    if(!(isMobile()&&list.length>1))pick(list.findIndex(a=>a.x_coord&&a.y_coord));}
+    /* prédio (várias unidades no mesmo lote): a LISTA é o destino — não abre a ficha
+       de uma única unidade. Imóvel único (casa/terreno): abre a ficha direto. */
+    if(list.length===1)pick(list.findIndex(a=>a.x_coord&&a.y_coord));
+    else flashList();}
   else if(pts.length>1){map.fitBounds(L.latLngBounds(pts).pad(.3));}
   else toast("Encontrado, mas sem coordenada cadastrada.");
 }
+
+/* rola a lista ao topo e pisca o cabeçalho do prédio — deixa claro onde está a listagem
+   (sem trocar de tela; a decisão de tela mora no finish/pino). */
+function flashList(ci){
+  const box=document.getElementById("results");if(!box)return;
+  const head=(ci&&box.querySelector(`.bldg-head[data-ci="${clean(ci)}"]`))||box.querySelector(".bldg-head");
+  if(!head){box.scrollTop=0;return;}
+  head.scrollIntoView({block:"nearest"});
+  head.classList.remove("flash");void head.offsetWidth;head.classList.add("flash");
+}
+/* prédio clicado NO MAPA (pino): joga o corretor para a lista de apartamentos daquele lote. */
+function revealList(ci){if(isMobile())setView("busca");flashList(ci);}
 
 /* ---------------- selecionar ---------------- */
 function pick(i){
