@@ -84,7 +84,11 @@ Ver análise no fim. `index.html` (redirecionamento) já criado; manifest/sw/íc
 
 ---
 
-## P1 — Laudo de avaliação automatizado (pedido em 03/07/2026) — ⬜
+## P1 — Laudo de avaliação automatizado — ✅ implementado em 03/07/2026
+
+Botão "📄 Gerar laudo de avaliação (PDF)" no painel do imóvel. Wizard de 4 passos (imóvel/conservação/diferenciais → valor sugerido pré-calculado + observações → fotos da galeria → dados do profissional, lembrados p/ os próximos). PDF via impressão do navegador; com CRECI sai como PTAM (Res. COFECI 1.066/2007), sem CRECI como Relatório de Referência. Pendente: alimentar a tabela de valores com a base do usuário (ele tem os dados; fará depois).
+
+Especificação original:
 
 Gerador de **Relatório de Referência de Mercado / PTAM** para o corretor, 100% client-side e sem IA:
 - **Wizard estilo iOS**: passos curtos, um assunto por tela, campos grandes, toque simples — estado de conservação, diferenciais (armários, reforma, andar, sol), fotos opcionais, dados do solicitante. Tudo que o app já sabe vem **pré-preenchido** (cadastro, áreas, IPTU, comparáveis da vizinhança, faixa de mercado, mini-mapa do lote).

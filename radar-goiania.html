@@ -171,6 +171,70 @@
   .cxp .dc{display:inline-block;background:var(--lot);color:#fff;font:700 10px/1 "IBM Plex Mono";padding:3px 5px;border-radius:2px}
   .cxp .ap{color:var(--muted);font-size:10.5px}
   .cxp a{color:var(--accent);font-weight:700}
+  /* laudo: botão de entrada */
+  .dlaudo{margin:0 0 12px}
+  .laudobtn{width:100%;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper-2);
+    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
+  .laudobtn:hover{background:var(--accent);border-color:var(--accent)}
+  /* wizard estilo iOS */
+  .wiz{position:fixed;inset:0;z-index:2000;background:var(--paper-2);display:flex;flex-direction:column}
+  .wiz[hidden]{display:none}
+  .wtop{display:flex;align-items:center;justify-content:space-between;padding:10px 8px;padding-top:calc(10px + env(safe-area-inset-top))}
+  .wback,.wclose{width:44px;height:44px;border:0;background:transparent;font-size:28px;color:var(--accent);cursor:pointer;line-height:1}
+  .wback[disabled]{opacity:0;pointer-events:none}
+  .wdots{display:flex;gap:7px}
+  .wdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .wdots i.on{background:var(--accent)}
+  .wbody{flex:1;overflow-y:auto;padding:4px 22px 20px;width:100%;max-width:560px;margin:0 auto}
+  .wh1{font:800 24px/1.15 "IBM Plex Sans";margin:6px 0 4px}
+  .wsub{font:500 14px/1.5 "IBM Plex Sans";color:var(--muted);margin:0 0 18px}
+  .wcard{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;font:500 14px/1.6 "IBM Plex Sans"}
+  .wcard b{font-weight:700}
+  .wlabel{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:block}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{padding:12px 18px;border-radius:22px;border:1.5px solid var(--line);background:var(--paper);
+    font:600 15px/1 "IBM Plex Sans";color:var(--ink);cursor:pointer;min-height:44px}
+  .seg button.on{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chips button{padding:11px 15px;border-radius:20px;border:1.5px solid var(--line);background:var(--paper);
+    font:500 14px/1 "IBM Plex Sans";color:var(--ink);cursor:pointer;min-height:44px}
+  .chips button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .winput{width:100%;font:500 17px/1.3 "IBM Plex Sans";padding:14px;border-radius:12px;border:1.5px solid var(--line);
+    background:var(--paper);color:var(--ink);margin-bottom:4px}
+  .winput:focus{outline:none;border-color:var(--accent)}
+  textarea.winput{min-height:96px;resize:vertical}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .pgrid .ph{position:relative}
+  .pgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
+  .pgrid .rm{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:15px;cursor:pointer;line-height:1}
+  .waddph{width:100%;border:1.5px dashed var(--line);background:var(--paper);border-radius:12px;padding:18px;
+    font:600 15px/1 "IBM Plex Sans";color:var(--muted);cursor:pointer;min-height:52px}
+  .wfoot{padding:12px 22px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .wnext{display:block;width:100%;max-width:560px;margin:0 auto;background:var(--accent);color:#fff;border:0;
+    font:700 17px/1 "IBM Plex Sans";padding:17px;border-radius:14px;cursor:pointer}
+  .wnext:active{transform:translateY(1px)}
+  /* laudo impresso */
+  #laudo{display:none}
+  @media print{
+    body.print-laudo>*{display:none!important}
+    body.print-laudo #laudo{display:block!important}
+    #laudo{font:400 11pt/1.5 "IBM Plex Sans","Segoe UI",sans-serif;color:#111}
+    #laudo .lhead{border-bottom:3px solid #b5451f;padding-bottom:10px;margin-bottom:14px}
+    #laudo .lhead h1{font:800 19pt/1.2 "IBM Plex Sans";margin:0}
+    #laudo .lhead .lsub{font-size:10pt;color:#555;margin-top:4px}
+    #laudo h2{font:700 12pt/1.3 "IBM Plex Sans";border-bottom:1px solid #ccc;padding-bottom:3px;margin:16px 0 8px}
+    #laudo table{width:100%;border-collapse:collapse;font-size:10.5pt}
+    #laudo td{padding:4px 8px;border:1px solid #ddd;vertical-align:top}
+    #laudo td.k{width:34%;background:#f4f1e8;font-weight:600}
+    #laudo .destaque{background:#f4f1e8;border:2px solid #b5451f;border-radius:6px;padding:12px 16px;margin:12px 0;text-align:center}
+    #laudo .destaque .dv{font:800 18pt/1.2 "IBM Plex Sans";color:#b5451f}
+    #laudo .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+    #laudo .lfotos img{width:100%;height:150pt;object-fit:cover}
+    #laudo .lmiudo{font-size:8.5pt;color:#555;line-height:1.5}
+    #laudo .lass{margin-top:44px;text-align:center}
+    #laudo .lass .linha{border-top:1px solid #333;width:60%;margin:0 auto 4px}
+    #laudo section{page-break-inside:avoid}
+  }
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -302,6 +366,7 @@
       <div class="insc" id="dInsc"></div>
       <div class="dgrid" id="dGrid"></div>
       <div class="dcomps" id="dComps"></div>
+      <div class="dlaudo"><button class="laudobtn" onclick="abrirLaudo()">📄 Gerar laudo de avaliação (PDF)</button></div>
       <div class="dnote" id="dNote"></div>
       <div class="acts" id="dActs"></div>
     </div>
@@ -312,6 +377,20 @@
     <button id="vbMapa" onclick="setView('mapa')">🗺️ Mapa</button>
   </nav>
 </div>
+
+<!-- WIZARD DO LAUDO (estilo iOS: um assunto por tela, campos grandes) -->
+<div class="wiz" id="wiz" hidden>
+  <div class="wtop">
+    <button class="wback" id="wBack" onclick="wizBack()">‹</button>
+    <div class="wdots" id="wDots"></div>
+    <button class="wclose" onclick="fecharLaudo()">×</button>
+  </div>
+  <div class="wbody" id="wBody"></div>
+  <div class="wfoot"><button class="wnext" id="wNext" onclick="wizNext()">Continuar</button></div>
+</div>
+
+<!-- LAUDO (só aparece na impressão/PDF) -->
+<div id="laudo"></div>
 
 <script>
 /* ---------------- config ---------------- */
@@ -824,29 +903,33 @@ let DCUR=null;
 const CMPCACHE={};
 function quant(sorted,p){const i=p*(sorted.length-1),lo=Math.floor(i),hi=Math.ceil(i);
   return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
-async function compare(){
-  const a=DCUR;if(!a||!a.x_coord||!a.y_coord)return;
-  const box=document.getElementById("dComps");
+async function getComps(a){
   const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
   const areaField=isU?"areaedif":"areaterr";
   const myArea=a[areaField]||0, myVal=a.vlvenal||0;
-  if(!(myArea>0&&myVal>0)){box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
-  const myPm2=myVal/myArea;
+  if(!(myArea>0&&myVal>0))return null;
+  let res=null,radius=0;
+  for(const r of [400,800]){
+    radius=r;
+    const key=clean(a.ci)+"|"+areaField+"|"+r;
+    /* cacheia a PROMISE: clique duplo não dispara consultas duplicadas */
+    if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r).catch(err=>{delete CMPCACHE[key];throw err;});
+    res=await CMPCACHE[key];
+    if(res.n>=3)break;
+  }
+  return {res,radius,isU,myPm2:myVal/myArea};
+}
+async function compare(){
+  const a=DCUR;if(!a||!a.x_coord||!a.y_coord)return;
+  const box=document.getElementById("dComps");
   box.innerHTML='<div class="cmp-load">⏳ analisando a vizinhança… (até ~20s no celular)</div>';
   box.scrollIntoView({block:"nearest",behavior:"smooth"});
   try{
-    let res=null,radius=0;
-    for(const r of [400,800]){
-      radius=r;
-      const key=clean(a.ci)+"|"+areaField+"|"+r;
-      /* cacheia a PROMISE: clique duplo não dispara consultas duplicadas */
-      if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r).catch(err=>{delete CMPCACHE[key];throw err;});
-      res=await CMPCACHE[key];
-      if(res.n>=3)break;
-    }
+    const g=await getComps(a);
     if(DCUR!==a)return; /* usuário já trocou de imóvel — descarta */
-    if(!res||res.n<3){box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(res?res.n:0)+' em '+radius+' m).</div>';return;}
-    await renderComps(box,res,myPm2,radius,isU,a);
+    if(!g){box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
+    if(!g.res||g.res.n<3){box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(g.res?g.res.n:0)+' em '+g.radius+' m).</div>';return;}
+    await renderComps(box,g.res,g.myPm2,g.radius,g.isU,a);
   }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
 }
 function compsBase(a,areaField,myArea,radius){
@@ -925,6 +1008,128 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   </div>`;
 }
 
+/* ---------------- laudo de avaliação: wizard iOS-style + PDF via impressão ---------------- */
+const CONSERVS=["Novo","Ótimo","Bom","Regular","Precisa reforma"];
+const DIFS=["Reformado","Armários planejados","Área gourmet","Piscina","Esquina","Sol da manhã","Andar alto","Vaga extra","Quintal amplo","Documentação ok"];
+let LZ=null;
+function abrirLaudo(){
+  if(!DCUR)return;
+  let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
+  LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null};
+  getComps(DCUR).then(g=>{if(LZ){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{});
+  document.getElementById("wiz").hidden=false;
+  wizRender();
+}
+function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;}
+function wizBack(){if(LZ&&LZ.step>0){LZ.step--;wizRender();}}
+function wizSet(k,v){if(!LZ)return;LZ[k]=v;wizRender();}
+function wizDif(d){if(!LZ)return;const i=LZ.difs.indexOf(d);i<0?LZ.difs.push(d):LZ.difs.splice(i,1);wizRender();}
+function wizFoto(inp){
+  [...inp.files].slice(0,Math.max(0,8-LZ.fotos.length)).forEach(f=>{
+    const r=new FileReader();r.onload=()=>{if(LZ){LZ.fotos.push(r.result);wizRender();}};r.readAsDataURL(f);
+  });
+  inp.value="";
+}
+function wizRmFoto(i){if(LZ){LZ.fotos.splice(i,1);wizRender();}}
+function wizRender(){
+  if(!LZ)return;
+  const a=LZ.a,b=document.getElementById("wBody");
+  document.getElementById("wDots").innerHTML=[0,1,2,3].map(i=>`<i class="${i===LZ.step?'on':''}"></i>`).join("");
+  document.getElementById("wBack").disabled=LZ.step===0;
+  document.getElementById("wNext").textContent=LZ.step===3?"Gerar PDF":"Continuar";
+  const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim();
+  if(LZ.step===0){
+    b.innerHTML=`<div class="wh1">O imóvel</div><div class="wsub">Confira os dados e marque o estado.</div>
+      <div class="wcard"><b>${esc(a.nmedificio)||esc(addr)||"Imóvel"}</b><br>
+        Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}<br>
+        Inscrição ${esc(clean(a.nrinscr)||clean(a.ci))}<br>
+        ${a.areaedif?"Construído: "+Math.round(a.areaedif)+" m² · ":""}${a.areaterr?"Terreno: "+Math.round(a.areaterr)+" m²":""}</div>
+      <span class="wlabel">Estado de conservação</span>
+      <div class="seg">${CONSERVS.map(c=>`<button class="${LZ.conserv===c?'on':''}" onclick="wizSet('conserv','${c}')">${c}</button>`).join("")}</div>
+      <span class="wlabel">Diferenciais (toque para marcar)</span>
+      <div class="chips">${DIFS.map(d=>`<button class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>`;
+  }else if(LZ.step===1){
+    const est=mercadoEstimado(a);
+    if(LZ.valor==null&&est)LZ.valor=Math.round((est.lo+est.hi)/2/1000)*1000;
+    const g=LZ.comps;
+    b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">Sugerido pela análise — ajuste pelo seu conhecimento.</div>
+      <div class="wcard">${est?`Faixa estimada: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem estimativa disponível para este imóvel."}
+        ${g&&g.res&&g.res.n>=3?`<br><br>Vizinhança: <b>${g.res.n} imóveis parecidos</b> em ${g.radius} m · meio da faixa ${brl(g.res.med)}/m² (base cadastro)`:(g===null?"":"<br><br>⏳ analisando a vizinhança…")}</div>
+      <span class="wlabel">Valor de venda sugerido (R$)</span>
+      <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null">
+      <span class="wlabel">Observações (opcional)</span>
+      <textarea class="winput" placeholder="ex.: reformado em 2024, vista livre, aceita permuta…" oninput="LZ.obs=this.value">${esc(LZ.obs)}</textarea>`;
+  }else if(LZ.step===2){
+    b.innerHTML=`<div class="wh1">Fotos</div><div class="wsub">Opcional — até 8, direto da galeria ou câmera.</div>
+      <button class="waddph" onclick="document.getElementById('wFile').click()">＋ Adicionar fotos</button>
+      <input id="wFile" type="file" accept="image/*" multiple hidden onchange="wizFoto(this)">
+      <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${f}"><button class="rm" onclick="wizRmFoto(${i})">×</button></div>`).join("")}</div>`;
+  }else{
+    const p=LZ.prof;
+    b.innerHTML=`<div class="wh1">Você</div><div class="wsub">Com CRECI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
+      <span class="wlabel">Nome completo *</span>
+      <input class="winput" value="${esc(p.nome||"")}" oninput="LZ.prof.nome=this.value">
+      <span class="wlabel">CRECI (opcional)</span>
+      <input class="winput" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
+      <span class="wlabel">Telefone / e-mail (opcional)</span>
+      <input class="winput" value="${esc(p.contato||"")}" oninput="LZ.prof.contato=this.value">`;
+  }
+}
+function wizNext(){
+  if(!LZ)return;
+  if(LZ.step<3){LZ.step++;wizRender();return;}
+  if(!(LZ.prof.nome||"").trim()){toast("Preencha seu nome para assinar o documento.");return;}
+  try{localStorage.setItem("radar_prof",JSON.stringify(LZ.prof));}catch(e){}
+  montarLaudo();
+}
+function montarLaudo(){
+  const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a),g=LZ.comps,ul=unitLabel(a);
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim()+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
+  const comCreci=!!(p.creci||"").trim();
+  const titulo=comCreci?"Parecer Técnico de Avaliação Mercadológica (PTAM)":"Relatório de Referência de Mercado";
+  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  const linhas=[
+    ["Endereço",esc(addr)||"—"],
+    ["Setor / Bairro",esc(a.nmbairro)||"—"],
+    ["Quadra / Lote","Q "+(esc(a.nrquadra)||"—")+" · L "+(esc(a.nrlote)||"—")],
+    ["Inscrição cadastral",esc(clean(a.nrinscr)||clean(a.ci))+(ul?" (unidade) · lote "+esc(a.ci):"")],
+    ul?["Unidade",esc(ul)+(clean(a.nmedificio)?" — "+esc(a.nmedificio):"")]:null,
+    ["Uso",USO[a.uso]||"—"],
+    ["Área do terreno",a.areaterr?Math.round(a.areaterr)+" m²"+(ul?" (fração ideal)":""):"—"],
+    ["Área construída",a.areaedif?Math.round(a.areaedif)+" m²":"—"],
+    ["No cadastro municipal desde",fmtDt(a.dtinclusao)||"—"],
+    ["IPTU lançado (exercício)",a.vlimp98?brl(a.vlimp98):"—"],
+    ["Valor venal (base fiscal)",brl(a.vlvenal)],
+    ["Estado de conservação (declarado)",esc(LZ.conserv)],
+    LZ.difs.length?["Diferenciais (declarados)",LZ.difs.map(esc).join(", ")]:null
+  ].filter(Boolean);
+  const compsHtml=g&&g.res&&g.res.n>=3
+    ?`<p>Foram considerados <b>${g.res.n} imóveis de perfil semelhante</b> (mesmo uso e porte) num raio de ${g.radius} m, com base no cadastro municipal. O valor unitário (base venal) do conjunto situa-se entre ${brl(g.res.q1)} e ${brl(g.res.q3)}/m² no miolo da amostra, mediana de ${brl(g.res.med)}/m²; o imóvel avaliado apresenta ${brl(g.myPm2)}/m².</p>`
+    :`<p>Não havia amostra mínima de vizinhança disponível na data de emissão; a estimativa apoia-se na referência de mercado indicada abaixo.</p>`;
+  const nSec=LZ.fotos.length?4:3;
+  document.getElementById("laudo").innerHTML=`
+    <div class="lhead"><h1>${titulo}</h1>
+      <div class="lsub">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?" · "+esc(p.contato):""} — Goiânia/GO, ${hoje}</div></div>
+    <section><h2>1. Identificação do imóvel</h2>
+      <table>${linhas.map(l=>`<tr><td class="k">${l[0]}</td><td>${l[1]}</td></tr>`).join("")}</table></section>
+    <section><h2>2. Análise de mercado</h2>
+      ${compsHtml}
+      ${est?`<p>Fonte principal da estimativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
+      ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
+      <div class="destaque">Valor de venda sugerido<div class="dv">${LZ.valor?brl(LZ.valor):"—"}</div></div>
+      ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</section>
+    ${LZ.fotos.length?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.map(f=>`<img src="${f}">`).join("")}</div></section>`:""}
+    <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
+      <p class="lmiudo">Método comparativo direto de dados de mercado: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), com conversão a mercado por referências públicas de R$/m² por bairro (Fipe/MySide/imprensa, ${M2_MERCADO.ref}) e, quando disponíveis, laudos públicos de avaliação da CAIXA. A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra. Este documento expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Emitido como PTAM na forma da Resolução COFECI nº 1.066/2007.":" A emissão de PTAM é privativa de corretor inscrito no CRECI (Res. COFECI nº 1.066/2007)."}</p>
+      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}</div></section>`;
+  document.body.classList.add("print-laudo");
+  const done=()=>{document.body.classList.remove("print-laudo");window.removeEventListener("afterprint",done);};
+  window.addEventListener("afterprint",done);
+  fecharLaudo();
+  setTimeout(()=>window.print(),150);
+}
+
 /* ---------------- camada Caixa (dados estáticos de caixa-goiania.js, gerado por atualizar-caixa.py) ---------------- */
 let caixaLayer=null,caixaOn=false;
 function initCaixa(){
@@ -998,7 +1203,8 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();}); /* combo dá stopPropagation no seu Esc */
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  if(!document.getElementById("wiz").hidden)fecharLaudo();else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
 /* bottom sheet: tocar na alça fecha; arrastar para baixo também */
 (function(){
