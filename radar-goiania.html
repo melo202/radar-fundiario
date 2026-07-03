@@ -686,8 +686,11 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
     <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
     <div class="cell"><div class="k">Unid. no lote</div><div class="v">${a.ttsublot||"—"}</div></div>`;
+  const compsBox=document.getElementById("dComps");
+  const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
   DCUR=a;
-  document.getElementById("dComps").innerHTML=
+  if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
+  else compsBox.innerHTML=
     (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
   let nota=(dtCad?"Cadastro atualizado em "+dtCad+" · ":"")+
@@ -733,12 +736,15 @@ async function compare(){
     for(const r of [400,800]){
       radius=r;
       const key=clean(a.ci)+"|"+areaField+"|"+r;
-      res=CMPCACHE[key]||(CMPCACHE[key]=await compsStats(a,areaField,myArea,r));
+      /* cacheia a PROMISE: clique duplo não dispara consultas duplicadas */
+      if(!CMPCACHE[key])CMPCACHE[key]=compsStats(a,areaField,myArea,r).catch(err=>{delete CMPCACHE[key];throw err;});
+      res=await CMPCACHE[key];
       if(res.n>=3)break;
     }
+    if(DCUR!==a)return; /* usuário já trocou de imóvel — descarta */
     if(!res||res.n<3){box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(res?res.n:0)+' em '+radius+' m).</div>';return;}
-    await renderComps(box,res,myPm2,radius,isU);
-  }catch(e){box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
+    await renderComps(box,res,myPm2,radius,isU,a);
+  }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
 }
 function compsBase(a,areaField,myArea,radius){
   /* NBR 14653-2: comparável com área entre 0,5x e 2x a do alvo, mesmo uso */
@@ -779,14 +785,18 @@ async function compsStats(a,areaField,myArea,radius){
   const [q1,med,q3]=await Promise.all([pct(.25),pct(.5),pct(.75)]);
   return {n,exact:false,q1,med,q3,min:Math.max(50,q1-1.5*(q3-q1)),max:q3+1.5*(q3-q1)};
 }
-async function renderComps(box,r,myPm2,radius,isU){
-  let below;
-  if(r.exact){below=r.vals.filter(v=>v<myPm2).length/r.vals.length;}
-  else{try{const a=DCUR,areaField=isU?"areaedif":"areaterr";
-    const base=compsBase(a,areaField,a[areaField],radius);
-    const c=await jsonp(Object.assign({},base,
-      {where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
-    below=(c.count||0)/r.n;}catch(e){below=null;}}
+async function renderComps(box,r,myPm2,radius,isU,a){
+  let below=r.below!==undefined?r.below:null;
+  if(r.below===undefined){
+    if(r.exact){below=r.vals.filter(v=>v<myPm2).length/r.vals.length;}
+    else{try{const areaField=isU?"areaedif":"areaterr";
+      const base=compsBase(a,areaField,a[areaField],radius);
+      const c=await jsonp(Object.assign({},base,
+        {where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
+      below=(c.count||0)/r.n;}catch(e){below=null;}}
+    r.below=below; /* memoriza: re-render (ex.: troca de coeficiente) não repete a consulta */
+  }
+  if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio */
   const amp=(r.q3-r.q1)/r.med;
   const conf=r.n<5?["baixa","amostra pequena"]:amp<=.3?["alta","confiança alta"]:amp<=.4?["media","confiança média"]:["baixa","dispersão alta"];
   const span=Math.max(r.max-r.min,1);
@@ -880,7 +890,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
 /* bottom sheet: arrastar a alça para baixo fecha o detalhe */
 (function(){
@@ -906,7 +916,7 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
       if(comboActive>=0&&items[comboActive]){pickBairro(items[comboActive].dataset.code);document.getElementById("quadra").focus();}
       else if(resolveBairro()){document.getElementById("quadra").focus();}
       return;}
-    else if(e.key==="Escape"){list.classList.remove("show");comboExpanded(false);return;}
+    else if(e.key==="Escape"){e.stopPropagation();list.classList.remove("show");comboExpanded(false);return;}
     else return;
     items.forEach((it,i)=>it.classList.toggle("active",i===comboActive));
     if(items[comboActive])items[comboActive].scrollIntoView({block:"nearest"});
