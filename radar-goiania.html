@@ -85,6 +85,7 @@
   .chk{display:flex;align-items:center;gap:8px;font:500 12px/1 "IBM Plex Sans"!important;letter-spacing:0!important;
     text-transform:none!important;color:var(--muted)!important;cursor:pointer;margin:4px 0 0!important}
   .chk input{width:auto;margin:0;accent-color:var(--accent)}
+  .chkmap{display:none;margin-top:9px!important} /* só faz sentido no mobile (no desktop o mapa já fica visível ao lado) */
   .bldg-head{margin:8px 16px 2px;padding:10px 12px;background:var(--ink);color:var(--paper-2);border-radius:2px}
   .bldg-head .nm{font:700 13px/1.2 "IBM Plex Sans"}
   .bldg-head .sub{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--line);margin-top:5px}
@@ -126,7 +127,13 @@
   .empty{padding:40px 22px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
   .empty .big{font-size:15px;color:var(--ink);font-weight:600;margin-bottom:6px}
 
-  .foot{padding:12px 22px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);line-height:1.5}
+  .foot{padding:9px 22px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);line-height:1.5}
+  .foot>summary{cursor:pointer;font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.07em;text-transform:uppercase;
+    list-style:none;user-select:none;color:var(--muted)}
+  .foot>summary::-webkit-details-marker{display:none}
+  .foot>summary::before{content:"▸ "}
+  .foot[open]>summary::before{content:"▾ "}
+  .foot .footbody{margin-top:8px}
 
   /* ---------- mapa ---------- */
   .mapwrap{position:relative}
@@ -380,6 +387,7 @@
     .count .csv{padding:11px 14px;font-size:11px;margin-top:-9px}
     .pgrid .rm{width:32px;height:32px}
     .chk{min-height:44px}
+    .chkmap{display:flex}
     .detail{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;
       border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:0}
     /* cabeçalho do sheet fica GRUDADO no topo — alça e × sempre visíveis mesmo rolando */
@@ -452,7 +460,8 @@
         <input id="insc" placeholder="ex.: 3020150346" autocomplete="off" inputmode="numeric">
       </div>
 
-      <button class="go" id="btnGo" onclick="buscar()">Localizar no mapa</button>
+      <button class="go" id="btnGo" onclick="buscar()">Buscar</button>
+      <label class="chk chkmap"><input type="checkbox" id="autoMapa"> ao buscar, abrir direto no mapa no ponto</label>
       <p class="hint">💡 ou <b>clique direto no mapa</b> sobre o imóvel para identificar o lote</p>
       <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Oportunidades Caixa (<span id="caixaN">0</span>)</button>
     </div>
@@ -461,9 +470,10 @@
       <div class="empty"><div class="big">Comece pela busca</div>Escolha o setor, digite a quadra e o lote. O app varre o cadastro oficial e planta os pontos no mapa.</div>
     </div>
 
-    <div class="foot">
-      Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (FipeZap/imprensa 2025-26), ajustados pelo fator oferta 0,90 (NBR 14653-2). O nome do titular não é lido por aqui — é consultado por você, manualmente, na CND oficial.
-    </div>
+    <details class="foot">
+      <summary>Fontes &amp; metodologia</summary>
+      <div class="footbody">Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (FipeZap/imprensa 2025-26), ajustados pelo fator oferta 0,90 (NBR 14653-2). O nome do titular não é lido por aqui — é consultado por você, manualmente, na CND oficial.</div>
+    </details>
   </aside>
 
   <!-- MAPA -->
@@ -966,8 +976,14 @@ function finish(items){
     plot(units);
     const nLotes=new Set(units.map(a=>clean(a.ci))).size;
     const ehPredio=units.length>1&&nLotes===1;
+    const tgl=document.getElementById("autoMapa");
+    const autoMapa=!!(tgl&&tgl.checked); /* toggle: abrir direto no mapa no ponto */
     if(isMobile()){
-      if(ehPredio){
+      if(autoMapa){
+        /* corretor pediu para pular a lista e cair direto no mapa, no ponto */
+        setView("mapa");
+        if(ehPredio)toast("🏢 "+units.length+" apartamentos — toque no pino para ver a lista.");
+      }else if(ehPredio){
         /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
         setView("busca");
         toast("🏢 "+units.length+" apartamentos deste prédio listados abaixo ⬇");
@@ -1694,6 +1710,10 @@ function closeDetail(){document.getElementById("detail").classList.remove("show"
 /* ---------------- init ---------------- */
 document.body.dataset.view="busca";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
+/* toggle "abrir direto no mapa": lembra a preferência entre sessões */
+(function(){const t=document.getElementById("autoMapa");if(!t)return;
+  try{t.checked=localStorage.getItem("radar_autoMapa")==="1";}catch(e){}
+  t.addEventListener("change",()=>{try{localStorage.setItem("radar_autoMapa",t.checked?"1":"0");}catch(e){}});})();
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{initMap();loadBairros();initCaixa();}
