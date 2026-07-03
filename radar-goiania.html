@@ -464,6 +464,7 @@ proj4.defs("EPSG:31982","+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0
 const toWGS = (x,y)=>{const [lon,lat]=proj4("EPSG:31982","EPSG:4326",[x,y]);return [lat,lon];};
 const SVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/3/query";
 const LOTSVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/0/query";
+const BAISVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/2/query";
 
 const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
@@ -675,6 +676,47 @@ function pickBairro(code){
   document.getElementById("bairroList").classList.remove("show");
   comboExpanded(false);
 }
+/* bairro sem quadra/lote: desenha a divisa do setor e leva o mapa até lá */
+let bairroOutline=null;
+async function mostrarBairro(code){
+  const b=COMBO.find(x=>String(x.code)===String(code));
+  if(!b||!map)return false;
+  const toks=norm(b.raw).replace(/'/g,"").split(/\s+/);
+  const core=(toks.length>1&&PFX[toks[0]]?toks.slice(1):toks).join(" ");
+  loading(true,"localizando o setor…");
+  try{
+    /* 1º: divisa oficial do bairro (camada 2) por nome — igualdade, depois LIKE */
+    let fs=[];
+    try{
+      let d=await jsonp({where:`UPPER(nm_bai)='${core}'`,outFields:"nm_bai",returnGeometry:"true",f:"json"},0,BAISVC);
+      fs=d.features||[];
+      if(!fs.length){
+        d=await jsonp({where:`UPPER(nm_bai) LIKE '%${core}%'`,outFields:"nm_bai",returnGeometry:"true",f:"json"},0,BAISVC);
+        fs=(d.features||[]).sort((x,y)=>clean(x.attributes.nm_bai).length-clean(y.attributes.nm_bai).length);
+      }
+    }catch(e){fs=[];}
+    if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;}
+    /* no mobile o mapa acabou de ficar visível: mede o container ANTES do fitBounds (senão zoom=0) */
+    const enquadra=bnds=>{if(isMobile())setView("mapa");
+      setTimeout(()=>{map.invalidateSize();map.fitBounds(bnds);},90);};
+    const rings=fs.length&&fs[0].geometry&&fs[0].geometry.rings;
+    if(rings&&rings.length){
+      bairroOutline=L.polygon(rings.map(rg=>rg.map(pt=>toWGS(pt[0],pt[1]))),
+        {color:"#b5451f",weight:2.5,dashArray:"6 6",fill:false,interactive:false}).addTo(map);
+      enquadra(bairroOutline.getBounds().pad(0.05));
+    }else{
+      /* nome com acento pode não casar — fallback: enquadra por amostra de lotes do setor */
+      const d=await jsonp({where:`cdbairro=${+code} AND vlvenal>0`,outFields:"*",returnGeometry:"false",
+        resultRecordCount:40,orderByFields:"OBJECTID",f:"json"});
+      const pts=(d.features||[]).map(f=>f.attributes).filter(a=>a.x_coord&&a.y_coord).map(a=>toWGS(a.x_coord,a.y_coord));
+      if(!pts.length)return false;
+      enquadra(L.latLngBounds(pts).pad(0.3));
+    }
+    toast(b.disp+" no mapa — dê zoom nos lotes ou digite quadra e lote.");
+    return true;
+  }catch(e){return false;}
+  finally{loading(false);}
+}
 function resolveBairro(){
   // se o usuário digitou mas não clicou, tenta casar o melhor
   if(document.getElementById("bairro").value)return true;
@@ -772,7 +814,11 @@ async function buscar(){
       const q=clean(document.getElementById("quadra").value);
       const l=clean(document.getElementById("lote").value);
       if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
-      if(!q&&!l){toast("Digite ao menos a quadra.");return;}
+      if(!q&&!l){
+        /* só o bairro: mostra o setor no mapa em vez de bloquear */
+        if(await mostrarBairro(b))return;
+        toast("Digite ao menos a quadra.");return;
+      }
       loading(true,"consultando a quadra…");
       let whereQ=`cdbairro=${b} AND vlvenal>0`;
       if(q)whereQ+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
@@ -917,6 +963,7 @@ function cardHTML(a,i,isUnit){
 /* ---------------- plotar no mapa (1 pino por lote) ---------------- */
 function plot(list){
   layerGroup.clearLayers();
+  if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;} /* tira a divisa do setor ao plotar resultados */
   const byCi={},pts=[];
   list.forEach((a,i)=>{
     if(!a.x_coord||!a.y_coord)return;
