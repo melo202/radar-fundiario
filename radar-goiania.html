@@ -1117,7 +1117,9 @@ let LZ=null;
 function abrirLaudo(){
   if(!DCUR)return;
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
-  LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null};
+  const hojeISO=new Date().toISOString().slice(0,10);
+  LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null,
+      vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra"};
   const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
   getComps(DCUR).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   document.getElementById("wiz").hidden=false;
@@ -1163,7 +1165,10 @@ function wizRender(){
       <span class="wlabel">Estado de conservação</span>
       <div class="seg">${CONSERVS.map(c=>`<button class="${LZ.conserv===c?'on':''}" onclick="wizSet('conserv','${c}')">${c}</button>`).join("")}</div>
       <span class="wlabel">Diferenciais (toque para marcar)</span>
-      <div class="chips">${DIFS.map(d=>`<button class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>`;
+      <div class="chips">${DIFS.map(d=>`<button class="${LZ.difs.includes(d)?'on':''}" onclick="wizDif('${d}')">${d}</button>`).join("")}</div>
+      <span class="wlabel">Vistoria</span>
+      <div class="seg"><button class="${LZ.vistoria?'on':''}" onclick="wizSet('vistoria',true)">Vistoriei o imóvel</button><button class="${!LZ.vistoria?'on':''}" onclick="wizSet('vistoria',false)">Sem vistoria</button></div>
+      ${LZ.vistoria?`<input class="winput" style="margin-top:10px" type="date" value="${LZ.dataVist}" oninput="LZ.dataVist=this.value">`:""}`;
   }else if(LZ.step===1){
     const est=mercadoEstimado(a);
     const fc=FATOR_CONSERV[LZ.conserv]||1;
@@ -1186,11 +1191,16 @@ function wizRender(){
       <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${f}"><button class="rm" onclick="wizRmFoto(${i})">×</button></div>`).join("")}</div>`;
   }else{
     const p=LZ.prof;
-    b.innerHTML=`<div class="wh1">Você</div><div class="wsub">Com CRECI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
+    const FINS=["Venda / compra","Locação","Partilha ou inventário","Garantia","Instrução judicial","Outra"];
+    b.innerHTML=`<div class="wh1">Solicitante e você</div><div class="wsub">Com CRECI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
+      <span class="wlabel">Solicitante (opcional)</span>
+      <input class="winput" placeholder="quem pediu o parecer" value="${esc(LZ.solicitante)}" oninput="LZ.solicitante=this.value">
+      <span class="wlabel">Finalidade</span>
+      <select class="winput" oninput="LZ.finalidade=this.value">${FINS.map(f=>`<option ${LZ.finalidade===f?"selected":""}>${f}</option>`).join("")}</select>
       <span class="wlabel">Nome completo *</span>
       <input class="winput" value="${esc(p.nome||"")}" oninput="LZ.prof.nome=this.value">
-      <span class="wlabel">CRECI (opcional)</span>
-      <input class="winput" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
+      <span class="wlabel">CRECI / CNAI (opcional)</span>
+      <input class="winput" placeholder="CRECI 12345 · CNAI 6789" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
       <span class="wlabel">Telefone / e-mail (opcional)</span>
       <input class="winput" value="${esc(p.contato||"")}" oninput="LZ.prof.contato=this.value">`;
   }
@@ -1199,6 +1209,7 @@ function wizNext(){
   if(!LZ)return;
   if(LZ.step<3){LZ.step++;wizRender();return;}
   if(!(LZ.prof.nome||"").trim()){toast("Preencha seu nome para assinar o documento.");return;}
+  if(LZ.valor==null){toast("Informe o valor de venda sugerido (passo Valor).");LZ.step=1;wizRender();return;}
   try{localStorage.setItem("radar_prof",JSON.stringify(LZ.prof));}catch(e){}
   montarLaudo();
 }
@@ -1209,7 +1220,10 @@ function montarLaudo(){
   const comCreci=!!(p.creci||"").trim();
   const titulo=comCreci?"Parecer Técnico de Avaliação Mercadológica (PTAM)":"Relatório de Referência de Mercado";
   const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  const vist=LZ.vistoria?("Vistoria realizada pelo subscritor em "+(fmtDt((LZ.dataVist||"").replace(/-/g,""))||hoje)):"Sem vistoria presencial (avaliação com base em dados cadastrais, fotos e informações do interessado)";
   const linhas=[
+    (LZ.solicitante||"").trim()?["Solicitante",esc(LZ.solicitante)]:null,
+    ["Finalidade",esc(LZ.finalidade)],
     ["Endereço",esc(addr)||"—"],
     ["Setor / Bairro",esc(a.nmbairro)||"—"],
     ["Quadra / Lote","Q "+(esc(a.nrquadra)||"—")+" · L "+(esc(a.nrlote)||"—")],
@@ -1222,7 +1236,8 @@ function montarLaudo(){
     ["IPTU lançado (exercício)",a.vlimp98?brl(a.vlimp98):"—"],
     ["Valor venal (base fiscal)",brl(a.vlvenal)],
     ["Estado de conservação (declarado)",esc(LZ.conserv)],
-    LZ.difs.length?["Diferenciais (declarados)",LZ.difs.map(esc).join(", ")]:null
+    LZ.difs.length?["Diferenciais (declarados)",LZ.difs.map(esc).join(", ")]:null,
+    ["Vistoria",vist]
   ].filter(Boolean);
   let barHtml="";
   if(g&&g.res&&g.res.n>=3){
@@ -1236,7 +1251,10 @@ function montarLaudo(){
     ?`<p>Foram considerados <b>${g.res.n} imóveis de perfil semelhante</b> (mesmo uso e porte) num raio de ${g.radius} m, com base no cadastro municipal. O valor unitário (base venal) do conjunto situa-se entre ${brl(g.res.q1)} e ${brl(g.res.q3)}/m² no miolo da amostra, mediana de ${brl(g.res.med)}/m². O imóvel avaliado (▼) apresenta ${brl(g.myPm2)}/m².</p>${barHtml}`
     :`<p>Não havia amostra mínima de vizinhança disponível na data de emissão; a estimativa apoia-se na referência de mercado indicada abaixo.</p>`;
   const isU2=!!ul, pm2L=isU2?m2Edif(a):m2Terr(a);
+  const m2bL=M2_MERCADO.bairros[String(a.cdbairro)];
+  const regiaoHtml=`<p>O imóvel situa-se no bairro ${esc(a.nmbairro)}, Goiânia/GO${g&&g.res&&g.res.n>=3?`, região com ${g.res.n} imóveis de perfil semelhante cadastrados em raio de ${g.radius} m`:""}${m2bL?`, com referência pública de mercado de R$ ${m2bL.toLocaleString("pt-BR")}/m² (anunciado, ${M2_MERCADO.ref})`:""}.</p>`;
   const nSec=LZ.fotos.length?4:3;
+  const foraFaixa=est&&LZ.valor&&(LZ.valor<est.lo*0.97||LZ.valor>est.hi*1.03);
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
     <div class="lhead"><div class="eye">Radar Fundiário · Cadastro Imobiliário de Goiânia</div><h1>${titulo}</h1>
@@ -1249,16 +1267,19 @@ function montarLaudo(){
     <section><h2>1. Identificação do imóvel</h2>
       <table>${linhas.map(l=>`<tr><td class="k">${l[0]}</td><td>${l[1]}</td></tr>`).join("")}</table></section>
     <section><h2>2. Análise de mercado</h2>
+      ${regiaoHtml}
       ${compsHtml}
       ${est?`<p>Fonte principal da estimativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
       ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
       <div class="destaque"><div class="dk">Valor de venda sugerido</div><div class="dv">${LZ.valor?brl(LZ.valor):"—"}</div>
         ${est?`<div class="df">faixa de referência: ${brl(est.lo)} – ${brl(est.hi)}</div>`:""}</div>
+      ${foraFaixa?`<p class="lmiudo">Valor arbitrado pelo subscritor com base em vistoria, diferenciais e observações, divergindo justificadamente da faixa estatística de referência.</p>`:""}
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</section>
-    ${LZ.fotos.length?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.map(f=>`<img src="${f}">`).join("")}</div></section>`:""}
+    ${LZ.fotos.length?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+1} do imóvel">`).join("")}</div></section>`:""}
     <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
-      <p class="lmiudo">Método comparativo direto de dados de mercado: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), com conversão a mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra. Este documento expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Emitido como PTAM na forma da Resolução COFECI nº 1.066/2007.":" A emissão de PTAM é privativa de corretor inscrito no CRECI (Res. COFECI nº 1.066/2007)."}</p>
-      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}</div></section>`;
+      <p class="lmiudo">Abordagem comparativa simplificada: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base fiscal pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), convertida a valores de mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra.</p>
+      <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características conforme o cadastro municipal, podendo divergir da matrícula do imóvel. O subscritor declara não possuir interesse presente ou futuro no imóvel avaliado nem vínculo que comprometa sua isenção; as informações prestadas por terceiros foram assumidas como verdadeiras. Este documento é indivisível e destina-se exclusivamente à finalidade de ${esc(LZ.finalidade).toLowerCase()}. Expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Parecer emitido por corretor de imóveis; a menção à Resolução COFECI nº 1.066/2007 pressupõe inscrição do subscritor no CNAI." : " A emissão de PTAM é privativa de corretor inscrito no CRECI e no CNAI (Res. COFECI nº 1.066/2007); na ausência dessa inscrição, este documento constitui relatório de referência de mercado, sem natureza de laudo ou parecer técnico oficial."}</p>
+      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — "+esc(p.creci):""}</div></section>`;
   fecharLaudo();
   /* iOS PWA standalone: window.print() é no-op — mostra o laudo em tela cheia com instrução */
   const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
