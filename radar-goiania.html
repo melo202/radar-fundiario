@@ -205,10 +205,13 @@
     .combo-item{padding:13px 12px}
     .go{padding:16px}
     .detail{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;
-      border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:6px}
-    .detail .grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px;cursor:grab;touch-action:none}
-    .detail .grab::before{content:"";display:block;position:relative;top:-14px;height:34px;margin:0 -60px}
-    .detail .x{width:44px;height:44px;top:2px;right:2px;font-size:24px}
+      border-bottom:0;max-height:58dvh;overflow-y:auto;padding-top:0}
+    /* cabeçalho do sheet fica GRUDADO no topo — alça e × sempre visíveis mesmo rolando */
+    .detail .shead{position:sticky;top:0;z-index:6;background:var(--paper-2);margin:0 -18px 4px;padding:8px 18px 2px;
+      border-radius:14px 14px 0 0}
+    .detail .grab{width:56px;height:6px;border-radius:3px;background:var(--muted);margin:2px auto 8px;cursor:grab;touch-action:none}
+    .detail .grab::before{content:"";display:block;position:relative;top:-16px;height:38px;margin:0 -80px}
+    .detail .x{width:44px;height:44px;top:0;right:4px;font-size:26px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
     .detail .acts a{min-height:44px;display:flex;align-items:center;justify-content:center}
   }
@@ -296,8 +299,10 @@
     <div class="toast" id="toast"></div>
     <div class="loading" id="loading"><div class="spin"></div><span id="loadmsg">consultando cadastro…</span></div>
     <div class="detail" id="detail">
-      <div class="grab" id="grab"></div>
-      <button class="x" onclick="closeDetail()">×</button>
+      <div class="shead">
+        <div class="grab" id="grab"></div>
+        <button class="x" onclick="closeDetail()">×</button>
+      </div>
       <div class="dtag" id="dTag"></div>
       <h3 id="dAddr"></h3>
       <div class="insc" id="dInsc"></div>
@@ -755,6 +760,7 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">Unid. no lote</div><div class="v">${a.ttsublot||"—"}</div></div>`;
   const compsBox=document.getElementById("dComps");
   const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
+  if(DCUR!==a)d.scrollTop=0; /* imóvel novo: sheet abre no topo (senão o × fica fora da tela) */
   DCUR=a;
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
   else compsBox.innerHTML=
@@ -797,7 +803,8 @@ async function compare(){
   const myArea=a[areaField]||0, myVal=a.vlvenal||0;
   if(!(myArea>0&&myVal>0)){box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
   const myPm2=myVal/myArea;
-  box.innerHTML='<div class="cmp-load">⏳ analisando a vizinhança…</div>';
+  box.innerHTML='<div class="cmp-load">⏳ analisando a vizinhança… (até ~20s no celular)</div>';
+  box.scrollIntoView({block:"nearest",behavior:"smooth"});
   try{
     let res=null,radius=0;
     for(const r of [400,800]){
@@ -826,8 +833,9 @@ async function compsStats(a,areaField,myArea,radius){
   const cnt=await jsonp(Object.assign({},base,{returnCountOnly:"true"}));
   const n=cnt.count||0;
   if(n<3)return {n};
-  if(n<=800){
-    const d=await jsonp(Object.assign({},base,{outFields:"*",resultRecordCount:1000}));
+  /* teto 400: acima disso o download (~85 campos/registro) pesa demais no 4G — usa contagens */
+  if(n<=400){
+    const d=await jsonp(Object.assign({},base,{outFields:"*",resultRecordCount:500}));
     let vals=(d.features||[]).map(f=>f.attributes)
       .map(x=>x[areaField]>0?x.vlvenal/x[areaField]:null)
       .filter(v=>v&&isFinite(v)).sort((p,q)=>p-q);
@@ -841,7 +849,7 @@ async function compsStats(a,areaField,myArea,radius){
   /* vizinhança grande: percentis por busca binária de contagens (aritmética no WHERE) */
   const pct=async p=>{
     let lo=50,hi=40000;
-    for(let i=0;i<9;i++){
+    for(let i=0;i<7;i++){
       const mid=(lo+hi)/2;
       const c=await jsonp(Object.assign({},base,
         {where:base.where+` AND vlvenal/${areaField}<${mid.toFixed(2)}`,returnCountOnly:"true"}));
@@ -878,7 +886,7 @@ async function renderComps(box,r,myPm2,radius,isU,a){
       <div class="med" style="left:${px(r.med)}%"></div>
       <div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div>
     </div>
-    <div class="lbl"><span>${fx(r.min)}</span><span>med ${fx(r.med)}</span><span>${fx(r.max)}</span></div>
+    <div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>med ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div>
     <div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — percentil <b>${pctl}</b> da vizinhança`:""}${pctl!=null&&pctl<=25?" · 🔻 abaixo da faixa típica":pctl!=null&&pctl>=75?" · 🔺 acima da faixa típica":""}</div>
     <div class="mkt">Faixa típica (Q1–Q3): ${fx(r.q1)}–${fx(r.q3)}/m² venal · ref. mercado ${COEF.toFixed(1)}×: ${fx(r.q1*COEF)}–${fx(r.q3*COEF)}/m². Posição relativa é imune à defasagem da planta de valores; a conversão a mercado depende do coeficiente.</div>
   </div>`;
@@ -959,14 +967,21 @@ if(!window.L||!window.proj4){
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
-/* bottom sheet: arrastar a alça para baixo fecha o detalhe */
+/* bottom sheet: tocar na alça fecha; arrastar para baixo também */
 (function(){
   const d=document.getElementById("detail"),g=document.getElementById("grab");
   let y0=null;
-  g.addEventListener("pointerdown",e=>{y0=e.clientY;g.setPointerCapture(e.pointerId);});
-  g.addEventListener("pointermove",e=>{if(y0==null)return;const dy=Math.max(0,e.clientY-y0);d.style.transform=`translateY(${dy}px)`;});
-  g.addEventListener("pointerup",e=>{const dy=y0==null?0:e.clientY-y0;y0=null;d.style.transform="";if(dy>70)closeDetail();});
-  g.addEventListener("pointercancel",()=>{y0=null;d.style.transform="";});
+  g.addEventListener("click",()=>closeDetail());
+  if(window.PointerEvent){
+    g.addEventListener("pointerdown",e=>{y0=e.clientY;g.setPointerCapture(e.pointerId);});
+    g.addEventListener("pointermove",e=>{if(y0==null)return;const dy=Math.max(0,e.clientY-y0);d.style.transform=`translateY(${dy}px)`;});
+    g.addEventListener("pointerup",e=>{const dy=y0==null?0:e.clientY-y0;y0=null;d.style.transform="";if(dy>70)closeDetail();});
+    g.addEventListener("pointercancel",()=>{y0=null;d.style.transform="";});
+  }else{ /* iOS antigo sem PointerEvent */
+    g.addEventListener("touchstart",e=>{y0=e.touches[0].clientY;},{passive:true});
+    g.addEventListener("touchmove",e=>{if(y0==null)return;const dy=Math.max(0,e.touches[0].clientY-y0);d.style.transform=`translateY(${dy}px)`;},{passive:true});
+    g.addEventListener("touchend",e=>{const dy=y0==null?0:(e.changedTouches[0].clientY-y0);y0=null;d.style.transform="";if(dy>70)closeDetail();});
+  }
 })();
 document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
 
@@ -989,7 +1004,8 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero").forEach(el=>
     if(items[comboActive])items[comboActive].scrollIntoView({block:"nearest"});
   });
   /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção */
-  document.addEventListener("pointerdown",e=>{if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}});
+  const DOWNEV=window.PointerEvent?"pointerdown":"touchstart";
+  document.addEventListener(DOWNEV,e=>{if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}});
 })();
 </script>
 </body>
