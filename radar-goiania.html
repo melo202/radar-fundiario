@@ -97,12 +97,6 @@
   .hint{margin:10px 2px 0;font:500 11.5px/1.4 "IBM Plex Sans";color:var(--muted)}
   .hint b{color:var(--accent)}
 
-  .calib{padding:14px 22px;border-bottom:1px dashed var(--line);background:var(--paper)}
-  .calib .lead{font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);margin-bottom:10px}
-  .coefrow{display:flex;align-items:center;gap:12px}
-  .coefrow input[type=range]{flex:1;margin:0;padding:0;accent-color:var(--accent)}
-  .coefval{font:700 16px/1 "IBM Plex Mono",monospace;min-width:52px;text-align:right}
-  .calib small{display:block;color:var(--muted);font-size:11px;margin-top:8px;line-height:1.4}
 
   .results{flex:1;overflow-y:auto;padding:6px 0}
   .count{padding:12px 22px 4px;font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -1318,7 +1312,14 @@ function initCaixa(){
   const pl=CAIXA.imoveis.filter(i=>i.x&&i.y);
   if(!pl.length)return;
   document.getElementById("caixaN").textContent=pl.length;
-  document.getElementById("btnCaixa").style.display="block";
+  const btn=document.getElementById("btnCaixa");btn.style.display="block";
+  /* avisa se a lista está velha (>14 dias) — atualização é manual via atualizar-caixa.py */
+  const g=CAIXA.gerado&&Date.parse(CAIXA.gerado);
+  if(g&&(Date.now()-g)/864e5>14){
+    const d=CAIXA.gerado.split("-").reverse().join("/");
+    btn.title="Lista da Caixa de "+d+" — pode estar desatualizada (rode atualizar-caixa.py)";
+    btn.innerHTML="🏦 Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
+  }
 }
 function caixaPopup(i){
   return `<div class="cxp">

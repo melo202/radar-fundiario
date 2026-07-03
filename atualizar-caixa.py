@@ -21,17 +21,32 @@ SVC = "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/
 CSV_URL = "https://venda-imoveis.caixa.gov.br/listaweb/Lista_imoveis_GO.csv"
 UA = {"User-Agent": "Mozilla/5.0 (RadarFundiario; uso pessoal; contato do dono do repo)"}
 
-def http(url, params=None, tries=2):
+def http(url, params=None, tries=3):
     if params:
         url = url + "?" + urllib.parse.urlencode(params)
+    delay = 2
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers=UA)
             return urllib.request.urlopen(req, timeout=60).read()
+        except urllib.error.HTTPError as e:
+            # 429/503: respeita o Retry-After se vier; 4xx que não seja 429 não adianta repetir
+            if e.code in (429, 503):
+                ra = e.headers.get("Retry-After")
+                wait = int(ra) if ra and ra.isdigit() else delay
+                if i + 1 == tries:
+                    raise
+                time.sleep(wait); delay *= 4
+            elif 400 <= e.code < 500:
+                raise
+            else:
+                if i + 1 == tries:
+                    raise
+                time.sleep(delay); delay *= 4
         except Exception:
             if i + 1 == tries:
                 raise
-            time.sleep(2)
+            time.sleep(delay); delay *= 4
 
 def arcgis(params):
     p = dict(params); p["f"] = "json"
@@ -89,7 +104,9 @@ def main():
             # desconto vem com PONTO decimal ("48.31"), diferente dos precos ("496.312,00")
             "d": (lambda s: round(float(s), 2) if re.fullmatch(r"[0-9]+(\.[0-9]+)?", s) else None)(r[7].strip()),
             "t": r[9].split(",")[0].strip(),
-            "m": r[10].strip(), "u": r[11].strip(),
+            "m": r[10].strip(),
+            # só aceita link https da Caixa (evita esquema perigoso vindo de CSV adulterado)
+            "u": (lambda u: u if u.startswith("https://venda-imoveis.caixa.gov.br") else "")(r[11].strip()),
         })
     print("   imoveis em Goiania:", len(imoveis))
 
@@ -108,6 +125,7 @@ def main():
     print("3/4 cruzando QD/LT e geocodificando no cadastro…")
     ok = 0
     fat = {}
+    falhas = 0  # falhas consecutivas — se o servidor cair, aborta sem gravar arquivo furado
     for im in imoveis:
         cx_full, cx_core = norm(im["b"]), core_cx(im["b"])
         code = fulls.get(cx_full) or cores.get(cx_core)
@@ -142,9 +160,13 @@ def main():
                 r = arcgis({"where": where, "outFields": "*", "returnGeometry": "false",
                             "resultRecordCount": 1, "orderByFields": "OBJECTID"})
                 fs = r.get("features", [])
+                falhas = 0
             except Exception as e:
                 print("   aviso:", im["id"], e)
                 fs = []
+                falhas += 1
+                if falhas >= 15:
+                    raise SystemExit("Servidor da prefeitura instável (15 falhas seguidas) — abortado sem gravar. Tente mais tarde.")
             time.sleep(0.25)
             if fs:
                 at = fs[0]["attributes"]
