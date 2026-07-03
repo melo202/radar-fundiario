@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#141a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Radar">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Radar Fundiário · Goiânia</title>
@@ -210,7 +213,7 @@
     .detail .shead{position:sticky;top:0;z-index:6;background:var(--paper-2);margin:0 -18px 4px;padding:8px 18px 2px;
       border-radius:14px 14px 0 0}
     .detail .grab{width:56px;height:6px;border-radius:3px;background:var(--muted);margin:2px auto 8px;cursor:grab;touch-action:none}
-    .detail .grab::before{content:"";display:block;position:relative;top:-16px;height:38px;margin:0 -80px}
+    .detail .grab::before{content:"";display:block;position:relative;top:-13px;height:28px;margin:0 -80px}
     .detail .x{width:44px;height:44px;top:0;right:4px;font-size:26px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
     .detail .acts a{min-height:44px;display:flex;align-items:center;justify-content:center}
@@ -377,7 +380,7 @@ function initMap(){
 /* ---------------- divisas de lote (camada 0): desenha os lotes no zoom próximo ----------------
    hover = tooltip com resumo do cadastro (carregado 1x por lote); clique atravessa
    para o identificador de ponto já existente (onMapClick). */
-const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOpacity:.05};
+const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOpacity:.05,bubblingMouseEvents:false};
 const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
 let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
 const LOTINFO={};
@@ -430,11 +433,25 @@ async function refreshLots(){
     poly.on("mouseover",()=>{poly.setStyle(LOT_HOVER);
       hv=setTimeout(async()=>{const h=await lotInfo(ci);poly.setTooltipContent(h);},140);});
     poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(LOT_STYLE);});
+    poly.on("click",()=>loadCi(ci)); /* direto pelo ci: mais rápido que a consulta espacial */
     poly.addTo(lotLayer);
   });
   if(!map.hasLayer(lotLayer))lotLayer.addTo(map);
   if(!LOTHINT&&(d.features||[]).length){LOTHINT=true;
     toast("Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
+}
+
+/* clicar num lote desenhado -> carrega direto pela inscrição do lote */
+async function loadCi(ci){
+  if(!ci)return;
+  loading(true,"carregando lote…");
+  try{
+    const d=await jsonp({where:`ci='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
+    const items=(d.features||[]).map(f=>f.attributes);
+    if(!items.length){toast("Lote sem registro no cadastro.");return;}
+    finish(items);
+  }catch(err){toast("Falha ao carregar o lote. Tente de novo.");}
+  finally{loading(false);}
 }
 
 /* clicar no mapa -> identifica o lote naquele ponto (consulta espacial) */
@@ -510,7 +527,11 @@ function resolveBairro(){
   const q=norm(document.getElementById("bairroInput").value);
   if(!q)return false;
   const hits=COMBO.filter(b=>b.search.includes(q));
-  if(hits.length){pickBairro(hits[0].code);return true;}
+  if(hits.length){
+    /* melhor casamento primeiro (termo mais no início do nome), não o 1º alfabético */
+    hits.sort((a,b)=>{const ai=a.search.indexOf(q),bi=b.search.indexOf(q);return ai-bi||a.disp.localeCompare(b.disp,"pt");});
+    pickBairro(hits[0].code);return true;
+  }
   return false;
 }
 
@@ -549,7 +570,7 @@ function setView(v){
   if(v==="mapa"&&map)setTimeout(()=>{map.invalidateSize();refreshLots();},60);
 }
 
-async function fetchWhere(where){
+async function fetchWhere(where,maxPages=30){
   let all=[],offset=0,page=2000,guard=0,truncated=false;
   while(true){
     const d=await jsonp({where,outFields:"*",returnGeometry:"false",
@@ -557,14 +578,16 @@ async function fetchWhere(where){
     const fs=d.features||[];all=all.concat(fs);
     if(fs.length<page)break;
     offset+=page;
-    if(++guard>=30){truncated=true;break;}
+    if(++guard>=maxPages){truncated=true;break;}
   }
   if(truncated)toast("Resultado muito grande — a lista pode estar incompleta. Refine a busca.");
   return all.map(f=>f.attributes);
 }
 
 async function buscar(){
-  const btn=document.getElementById("btnGo");btn.disabled=true;closeDetail();
+  const btn=document.getElementById("btnGo");
+  if(btn.disabled)return; /* Enter repetido durante busca em andamento */
+  btn.disabled=true;closeDetail();
   try{
     let items=[];
     if(MODE==="insc"){
@@ -589,8 +612,8 @@ async function buscar(){
       else if(rD)whereA+=` AND nmlogradou LIKE '%${rD}%'`;
       else whereA+=` AND UPPER(nmlogradou) LIKE '%${rN.replace(/'/g,"")}%'`;
       let all=await fetchWhere(whereA);
-      /* rua com acento no cadastro pode não casar o LIKE — cai para a varredura do setor */
-      if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`);
+      /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
+      if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`,8);
       items=all.filter(a=>{
         const log=norm(a.nmlogradou);
         const okR=log.includes(rN)||(rD&&(log.match(/\d+/g)||[]).includes(rD));
@@ -716,7 +739,9 @@ function plot(list){
     if(byCi[ci]===undefined){
       const ll=toWGS(a.x_coord,a.y_coord);pts.push(ll);
       const idx=i;
-      const mk=L.circleMarker(ll,{radius:8,color:"#141a1f",weight:2,fillColor:"#b5451f",fillOpacity:.9})
+      /* bubblingMouseEvents:false — sem isso o clique no pino também dispara o
+         clique do mapa (identificar lote), que apagava a lista de resultados */
+      const mk=L.circleMarker(ll,{radius:8,color:"#141a1f",weight:2,fillColor:"#b5451f",fillOpacity:.9,bubblingMouseEvents:false})
         .addTo(layerGroup).on("click",()=>pick(idx));
       byCi[ci]=mk;
     }
@@ -919,7 +944,7 @@ function toggleCaixa(){
   if(!caixaLayer){
     caixaLayer=L.layerGroup();
     CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
-      L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95})
+      L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
         .bindPopup(caixaPopup(i)).addTo(caixaLayer);
     });
   }
@@ -936,14 +961,14 @@ function toggleCaixa(){
 
 /* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */
 const csvCell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-const csvNum=v=>v?String(v).replace(".",","):"";
+const csvNum=v=>v?String(Math.round(v*100)/100).replace(".",","):"";
 function exportCSV(){
   if(!LAST.length)return;
   const head=["inscricao","ci","bairro","quadra","lote","endereco","complemento","edificio","uso",
     "area_terreno_m2","area_construida_m2","valor_venal","ref_mercado_"+COEF.toFixed(1)+"x","rs_m2","lat","lon"];
   const lines=[head.join(";")];
   LAST.forEach(a=>{
-    const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim()+(clean(a.nrimovel)?", "+clean(a.nrimovel):"");
+    const addr=(clean(a.tplogradou)+" "+clean(a.nmlogradou)).trim()+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
     const ref=refPrice(a), pm2=unitLabel(a)?m2Edif(a):m2Terr(a);
     let lat="",lon="";
     if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);lat=csvNum(ll[0].toFixed(6));lon=csvNum(ll[1].toFixed(6));}

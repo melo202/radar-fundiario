@@ -1,5 +1,10 @@
 # Como publicar o Radar Fundiário no GitHub Pages
 
+> ✅ **JÁ PUBLICADO em 02/07/2026:** https://melo202.github.io/radar-fundiario/
+> (repositório `melo202/radar-fundiario`, Pages servido pelo branch `gh-pages`).
+> Os passos 1–4 abaixo ficam como registro; o que importa no dia a dia é a
+> seção **"Como atualizar depois"**.
+
 Tempo estimado: 10 minutos. Faz uma vez só — depois, atualizar é 1 comando.
 
 ---
@@ -54,12 +59,13 @@ inicial"; no iPhone/Safari, botão compartilhar → "Adicionar à Tela de Iníci
 
 ## Como atualizar depois (sempre que mudar algo)
 
-No PowerShell, dentro da pasta:
+No PowerShell, dentro da pasta. **Importante:** o site é servido pelo branch
+`gh-pages`, então o push precisa atualizar os DOIS branches:
 
 ```
 git add -A
 git commit -m "descreva o que mudou"
-git push
+git push origin master master:gh-pages
 ```
 
 Em ~1 minuto o site atualiza sozinho.
@@ -72,7 +78,7 @@ A lista da Caixa muda todo dia. Quando quiser dados frescos:
 python atualizar-caixa.py
 git add -A
 git commit -m "atualiza imoveis da Caixa"
-git push
+git push origin master master:gh-pages
 ```
 
 ---
