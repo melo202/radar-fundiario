@@ -152,6 +152,16 @@
   .detail .backlist{position:absolute;top:8px;left:12px;z-index:7;border:1px solid var(--line);background:var(--paper);
     color:var(--ink);font:600 11px/1 "IBM Plex Sans";padding:9px 11px;border-radius:2px;cursor:pointer;min-height:36px}
   .detail .backlist:hover{border-color:var(--accent);color:var(--accent)}
+  /* seletor de imóvel — usa a moldura do .detail; só estiliza título e as linhas */
+  .chooser .chnm{font:700 16px/1.2 "IBM Plex Sans";color:var(--ink);margin-bottom:2px;padding-right:36px}
+  .chooser .chsub{font:600 11px/1.3 "IBM Plex Mono",monospace;color:var(--muted);letter-spacing:.03em;margin-bottom:12px}
+  .chooser .chlist{display:flex;flex-direction:column;gap:8px}
+  .chooser .chrow{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+    background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--lot);border-radius:2px;padding:12px 13px;min-height:48px}
+  .chooser .chrow:hover{border-color:var(--muted);border-left-color:var(--accent)}
+  .chooser .chrow .u{display:block;font:700 14px/1.15 "IBM Plex Sans";color:var(--ink)}
+  .chooser .chrow .m{display:block;font:600 11px/1.3 "IBM Plex Mono",monospace;color:var(--muted);margin-top:3px}
+  .chooser .chrow .val{flex:none;font:800 14px/1.1 "IBM Plex Sans";color:var(--accent);white-space:nowrap}
   .detail .dtag{font:700 12px/1 "IBM Plex Mono";color:var(--lot-bright);letter-spacing:.06em}
   .detail h3{margin:6px 0 3px;font:700 18px/1.15 "IBM Plex Sans"}
   .detail .insc{font:600 13px/1 "IBM Plex Mono";color:var(--accent);margin-bottom:12px}
@@ -504,6 +514,17 @@
       <div class="dnote" id="dNote"></div>
       <div class="acts" id="dActs"></div>
     </div>
+
+    <!-- SELETOR de imóvel: aparece ao clicar num prédio no mapa; escolhe o apto -> abre a ficha -->
+    <div class="detail chooser" id="chooser" role="region" aria-label="Escolha o imóvel">
+      <div class="shead">
+        <div class="grab" aria-hidden="true"></div>
+        <button class="x" onclick="closeChooser()" aria-label="Fechar">×</button>
+      </div>
+      <div class="chnm" id="chNm"></div>
+      <div class="chsub" id="chSub"></div>
+      <div class="chlist" id="chList"></div>
+    </div>
   </div>
 
   <!-- toast/loading ficam FORA do .mapwrap: no mobile o mapa some na aba Consulta,
@@ -694,7 +715,7 @@ async function loadCi(ci){
     if(tk!==SEARCHTOKEN)return;
     const items=sanitiza((d.features||[]).map(f=>f.attributes));
     if(!items.length){toast("Lote sem registro no cadastro.");return;}
-    finish(items);
+    finish(items,true); /* veio do mapa: prédio abre o seletor de imóvel */
   }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao carregar o lote. Tente de novo.");}
   finally{if(tk===SEARCHTOKEN)loading(false);}
 }
@@ -711,7 +732,7 @@ async function onMapClick(e){
     if(tk!==SEARCHTOKEN)return;
     const items=sanitiza((d.features||[]).map(f=>f.attributes));
     if(!items.length){toast("Nenhum lote nesse ponto. Clique sobre o imóvel.");return;}
-    finish(items);
+    finish(items,true); /* veio do mapa: prédio abre o seletor de imóvel */
   }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao identificar o ponto. Tente de novo.");}
   finally{if(tk===SEARCHTOKEN)loading(false);}
 }
@@ -964,8 +985,10 @@ async function buscar(){
   }finally{if(tk===SEARCHTOKEN){loading(false);btn.disabled=false;}}
 }
 
-/* aplica filtro de apto/garagem, ordena, renderiza e plota */
-function finish(items){
+/* aplica filtro de apto/garagem, ordena, renderiza e plota.
+   fromMap=true quando veio de um clique no MAPA (pino/lote/ponto): aí um prédio abre
+   o SELETOR de imóvel em vez de jogar o corretor na aba de busca. */
+function finish(items,fromMap){
     const apto=(MODE==="ql"||MODE==="addr"||MODE==="bd")?clean(document.getElementById("apto").value):"";
     const hideGar=document.getElementById("hideGar").checked;
     let units=items.slice();
@@ -989,6 +1012,11 @@ function finish(items){
     plot(units);
     const nLotes=new Set(units.map(a=>clean(a.ci))).size;
     const ehPredio=units.length>1&&nLotes===1;
+    if(fromMap&&ehPredio){
+      /* clicou num prédio NO MAPA: escolhe o imóvel antes de abrir a ficha */
+      showChooser(clean(units[0].ci));
+      return;
+    }
     if(isMobile()){
       if(ehPredio){
         /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
@@ -1123,8 +1151,8 @@ function plot(list){
       /* bubblingMouseEvents:false — sem isso o clique no pino também dispara o
          clique do mapa (identificar lote), que apagava a lista de resultados */
       const mk=L.circleMarker(ll,{radius:8,color:"#141a1f",weight:2,fillColor:"#b5451f",fillOpacity:.9,bubblingMouseEvents:false})
-        /* pino de prédio abre a LISTA de unidades; pino de imóvel único abre a ficha */
-        .addTo(layerGroup).on("click",()=>predio?revealList(ci):pick(idx));
+        /* pino de prédio abre o SELETOR de imóvel; pino de imóvel único abre a ficha direto */
+        .addTo(layerGroup).on("click",()=>predio?showChooser(ci):pick(idx));
       byCi[ci]=mk;
     }
   });
@@ -1162,9 +1190,32 @@ function verNoMapa(ci){
   if(isMobile()){setView("mapa");setTimeout(go,80);}else go(); /* espera o mapa remedir ao voltar a ficar visível */
 }
 
+/* ---------------- seletor de imóvel (prédio clicado no mapa) ----------------
+   Em vez de abrir a ficha de um apto qualquer (ou jogar na aba de busca), mostra um
+   sheet no mapa com os imóveis do prédio; o corretor escolhe e AÍ abre a ficha. */
+function showChooser(ci){
+  ci=clean(ci);
+  const units=(LAST||[]).filter(a=>clean(a.ci)===ci);
+  if(units.length<=1){ const gi=LAST.indexOf(units[0]); if(gi>=0)pick(gi); return; }
+  if(!isMobile()){ revealList(ci); return; } /* desktop: a lista já vive na coluna ao lado */
+  const a0=units[0], ed=esc(clean(a0.nmedificio))||"Imóveis no mesmo lote";
+  document.getElementById("chNm").innerHTML="🏢 "+ed;
+  document.getElementById("chSub").textContent=`Q ${clean(a0.nrquadra)||"—"} · L ${clean(a0.nrlote)||"—"} · ${units.length} imóveis — escolha um`;
+  document.getElementById("chList").innerHTML=units.map(a=>{
+    const gi=LAST.indexOf(a), ul=esc(unitLabel(a))||"Imóvel", area=a.areaedif?Math.round(a.areaedif)+" m²":"—";
+    const est=mercadoEstimado(a), val=est?"~"+brlC((est.lo+est.hi)/2):brl(a.vlvenal);
+    return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${brl(a.vlvenal)}</span></span><span class="val">${val}</span></button>`;
+  }).join("");
+  closeDetail();
+  setView("mapa");
+  document.getElementById("chooser").classList.add("show");
+}
+function chooseThis(i){closeChooser();pick(i);}
+function closeChooser(){document.getElementById("chooser").classList.remove("show");}
+
 /* ---------------- selecionar ---------------- */
 function pick(i){
-  const a=LAST[i];if(!a)return;sel=i;
+  const a=LAST[i];if(!a)return;sel=i;closeChooser();
   document.querySelectorAll(".card").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
