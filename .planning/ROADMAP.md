@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-07-04)
 - [x] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
  (completed 2026-07-04)
-- [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
+- [x] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo (completed 2026-07-04)
 - [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
 
 ## Phase Details
@@ -103,7 +103,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md — Seam de IA dormant: AI_CONFIG{enabled:false} + async pesquisarMercadoIA (script separado, input whitelisted, fail-to-null, zero call-sites, deletável) (IA-01)
+- [x] 05-01-PLAN.md — Seam de IA dormant: AI_CONFIG{enabled:false} + async pesquisarMercadoIA (script separado, input whitelisted, fail-to-null, zero call-sites, deletável) (IA-01)
 
 ### Phase 6: Motion no App Todo
 **Goal**: O app todo se move com fluidez premium — transições de tela, sheet e listas — sem nunca bloquear o corretor em campo nem ignorar preferências de acessibilidade.
@@ -132,5 +132,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Home = Mapa | 2/2 | Complete    | 2026-07-04 |
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 2/2 | Complete    | 2026-07-04 |
 | 4. Camada de Satélite | 2/2 | Complete    | 2026-07-04 |
-| 5. Seam de IA (dormant) | 0/TBD | Not started | - |
+| 5. Seam de IA (dormant) | 1/1 | Complete    | 2026-07-04 |
 | 6. Motion no App Todo | 0/TBD | Not started | - |

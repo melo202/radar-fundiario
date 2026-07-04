@@ -89,7 +89,7 @@ Preenchido durante a criação do roadmap.
 | MAPA-05 | Phase 3 | Complete |
 | SAT-01 | Phase 4 | Complete |
 | SAT-02 | Phase 4 | Complete |
-| IA-01 | Phase 5 | Pending |
+| IA-01 | Phase 5 | Complete |
 | MOT-01 | Phase 6 | Pending |
 | MOT-02 | Phase 6 | Pending |
 | MOT-03 | Phase 6 | Pending |
