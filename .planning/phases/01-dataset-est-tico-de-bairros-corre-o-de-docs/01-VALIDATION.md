@@ -19,7 +19,7 @@ created: 2026-07-04
 |----------|-------|
 | **Framework** | none — build-script self-validation + a standalone smoke check (Python `pyproj`/`json` or `npx`-invoked check; no permanent dependency) |
 | **Config file** | none |
-| **Quick run command** | `python build-bairros.py --verify` (build script asserts pagination + prints feature count & join report) |
+| **Quick run command** | `python gerar-bairros.py --verify` (build script asserts pagination + prints feature count & join report) |
 | **Full suite command** | `python check-bairros-geojson.py bairros-goiania.json` (smoke check: well-formed, size budget, irregular-bairro reprojection lands in Goiânia bbox) |
 | **Estimated runtime** | ~a few seconds (offline, one-shot) |
 
@@ -39,7 +39,7 @@ created: 2026-07-04
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 01-01-01 | 01 | 1 | DADOS-01 | — | N/A | artifact | `test -f bairros-goiania.json && python check-bairros-geojson.py bairros-goiania.json` | ❌ W0 | ⬜ pending |
-| 01-01-02 | 01 | 1 | DADOS-02 | — | N/A | script-assert | `python build-bairros.py --verify` (prints count + pagination proof + join report) | ❌ W0 | ⬜ pending |
+| 01-01-02 | 01 | 1 | DADOS-02 | — | N/A | script-assert | `python gerar-bairros.py --verify` (prints count + pagination proof + join report) | ❌ W0 | ⬜ pending |
 | 01-01-03 | 01 | 1 | DADOS-01 | — | reprojection correctness (UTM-22 guard) | smoke | `python check-bairros-geojson.py --check-irregular bairros-goiania.json` | ❌ W0 | ⬜ pending |
 | 01-01-04 | 01 | 1 | DADOS-03 | — | N/A | grep | `grep -q "returnGeometry" PROJETO-radar.md && grep -q "returnGeometry" ROADMAP-radar.md` | ✅ | ⬜ pending |
 

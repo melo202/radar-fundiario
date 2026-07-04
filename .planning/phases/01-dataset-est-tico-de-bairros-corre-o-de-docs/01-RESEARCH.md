@@ -379,9 +379,11 @@ if __name__ == "__main__":
 
 **If validated during planning/execution, downgrade these to [VERIFIED] or adjust the simplification tolerance accordingly.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact simplification tolerance / precision to ship**
+> Both questions below are substantively resolved: each carries a concrete recommendation that Phase 1's plan operationalizes verbatim (10%/precision=6; ~295 self-intersections documented as an accepted limitation). Any remaining judgment is deferred to Phase 3 visual QA, not blocking Phase 1.
+
+1. **Exact simplification tolerance / precision to ship** — RESOLVED (ship 10%/precision=6; re-tune deferred to Phase 3 QA)
    - What we know: `-simplify 10% keep-shapes precision=6` produces ~142KB gzipped, matching the milestone's ~150KB target, with 295 residual self-intersections.
    - What's unclear: Whether a human reviewer will find 10% too aggressive or too conservative once rendered in the actual Leaflet map at Phase 3 — this can't be fully judged from raw byte counts alone.
    - Recommendation: Ship at 10%/precision=6 as the default in this phase (meets the byte budget, passes the geometric smoke test), but keep the simplification step as a clearly separated, easily-rerunnable command (not baked irreversibly into a single monolithic script step) so Phase 3 can request a re-tune without redoing the fetch/reproject/join-report work.
