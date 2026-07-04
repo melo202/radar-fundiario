@@ -79,26 +79,26 @@ Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DADOS-01 | — | Pending |
-| DADOS-02 | — | Pending |
-| DADOS-03 | — | Pending |
-| MAPA-01 | — | Pending |
-| MAPA-02 | — | Pending |
-| MAPA-03 | — | Pending |
-| MAPA-04 | — | Pending |
-| MAPA-05 | — | Pending |
-| SAT-01 | — | Pending |
-| SAT-02 | — | Pending |
-| MOT-01 | — | Pending |
-| MOT-02 | — | Pending |
-| MOT-03 | — | Pending |
-| IA-01 | — | Pending |
+| DADOS-01 | Phase 1 | Pending |
+| DADOS-02 | Phase 1 | Pending |
+| DADOS-03 | Phase 1 | Pending |
+| MAPA-01 | Phase 2 | Pending |
+| MAPA-04 | Phase 2 | Pending |
+| MAPA-02 | Phase 3 | Pending |
+| MAPA-03 | Phase 3 | Pending |
+| MAPA-05 | Phase 3 | Pending |
+| SAT-01 | Phase 4 | Pending |
+| SAT-02 | Phase 4 | Pending |
+| IA-01 | Phase 5 | Pending |
+| MOT-01 | Phase 6 | Pending |
+| MOT-02 | Phase 6 | Pending |
+| MOT-03 | Phase 6 | Pending |
 
 **Coverage:**
 - Requisitos v2.0: 14 total
-- Mapeados para fases: 0 (a preencher pelo roadmapper)
-- Não mapeados: 14 ⚠️
+- Mapeados para fases: 14 (100%)
+- Não mapeados: 0 ✓
 
 ---
 *Requirements defined: 2026-07-04*
-*Last updated: 2026-07-04 after milestone v2.0 requirements definition*
+*Last updated: 2026-07-04 after roadmap creation (14/14 requirements mapped to 6 phases)*
