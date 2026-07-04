@@ -13,7 +13,8 @@ v2.0 (Mapa-first + Motion + Satélite) transforma a home de "tela de busca" para
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry` (completed 2026-07-04)
-- [x] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível (completed 2026-07-04)
+- [x] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível
+ (completed 2026-07-04)
 - [ ] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
 - [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
 - [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
@@ -61,10 +62,11 @@ Plans:
   3. Clicar/tocar-drill num bairro dá `fitBounds`/zoom até o bairro e revela as divisões de lote, confirmando que o gate zoom≥17 + envelope de `refreshLots()` dispara corretamente quando a câmera chega via clique no bairro (não só via pinch-zoom manual)
   4. Um bairro grande (ex.: Bueno ~57k registros, Oeste ~32k) não congela nem trava o mobile de médio/baixo desempenho ao drilar — o gate de zoom e o envelope de viewport seguem intactos
   5. Um breadcrumb (Goiânia › Bairro) reflete o histórico do drill e permite voltar
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Camada de bairros (outlines do JSON estático + Canvas) + highlight único gated por toque + drill fitBounds→lotes + gate de zoom + sw.js precache/bump (MAPA-02, MAPA-03)
+- [ ] 03-02-PLAN.md — Breadcrumb (Goiânia › Bairro) + zoom-out + verificação de não-freeze do bairro grande (MAPA-05, MAPA-03)
 
 ### Phase 4: Camada de Satélite
 **Goal**: O corretor alterna deliberadamente entre ruas e satélite sem perder a legibilidade dos rótulos nem sentir uma troca seca de imagem.
