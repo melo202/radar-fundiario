@@ -2096,5 +2096,119 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero,#predio").forE
   document.addEventListener(DOWNEV,e=>{if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}});
 })();
 </script>
+
+<!-- ============================================================
+     AI SEAM — DORMANT (pesquisa de mercado externa, opt-in, v2.1+)
+     Este bloco <script> é FISICAMENTE SEPARADO do núcleo acima e
+     pode ser apagado por completo, sem editar nada além dele, sem
+     quebrar busca, cadastro, laudo ou mapa. Nenhuma função abaixo
+     é chamada por qualquer caminho do núcleo (buscar/loadCi/
+     onMapClick/showDetail/wizard de laudo) — zero call-sites em
+     v2.0. Ativar no futuro = (1) mudar AI_CONFIG.enabled para true
+     e preencher endpoint/apiKey via runtime (proxy Worker ou
+     BYO-key em localStorage — NUNCA embutir chave aqui), e (2)
+     adicionar um botão opt-in explícito na UI que chame a função
+     abaixo passando um contexto. Nenhuma dessas duas coisas existe
+     em v2.0.
+     ============================================================ -->
+<script>
+(function(){
+  "use strict";
+
+  /* Config do seam — dormant por padrão. Nenhuma chave é embutida
+     aqui (apiKey:null); em runtime futuro ela viria de um proxy
+     Cloudflare Worker (apiKeyMode:"proxy", Worker guarda a key) ou
+     de localStorage no modo BYO-key (apiKeyMode:"byok", usuário
+     cola a própria chave) — nunca commitada neste arquivo público. */
+  const AI_CONFIG = {
+    enabled: false,                       // master switch — dormant, ships false
+    provider: "openrouter",
+    model: "z-ai/glm-4.5-air:online",      // default; fallbacks: qwen/qwen3-14b:online, deepseek/deepseek-v4-flash:online (ver AI-MODELS.md)
+    endpoint: "",                         // vazio — endpoint NÃO ativado em v2.0
+    apiKey: null,                         // NUNCA embutir chave real; vem em runtime (proxy ou BYO-key)
+    apiKeyMode: "proxy",                  // "proxy" = Worker guarda a key | "byok" = usuário cola a key em localStorage
+    maxTokens: 600,
+    timeoutMs: 15000,
+  };
+
+  /* Whitelist de input — mesma disciplina do denylist SENS (linha
+     ~639 do núcleo): em vez de proibir campos sensíveis, aqui só é
+     permitido ENTRAR o que está explicitamente listado. Qualquer
+     objeto "contexto" cru (ex.: um registro vindo da API cadastral)
+     nunca deve ser passado adiante — só {bairro, uso, faixaPreco}
+     sobrevive à reconstrução abaixo. Isso torna estruturalmente
+     impossível vazar dtnascimen/CPF/nome/etc. para uma IA externa,
+     mesmo que o caller passe um objeto maior por engano. */
+  const ALLOWED = ["bairro", "uso", "faixaPreco"];
+
+  /**
+   * pesquisarMercadoIA — único ponto de entrada async do seam.
+   * Aceita SOMENTE um objeto whitelisted {bairro, uso, faixaPreco}
+   * — NUNCA um registro cru da API. Em v2.0 está sempre desativado
+   * (AI_CONFIG.enabled === false) e portanto SEMPRE resolve para
+   * null antes de qualquer rede. Fail-safe: qualquer erro (rede,
+   * timeout, resposta malformada) também resolve para null — esta
+   * função nunca lança exceção para o app; o núcleo nunca deve
+   * depender do seu retorno.
+   *
+   * Não lê nem escreve nenhuma variável do núcleo (LAST, sel, LZ,
+   * LOTINFO, esc, clean, SENS, etc.) — recebe um valor, devolve um
+   * valor, sem estado compartilhado.
+   *
+   * @param {{bairro?: string, uso?: string, faixaPreco?: string}} contexto
+   * @returns {Promise<{resumo: string, fonte: string} | null>}
+   */
+  async function pesquisarMercadoIA(contexto) {
+    // 1) Barreira de whitelist — reconstrói um objeto novo só com
+    //    as chaves permitidas, coeridas para string. "contexto" cru
+    //    nunca é usado adiante.
+    const c = (contexto && typeof contexto === "object") ? contexto : {};
+    const safe = {};
+    ALLOWED.forEach(k => { if (k in c) safe[k] = String(c[k]); });
+
+    // 2) Fail-to-null — short-circuit antes de qualquer rede.
+    if (!AI_CONFIG.enabled) return null;
+
+    try {
+      /* Esboço do adapter (OpenAI-compatible Chat Completions via
+         OpenRouter), INALCANÇÁVEL em v2.0 porque o return acima já
+         resolveu para null quando enabled:false. Documentado para
+         a fase de ativação (IA-02) — formato do body conforme
+         AI-MODELS.md "Contrato de API do seam". Não faz fetch
+         nenhum enquanto AI_CONFIG.endpoint === "" e enabled===false.
+      //
+      // const resp = await fetch(AI_CONFIG.endpoint, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     "Authorization": "Bearer " + AI_CONFIG.apiKey,
+      //   },
+      //   body: JSON.stringify({
+      //     model: AI_CONFIG.model,
+      //     messages: [
+      //       { role: "system", content: "Resuma sinais públicos de mercado imobiliário; responda em pt-BR; cite fontes; deixe claro que não é dado oficial." },
+      //       { role: "user", content: "Bairro: " + safe.bairro + " | Uso: " + safe.uso + " | Faixa: " + safe.faixaPreco },
+      //     ],
+      //     plugins: [{ id: "web", max_results: 5 }],
+      //     temperature: 0.3,
+      //     max_tokens: AI_CONFIG.maxTokens,
+      //   }),
+      // });
+      // const data = await resp.json();
+      // const texto = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      // return texto ? { resumo: texto, fonte: AI_CONFIG.model } : null;
+      */
+      return null;
+    } catch (_e) {
+      // Qualquer erro (rede, timeout, parse) resolve para null — nunca lança para o app.
+      return null;
+    }
+  }
+
+  /* Nenhuma exportação global intencional além da declaração acima
+     no escopo deste <script> — não há window.pesquisarMercadoIA
+     nem qualquer hook de UI em v2.0. Isolamento total do núcleo. */
+})();
+</script>
 </body>
 </html>
