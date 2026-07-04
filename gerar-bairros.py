@@ -248,9 +248,18 @@ def main():
     named, unnamed = 0, 0
     for feat in features:
         attrs = feat["attributes"]
+        geom = feat.get("geometry") or {}
+        src_rings = geom.get("rings")
+        if not src_rings:
+            # defesa: feature sem geometria no retorno do endpoint (não deve ocorrer,
+            # mas não confiar cegamente em servidor de terceiro sem SLA)
+            raise SystemExit(
+                f"ERRO: feature id={attrs.get('id')!r} (OBJECTID={attrs.get('OBJECTID')!r}) "
+                "veio sem geometry/rings — abortado sem gravar arquivo furado."
+            )
         rings = [
             [list(to_wgs.transform(x, y)) for x, y in ring]
-            for ring in feat["geometry"]["rings"]
+            for ring in src_rings
         ]
         nm = (attrs.get("nm_bai") or "").strip() or None
         if nm:

@@ -41,8 +41,14 @@ def validate_output(path, max_gzip_kb=MAX_GZIP_KB):
                 f"nao e Polygon: geometry={geom!r}"
             )
         coords = geom.get("coordinates")
-        if not coords or len(coords[0]) < 3:
-            raise ValueError(f"feature #{i} tem anel com menos de 3 pontos: {coords!r}")
+        if not coords:
+            raise ValueError(f"feature #{i} sem coordinates: {coords!r}")
+        for r, ring in enumerate(coords):
+            if len(ring) < 3:
+                raise ValueError(
+                    f"feature #{i} anel #{r} tem menos de 3 pontos ({len(ring)}) — "
+                    f"possivel degenerescencia de simplificacao: {ring!r}"
+                )
 
     raw = json.dumps(data, separators=(",", ":")).encode("utf-8")
     kb = len(gzip.compress(raw)) / 1024
