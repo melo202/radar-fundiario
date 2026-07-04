@@ -733,7 +733,9 @@ function setSatelite(on){
     satTile.setOpacity(0); satRef.setOpacity(0);
     satTile.addTo(map); satRef.addTo(map);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{ satTile.setOpacity(1); satRef.setOpacity(1); }));
-    setTimeout(()=>{ if(satelliteOn&&map.hasLayer(streetTile))map.removeLayer(streetTile); },250);
+    /* garantia do estado final: se o rAF for estrangulado (aba em segundo plano, low-power,
+       reduce-motion), o satélite NUNCA pode ficar invisível — o timeout força opacity 1. */
+    setTimeout(()=>{ if(satelliteOn){ satTile.setOpacity(1); satRef.setOpacity(1); if(map.hasLayer(streetTile))map.removeLayer(streetTile); } },250);
   } else {
     if(!map.hasLayer(streetTile))streetTile.addTo(map);
     satTile.setOpacity(0); satRef.setOpacity(0);
