@@ -164,6 +164,11 @@
     color:var(--ink);font:600 15px/1.2 "IBM Plex Sans";cursor:pointer;box-shadow:0 4px 14px rgba(20,26,31,.18)}
   .searchpill .pill-ic{font-size:16px;line-height:1}
   .searchpill:active{border-color:var(--accent)}
+  .coachmark{position:absolute;z-index:390;top:calc(72px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    max-width:calc(100vw - 32px);display:inline-flex;align-items:center;gap:8px;
+    padding:12px 16px;background:var(--paper-2);border:1px solid var(--line);border-radius:2px;
+    color:var(--muted);font:500 13px/1.4 "IBM Plex Sans";box-shadow:var(--shadow);white-space:nowrap}
+  .coach-x{width:44px;height:44px;border:0;background:transparent;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;margin-right:-12px}
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
     border:2px solid var(--ink);border-radius:3px;padding:16px 18px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none;
     max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto} /* iPhone paisagem cai no desktop: precisa rolar */
@@ -511,9 +516,13 @@
   <!-- MAPA -->
   <div class="mapwrap">
     <div id="map"></div>
-    <button id="searchPill" class="searchpill" aria-label="Abrir busca de imóvel" onclick="setView('busca');focusFirstField()">
+    <button id="searchPill" class="searchpill" aria-label="Abrir busca de imóvel" onclick="setView('busca');focusFirstField();dismissCoach()">
       <span class="pill-ic" aria-hidden="true">🔍</span><span class="pill-lb">O que você procura?</span>
     </button>
+    <div id="coachMark" class="coachmark" role="status" style="display:none">
+      <span class="coach-tx">Toque num bairro pra explorar, ou use a busca.</span>
+      <button class="coach-x" aria-label="Dispensar dica" onclick="dismissCoach()">×</button>
+    </div>
     <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
       <div class="shead">
         <div class="grab" id="grab" aria-hidden="true"></div>
@@ -830,7 +839,7 @@ async function mostrarBairro(code){
     if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;}
     /* no mobile o mapa acabou de ficar visível: mede o container ANTES do fitBounds (senão zoom=0) */
     /* no desktop (Plan 02-02) fecha também o overlay de busca pós-resultado, igual ao mobile */
-    const enquadra=bnds=>{setView("mapa");
+    const enquadra=bnds=>{setView("mapa");dismissCoach();
       setTimeout(()=>{map.invalidateSize();map.fitBounds(bnds);},90);};
     const rings=fs.length&&fs[0].geometry&&fs[0].geometry.rings;
     if(rings&&rings.length){
@@ -1821,12 +1830,22 @@ function exportCSV(){
 }
 function closeDetail(){document.getElementById("detail").classList.remove("show");}
 
+/* ---------------- coach-mark de 1ª vez (Plan 02-02) ---------------- */
+function dismissCoach(){
+  const c=document.getElementById("coachMark"); if(c)c.style.display="none";
+  try{localStorage.setItem("radar_coach","1");}catch(e){}
+}
+function initCoach(){
+  let seen="1"; try{seen=localStorage.getItem("radar_coach");}catch(e){}
+  if(!seen){const c=document.getElementById("coachMark"); if(c)c.style.display="inline-flex";}
+}
+
 /* ---------------- init ---------------- */
 document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
-}else{initMap();setView("mapa");loadBairros();initCaixa();}
+}else{initMap();setView("mapa");initCoach();loadBairros();initCaixa();}
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"))
   navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
 /* offline -> online: recarrega a lista de setores se ela não tiver vindo */
