@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry` (completed 2026-07-04)
 - [x] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível
  (completed 2026-07-04)
-- [ ] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
+- [x] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação (completed 2026-07-04)
 - [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
 - [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
 - [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
@@ -65,8 +65,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Camada de bairros (outlines do JSON estático + Canvas) + highlight único gated por toque + drill fitBounds→lotes + gate de zoom + sw.js precache/bump (MAPA-02, MAPA-03)
-- [ ] 03-02-PLAN.md — Breadcrumb (Goiânia › Bairro) + zoom-out + verificação de não-freeze do bairro grande (MAPA-05, MAPA-03)
+- [x] 03-01-PLAN.md — Camada de bairros (outlines do JSON estático + Canvas) + highlight único gated por toque + drill fitBounds→lotes + gate de zoom + sw.js precache/bump (MAPA-02, MAPA-03)
+- [x] 03-02-PLAN.md — Breadcrumb (Goiânia › Bairro) + zoom-out + verificação de não-freeze do bairro grande (MAPA-05, MAPA-03)
 
 ### Phase 4: Camada de Satélite
 **Goal**: O corretor alterna deliberadamente entre ruas e satélite sem perder a legibilidade dos rótulos nem sentir uma troca seca de imagem.
@@ -126,7 +126,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Dataset Estático de Bairros + Correção de Docs | 2/2 | Complete    | 2026-07-04 |
 | 2. Home = Mapa | 2/2 | Complete    | 2026-07-04 |
-| 3. Render de Bairro + Hover/Tap + Click-to-Drill | 0/TBD | Not started | - |
+| 3. Render de Bairro + Hover/Tap + Click-to-Drill | 2/2 | Complete    | 2026-07-04 |
 | 4. Camada de Satélite | 0/TBD | Not started | - |
 | 5. Seam de IA (dormant) | 0/TBD | Not started | - |
 | 6. Motion no App Todo | 0/TBD | Not started | - |

@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: milestone
 status: executing
 stopped_at: ROADMAP.md e REQUIREMENTS.md (traceability) escritos; STATE.md inicializado para Phase 1
-last_updated: "2026-07-04T21:40:04.405Z"
+last_updated: "2026-07-04T22:15:27.019Z"
 last_activity: 2026-07-04
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 2 — Home = Mapa
+**Current focus:** Phase 3 — Render de Bairro + Hover/Tap + Click-to-Drill
 
 ## Current Position
 
-Phase: 3
+Phase: 4
 Plan: Not started
-Status: Executing Phase 2
+Status: Executing Phase 3
 Last activity: 2026-07-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 6
 - Average duration: —
 - Total execution time: —
 
@@ -46,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 |-------|-------|-------|----------|
 | 1 | 2 | - | - |
 | 2 | 2 | - | - |
+| 3 | 2 | - | - |
 
 **Recent Trend:**
 

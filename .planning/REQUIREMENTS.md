@@ -84,9 +84,9 @@ Preenchido durante a criação do roadmap.
 | DADOS-03 | Phase 1 | Complete |
 | MAPA-01 | Phase 2 | Complete |
 | MAPA-04 | Phase 2 | Complete |
-| MAPA-02 | Phase 3 | Pending |
-| MAPA-03 | Phase 3 | Pending |
-| MAPA-05 | Phase 3 | Pending |
+| MAPA-02 | Phase 3 | Complete |
+| MAPA-03 | Phase 3 | Complete |
+| MAPA-05 | Phase 3 | Complete |
 | SAT-01 | Phase 4 | Pending |
 | SAT-02 | Phase 4 | Pending |
 | IA-01 | Phase 5 | Pending |
