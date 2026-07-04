@@ -2,8 +2,11 @@
    Estratégia: NETWORK-FIRST para o app e os dados (HTML, caixa-goiania.js,
    manifest) — o cache é só fallback offline, nunca congela versão.
    CACHE-FIRST apenas para bibliotecas de CDN e ícones (imutáveis).
-   Consultas ao ArcGIS (JSONP) e tiles do mapa NÃO passam por aqui: dado vivo. */
-const CACHE = "radar-v4";
+   Consultas ao ArcGIS (JSONP) e tiles do mapa (CARTO e, desde a Fase 4, os
+   tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
+   nunca cache — dado vivo, e tiles de satélite são pesados demais para
+   inchar o storage do PWA. */
+const CACHE = "radar-v5";
 const LOCAL = [
   "./",
   "./radar-goiania.html",
