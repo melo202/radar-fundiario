@@ -347,7 +347,9 @@
   #laudoView .lvbar{position:sticky;top:0;z-index:3;display:flex;gap:10px;align-items:center;justify-content:space-between;
     background:var(--l-ink);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
     font:600 12px/1.4 "Open Sans","Segoe UI",sans-serif}
-  #laudoView .lvbar button{width:40px;height:40px;flex:none;border:0;background:transparent;color:#fff;font-size:24px;cursor:pointer}
+  #laudoView .lvprint{border:0;background:var(--l-accent);color:#fff;font:700 14px/1 "Open Sans","Segoe UI",sans-serif;
+    padding:0 18px;min-height:44px;border-radius:9px;cursor:pointer}
+  #laudoView .lvx{width:44px;height:44px;flex:none;border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}
   #laudoView .lvbody{max-width:780px;margin:0 auto;padding:22px 18px 48px;color:var(--l-text);background:var(--l-bg);
     font:400 13.5px/1.55 "Open Sans","Segoe UI",system-ui,sans-serif}
   @media(max-width:640px){
@@ -546,8 +548,8 @@
 <!-- Visão em tela do laudo (fallback do PWA standalone no iOS, onde window.print não abre) -->
 <div id="laudoView" hidden>
   <div class="lvbar">
-    <span>Toque em <b>Compartilhar ⬆</b> → <b>Imprimir</b> e pince para gerar o PDF — ou abra no Safari.</span>
-    <button onclick="document.getElementById('laudoView').hidden=true" aria-label="Fechar">×</button>
+    <button class="lvprint" onclick="imprimirLaudo()">🖨️ Salvar PDF</button>
+    <button class="lvx" onclick="fecharLaudoView()" aria-label="Fechar laudo">×</button>
   </div>
   <div class="lvbody" id="laudoViewBody"></div>
 </div>
@@ -1606,23 +1608,30 @@ function montarLaudo(){
 
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo();
-  /* iOS PWA standalone: window.print() é no-op — mostra o laudo em tela cheia com instrução */
+  /* NÃO imprime automático: o navegador bloqueia o print sem clique do usuário
+     e acaba imprimindo a página errada (o mapa). Mostramos o laudo NA TELA; o PDF
+     sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
+     é ele que vai para o PDF — e só é limpo ao fechar (fecharLaudoView). */
+  document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
+}
+/* dispara o PDF a partir do CLIQUE do usuário (gesto real → não é bloqueado) */
+function imprimirLaudo(){
   const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
-  if(standalone){
-    document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-    document.getElementById("laudo").innerHTML="";
-    document.getElementById("laudoView").hidden=false;
-    document.getElementById("laudoView").scrollTop=0;
+  if(standalone){ /* em PWA instalado no iOS, window.print() é no-op */
+    alert("No app instalado na tela inicial, toque em Compartilhar ⬆ e depois em Imprimir para salvar o PDF (ou abra o Radar no Safari).");
     return;
   }
   document.body.classList.add("print-laudo");
-  const done=()=>{document.body.classList.remove("print-laudo");
-    document.getElementById("laudo").innerHTML="";  /* libera as fotos do DOM após o PDF */
-    window.removeEventListener("afterprint",done);};
+  const done=()=>{document.body.classList.remove("print-laudo");window.removeEventListener("afterprint",done);};
   window.addEventListener("afterprint",done);
-  const mq=matchMedia("print");mq.addEventListener&&mq.addEventListener("change",e=>{if(!e.matches)done();});
-  window.addEventListener("focus",done,{once:true}); /* rede de segurança se afterprint não vier (iOS) */
-  setTimeout(()=>window.print(),150);
+  window.print();
+}
+function fecharLaudoView(){
+  document.getElementById("laudoView").hidden=true;
+  document.getElementById("laudoViewBody").innerHTML="";
+  document.getElementById("laudo").innerHTML=""; /* libera as fotos da memória */
+  document.body.classList.remove("print-laudo");
 }
 
 /* ---------------- calculadora de custos de compra ----------------
@@ -1812,6 +1821,7 @@ document.addEventListener("focusin",e=>{
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
   if(!document.getElementById("calc").hidden)fecharCustos();
   else if(!document.getElementById("wiz").hidden)fecharLaudo();
+  else if(!document.getElementById("laudoView").hidden)fecharLaudoView();
   else if(document.getElementById("chooser").classList.contains("show"))closeChooser();
   else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
