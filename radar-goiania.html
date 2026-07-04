@@ -655,6 +655,13 @@ function initMap(){
   layerGroup=L.layerGroup().addTo(map);
   map.on("click",onMapClick);
   initLots();
+  map.createPane("bairros").style.zIndex=370; /* abaixo do pane "lots" (380) e do overlayPane (400) */
+  map.on("zoomend",()=>{
+    if(!bairroLayer)return;
+    const z=map.getZoom();
+    if(z>=17){ if(map.hasLayer(bairroLayer))map.removeLayer(bairroLayer); }
+    else { if(!map.hasLayer(bairroLayer))bairroLayer.addTo(map); }
+  });
 }
 
 /* ---------------- divisas de lote (camada 0): desenha os lotes no zoom próximo ----------------
@@ -664,6 +671,14 @@ const LOT_STYLE={pane:"lots",color:"#2c5545",weight:1,fillColor:"#2c5545",fillOp
 const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
 let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
 const LOTINFO={};
+
+/* ---------------- divisas de bairro (Fase 3, MAPA-02/03): outline estático do bairros-goiania.json (Fase 1) -----
+   espelha o padrão de LOT_STYLE/LOT_HOVER; some em zoom>=17 (dá lugar aos lotes). */
+const BAI_STYLE={pane:"bairros",color:"var(--line)",weight:1,fillColor:"var(--line)",fillOpacity:.03,opacity:.8,bubblingMouseEvents:false};
+const BAI_HOVER={color:"var(--accent)",weight:2.5,fillOpacity:.08,opacity:1};
+/* função de resolução de estilo (não objeto cru) — deixa a extensão v2.1 (styling por território) barata */
+function baiStyle(feature){return BAI_STYLE;}
+let bairroLayer=null,baiHi=null;
 /* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
 function capCache(o,max){const k=Object.keys(o);if(k.length>max)delete o[k[0]];}
 let LOTDEB=null,LOTLAST=null;
@@ -728,6 +743,24 @@ async function refreshLots(){
   LOTLAST=map.getBounds(); /* memoriza a vista coberta — pans curtos não refazem a consulta */
   if(!LOTHINT&&(d.features||[]).length){LOTHINT=true;
     toast(matchMedia("(hover:none)").matches?"Lotes delimitados — toque num lote para abrir os dados.":"Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
+}
+
+/* ---------------- polígonos de bairro (camada estática, Fase 1 -> bairros-goiania.json) ----------------
+   outline (linha) em zoom de cidade; some em zoom>=17 (gate no zoomend de initMap). Falha de fetch é silenciosa
+   (progressive enhancement — busca e lotes continuam funcionando sem o layer). */
+function onEachBairro(feature,layer){
+  layer.bindTooltip("",{sticky:true,direction:"top",opacity:.96});
+}
+async function loadBairroPolys(){
+  let data;
+  try{
+    const r=await fetch('bairros-goiania.json');
+    data=await r.json();
+  }catch(e){console.warn("bairros-goiania.json:",e);return;}
+  try{
+    bairroLayer=L.geoJSON(data,{renderer:L.canvas({pane:"bairros"}),pane:"bairros",style:baiStyle,onEachFeature:onEachBairro});
+    if(map.getZoom()<17)bairroLayer.addTo(map);
+  }catch(e){console.warn("bairros-goiania.json:",e);}
 }
 
 /* token de busca: respostas concorrentes (buscar/onMapClick/loadCi) não se sobrescrevem */
@@ -1847,7 +1880,7 @@ document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
-}else{initMap();setView("mapa");initCoach();loadBairros();initCaixa();}
+}else{initMap();setView("mapa");initCoach();loadBairros();loadBairroPolys();initCaixa();}
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"))
   navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
 /* offline -> online: recarrega a lista de setores se ela não tiver vindo */
