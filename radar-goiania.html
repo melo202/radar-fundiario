@@ -748,8 +748,35 @@ async function refreshLots(){
 /* ---------------- polígonos de bairro (camada estática, Fase 1 -> bairros-goiania.json) ----------------
    outline (linha) em zoom de cidade; some em zoom>=17 (gate no zoomend de initMap). Falha de fetch é silenciosa
    (progressive enhancement — busca e lotes continuam funcionando sem o layer). */
+/* uma única função de realce, gated por toque — mesmo princípio de refreshLots (não dois code paths) */
+function highlightBairro(layer){
+  if(baiHi&&baiHi!==layer){baiHi.setStyle(BAI_STYLE);baiHi.closeTooltip();}
+  layer.setStyle(BAI_HOVER);
+  const nm=layer.feature.properties.nm_bai;
+  const lbl=(nm&&nm.trim())?esc(nm):"Área rural / gleba";
+  layer.setTooltipContent(lbl);layer.openTooltip();
+  baiHi=layer;
+}
+function clearBaiHi(){
+  if(baiHi){baiHi.setStyle(BAI_STYLE);baiHi.closeTooltip();baiHi=null;}
+}
+function drillBairro(layer){
+  dismissCoach();
+  const b=layer.getBounds();
+  setTimeout(()=>{map.invalidateSize();map.fitBounds(b.pad(0.05));},90);
+}
 function onEachBairro(feature,layer){
   layer.bindTooltip("",{sticky:true,direction:"top",opacity:.96});
+  const touch=matchMedia("(hover:none)").matches;
+  if(touch){
+    /* mobile: 1º toque realça+nome; 2º toque no MESMO bairro dá drill */
+    layer.on("click",()=>{ if(baiHi===layer){drillBairro(layer);} else {highlightBairro(layer);} });
+  }else{
+    /* desktop: hover realça+nome, mouseout reseta; clique drila direto */
+    layer.on("mouseover",()=>highlightBairro(layer));
+    layer.on("mouseout",()=>{ if(baiHi===layer)clearBaiHi(); });
+    layer.on("click",()=>drillBairro(layer));
+  }
 }
 async function loadBairroPolys(){
   let data;
