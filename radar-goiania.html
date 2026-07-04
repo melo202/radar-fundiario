@@ -32,6 +32,16 @@
     --muted:#57503f;      /* escurecido p/ passar AA sobre o papel (era #6b6353, ~3.7:1) */
     --ok:#2c5545;
     --shadow:0 2px 0 rgba(20,26,31,.08);
+    /* ===== paleta do LAUDO (troque estas 8 linhas para recolorir o laudo inteiro) ===== */
+    --l-accent:#ff7d00;   /* laranja — títulos de seção, valores-chave, seta "maior liquidez" */
+    --l-ink:#232526;      /* grafite — pill "Fachada", valor-herói, assinatura */
+    --l-blue:#4577c0;     /* azul — seta "menor liquidez" */
+    --l-text:#333638;     /* corpo do texto */
+    --l-label:#70706e;    /* rótulos e legendas */
+    --l-card:#ffffff;     /* fundo dos cards */
+    --l-border:#e6e4df;   /* borda dos cards */
+    --l-hair:#efece6;     /* separadores de linha (chave/valor) */
+    --l-bg:#faf9f7;       /* fundo da página do laudo */
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -277,101 +287,76 @@
   .wnext{display:block;width:100%;max-width:560px;margin:0 auto;background:var(--accent);color:#fff;border:0;
     font:700 17px/1 "IBM Plex Sans";padding:17px;border-radius:14px;cursor:pointer}
   .wnext:active{transform:translateY(1px)}
-  /* laudo impresso — visual premium (cores forçadas com print-color-adjust) */
+  /* ===== LAUDO — layout premium em cards; tela (#laudoView) e PDF (#laudo) compartilham as classes ===== */
   #laudo{display:none}
+  #laudo .lbrand,#laudoView .lbrand{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 2px 18px}
+  #laudo .lbrand .t,#laudoView .lbrand .t{font:800 19px/1.1 "Open Sans","Segoe UI",sans-serif;color:#1c1e20}
+  #laudo .lbrand .t small,#laudoView .lbrand .t small{display:block;font:700 10px/1.3 "Open Sans",sans-serif;color:var(--l-accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+  #laudo .lbrand .m,#laudoView .lbrand .m{text-align:right;font-size:10.5px;color:var(--l-label);line-height:1.5;flex:none}
+  #laudo .lcard,#laudoView .lcard{background:var(--l-card);border:1px solid var(--l-border);border-radius:14px;padding:17px 19px;margin-bottom:15px}
+  #laudo .lcard h3,#laudoView .lcard h3{margin:0 0 10px;color:var(--l-accent);font:700 14px/1.2 "Open Sans","Segoe UI",sans-serif}
+  #laudo .lcard p,#laudoView .lcard p{margin:0 0 8px}
+  #laudo .lcard p:last-child,#laudoView .lcard p:last-child{margin-bottom:0}
+  #laudo .lrow,#laudoView .lrow{display:flex;gap:15px}
+  #laudo .lrow>.lcard,#laudoView .lrow>.lcard{flex:1;margin-bottom:15px}
+  #laudo .lrow>.lcard.foto,#laudoView .lrow>.lcard.foto{flex:0 0 42%;padding:0;overflow:hidden;position:relative}
+  #laudo .pill,#laudoView .pill{position:absolute;top:12px;left:12px;z-index:2;background:var(--l-ink);color:#fff;font:700 10px/1 "Open Sans",sans-serif;padding:7px 11px;border-radius:8px}
+  #laudo .foto img,#laudoView .foto img{width:100%;height:100%;min-height:265px;object-fit:cover;display:block}
+  #laudo .kv,#laudoView .kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--l-hair)}
+  #laudo .kv:last-child,#laudoView .kv:last-child{border-bottom:0}
+  #laudo .kv .k,#laudoView .kv .k{color:var(--l-label);flex:none;max-width:46%}
+  #laudo .kv .v,#laudoView .kv .v{text-align:right;font-weight:700;color:#26282a}
+  #laudo .preco .prow,#laudoView .preco .prow{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  #laudo .preco .hero,#laudoView .preco .hero{font:800 33px/1 "Open Sans","Segoe UI",sans-serif;color:#1c1e20;letter-spacing:-.01em;white-space:nowrap}
+  #laudo .preco .subs,#laudoView .preco .subs{display:flex;gap:12px;flex:1;min-width:270px}
+  #laudo .subcard,#laudoView .subcard{flex:1;border:1px solid var(--l-border);border-radius:11px;padding:12px 14px}
+  #laudo .subcard .st,#laudoView .subcard .st{display:flex;align-items:center;gap:7px;font:700 12.5px/1 "Open Sans",sans-serif;color:#26282a;margin-bottom:7px}
+  #laudo .subcard .ar,#laudoView .subcard .ar{font-size:15px;font-weight:800}
+  #laudo .subcard.up .ar,#laudoView .subcard.up .ar{color:var(--l-accent)}
+  #laudo .subcard.down .ar,#laudoView .subcard.down .ar{color:var(--l-blue)}
+  #laudo .subcard .sl,#laudoView .subcard .sl{color:var(--l-label);font-size:11.5px}
+  #laudo .subcard .sv,#laudoView .subcard .sv{font-weight:700;font-size:14.5px;color:#26282a;margin-top:2px;white-space:nowrap}
+  #laudo .lbar,#laudoView .lbar{position:relative;height:13px;background:var(--l-hair);border-radius:7px;margin:15px 6px 6px}
+  #laudo .lbar .iqr,#laudoView .lbar .iqr{position:absolute;top:0;bottom:0;background:#cfe0d8;border-radius:7px}
+  #laudo .lbar .med,#laudoView .lbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--l-ink)}
+  #laudo .lbar .me,#laudoView .lbar .me{position:absolute;top:-8px;width:0;height:0;border:7px solid transparent;border-top-color:var(--l-accent);transform:translateX(-7px)}
+  #laudo .llbl,#laudoView .llbl{display:flex;justify-content:space-between;font:600 10.5px/1 "Open Sans",sans-serif;color:var(--l-label);margin:6px 6px 0}
+  #laudo .lfotos,#laudoView .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
+  #laudo .lfotos img,#laudoView .lfotos img{width:100%;height:120px;object-fit:cover;border-radius:8px}
+  #laudo .lmiudo,#laudoView .lmiudo{font-size:10.5px;color:var(--l-label);text-align:justify;line-height:1.5}
+  #laudo .lass,#laudoView .lass{margin-top:28px;text-align:center}
+  #laudo .lass .linha,#laudoView .lass .linha{border-top:1.5px solid var(--l-ink);width:56%;margin:0 auto 6px}
+  #laudo .foot,#laudoView .foot{margin-top:4px;text-align:right;font:600 9.5px/1 "Open Sans",sans-serif;color:var(--l-label);letter-spacing:.02em}
+  #laudoView .lrun{display:none}
   @media print{
-    @page{margin:12mm 14mm 18mm}
+    @page{margin:12mm 13mm 14mm}
     body.print-laudo>*{display:none!important}
     body.print-laudo #laudo{display:block!important}
-    #laudo{font:400 10.5pt/1.55 "IBM Plex Sans","Segoe UI",sans-serif;color:#141a1f;
+    #laudo{font:400 10.5px/1.55 "Open Sans","Segoe UI",sans-serif;color:var(--l-text);background:#fff;
       -webkit-print-color-adjust:exact;print-color-adjust:exact}
-    #laudo .lhead{background:#141a1f;color:#f2eee4;padding:15pt 18pt 13pt;border-top:5pt solid #b5451f}
-    #laudo .lhead .eye{font:700 8pt/1 "IBM Plex Mono",monospace;letter-spacing:.22em;color:#c9691f;text-transform:uppercase;margin-bottom:6pt}
-    #laudo .lhead h1{font:800 18pt/1.15 "IBM Plex Sans";margin:0}
-    #laudo .lhead .lsub{font-size:9.5pt;color:#c3b9a3;margin-top:5pt}
-    #laudo .lkpis{display:flex;border:1.2pt solid #141a1f;border-top:0;margin-bottom:14pt}
-    #laudo .lkpis .kpi{flex:1;padding:9pt 12pt;border-right:.6pt solid #d8d0be}
-    #laudo .lkpis .kpi:last-child{border-right:0}
-    #laudo .lkpis .kk{font:700 7.5pt/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:#6b6353;margin-bottom:4pt}
-    #laudo .lkpis .kv{font:800 12pt/1.15 "IBM Plex Sans"}
-    #laudo .lkpis .kpi.hl .kv{color:#b5451f}
-    #laudo h2{font:800 11pt/1.3 "IBM Plex Sans";margin:15pt 0 8pt;padding-left:8pt;border-left:5pt solid #b5451f;
-      text-transform:uppercase;letter-spacing:.05em}
-    #laudo table{width:100%;border-collapse:collapse;font-size:9.8pt}
-    #laudo td{padding:5pt 9pt;border-bottom:.6pt solid #e4ddcc;vertical-align:top}
-    #laudo td.k{width:33%;font-weight:700;color:#4a443a}
-    #laudo .lbar{position:relative;height:11pt;background:#e4ddcc;border-radius:6pt;margin:14pt 4pt 4pt}
-    #laudo .lbar .iqr{position:absolute;top:0;bottom:0;background:#3f7a63;opacity:.55;border-radius:6pt}
-    #laudo .lbar .med{position:absolute;top:-2pt;bottom:-2pt;width:1.6pt;background:#141a1f}
-    #laudo .lbar .me{position:absolute;top:-6.5pt;width:0;height:0;border:6pt solid transparent;border-top-color:#b5451f;transform:translateX(-6pt)}
-    #laudo .llbl{display:flex;justify-content:space-between;font:600 8pt/1 "IBM Plex Mono",monospace;color:#6b6353;margin:4pt 6pt 0}
-    #laudo .lcover{margin:0 0 14pt}
-    #laudo .lcover img{width:100%;height:200pt;object-fit:cover;display:block}
-    #laudo .destaque{background:#141a1f;color:#f2eee4;border-radius:8pt;padding:13pt 16pt;margin:14pt 0;text-align:center}
-    #laudo .destaque .dk{font:700 8pt/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:#c9691f}
-    #laudo .destaque .dv{font:800 22pt/1.15 "IBM Plex Sans";margin-top:5pt}
-    #laudo .lgauge{margin:12pt 4pt 2pt}
-    #laudo .lgbar{position:relative;height:7pt;border-radius:4pt;background:linear-gradient(90deg,#3f7a63,#a8842c,#b5451f)}
-    #laudo .lgfill{display:none}
-    #laudo .lgmark{position:absolute;top:-3pt;width:3pt;height:13pt;background:#f2eee4;border:1pt solid #141a1f;border-radius:1pt;transform:translateX(-1.5pt)}
-    #laudo .lgends{display:flex;justify-content:space-between;margin-top:5pt;font:700 8.5pt/1.3 "IBM Plex Sans";color:#f2eee4}
-    #laudo .lgends i{display:block;font:600 6.5pt/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#c3b9a3;font-style:normal;margin-top:2pt}
-    #laudo .lgends span:last-child{text-align:right}
-    #laudo .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6pt;margin-top:8pt}
-    #laudo .lfotos img{width:100%;height:140pt;object-fit:cover;border-radius:4pt}
-    #laudo .lmiudo{font-size:8pt;color:#6b6353;line-height:1.55;text-align:justify}
-    #laudo .lass{margin-top:40pt;text-align:center;font-size:10pt}
-    #laudo .lass .linha{border-top:1.2pt solid #141a1f;width:58%;margin:0 auto 5pt}
-    #laudo .lrun{position:fixed;bottom:-10mm;left:0;right:0;display:flex;justify-content:space-between;
-      font:600 7.5pt/1 "IBM Plex Mono",monospace;color:#8a8271;border-top:.6pt solid #c3b9a3;padding-top:4pt}
-    #laudo section{page-break-inside:avoid}
+    #laudo .lcard{box-shadow:none}
+    #laudo h3{page-break-after:avoid}                                        /* título não fica órfão */
+    #laudo .prow,#laudo .subs,#laudo .subcard,#laudo .lbar,#laudo .lass,#laudo .kv{page-break-inside:avoid} /* blocos atômicos não partem */
+    #laudo .foot{display:none}                                               /* no PDF o rodapé é o .lrun repetido */
+    #laudo .lrun{position:fixed;bottom:-9mm;left:0;right:0;display:flex;justify-content:space-between;
+      font:600 7.5pt/1 "Open Sans",sans-serif;color:var(--l-label);border-top:.6pt solid var(--l-border);padding-top:4pt}
   }
-  /* visão em tela do laudo (PWA standalone iOS) — espelha o visual do PDF */
-  #laudoView{position:fixed;inset:0;z-index:2100;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  /* visão em tela do laudo (PWA standalone iOS) — mesma linguagem do PDF, em cards */
+  #laudoView{position:fixed;inset:0;z-index:2100;background:var(--l-bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
   #laudoView[hidden]{display:none}
-  #laudoView .lvbar{position:sticky;top:0;display:flex;gap:10px;align-items:center;justify-content:space-between;
-    background:var(--ink);color:var(--paper-2);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
-    font:500 12px/1.4 "IBM Plex Sans"}
+  #laudoView .lvbar{position:sticky;top:0;z-index:3;display:flex;gap:10px;align-items:center;justify-content:space-between;
+    background:var(--l-ink);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+    font:600 12px/1.4 "Open Sans","Segoe UI",sans-serif}
   #laudoView .lvbar button{width:40px;height:40px;flex:none;border:0;background:transparent;color:#fff;font-size:24px;cursor:pointer}
-  #laudoView .lvbody{max-width:720px;margin:0 auto;padding:0 0 40px;color:#141a1f;font:400 14px/1.55 "IBM Plex Sans",sans-serif}
-  #laudoView .lrun{display:none}
-  #laudoView .lhead{background:#141a1f;color:#f2eee4;padding:18px 22px 15px;border-top:6px solid #b5451f}
-  #laudoView .lhead .eye{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.22em;color:#c9691f;text-transform:uppercase;margin-bottom:7px}
-  #laudoView .lhead h1{font:800 22px/1.15 "IBM Plex Sans";margin:0}
-  #laudoView .lhead .lsub{font-size:12px;color:#c3b9a3;margin-top:6px}
-  #laudoView .lkpis{display:flex;border:1.5px solid #141a1f;border-top:0;margin-bottom:16px}
-  #laudoView .lkpis .kpi{flex:1;padding:11px 14px;border-right:1px solid #d8d0be}
-  #laudoView .lkpis .kpi:last-child{border-right:0}
-  #laudoView .lkpis .kk{font:700 9px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:#6b6353;margin-bottom:5px}
-  #laudoView .lkpis .kv{font:800 15px/1.15 "IBM Plex Sans"}
-  #laudoView .lkpis .kpi.hl .kv{color:#b5451f}
-  #laudoView section{padding:0 22px}
-  #laudoView h2{font:800 14px/1.3 "IBM Plex Sans";margin:18px 0 9px;padding-left:9px;border-left:6px solid #b5451f;text-transform:uppercase;letter-spacing:.05em}
-  #laudoView table{width:100%;border-collapse:collapse;font-size:13px}
-  #laudoView td{padding:6px 10px;border-bottom:1px solid #e4ddcc;vertical-align:top}
-  #laudoView td.k{width:33%;font-weight:700;color:#4a443a}
-  #laudoView .lbar{position:relative;height:14px;background:#e4ddcc;border-radius:7px;margin:16px 6px 5px}
-  #laudoView .lbar .iqr{position:absolute;top:0;bottom:0;background:#3f7a63;opacity:.55;border-radius:7px}
-  #laudoView .lbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:#141a1f}
-  #laudoView .lbar .me{position:absolute;top:-8px;width:0;height:0;border:7px solid transparent;border-top-color:#b5451f;transform:translateX(-7px)}
-  #laudoView .llbl{display:flex;justify-content:space-between;font:600 11px/1 "IBM Plex Mono",monospace;color:#6b6353;margin:5px 8px 0}
-  #laudoView .lcover{margin:0 0 16px}
-  #laudoView .lcover img{width:100%;height:210px;object-fit:cover;display:block}
-  #laudoView .destaque{background:#141a1f;color:#f2eee4;border-radius:9px;padding:15px 18px;margin:16px 0;text-align:center}
-  #laudoView .destaque .dk{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:#c9691f}
-  #laudoView .destaque .dv{font:800 27px/1.15 "IBM Plex Sans";margin-top:6px}
-  #laudoView .lgauge{margin:14px 4px 2px}
-  #laudoView .lgbar{position:relative;height:9px;border-radius:5px;background:linear-gradient(90deg,#3f7a63,#a8842c,#b5451f)}
-  #laudoView .lgfill{display:none}
-  #laudoView .lgmark{position:absolute;top:-4px;width:4px;height:17px;background:#f2eee4;border:1px solid #141a1f;border-radius:2px;transform:translateX(-2px)}
-  #laudoView .lgends{display:flex;justify-content:space-between;margin-top:6px;font:700 12px/1.3 "IBM Plex Sans";color:#f2eee4}
-  #laudoView .lgends i{display:block;font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#c3b9a3;font-style:normal;margin-top:2px}
-  #laudoView .lgends span:last-child{text-align:right}
-  #laudoView .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-  #laudoView .lfotos img{width:100%;height:110px;object-fit:cover;border-radius:4px}
-  #laudoView .lmiudo{font-size:11px;color:#6b6353;line-height:1.55;text-align:justify}
-  #laudoView .lass{margin-top:40px;text-align:center;font-size:14px}
-  #laudoView .lass .linha{border-top:1.5px solid #141a1f;width:58%;margin:0 auto 6px}
+  #laudoView .lvbody{max-width:780px;margin:0 auto;padding:22px 18px 48px;color:var(--l-text);background:var(--l-bg);
+    font:400 13.5px/1.55 "Open Sans","Segoe UI",system-ui,sans-serif}
+  @media(max-width:640px){
+    #laudoView .lrow{flex-direction:column}
+    #laudoView .lrow>.lcard.foto{flex:auto}
+    #laudoView .foto img{min-height:200px}
+    #laudoView .preco .subs{min-width:0;flex-direction:column}
+    #laudoView .preco .hero{font-size:28px}
+  }
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
   .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s}
@@ -1582,34 +1567,44 @@ function montarLaudo(){
   const foraFaixa=est&&LZ.valor&&(LZ.valor<est.lo*0.97||LZ.valor>est.hi*1.03);
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
-    <div class="lhead"><div class="eye">Radar Fundiário · Cadastro Imobiliário de Goiânia</div><h1>${titulo}</h1>
-      <div class="lsub">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?" · "+esc(p.contato):""} — Goiânia/GO, ${hoje}</div></div>
-    ${LZ.fotos.length?`<div class="lcover"><img src="${esc(LZ.fotos[0])}" alt="Fachada do imóvel"></div>`:""}
-    <div class="lkpis">
-      <div class="kpi"><div class="kk">Valor venal (fiscal)</div><div class="kv">${brl(a.vlvenal)}</div></div>
-      <div class="kpi"><div class="kk">R$/m² ${isU2?"construído":"terreno"}</div><div class="kv">${pm2L?brl(pm2L):"—"}</div></div>
-      <div class="kpi hl"><div class="kk">Faixa de mercado</div><div class="kv">${est?brlC(est.lo)+"–"+brlC(est.hi):"—"}</div></div>
+    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>${titulo}</div>
+      <div class="m">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?"<br>"+esc(p.contato):""}<br>Goiânia/GO · ${hoje}</div></div>
+
+    <div class="lcard"><h3>Finalidade</h3>
+      <p>Determinar o valor de referência de mercado do imóvel${(LZ.finalidade||"").trim()?" para fins de "+esc(LZ.finalidade).toLowerCase():""}, apoiando as partes na negociação a estabelecer um preço condizente com as condições do mercado imobiliário local.</p>
+      <p>A referência apoia-se em dados públicos do Cadastro Imobiliário de Goiânia e em preços de mercado por bairro, seguindo os critérios da NBR 14.653 da ABNT${comCreci?" e as diretrizes do COFECI":""}.</p></div>
+
+    <div class="lrow">
+      <div class="lcard"><h3>Características do imóvel</h3>
+        ${linhas.filter(l=>l[0]!=="Finalidade").map(l=>`<div class="kv"><span class="k">${l[0]}</span><span class="v">${l[1]}</span></div>`).join("")}</div>
+      ${LZ.fotos.length?`<div class="lcard foto"><span class="pill">Fachada</span><img src="${esc(LZ.fotos[0])}" alt="Fachada do imóvel"></div>`:""}
     </div>
-    <section><h2>1. Identificação do imóvel</h2>
-      <table>${linhas.map(l=>`<tr><td class="k">${l[0]}</td><td>${l[1]}</td></tr>`).join("")}</table></section>
-    <section><h2>2. Análise de mercado</h2>
+
+    <div class="lcard preco"><h3>Precificação final</h3>
+      ${(()=>{const vs=LZ.valor||0;
+        const gmin=est?Math.min(est.lo,vs*0.96):vs*0.96, gmax=est?Math.max(est.hi,vs*1.08):vs*1.10;
+        return `<div class="prow"><div class="hero">${vs?brl(vs):"—"}</div>
+        ${vs?`<div class="subs">
+          <div class="subcard up"><div class="st"><span class="ar">↑</span> Maior liquidez</div><div class="sl">Valor mínimo</div><div class="sv">${brl(gmin)}</div></div>
+          <div class="subcard down"><div class="st"><span class="ar">↓</span> Menor liquidez</div><div class="sl">Valor máximo</div><div class="sv">${brl(gmax)}</div></div>
+        </div>`:""}</div>`;})()}
+      ${foraFaixa?`<p class="lmiudo">Valor arbitrado pelo subscritor com base em vistoria, diferenciais e observações, divergindo justificadamente da faixa estatística de referência.</p>`:""}</div>
+
+    <div class="lcard"><h3>Análise de mercado</h3>
       ${regiaoHtml}
       ${compsHtml}
       ${est?`<p>Fonte principal da estimativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
       ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
-      ${(()=>{const vs=LZ.valor||0;
-        const gmin=est?Math.min(est.lo,vs*0.96):vs*0.96, gmax=est?Math.max(est.hi,vs*1.08):vs*1.10;
-        const gp=gmax>gmin?Math.min(94,Math.max(6,(vs-gmin)/(gmax-gmin)*100)):50;
-        return `<div class="destaque"><div class="dk">Valor de venda sugerido</div><div class="dv">${vs?brl(vs):"—"}</div>
-        ${vs?`<div class="lgauge"><div class="lgbar"><div class="lgfill" style="width:${gp}%"></div><div class="lgmark" style="left:${gp}%"></div></div>
-          <div class="lgends"><span>${brl(gmin)}<i>maior liquidez</i></span><span>${brl(gmax)}<i>menor liquidez</i></span></div></div>`:""}</div>`;})()}
-      ${foraFaixa?`<p class="lmiudo">Valor arbitrado pelo subscritor com base em vistoria, diferenciais e observações, divergindo justificadamente da faixa estatística de referência.</p>`:""}
-      ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</section>
-    ${LZ.fotos.length>1?`<section><h2>3. Registro fotográfico</h2><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></section>`:""}
-    <section><h2>${nSec}. Metodologia, fontes e ressalvas</h2>
+      ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</div>
+
+    ${LZ.fotos.length>1?`<div class="lcard"><h3>Registro fotográfico</h3><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></div>`:""}
+
+    <div class="lcard"><h3>Metodologia, fontes e ressalvas</h3>
       <p class="lmiudo">Abordagem comparativa simplificada: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base fiscal pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), convertida a valores de mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra.</p>
       <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características conforme o cadastro municipal, podendo divergir da matrícula do imóvel. O subscritor declara não possuir interesse presente ou futuro no imóvel avaliado nem vínculo que comprometa sua isenção; as informações prestadas por terceiros foram assumidas como verdadeiras. Este documento é indivisível e destina-se exclusivamente à finalidade de ${esc(LZ.finalidade).toLowerCase()}. Expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comCreci?" Parecer emitido por corretor de imóveis; a menção à Resolução COFECI nº 1.066/2007 pressupõe inscrição do subscritor no CNAI." : " A emissão de PTAM é privativa de corretor inscrito no CRECI e no CNAI (Res. COFECI nº 1.066/2007); na ausência dessa inscrição, este documento constitui relatório de referência de mercado, sem natureza de laudo ou parecer técnico oficial."}</p>
-      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — "+esc(p.creci):""}</div></section>`;
+      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — "+esc(p.creci):""}</div></div>
+
+    <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo();
   /* iOS PWA standalone: window.print() é no-op — mostra o laudo em tela cheia com instrução */
   const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
