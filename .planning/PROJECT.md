@@ -78,6 +78,9 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 | Estimativa sempre como faixa, nunca número seco; padrões IAAO | PGV defasada e heterogênea; honestidade estatística | ✓ Good |
 | **v2.0: IA permitida, mas isolada em pesquisa de mercado externa** | Núcleo cadastral/laudo seguem determinísticos; IA opt-in, rotulada, sandbox | — Pending |
 | **v2.0: home vira mapa-first; busca vira card** | Corretor pensa espacialmente; mapa é o gesto mais intuitivo | — Pending |
+| **v2.0: fica no Leaflet 1.9.4 (sem MapLibre); + Motion via CDN** | Polígonos/view << crossover; geometria (layers 0/1/2) já existe e já é consumida | — Pending |
+| **v2.0: satélite = Esri World Imagery** | Drop-in Web Mercator, 2M/mês grátis; uso é baixo volume, não divulgado — enquadramento aceito p/ o free tier | — Pending (revisar se virar produto público) |
+| **v2.0: diferenciais premium incluídos** (breadcrumb, crossfade, stagger) | Esforço baixo, ganho de percepção alto; encaixam no motion pass | — Pending |
 
 ## Evolution
 
