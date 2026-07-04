@@ -13,7 +13,7 @@ v2.0 (Mapa-first + Motion + Satélite) transforma a home de "tela de busca" para
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry` (completed 2026-07-04)
-- [ ] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível
+- [x] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível (completed 2026-07-04)
 - [ ] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
 - [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
 - [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
@@ -48,8 +48,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Boot no mapa (mobile) + pill de busca flutuante (MAPA-01, MAPA-04)
-- [ ] 02-02-PLAN.md — Desktop mapa-first (full-bleed + overlay + Esc) + coach-mark de 1ª vez (MAPA-01, MAPA-04)
+- [x] 02-01-PLAN.md — Boot no mapa (mobile) + pill de busca flutuante (MAPA-01, MAPA-04)
+- [x] 02-02-PLAN.md — Desktop mapa-first (full-bleed + overlay + Esc) + coach-mark de 1ª vez (MAPA-01, MAPA-04)
 
 ### Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill
 **Goal**: O corretor vê os bairros desenhados no mapa, entende onde está ao tocar/passar o mouse, e mergulha nos lotes de um bairro com um clique — sem travar em bairros grandes.
@@ -123,7 +123,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Dataset Estático de Bairros + Correção de Docs | 2/2 | Complete    | 2026-07-04 |
-| 2. Home = Mapa | 0/TBD | Not started | - |
+| 2. Home = Mapa | 2/2 | Complete    | 2026-07-04 |
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 0/TBD | Not started | - |
 | 4. Camada de Satélite | 0/TBD | Not started | - |
 | 5. Seam de IA (dormant) | 0/TBD | Not started | - |

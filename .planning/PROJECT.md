@@ -30,7 +30,8 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 <!-- Milestone v2.0 scope. Building toward these. -->
 
 - [x] Fundação de dados: GeoJSON estático de bairros (offline, versionado) + docs corrigidas — Validado na Fase 1 (DADOS-01/02/03)
-- [ ] Home = mapa interativo com zoom em toda Goiânia
+- [x] Home = mapa interativo com zoom em toda Goiânia — Validado na Fase 2 (MAPA-01; mobile e desktop mapa-first)
+- [x] Busca movida da home para pill/card flutuante sempre acessível — Validado na Fase 2 (MAPA-04)
 - [ ] Bairros renderizados como polígonos (linha); hover mostra o nome
 - [ ] Clique no bairro → zoom no bairro + revela as divisões dos lotes
 - [ ] Busca movida da tela inicial para um card clicável (deixa de ser a home)
