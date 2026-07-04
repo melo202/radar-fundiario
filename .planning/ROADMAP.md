@@ -30,10 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. O script de build documenta explicitamente a integridade do join bairro↔`cdbairro` (709 vs. 1.206 polígonos) e prova, via paginação explícita, que o dataset não está truncado por um page-size default do ArcGIS
   3. Uma forma de bairro irregular (não-simétrica) renderiza corretamente no lugar certo do mapa, provando que o pipeline reutiliza `toWGS()`/`proj4.defs` existente sem re-derivar a projeção
   4. `PROJETO-radar.md §4` e `ROADMAP-radar.md §0` foram corrigidos para refletir que `returnGeometry=true` funciona no endpoint (verificado em 2026-07-04)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Offline bairros GeoJSON build (paginate + reproject + join report) + smoke check
+- [ ] 01-02-PLAN.md — Corrigir docs: returnGeometry=true funciona (PROJETO §4, ROADMAP §0)
 
 ### Phase 2: Home = Mapa
 **Goal**: O corretor abre o app e cai direto no território de Goiânia — a busca continua a um toque de distância, nunca escondida.
