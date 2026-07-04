@@ -649,6 +649,7 @@ const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
 let streetTile, satTile, satRef; /* Fase 4 SAT-01: camadas de base alternáveis, ruas é o default */
 let satelliteOn=false;
+let SATTOKEN=0; /* guarda contra toggle rápido: rAF/timeout obsoletos não forçam opacidade da vez errada (idioma LOTTOKEN/DRILLTOKEN) */
 /* multiplicador genérico venal->mercado, usado só quando não há tabela do bairro nem laudo da Caixa */
 const AUTO_COEF=2.8;
 
@@ -719,6 +720,7 @@ function initMap(){
 }
 function setSatelite(on){
   satelliteOn=on;
+  const tk=++SATTOKEN; /* invalida rampas/timeouts pendentes de toggles anteriores */
   const b=document.getElementById("btnSat");
   if(b){
     b.classList.toggle("on",on);
@@ -732,10 +734,11 @@ function setSatelite(on){
   if(on){
     satTile.setOpacity(0); satRef.setOpacity(0);
     satTile.addTo(map); satRef.addTo(map);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{ satTile.setOpacity(1); satRef.setOpacity(1); }));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(tk!==SATTOKEN)return; satTile.setOpacity(1); satRef.setOpacity(1); }));
     /* garantia do estado final: se o rAF for estrangulado (aba em segundo plano, low-power,
-       reduce-motion), o satélite NUNCA pode ficar invisível — o timeout força opacity 1. */
-    setTimeout(()=>{ if(satelliteOn){ satTile.setOpacity(1); satRef.setOpacity(1); if(map.hasLayer(streetTile))map.removeLayer(streetTile); } },250);
+       reduce-motion), o satélite NUNCA pode ficar invisível — o timeout força opacity 1.
+       tk!==SATTOKEN: um toggle mais novo já assumiu → não mexe (evita flash da camada errada). */
+    setTimeout(()=>{ if(tk===SATTOKEN&&satelliteOn){ satTile.setOpacity(1); satRef.setOpacity(1); if(map.hasLayer(streetTile))map.removeLayer(streetTile); } },250);
   } else {
     if(!map.hasLayer(streetTile))streetTile.addTo(map);
     satTile.setOpacity(0); satRef.setOpacity(0);
