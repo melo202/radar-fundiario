@@ -12,7 +12,7 @@ v2.0 (Mapa-first + Motion + Satélite) transforma a home de "tela de busca" para
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry`
+- [x] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry` (completed 2026-07-04)
 - [ ] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível
 - [ ] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
 - [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
@@ -33,8 +33,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Offline bairros GeoJSON build (paginate + reproject + join report) + smoke check
-- [ ] 01-02-PLAN.md — Corrigir docs: returnGeometry=true funciona (PROJETO §4, ROADMAP §0)
+- [x] 01-01-PLAN.md — Offline bairros GeoJSON build (paginate + reproject + join report) + smoke check
+- [x] 01-02-PLAN.md — Corrigir docs: returnGeometry=true funciona (PROJETO §4, ROADMAP §0)
 
 ### Phase 2: Home = Mapa
 **Goal**: O corretor abre o app e cai direto no território de Goiânia — a busca continua a um toque de distância, nunca escondida.
@@ -121,7 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Dataset Estático de Bairros + Correção de Docs | 0/TBD | Not started | - |
+| 1. Dataset Estático de Bairros + Correção de Docs | 2/2 | Complete    | 2026-07-04 |
 | 2. Home = Mapa | 0/TBD | Not started | - |
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 0/TBD | Not started | - |
 | 4. Camada de Satélite | 0/TBD | Not started | - |

@@ -29,6 +29,7 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 <!-- Milestone v2.0 scope. Building toward these. -->
 
+- [x] Fundação de dados: GeoJSON estático de bairros (offline, versionado) + docs corrigidas — Validado na Fase 1 (DADOS-01/02/03)
 - [ ] Home = mapa interativo com zoom em toda Goiânia
 - [ ] Bairros renderizados como polígonos (linha); hover mostra o nome
 - [ ] Clique no bairro → zoom no bairro + revela as divisões dos lotes

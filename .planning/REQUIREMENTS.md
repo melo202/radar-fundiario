@@ -79,9 +79,9 @@ Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DADOS-01 | Phase 1 | Pending |
-| DADOS-02 | Phase 1 | Pending |
-| DADOS-03 | Phase 1 | Pending |
+| DADOS-01 | Phase 1 | Complete |
+| DADOS-02 | Phase 1 | Complete |
+| DADOS-03 | Phase 1 | Complete |
 | MAPA-01 | Phase 2 | Pending |
 | MAPA-04 | Phase 2 | Pending |
 | MAPA-02 | Phase 3 | Pending |
