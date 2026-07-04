@@ -240,6 +240,9 @@
   .sattoggle:hover{border-color:var(--accent-ink)}
   .sattoggle.on{border-color:var(--accent);color:var(--accent)}
   .leaflet-control-sattoggle{z-index:490}
+  /* Fase 4 SAT-02: crossfade de opacidade (250ms) escopado só à tile do satélite + reference —
+     NÃO é um token de transição compartilhado; outlines de bairro/lote continuam em snap instantâneo. */
+  .sat-fade .leaflet-tile{transition:opacity .25s ease}
   .cxp{font:500 12px/1.5 "IBM Plex Sans";max-width:230px}
   .cxp .tt{font:700 12px/1.3 "IBM Plex Sans"}
   .cxp .pr{font:800 15px/1.2 "IBM Plex Sans";color:var(--accent)}
@@ -691,12 +694,12 @@ function initMap(){
      criadas aqui mas NÃO adicionadas ao map — ruas continua sendo o default no boot; o toggle
      custom (setSatelite) é que decide qual base tile fica visível. NUNCA trocar por zoom. */
   satTile=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
-    maxZoom:19, attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
-  });
+    maxZoom:19, opacity:0, className:"sat-fade", attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+  }); /* opacity:0 no boot — o crossfade de 250ms (SAT-02) rampa via setSatelite(), nunca corte seco */
   map.createPane("satref").style.zIndex=350; /* entre o tilePane (~200) e o pane "bairros" (370) */
   satRef=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{
-    maxZoom:19, pane:"satref"
-  }); /* overlay transparente com rótulos+halo baked-in — nunca satélite "pelado" sem rótulos */
+    maxZoom:19, pane:"satref", opacity:0, className:"sat-fade"
+  }); /* overlay transparente com rótulos+halo baked-in — nunca satélite "pelado" sem rótulos; fade em lockstep com satTile */
   /* botão bespoke (não L.control.layers) — canto livre em mobile/desktop, nunca troca por zoom */
   const SatControl=L.Control.extend({
     options:{position:"bottomright"},
@@ -723,8 +726,19 @@ function setSatelite(on){
     b.setAttribute("aria-label", on?"Ver ruas":"Ver satélite");
     b.textContent = on?"🗺️":"🛰️";
   }
-  if(on){ satTile.addTo(map); satRef.addTo(map); if(map.hasLayer(streetTile))map.removeLayer(streetTile); }
-  else { streetTile.addTo(map); if(map.hasLayer(satTile))map.removeLayer(satTile); if(map.hasLayer(satRef))map.removeLayer(satRef); }
+  /* Fase 4 SAT-02: crossfade de opacidade ~250ms escopado à tile do satélite+reference (lockstep),
+     via .leaflet-tile{transition:opacity .25s ease} (className "sat-fade"). Outlines de bairro/lote
+     não entram aqui — snap instantâneo pelo setStyle abaixo, sem transição. */
+  if(on){
+    satTile.setOpacity(0); satRef.setOpacity(0);
+    satTile.addTo(map); satRef.addTo(map);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ satTile.setOpacity(1); satRef.setOpacity(1); }));
+    setTimeout(()=>{ if(satelliteOn&&map.hasLayer(streetTile))map.removeLayer(streetTile); },250);
+  } else {
+    if(!map.hasLayer(streetTile))streetTile.addTo(map);
+    satTile.setOpacity(0); satRef.setOpacity(0);
+    setTimeout(()=>{ if(!satelliteOn){ if(map.hasLayer(satTile))map.removeLayer(satTile); if(map.hasLayer(satRef))map.removeLayer(satRef); } },250);
+  }
   /* re-aplica o estilo por modo às camadas vetoriais já montadas */
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
   if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle()));
