@@ -1798,11 +1798,11 @@ function exportCSV(){
 function closeDetail(){document.getElementById("detail").classList.remove("show");}
 
 /* ---------------- init ---------------- */
-document.body.dataset.view="busca";
+document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
-}else{initMap();loadBairros();initCaixa();}
+}else{initMap();setView("mapa");loadBairros();initCaixa();}
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"))
   navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
 /* offline -> online: recarrega a lista de setores se ela não tiver vindo */
