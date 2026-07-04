@@ -15,7 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Dataset Estático de Bairros + Correção de Docs** - GeoJSON de bairros pré-simplificado e versionado alimenta a home sem tocar o endpoint ao vivo; documentação corrigida sobre `returnGeometry` (completed 2026-07-04)
 - [x] **Phase 2: Home = Mapa** - O app abre no mapa de Goiânia; busca vira card flutuante sempre acessível
  (completed 2026-07-04)
-- [x] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação (completed 2026-07-04)
+- [x] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
+ (completed 2026-07-04)
 - [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
 - [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
 - [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
@@ -77,13 +78,15 @@ Plans:
   2. Rótulos permanecem legíveis sobre a imagem de satélite (halo/backdrop tratado no mesmo commit do toggle, não como retrofit)
   3. A troca entre camadas usa crossfade suave, não troca seca de tile
   4. `sw.js` tem o allowlist de CDN atualizado para o host de tile do satélite e a versão de cache bumped no mesmo commit; os tiles de satélite são network-only (nunca cache-first), evitando inchar o storage do PWA
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — CSP img-src Esri (bloqueante) + camadas satélite/reference keyless + toggle deliberado (aria-pressed, bottomright) + rótulos/outlines legíveis + atribuição (SAT-01)
+- [ ] 04-02-PLAN.md — Crossfade suave escopado à troca de tiles (250ms) + sw.js radar-v4→radar-v5 (tiles Esri network-only) (SAT-02)
 
 **Flags**:
-- Decisão de licenciamento já tomada (Esri World Imagery) — falta o signup da API key no console de desenvolvedor ArcGIS (escopo "Basemaps", restrito por referrer ao(s) domínio(s) publicado(s))
+- Fonte definida: Esri World Imagery **keyless (legado)** via server.arcgisonline.com — decisão do usuário em 04-CONTEXT.md removeu o bloqueio da API key (não há mais signup pendente)
+- Pré-requisito bloqueante: o CSP img-src (linha 7) precisa incluir server.arcgisonline.com, senão os tiles são silenciosamente bloqueados (tratado no Plan 04-01, Task 1)
 - Limiar de zoom para a legibilidade dos rótulos precisa de teste empírico em dispositivo real (Android médio/baixo em 4G, não apenas DevTools)
 
 ### Phase 5: Seam de IA (dormant)
