@@ -87,8 +87,8 @@ Preenchido durante a criação do roadmap.
 | MAPA-02 | Phase 3 | Complete |
 | MAPA-03 | Phase 3 | Complete |
 | MAPA-05 | Phase 3 | Complete |
-| SAT-01 | Phase 4 | Pending |
-| SAT-02 | Phase 4 | Pending |
+| SAT-01 | Phase 4 | Complete |
+| SAT-02 | Phase 4 | Complete |
 | IA-01 | Phase 5 | Pending |
 | MOT-01 | Phase 6 | Pending |
 | MOT-02 | Phase 6 | Pending |

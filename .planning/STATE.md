@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: milestone
+milestone_name: Mapa-first + Motion + Satélite
 status: executing
-stopped_at: ROADMAP.md e REQUIREMENTS.md (traceability) escritos; STATE.md inicializado para Phase 1
-last_updated: "2026-07-04T22:15:27.019Z"
+stopped_at: Fases 1-4 completas e verificadas; próxima é a Fase 5 (Seam de IA dormant)
+last_updated: "2026-07-04"
 last_activity: 2026-07-04
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -21,51 +21,39 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 3 — Render de Bairro + Hover/Tap + Click-to-Drill
+**Current focus:** Phase 5 — Seam de IA (dormant)
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Executing Phase 3
-Last activity: 2026-07-04
+Phase: 5 of 6 (Seam de IA (dormant))
+Plan: Not started (a planejar)
+Status: Ready to plan
+Last activity: 2026-07-04 — Fase 4 (Camada de Satélite) completa e verificada ao vivo
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████▋░░░] 67%
 
 ## Performance Metrics
 
-**Velocity:**
-
-- Total plans completed: 6
-- Average duration: —
-- Total execution time: —
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 2 | - | - |
-| 2 | 2 | - | - |
-| 3 | 2 | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1 Dataset de Bairros + Docs | 2 | ✓ Complete |
+| 2 Home = Mapa | 2 | ✓ Complete |
+| 3 Render de Bairro + Drill | 2 | ✓ Complete |
+| 4 Camada de Satélite | 2 | ✓ Complete |
+| 5 Seam de IA (dormant) | — | ○ Next |
+| 6 Motion no App Todo | — | ○ Pending |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work:
+Logged in PROJECT.md Key Decisions. Recentes relevantes:
 
-- v2.0: home vira mapa-first; busca vira card clicável (Phase 2)
-- v2.0: fica no Leaflet 1.9.4 (sem MapLibre); Motion via CDN (Phase 6)
-- v2.0: satélite = Esri World Imagery — decisão tomada; falta signup da API key (Phase 4)
-- v2.0: IA permitida mas isolada em pesquisa de mercado externa, seam dormant apenas (Phase 5)
-- Geometria de bairro/lote (layers 0/1/2, `returnGeometry=true`) já funciona no endpoint ao vivo — v2.0 é reestruturação de UI sobre encanamento existente, não sourcing de dados novo
+- v2.0: home mapa-first; busca vira pill (Fase 2 ✓)
+- v2.0: fica no Leaflet 1.9.4 (sem MapLibre); Motion via CDN (Fase 6)
+- v2.0: satélite = Esri World Imagery **keyless legado** (SEM API key) — implementado na Fase 4 ✓
+- v2.0: IA permitida mas isolada em pesquisa de mercado externa; seam dormant apenas (Fase 5)
+- Geometria de bairro/lote (layers 0/1/2, `returnGeometry=true`) já funciona ao vivo — v2.0 é reestruturação de UI sobre encanamento existente
 
 ### Pending Todos
 
@@ -73,13 +61,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1: verificar integridade do join bairro↔`cdbairro` (709 vs. 1.206 polígonos) e completude da paginação antes de assumir o dataset como definitivo
-- Phase 1: re-verificar `returnGeometry=true` no momento da implementação (comportamento de servidor de terceiro, não documentado/sem SLA)
-- Phase 4: signup da API key Esri (console ArcGIS, escopo Basemaps, restrito por referrer) ainda pendente
-- Phase 3 e Phase 4: limiares de zoom (drill-down originado por clique no bairro; legibilidade de rótulos sobre satélite) precisam de teste empírico em dispositivo Android real em 4G, não apenas DevTools
+- **UAT de campo (não bloqueia):** legibilidade dos rótulos sobre satélite em Android médio/baixo no 4G, ao longo dos zooms 12–19, precisa de conferência em dispositivo real (verificado no preview desktop; item de campo).
+- (Resolvidos na execução: join bairro↔cdbairro documentado na Fase 1; `returnGeometry` re-verificado ao vivo; a "API key Esri" foi eliminada pela escolha do endpoint keyless.)
 
 ## Session Continuity
 
 Last session: 2026-07-04
-Stopped at: ROADMAP.md e REQUIREMENTS.md (traceability) escritos; STATE.md inicializado para Phase 1
+Stopped at: Fase 4 completa (satélite Esri keyless + rótulos + crossfade, verificado ao vivo). Próxima: Fase 5 (Seam de IA dormant).
 Resume file: None

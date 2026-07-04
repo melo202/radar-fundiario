@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-07-04)
 - [x] **Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill** - Bairros aparecem como polígonos, com destaque no hover/tap, drill-down por clique e breadcrumb de navegação
  (completed 2026-07-04)
-- [ ] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
+- [x] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade (completed 2026-07-04)
 - [ ] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
 - [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
 
@@ -81,8 +81,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — CSP img-src Esri (bloqueante) + camadas satélite/reference keyless + toggle deliberado (aria-pressed, bottomright) + rótulos/outlines legíveis + atribuição (SAT-01)
-- [ ] 04-02-PLAN.md — Crossfade suave escopado à troca de tiles (250ms) + sw.js radar-v4→radar-v5 (tiles Esri network-only) (SAT-02)
+- [x] 04-01-PLAN.md — CSP img-src Esri (bloqueante) + camadas satélite/reference keyless + toggle deliberado (aria-pressed, bottomright) + rótulos/outlines legíveis + atribuição (SAT-01)
+- [x] 04-02-PLAN.md — Crossfade suave escopado à troca de tiles (250ms) + sw.js radar-v4→radar-v5 (tiles Esri network-only) (SAT-02)
 
 **Flags**:
 - Fonte definida: Esri World Imagery **keyless (legado)** via server.arcgisonline.com — decisão do usuário em 04-CONTEXT.md removeu o bloqueio da API key (não há mais signup pendente)
@@ -130,6 +130,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Dataset Estático de Bairros + Correção de Docs | 2/2 | Complete    | 2026-07-04 |
 | 2. Home = Mapa | 2/2 | Complete    | 2026-07-04 |
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 2/2 | Complete    | 2026-07-04 |
-| 4. Camada de Satélite | 0/TBD | Not started | - |
+| 4. Camada de Satélite | 2/2 | Complete    | 2026-07-04 |
 | 5. Seam de IA (dormant) | 0/TBD | Not started | - |
 | 6. Motion no App Todo | 0/TBD | Not started | - |

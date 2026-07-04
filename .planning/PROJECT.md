@@ -36,7 +36,7 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 - [x] Clique no bairro → zoom no bairro + revela as divisões dos lotes + breadcrumb — Validado na Fase 3 (MAPA-03, MAPA-05)
 - [ ] Busca movida da tela inicial para um card clicável (deixa de ser a home)
 - [ ] Motion fluido no app todo (transições, sheet, cards) — liso no mobile
-- [ ] Camada de satélite alternável
+- [x] Camada de satélite alternável (Esri keyless + rótulos + crossfade) — Validado na Fase 4 (SAT-01, SAT-02)
 - [ ] Seam de integração de IA externa (pesquisa de mercado), plugável e desativado
 
 ### Out of Scope
