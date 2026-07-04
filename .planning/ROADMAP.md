@@ -45,10 +45,11 @@ Plans:
   2. Um card/pill de busca flutua sobre o mapa, visível e clicável em uma única ação, em qualquer momento
   3. Tocar/clicar no card de busca abre o fluxo de busca completo já existente (reaproveita 100% do painel atual, sem recriar markup)
   4. No desktop, o layout lado-a-lado permanece inalterado — a mudança de home é específica ao fluxo mobile/single-pane
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — Boot no mapa (mobile) + pill de busca flutuante (MAPA-01, MAPA-04)
+- [ ] 02-02-PLAN.md — Desktop mapa-first (full-bleed + overlay + Esc) + coach-mark de 1ª vez (MAPA-01, MAPA-04)
 
 ### Phase 3: Render de Bairro + Hover/Tap + Click-to-Drill
 **Goal**: O corretor vê os bairros desenhados no mapa, entende onde está ao tocar/passar o mouse, e mergulha nos lotes de um bairro com um clique — sem travar em bairros grandes.
