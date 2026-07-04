@@ -3,11 +3,12 @@
    manifest) — o cache é só fallback offline, nunca congela versão.
    CACHE-FIRST apenas para bibliotecas de CDN e ícones (imutáveis).
    Consultas ao ArcGIS (JSONP) e tiles do mapa NÃO passam por aqui: dado vivo. */
-const CACHE = "radar-v3";
+const CACHE = "radar-v4";
 const LOCAL = [
   "./",
   "./radar-goiania.html",
   "./caixa-goiania.js",
+  "./bairros-goiania.json",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
