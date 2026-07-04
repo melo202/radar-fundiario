@@ -675,7 +675,7 @@ function initMap(){
   map.on("zoomend",()=>{
     if(!bairroLayer)return;
     const z=map.getZoom();
-    if(z>=17){ if(map.hasLayer(bairroLayer))map.removeLayer(bairroLayer); }
+    if(z>=17){ if(map.hasLayer(bairroLayer)){ if(typeof clearBaiHi==="function")clearBaiHi(); map.removeLayer(bairroLayer); } }
     else { if(!map.hasLayer(bairroLayer))bairroLayer.addTo(map); }
   });
 }
@@ -690,8 +690,13 @@ const LOTINFO={};
 
 /* ---------------- divisas de bairro (Fase 3, MAPA-02/03): outline estático do bairros-goiania.json (Fase 1) -----
    espelha o padrão de LOT_STYLE/LOT_HOVER; some em zoom>=17 (dá lugar aos lotes). */
-const BAI_STYLE={pane:"bairros",color:"var(--line)",weight:1,fillColor:"var(--line)",fillOpacity:.03,opacity:.8,bubblingMouseEvents:false};
-const BAI_HOVER={color:"var(--accent)",weight:2.5,fillOpacity:.08,opacity:1};
+/* Canvas 2D (renderer usado abaixo) NÃO resolve var() do CSS — resolve os tokens p/ hex uma vez,
+   como LOT_STYLE já faz com hex literal; senão o traço sai PRETO em vez de tan/vermelho. */
+const _baiCss=getComputedStyle(document.documentElement);
+const _BAI_LINE=(_baiCss.getPropertyValue("--line").trim()||"#c3b9a3");
+const _BAI_ACCENT=(_baiCss.getPropertyValue("--accent").trim()||"#b5451f");
+const BAI_STYLE={pane:"bairros",color:_BAI_LINE,weight:1,fillColor:_BAI_LINE,fillOpacity:.03,opacity:.8,bubblingMouseEvents:false};
+const BAI_HOVER={color:_BAI_ACCENT,weight:2.5,fillOpacity:.08,opacity:1};
 /* função de resolução de estilo (não objeto cru) — deixa a extensão v2.1 (styling por território) barata */
 function baiStyle(feature){return BAI_STYLE;}
 let bairroLayer=null,baiHi=null;
@@ -789,10 +794,12 @@ function goHomeCrumb(){
   if(typeof clearBaiHi==="function")clearBaiHi();
   hideBreadcrumb();
 }
+let DRILLTOKEN=0;
 function drillBairro(layer){
   dismissCoach();
   const b=layer.getBounds();
-  setTimeout(()=>{map.invalidateSize();map.fitBounds(b.pad(0.05));},90);
+  const tk=++DRILLTOKEN; /* drills sucessivos rápidos não competem — só o último fitBounds vale */
+  setTimeout(()=>{ if(tk!==DRILLTOKEN)return; map.invalidateSize();map.fitBounds(b.pad(0.05));},90);
   showBreadcrumb(layer.feature.properties.nm_bai);
 }
 function onEachBairro(feature,layer){
