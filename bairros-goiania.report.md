@@ -36,3 +36,21 @@ Achado ao vivo durante a geracao: **1** valor(es) do campo de negocio `id` apare
 ## Fonte avaliada e rejeitada: CKAN bai.json
 
 O export aberto da Prefeitura (`bai.json`, CKAN) foi avaliado e **rejeitado** como fonte primaria: dados de 2018-09-18 (defasado), apenas 1.155 features (66 a menos que a layer 2 ao vivo), sem documentacao de CRS na pagina publica do dataset (embora o arquivo em si declare EPSG:31982 internamente). A layer 2 ao vivo do ArcGIS foi usada como fonte unica por ser mais completa e atual.
+
+## Simplificacao (mapshaper) — artefato final `bairros-goiania.json`
+
+Comando executado (versao pinada, `mapshaper@0.6`, via `npx --yes` — sem instalacao permanente/`package.json`):
+
+```bash
+npx --yes mapshaper@0.6 -i bairros-goiania.wgs84-raw.json snap -simplify 10% keep-shapes -o format=geojson precision=0.000001 bairros-goiania.json
+```
+
+**Achado importante sobre a sintaxe de `precision=`:** nesta versao do mapshaper (0.6.x), a flag `precision=` do `-o` espera uma **tolerancia decimal** (ex.: `0.000001` para ~6 casas decimais / ~11cm no equador), e NAO um inteiro "numero de casas decimais". Passar `precision=6` (a sintaxe originalmente prevista) faz o mapshaper arredondar para o multiplo de 6 UNIDADES mais proximo — em graus decimais isso colapsa toda geometria em pontos identicos e o writer emite `geometry: null` para as 1206 features (nenhum erro fatal, silencioso). Corrigido para `precision=0.000001`; verificado apos a correcao que todas as 1206 features preservam `geometry.type=="Polygon"` com coordenadas validas.
+
+Tamanhos resultantes (medidos com o modulo `gzip` do Python, `json.dumps(...,separators=(',',':'))`):
+- Bruto (sem simplificacao), `bairros-goiania.wgs84-raw.json`: ~5.3MB (nao comprimido)
+- Simplificado, `bairros-goiania.json`: **734.010 bytes (~717 KB) nao comprimido / ~166,6 KB gzip** — dentro do orcamento de ~200KB (hard budget do check automatizado); um pouco acima da estimativa de pesquisa de ~142KB, provavelmente por variacao natural do dado ao vivo (contagem de vertices/geometria pode ter mudado desde a pesquisa de 2026-07-04).
+
+**Limitacao aceita — self-intersecting rings (auto-intersecoes) residuais:** o `keep-shapes` (modo com preservacao de topologia) reparou 73 intersecoes automaticamente, mas **279 aneis com self-intersection (auto-intersecao) permanecem irreparaveis** (proximo do numero de referencia da pesquisa, ~295 — a pequena diferenca e esperada, dado de origem ao vivo). Isso e uma limitacao CONHECIDA E ACEITA para esta fase: o Leaflet renderiza cada anel de poligono de forma independente (fill-rule even-odd/nonzero via Canvas/SVG), entao os self-intersecting rings em poligonos pouco visualizados (majoritariamente Glebas rurais sem nome) sao um risco cosmetico, nao funcional, para a renderizacao da Fase 3. **Um futuro consumidor que precise de point-in-polygon exato ou calculo de area deve revalidar contra a fonte bruta (`bairros-goiania.wgs84-raw.json`), nao assumir que os poligonos deste arquivo simplificado sao topologicamente limpos.**
+
+**Nota de reprodutibilidade:** a etapa de simplificacao e intencionalmente separada e re-executavel — a Fase 3 pode reajustar a tolerancia (`-simplify`) ou a precisao sem precisar refazer o fetch/reprojecao/relatorio de integridade do join (Task 1 deste plano).
