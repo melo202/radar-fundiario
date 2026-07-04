@@ -44,7 +44,7 @@ Plans:
   1. Ao abrir o app, a tela inicial é o mapa com zoom enquadrando toda Goiânia (não a tela de busca)
   2. Um card/pill de busca flutua sobre o mapa, visível e clicável em uma única ação, em qualquer momento
   3. Tocar/clicar no card de busca abre o fluxo de busca completo já existente (reaproveita 100% do painel atual, sem recriar markup)
-  4. No desktop, o layout lado-a-lado permanece inalterado — a mudança de home é específica ao fluxo mobile/single-pane
+  4. No desktop, o app TAMBÉM vira mapa-first: o mapa ocupa a tela (full-bleed via novo `@media(min-width:821px)`) e a busca vira overlay/card acionado pela pill (decisão do usuário em 02-CONTEXT.md, revisando a suposição inicial de "manter lado a lado")
 **Plans**: 2 plans
 
 Plans:
