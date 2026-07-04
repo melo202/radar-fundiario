@@ -12,6 +12,7 @@ Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
 | Fato | Resultado | Consequência |
 |---|---|---|
 | `outFields` com campos específicos | **Erro 400** — só `outFields=*` funciona | Confirma a "manha" do §4 do briefing; não dá para reduzir payload por campo |
+| `returnGeometry=true` (camada 3) | **Aceita** — retorna polígono real (~+19% payload); reconfirmado 2026-07-04 | Corrige a suposição antiga de rejeição; v2.0 orquestra geometria existente, não faz sourcing novo |
 | Filtro server-side `nrquadra LIKE '%128%'` (Bueno) | **Funciona: 630 registros** (vs 57.225 do setor todo) | É a alavanca certa para o bug crítico |
 | `UPPER(...)` em where | Funciona (`useStandardizedQueries: true`) | Busca case-insensitive server-side ok |
 | CORS | Sem cabeçalho `Access-Control-Allow-Origin` | JSONP continua necessário |

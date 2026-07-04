@@ -46,7 +46,7 @@ Ferramenta de uso próprio para localizar imóveis em Goiânia por **quadra e lo
 
 **Comportamentos não óbvios do servidor:**
 - Aceita `outFields=*`, mas **rejeita** pedir campos específicos como `x_coord`, `y_coord`, `nrquadra` em `outFields` (erro 400). Solução: sempre `outFields=*`.
-- **Rejeita** `returnGeometry=true` nesse endpoint. As coordenadas vêm dos campos `x_coord`/`y_coord` do próprio registro.
+- **Aceita** `returnGeometry=true` nesse endpoint (verificado ao vivo em 2026-07-04): retorna a geometria real do polígono do lote (wkid 31982), com ~+19% de payload. Corrige a "manha" antiga que afirmava rejeição. Os campos `x_coord`/`y_coord` continuam disponíveis como fonte alternativa de coordenada. Obs.: servidor de terceiro, não documentado e sem SLA — reconfirmar antes de depender dele.
 - **Aceita consulta espacial** por ponto (`geometryType=esriGeometryPoint`, `spatialRel=esriSpatialRelIntersects`) — é o que viabiliza o "clique no mapa".
 - **Suporta JSONP** (`callback=`) e paginação (`resultOffset`/`resultRecordCount`); `maxRecordCount` alto.
 
