@@ -46,7 +46,10 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   3. Um relatório de diff (antes/depois, por polígono) foi gerado e passou por revisão humana nas bordas administrativas antes do commit; as 466 glebas sem nome recebem um rótulo genérico explícito ("Gleba não denominada"), não um nome fiscal forçado
   4. `sw.js` teve o cache version bumped (`radar-v5` → próxima) cobrindo o novo `bairros-goiania.json`, e qualquer dataset novo (CNEFE) está no array `LOCAL` com estratégia de cache decidida explicitamente
   5. No mobile, a malha ociosa é visualmente "sussurrada" (traço fino, baixa opacidade) e o destaque no toque "grita" (accent+nome, contraste reforçado vs. idle); a densidade de linhas responde ao zoom; o toque registra na ÁREA do bairro (fill), não só na linha fina
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 07-01-PLAN.md — Reconciliação de nomes por spatial join POST + geometria byte-idêntica (assert) + diff report (NOMES-01/02/03)
+- [ ] 07-02-PLAN.md — Destill do CNEFE (logradouros-goiania.json ~117KB gz) + bump sw.js radar-v6 + precache (NOMES-02, base BUSCA-10)
+- [ ] 07-03-PLAN.md — Tuning da malha mobile: idle sussurra / toque grita / densidade por zoom / toque na área (MALHA-01)
 **Phase flags**: spot-check humano do diff de nomes nas bordas administrativas é item de verificação em aberto (quem faz, ver Open Decision #1 da pesquisa) — não bloqueia a fase, mas deve ser agendado antes do commit final.
 
 ### Phase 8: Overhaul da Busca — Campo-Único Inteligente
@@ -112,7 +115,7 @@ Fases executam em ordem numérica: 7 → 8 → 9 → 10 → 11
 | 4. Camada de Satélite | v2.0 | 2/2 | ✅ Complete | 2026-07-04 |
 | 5. Seam de IA (dormant) | v2.0 | 1/1 | ✅ Complete | 2026-07-04 |
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
-| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 0/TBD | Not started | - |
+| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 0/3 | Not started | - |
 | 8. Overhaul da Busca | v2.1 | 0/TBD | Not started | - |
 | 9. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 10. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
