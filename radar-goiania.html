@@ -693,6 +693,7 @@ function mStagger(...args){
 // Compartilhado com a IIFE do #grab (drag-to-dismiss do .detail): !=null enquanto o dedo está
 // na alça. showDetail/closeDetail consultam isso para nunca iniciar uma spring/anim durante o drag.
 let SHEETDRAGY0 = null;
+let SHEETGEN = 0; /* geração do sheet: invalida cleanups async de close obsoletos em open/close rápidos (WR-02) */
 
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
@@ -1566,9 +1567,11 @@ function showDetail(a,ll){
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
   d.classList.add("show");
+  SHEETGEN++; /* invalida qualquer cleanup async de um close anterior (WR-02) */
   /* Fase 6 Plano 02: spring de abertura do sheet mobile; fade sutil no card desktop.
      Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null — a alça já está com o dedo). */
   if(SHEETDRAGY0==null){
+    d.style.transform=""; /* baseline limpo: se um drag/close anterior deixou um translateY inline, zera antes de abrir (WR-01 — importante quando Motion ausente/REDUCE, senão o sheet abre deslocado) */
     if(isMobile())mAnimate(d,{transform:["translateY(100%)","translateY(0)"]},{type:"spring",stiffness:420,damping:38,mass:1});
     else mAnimate(d,{opacity:[0,1],transform:["translateY(8px)","translateY(0)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
   }
@@ -2094,14 +2097,16 @@ function closeDetail(){
   /* Fase 6 Plano 02: fecho mais rápido (não-spring) via mAnimate; anima da posição ATUAL do
      transform (que pode já estar em translateY(dy) se veio de um drag-to-dismiss — não zera antes).
      Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null). */
+  const gen=++SHEETGEN; /* WR-02: só o cleanup do close MAIS RECENTE pode zerar o transform */
   if(SHEETDRAGY0==null){
     let controls=null;
     if(isMobile()){
       const from=d.style.transform||"translateY(0)"; /* posição atual: translateY(dy) se veio do drag, senão 0 */
       controls=mAnimate(d,{transform:[from,"translateY(100%)"]},{duration:0.16,easing:[0.4,0,1,1]});
     }else controls=mAnimate(d,{opacity:[1,0],transform:["translateY(0)","translateY(8px)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
-    if(controls&&controls.finished)controls.finished.then(()=>{d.style.transform="";}).catch(()=>{d.style.transform="";});
-    else d.style.transform=""; /* Motion ausente/REDUCE: .show já removeu (display:none) — limpa o inline nesse instante */
+    const clear=()=>{ if(gen===SHEETGEN)d.style.transform=""; }; /* se um open/close mais novo aconteceu, não mexe no sheet atual */
+    if(controls&&controls.finished)controls.finished.then(clear).catch(clear);
+    else clear(); /* Motion ausente/REDUCE: .show já removeu (display:none) — limpa o inline nesse instante */
   }
 }
 
