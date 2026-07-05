@@ -747,7 +747,9 @@ function initMap(){
     if(!bairroLayer)return;
     const z=map.getZoom();
     if(z>=17){ if(map.hasLayer(bairroLayer)){ if(typeof clearBaiHi==="function")clearBaiHi(); map.removeLayer(bairroLayer); } }
-    else { if(!map.hasLayer(bairroLayer))bairroLayer.addTo(map); }
+    else { if(!map.hasLayer(bairroLayer))bairroLayer.addTo(map);
+           bairroLayer.setStyle(baiStyle); /* MALHA-01: re-aplica a densidade da malha por zoom */
+           if(typeof baiHi!=="undefined"&&baiHi&&baiHi.setStyle)baiHi.setStyle(BAI_HOVER); /* não perde o destaque ao dar zoom */ }
   });
   /* ---------------- Fase 4 SAT-01: satélite Esri (keyless) + overlay de referência ----------------
      criadas aqui mas NÃO adicionadas ao map — ruas continua sendo o default no boot; o toggle
@@ -824,15 +826,19 @@ const LOTINFO={};
 const _baiCss=getComputedStyle(document.documentElement);
 const _BAI_LINE=(_baiCss.getPropertyValue("--line").trim()||"#c3b9a3");
 const _BAI_ACCENT=(_baiCss.getPropertyValue("--accent").trim()||"#b5451f");
-const BAI_STYLE={pane:"bairros",color:_BAI_LINE,weight:1,fillColor:_BAI_LINE,fillOpacity:.03,opacity:.8,bubblingMouseEvents:false};
+const BAI_STYLE={pane:"bairros",color:_BAI_LINE,weight:.6,fillColor:_BAI_LINE,fillOpacity:.02,opacity:.4,bubblingMouseEvents:false};
 const BAI_HOVER={color:_BAI_ACCENT,weight:2.5,fillOpacity:.08,opacity:1};
 /* função de resolução de estilo (não objeto cru) — deixa a extensão v2.1 (styling por território) barata.
    Fase 4 SAT-01: branch por satelliteOn — sobre imagem escura, solta o wash de fillColor e reforça o traço
    (opacity/weight), sem introduzir hex novo. */
 function baiStyle(feature){
+  /* MALHA-01: idle "sussurra" e densifica ao aproximar — rampa de weight/opacity por zoom
+     (z<=12 bem apagado; z>=16 mais presente). Sem hex novo; base em BAI_STYLE. */
+  const z=(typeof map!=="undefined"&&map)?map.getZoom():12;
+  const t=Math.max(0,Math.min(1,(z-12)/4));
   return satelliteOn
-    ? {...BAI_STYLE, opacity:1, weight:1.5, fillOpacity:0}
-    : BAI_STYLE;
+    ? {...BAI_STYLE, opacity:1, weight:1.2+t*0.6, fillOpacity:0}   /* sobre satélite: solta o wash, reforça o traço */
+    : {...BAI_STYLE, weight:0.5+t*0.7, opacity:0.35+t*0.15};       /* idle discreto que cresce com o zoom */
 }
 function lotStyle(){
   return satelliteOn
