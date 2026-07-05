@@ -47,6 +47,16 @@
     --l-hair:#efece6;     /* separadores de linha (chave/valor) */
     --l-bg:#faf9f7;       /* fundo da página do laudo */
   }
+  /* Fase 6 (Motion): kill-switch global de acessibilidade — zera/encurta animation/transition
+     quando o usuário/SO pede menos movimento. Presente desde o 1º commit de motion (não retrofit). */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{
@@ -656,6 +666,26 @@ let satelliteOn=false;
 let SATTOKEN=0; /* guarda contra toggle rápido: rAF/timeout obsoletos não forçam opacidade da vez errada (idioma LOTTOKEN/DRILLTOKEN) */
 /* multiplicador genérico venal->mercado, usado só quando não há tabela do bairro nem laudo da Caixa */
 const AUTO_COEF=2.8;
+
+/* ---------------- Fase 6: motion (foundation) ---------------- */
+/* let (não const) para o listener de "change" abaixo poder atualizar ao vivo, caso o usuário
+   troque a preferência do SO enquanto o app está aberto. */
+let REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", e => { REDUCE = e.matches; });
+
+// Progressive enhancement: anima SÓ quando o Motion carregou E o usuário não pediu reduced-motion.
+// Retorna os controles de animação do Motion (com .stop()) ou null. NUNCA lança exceção.
+// Quem chama DEVE fazer a mudança de estado real (troca de data-view, toggle de .show, insert no DOM)
+// INCONDICIONALMENTE, fora desta chamada — o funcionamento do app é 100% independente do Motion.
+function mAnimate(el, keyframes, options){
+  if (REDUCE || !window.Motion || typeof Motion.animate !== "function") return null;
+  try { return Motion.animate(el, keyframes, options); } catch(e){ return null; }
+}
+// Passthrough guardado da mesma forma, usado pelo stagger (Fase 6, Plano 03).
+function mStagger(...args){
+  if (REDUCE || !window.Motion || typeof Motion.stagger !== "function") return null;
+  try { return Motion.stagger(...args); } catch(e){ return null; }
+}
 
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
