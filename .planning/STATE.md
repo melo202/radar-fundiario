@@ -1,59 +1,46 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: milestone
-status: executing
-stopped_at: "Fase 4 completa (satélite Esri keyless + rótulos + crossfade, verificado ao vivo). Próxima: Fase 5 (Seam de IA dormant)."
-last_updated: "2026-07-05T00:58:51.011Z"
+milestone: v2.1
+milestone_name: Busca, Bairros & Território
+status: defining_requirements
+stopped_at: Milestone v2.1 iniciado — escopo confirmado, disparando pesquisa
+last_updated: "2026-07-05"
 last_activity: 2026-07-05
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-04)
+See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 6 — Motion no App Todo
+**Current focus:** Milestone v2.1 — Busca, Bairros & Território (definindo requisitos)
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Executing Phase 6
-Last activity: 2026-07-05
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-05 — Milestone v2.1 iniciado (nomes de bairro + UX da malha mobile + busca campo-único + Território/captação)
 
-Progress: [██████▋░░░] 67%
-
-## Performance Metrics
-
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 1 Dataset de Bairros + Docs | 2 | ✓ Complete |
-| 2 Home = Mapa | 2 | ✓ Complete |
-| 3 Render de Bairro + Drill | 2 | ✓ Complete |
-| 4 Camada de Satélite | 2 | ✓ Complete |
-| 5 Seam de IA (dormant) | — | ○ Next |
-| 6 Motion no App Todo | — | ○ Pending |
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
 ### Decisions
 
-Logged in PROJECT.md Key Decisions. Recentes relevantes:
+Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 
-- v2.0: home mapa-first; busca vira pill (Fase 2 ✓)
-- v2.0: fica no Leaflet 1.9.4 (sem MapLibre); Motion via CDN (Fase 6)
-- v2.0: satélite = Esri World Imagery **keyless legado** (SEM API key) — implementado na Fase 4 ✓
-- v2.0: IA permitida mas isolada em pesquisa de mercado externa; seam dormant apenas (Fase 5)
-- Geometria de bairro/lote (layers 0/1/2, `returnGeometry=true`) já funciona ao vivo — v2.0 é reestruturação de UI sobre encanamento existente
+- v2.1 escopo: Busca & Bairros + Território/captação (IA activation + ortofoto → v2.2)
+- Busca: overhaul completo (campo único inteligente substitui os 4 modos)
+- Numeração de fases continua a partir da 7 (v2.0 usou 1-6, arquivadas em milestones/v2.0-phases/)
 
 ### Pending Todos
 
@@ -61,11 +48,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- **UAT de campo (não bloqueia):** legibilidade dos rótulos sobre satélite em Android médio/baixo no 4G, ao longo dos zooms 12–19, precisa de conferência em dispositivo real (verificado no preview desktop; item de campo).
-- (Resolvidos na execução: join bairro↔cdbairro documentado na Fase 1; `returnGeometry` re-verificado ao vivo; a "API key Esri" foi eliminada pela escolha do endpoint keyless.)
+- A busca foi mexida recentemente (commits "simplifica escolha do modo" + correções de auditoria no seletor) — o campo-único pode substituir parte disso; pesquisa/planejamento deve checar o estado atual do código de busca antes.
+- Nomes de bairro (`nm_bai`, layer 2) têm muitos erros; achar a fonte confiável de reconciliação é parte da pesquisa.
+- Herdado do v2.0 (não-bloqueante): UAT de campo — legibilidade de rótulos sobre satélite + fluidez do motion em Android/4G real.
 
 ## Session Continuity
 
-Last session: 2026-07-04
-Stopped at: Fase 4 completa (satélite Esri keyless + rótulos + crossfade, verificado ao vivo). Próxima: Fase 5 (Seam de IA dormant).
+Last session: 2026-07-05
+Stopped at: v2.1 iniciado, escopo confirmado (4 temas), pesquisa a disparar
 Resume file: None

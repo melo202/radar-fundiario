@@ -8,6 +8,20 @@ Ferramenta web (arquivo único `radar-goiania.html`, sem backend) que localiza i
 
 O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado cadastral oficial e análise estatística **auditável linha a linha**, sem depender de servidor próprio.
 
+## Current Milestone: v2.1 Busca, Bairros & Território
+
+**Goal:** Elevar a qualidade de dados e a UX core e dar ao corretor as primeiras ferramentas de captação: corrigir os nomes de bairro, refinar a malha de bairros no mobile, reconstruir a busca como campo único inteligente ("de todos os jeitos possíveis"), e entregar a primeira leva de Território/captação.
+
+**Target features:**
+- Auditoria e correção dos nomes de bairro (reconciliar `nm_bai` contra fonte confiável)
+- UX da malha de bairros no mobile (hierarquia por interação, densidade por zoom, toque na área; choropleth como ponte pro heatmap)
+- Busca campo-único inteligente: detecção de intenção, chip de confirmação, setor na frase, lembrar setor, desambiguação, fix do fuzzy/falso-positivo, estados de erro/vazio úteis, exemplos tocáveis, CNEFE p/ logradouros, deep-link `?insc=`
+- Ferramentas de Território/captação: painel do setor (mediana R$/m², IPTU, idade), heatmap R$/m² por quadra, detector de lote subutilizado, farming com memória (localStorage), diff de cadastro entre visitas, cruzamento com imóveis Caixa
+
+**Deferido → v2.2:** ativação da pesquisa de mercado por IA (seam dormant já existe), ortofoto própria de Goiânia.
+
+**Contexto/constraints:** núcleo cadastral segue 100% determinístico; a busca foi mexida recentemente (o campo-único pode substituir parte disso — checar estado atual); numeração de fases continua a partir da 7.
+
 ## Requirements
 
 ### Validated
