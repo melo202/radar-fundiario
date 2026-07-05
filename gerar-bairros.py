@@ -238,7 +238,11 @@ def reconcile_name(rings_utm, nm_bai_original):
     # a carga sustentada de ~3400 chamadas do loop de reconciliacao
     # (Step 4.5); vale tanto pro caso de 1 candidato (so essa chamada)
     # quanto pro caso multi-candidato (chamadas extras abaixo).
-    time.sleep(0.3)
+    # 0.05s: a latencia de rede (~1-2s/chamada) ja limita a taxa
+    # naturalmente; o endpoint aguentou 50+ chamadas consecutivas sem 502,
+    # entao o sleep e so um buffer minimo (evita rajada) sem gastar
+    # wall-clock a toa (o loop tem ~3400 chamadas).
+    time.sleep(0.05)
     d = _query_layer3(rings_utm, {
         "where": "cdbairro>0",
         "outFields": "cdbairro,nmbairro",
@@ -264,7 +268,7 @@ def reconcile_name(rings_utm, nm_bai_original):
     # [7 parcelas], porque norm("Ofugi") e substring de norm("VI OFUGI")).
     counts = {}
     for cdbairro, nmbairro in candidates:
-        time.sleep(0.3)
+        time.sleep(0.05)
         cd = _query_layer3(rings_utm, {
             "where": f"cdbairro={cdbairro}",
             "returnCountOnly": "true",
