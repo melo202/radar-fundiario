@@ -664,6 +664,9 @@ const BAISVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/Mapa
 
 const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+/* venal 0/ausente é dado NÃO LANÇADO no cadastro (comum em garagem/box/imóvel não avaliado),
+   não "R$ 0" de verdade — mostrar "não informado" em vez de um zero enganoso. */
+const venalTxt=v=>(v>0)?brl(v):"não informado";
 const clean=v=>String(v==null?"":v).trim();
 const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 /* remove campos pessoais do titular já na entrada (defesa em profundidade — LGPD) */
@@ -856,7 +859,7 @@ function lotInfo(ci){
       const addr=logradouroDe(a);
       let h=`<b>Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</b> · ${esc(a.nmbairro)}<br>${esc(addr)||"sem logradouro"}`;
       if(nun>1||its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${nun} imóveis · <b>toque para abrir</b>`;
-      else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${brl(a.vlvenal)} · <b>toque p/ detalhe</b>`;
+      else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${venalTxt(a.vlvenal)} · <b>toque p/ detalhe</b>`;
       return h;
     }).catch(e=>{delete LOTINFO[ci];return "não foi possível carregar";});
   return LOTINFO[ci];
@@ -1446,7 +1449,7 @@ function cardHTML(a,i,isUnit){
       </div>
       <div class="vals">
         <div class="ref"><span class="lbl">Mercado estimado</span><b>${est?"~"+brlC((est.lo+est.hi)/2):"—"}</b></div>
-        <div class="venal">Venal<b>${brl(a.vlvenal)}</b></div>
+        <div class="venal">Venal<b>${venalTxt(a.vlvenal)}</b></div>
       </div>
     </div>`;
 }
@@ -1518,8 +1521,8 @@ function showChooser(ci){
   document.getElementById("chSub").textContent=`Q ${clean(a0.nrquadra)||"—"} · L ${clean(a0.nrlote)||"—"} · ${units.length} imóveis — escolha um`;
   document.getElementById("chList").innerHTML=units.map(a=>{
     const gi=LAST.indexOf(a), ul=esc(unitLabel(a))||"Imóvel", area=a.areaedif?Math.round(a.areaedif)+" m²":"—";
-    const est=mercadoEstimado(a), val=est?"~"+brlC((est.lo+est.hi)/2):brl(a.vlvenal);
-    return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${brl(a.vlvenal)}</span></span><span class="val">${val}</span></button>`;
+    const est=mercadoEstimado(a), val=est?"~"+brlC((est.lo+est.hi)/2):(a.vlvenal>0?brl(a.vlvenal):"—");
+    return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${venalTxt(a.vlvenal)}</span></span><span class="val">${val}</span></button>`;
   }).join("");
   closeDetail();
   setView("mapa");
@@ -1559,7 +1562,7 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">${isU?"Área total (c/ comum)":"Terreno"}</div><div class="v">${isU?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
-    <div class="cell"><div class="k">Valor venal</div><div class="v">${brl(a.vlvenal)}</div></div>
+    <div class="cell"><div class="k">Valor venal</div><div class="v">${venalTxt(a.vlvenal)}</div></div>
     <div class="cell hl"><div class="k">Mercado (estimado)</div><div class="v">${(()=>{const e=mercadoEstimado(a);return e?brlC(e.lo)+"–"+brlC(e.hi):"—";})()}</div></div>
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
@@ -1868,7 +1871,7 @@ function montarLaudo(){
     LZ.privativa?["Área privativa (informada)",Math.round(LZ.privativa)+" m²"]:null,
     ["No cadastro municipal desde",fmtDt(a.dtinclusao)||"—"],
     ["IPTU lançado (exercício)",a.vlimp98?brl(a.vlimp98):"—"],
-    ["Valor venal (base fiscal)",brl(a.vlvenal)],
+    ["Valor venal (base fiscal)",venalTxt(a.vlvenal)],
     ["Estado de conservação (declarado)",esc(LZ.conserv)],
     LZ.difs.length?["Diferenciais (declarados)",LZ.difs.map(esc).join(", ")]:null,
     ["Vistoria",vist]
