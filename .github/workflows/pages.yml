@@ -31,6 +31,11 @@ jobs:
           mkdir _site
           cp index.html radar-goiania.html caixa-goiania.js sw.js manifest.json \
              icon-192.png icon-512.png apple-touch-icon.png README.md _site/
+          # datasets do app — o mapa 404a sem eles. bairros-goiania.json é obrigatório;
+          # os demais são copiados só se existirem (logradouros chega na Fase 7 do v2.1).
+          cp bairros-goiania.json _site/
+          for f in logradouros-goiania.json bairros-goiania.report.md; do [ -f "$f" ] && cp "$f" _site/ || true; done
+          echo "Arquivos publicados:"; ls -1 _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
