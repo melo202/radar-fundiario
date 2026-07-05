@@ -306,6 +306,62 @@ RECON_OUT = "bairros-goiania.recon.json"  # RECON persistido p/ o modo --apply-n
 FINAL_OUT = "bairros-goiania.json"  # artefato simplificado committed (Task 2 injeta nomes aqui)
 GLEBA_LABEL = "Gleba não denominada"  # rotulo generico p/ poligonos sem parcela intersectada (0 candidatos)
 
+# --- nome de exibicao (nm_disp): expande o prefixo abreviado do cadastro e
+# recupera acentos do nome cru (nm_bai_original da layer 2, que vem acentuado e
+# SEM mojibake). O nm_bai OFICIAL (ex. "VI JOAO VAZ") fica intacto p/ matching;
+# nm_disp e so pra hover/breadcrumb. PFX espelha o mapa do app (radar-goiania.html)
+# pra manter consistencia (COD=Condominio, VLG=Vila, ESP=Espaco...). ---
+PFX_PT = {
+    "RES": "Residencial", "JD": "Jardim", "VI": "Vila", "VL": "Vila", "VILA": "Vila",
+    "VLG": "Vila", "SET": "Setor", "ST": "Setor", "LOT": "Loteamento", "PRQ": "Parque",
+    "PQ": "Parque", "BRO": "Bairro", "CH": "Chácara", "FAZ": "Fazenda", "CONJ": "Conjunto",
+    "COD": "Condomínio", "SIT": "Sítio", "GRJ": "Granja", "AER": "Aeroporto",
+    "DIS": "Distrito", "REC": "Recanto", "ZON": "Zona", "AREA": "Área", "ESP": "Espaço",
+}
+_CONNECTORS = {"de", "da", "do", "dos", "das", "e"}
+# acentos p/ o caso SEM raw (gleba/recuperado): palavras comuns em nomes de
+# bairro de Goiania que precisam de acento. Chave = forma minuscula sem acento.
+_ACCENT_WORDS = {
+    "esperanca": "Esperança", "sao": "São", "jose": "José", "conceicao": "Conceição",
+    "antonio": "Antônio", "goiania": "Goiânia", "industria": "Indústria",
+    "paraiso": "Paraíso", "agua": "Água", "aguas": "Águas", "ceu": "Céu",
+    "gloria": "Glória", "canaa": "Canaã", "marajo": "Marajó", "jatoba": "Jatobá",
+    "mansoes": "Mansões", "alem": "Além", "orion": "Órion", "itapua": "Itapuã",
+    "brasilia": "Brasília", "vitoria": "Vitória", "america": "América",
+    "atlantico": "Atlântico", "olimpico": "Olímpico", "solar": "Solar",
+}
+
+def _titano_pt(s):
+    """Title-case pt-BR: capitaliza cada palavra, mantendo conectores (de/da/do…)
+    minusculos (exceto se forem a 1a palavra). Aplica acento em palavras comuns
+    (_ACCENT_WORDS) — usado so quando nao ha raw acentuado pra copiar."""
+    out = []
+    for i, w in enumerate(s.lower().split()):
+        if w in _ACCENT_WORDS:
+            out.append(_ACCENT_WORDS[w])
+        elif i > 0 and w in _CONNECTORS:
+            out.append(w)
+        else:
+            out.append(w[:1].upper() + w[1:])
+    return " ".join(out)
+
+def display_name(official, raw):
+    """Nome amigavel: '<Tipo por extenso> <nucleo>'. O nucleo usa o `raw`
+    acentuado quando bate com o nucleo oficial (norm igual); senao title-case
+    do oficial (sem acento)."""
+    if not official or official == GLEBA_LABEL:
+        return official
+    toks = official.split()
+    if len(toks) > 1 and toks[0] in PFX_PT:
+        type_word, core_off = PFX_PT[toks[0]], " ".join(toks[1:])
+    else:
+        type_word, core_off = None, official
+    if raw and norm(raw) == norm(core_off):
+        core = raw.strip()            # ja vem acentuado e bem-caixado ("João Vaz", "do Anicuns")
+    else:
+        core = _titano_pt(core_off)   # sem raw (gleba/recuperado) ou raw divergente -> sem acento
+    return (type_word + " " + core) if type_word else core
+
 
 def fetch_all_bairros(page_size=500):
     """Pagina explicitamente em layer 2 via resultOffset. Nunca confia na
@@ -574,6 +630,8 @@ def apply_names():
         if feat["properties"]["nm_bai"] != new_name:
             changed += 1
         feat["properties"]["nm_bai"] = new_name
+        # nome de exibicao (hover/breadcrumb): prefixo por extenso + acento do raw
+        feat["properties"]["nm_disp"] = display_name(new_name, r.get("nm_bai_original"))
 
     if missing:
         raise SystemExit(

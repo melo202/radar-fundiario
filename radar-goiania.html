@@ -924,7 +924,7 @@ async function refreshLots(){
 function highlightBairro(layer){
   if(baiHi&&baiHi!==layer){baiHi.setStyle(baiStyle());baiHi.closeTooltip();}
   layer.setStyle(BAI_HOVER);
-  const nm=layer.feature.properties.nm_bai;
+  const nm=layer.feature.properties.nm_disp||layer.feature.properties.nm_bai; /* nm_disp: prefixo por extenso + acento */
   const lbl=(nm&&nm.trim())?esc(nm):"Área rural / gleba";
   layer.setTooltipContent(lbl);layer.openTooltip();
   baiHi=layer;
@@ -951,7 +951,7 @@ function drillBairro(layer){
   const b=layer.getBounds();
   const tk=++DRILLTOKEN; /* drills sucessivos rápidos não competem — só o último fitBounds vale */
   setTimeout(()=>{ if(tk!==DRILLTOKEN)return; map.invalidateSize();map.fitBounds(b.pad(0.05));},90);
-  showBreadcrumb(layer.feature.properties.nm_bai);
+  showBreadcrumb(layer.feature.properties.nm_disp||layer.feature.properties.nm_bai);
 }
 function onEachBairro(feature,layer){
   layer.bindTooltip("",{sticky:true,direction:"top",opacity:.96});
