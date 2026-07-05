@@ -25,6 +25,7 @@
 - [ ] **BUSCA-09**: Deep-link `?insc=` abre o imóvel direto no boot + botão "copiar link do imóvel"
 - [ ] **BUSCA-10**: Autocomplete de logradouro alimentado por um dataset CNEFE destilado (~9,8k ruas de Goiânia, ~39KB gz), versionado offline
 - [ ] **BUSCA-11**: Acessibilidade preservada — todo widget novo re-passa o checklist ARIA/teclado/iOS/`SEARCHTOKEN` da auditoria de 03/07 (gate de aceite, não retrofit)
+- [ ] **BUSCA-12**: Coordenação busca⇄ficha no desktop mapa-first não regride (guarda do hotfix `a7a4646`): busca sempre fechável (× + Esc); abrir ficha/seletor fecha o overlay (zero sobreposição de cards ≥821px); clicar prédio (busca ou mapa) mostra o seletor de unidades sobre o mapa. + Auditoria de correção dos dados da ficha em TODOS os modos (ql/endereço/prédio/inscrição 10-14 díg/clique-no-mapa) contra o registro de origem
 
 ### Malha de bairros (UX mobile)
 
@@ -60,18 +61,42 @@
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOMES-01/02/03 | — | Pending |
-| BUSCA-01..11 | — | Pending |
-| MALHA-01 | — | Pending |
-| TERR-01..07 | — | Pending |
+| NOMES-01 | Fase 7 | Pending |
+| NOMES-02 | Fase 7 | Pending |
+| NOMES-03 | Fase 7 | Pending |
+| MALHA-01 | Fase 7 | Pending |
+| BUSCA-01 | Fase 8 | Pending |
+| BUSCA-02 | Fase 8 | Pending |
+| BUSCA-03 | Fase 8 | Pending |
+| BUSCA-04 | Fase 8 | Pending |
+| BUSCA-05 | Fase 8 | Pending |
+| BUSCA-06 | Fase 8 | Pending |
+| BUSCA-07 | Fase 8 | Pending |
+| BUSCA-08 | Fase 8 | Pending |
+| BUSCA-09 | Fase 8 | Pending |
+| BUSCA-10 | Fase 8 | Pending |
+| BUSCA-11 | Fase 8 | Pending |
+| BUSCA-12 | Fase 8 | Pending |
+| TERR-01 | Fase 9 | Pending |
+| TERR-02 | Fase 9 | Pending |
+| TERR-03 | Fase 9 | Pending |
+| TERR-04 | Fase 10 | Pending |
+| TERR-05 | Fase 10 | Pending |
+| TERR-06 | Fase 11 | Pending |
+| TERR-07 | Fase 11 | Pending |
 
 **Coverage:**
-- Requisitos v2.1: 22 total
-- Mapeados para fases: 0 (a preencher pelo roadmapper)
+- Requisitos v2.1: 23 total
+- Mapeados para fases: 23/23 (100%) ✓
+- Fase 7 (Fundação de Dados): 4 requisitos — NOMES-01/02/03, MALHA-01
+- Fase 8 (Busca): 12 requisitos — BUSCA-01..12
+- Fase 9 (Setor-Scan + Choropleth + Painel): 3 requisitos — TERR-01/02/03
+- Fase 10 (Detector + Farming): 2 requisitos — TERR-04/05
+- Fase 11 (Diff + Caixa): 2 requisitos — TERR-06/07
+- Órfãos: nenhum
 
 ---
 *Requirements defined: 2026-07-05*
+*Traceability preenchida: 2026-07-05 (roadmap v2.1, Fases 7-11)*
