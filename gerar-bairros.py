@@ -52,7 +52,7 @@ from datetime import date
 # ---------------------------------------------------------------------------
 UA = {"User-Agent": "Mozilla/5.0 (RadarFundiario; uso pessoal; contato do dono do repo)"}
 
-def http(url, params=None, tries=3):
+def http(url, params=None, tries=5):
     if params:
         url = url + "?" + urllib.parse.urlencode(params)
     delay = 2
@@ -61,7 +61,11 @@ def http(url, params=None, tries=3):
             req = urllib.request.Request(url, headers=UA)
             return urllib.request.urlopen(req, timeout=60).read()
         except urllib.error.HTTPError as e:
-            if e.code in (429, 503):
+            # 502 tratado explicitamente igual 429/503 (quirk documentado:
+            # "502-under-load" do portalmapa.goiania.go.gov.br sob POSTs
+            # sustentados da reconciliacao de nomes, Step 4.5) — backoff
+            # exponencial com Retry-After honrado quando presente.
+            if e.code in (429, 502, 503):
                 ra = e.headers.get("Retry-After")
                 wait = int(ra) if ra and ra.isdigit() else delay
                 if i + 1 == tries:
@@ -81,20 +85,35 @@ def http(url, params=None, tries=3):
 LAYER2 = "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/2/query"
 LAYER3 = "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/3/query"
 
-def arcgis(url, params):
+def arcgis(url, params, tries=5):
+    """`tries` aqui reenvia a chamada INTEIRA (nao so a leitura HTTP) quando
+    o corpo devolvido nao e JSON valido — achado ao vivo nesta execucao:
+    o endpoint por vezes devolve HTTP 200 com corpo truncado/vazio sob
+    carga (502-under-load documentado, mas essa variante nao vira
+    HTTPError — vira JSONDecodeError). `http()` ja tem seu proprio
+    backoff por tentativa de rede; este loop cobre a camada de cima
+    (resposta 200 mas payload invalido)."""
     p = dict(params); p["f"] = "json"
-    d = json.loads(http(url, p).decode("utf-8"))
-    if "error" in d:
-        raise RuntimeError(d["error"])
-    return d
+    delay = 2
+    for i in range(tries):
+        try:
+            d = json.loads(http(url, p).decode("utf-8"))
+        except json.JSONDecodeError:
+            if i + 1 == tries:
+                raise
+            time.sleep(delay); delay *= 4
+            continue
+        if "error" in d:
+            raise RuntimeError(d["error"])
+        return d
 
 
-def http_post(url, params, tries=3):
+def http_post(url, params, tries=5):
     """Irmao do `http()` GET acima, mas envia o body como POST
     form-encoded. Necessario para consultas espaciais com geometria de
     poligono na layer 3 — GET intermitentemente 404/414 para poligonos
     realistas (30+ vertices), quirk novo verificado ao vivo (DATA-NAMES.md
-    1.3). MESMO backoff 429/503 do `http()` GET — nao re-derivar."""
+    1.3). MESMO backoff 429/502/503 do `http()` GET — nao re-derivar."""
     body = urllib.parse.urlencode(params).encode("utf-8")
     headers = {**UA, "Content-Type": "application/x-www-form-urlencoded"}
     delay = 2
@@ -103,7 +122,10 @@ def http_post(url, params, tries=3):
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
             return urllib.request.urlopen(req, timeout=60).read()
         except urllib.error.HTTPError as e:
-            if e.code in (429, 503):
+            # 502 explicito (quirk "502-under-load" sob POSTs sustentados
+            # da reconciliacao Step 4.5) — mesmo backoff exponencial de
+            # 429/503, Retry-After honrado quando presente.
+            if e.code in (429, 502, 503):
                 ra = e.headers.get("Retry-After")
                 wait = int(ra) if ra and ra.isdigit() else delay
                 if i + 1 == tries:
@@ -121,14 +143,24 @@ def http_post(url, params, tries=3):
             time.sleep(delay); delay *= 4
 
 
-def arcgis_post(url, params):
+def arcgis_post(url, params, tries=5):
     """Irmao POST de `arcgis()` — mesma injecao de f=json + raise em erro,
-    mas via `http_post` (body form-encoded, nao querystring)."""
+    mas via `http_post` (body form-encoded, nao querystring). Mesmo retry
+    de camada-JSON de `arcgis()` (200 com corpo truncado/invalido sob
+    carga — achado ao vivo)."""
     p = dict(params); p["f"] = "json"
-    d = json.loads(http_post(url, p).decode("utf-8"))
-    if "error" in d:
-        raise RuntimeError(d["error"])
-    return d
+    delay = 2
+    for i in range(tries):
+        try:
+            d = json.loads(http_post(url, p).decode("utf-8"))
+        except json.JSONDecodeError:
+            if i + 1 == tries:
+                raise
+            time.sleep(delay); delay *= 4
+            continue
+        if "error" in d:
+            raise RuntimeError(d["error"])
+        return d
 
 
 def norm(s):
@@ -144,6 +176,51 @@ def norm(s):
     return " ".join(stripped.upper().split())
 
 
+def _envelope_of(rings_utm):
+    """Bbox (envelope) UTM 31982 de um conjunto de rings — usado como
+    fallback de geometria (ver `reconcile_name`)."""
+    xs = [x for ring in rings_utm for x, y in ring]
+    ys = [y for ring in rings_utm for x, y in ring]
+    return {
+        "xmin": min(xs), "ymin": min(ys), "xmax": max(xs), "ymax": max(ys),
+        "spatialReference": {"wkid": 31982},
+    }
+
+
+def _query_layer3(rings_utm, extra_params, use_envelope=False):
+    """POST a layer 3 com a geometria do poligono; faz fallback automatico
+    para o ENVELOPE (bbox) do poligono se o POST com os rings completos
+    falhar (`JSONDecodeError` apos retries do `arcgis_post`).
+
+    Quirk novo verificado ao vivo nesta execucao: poligonos muito grandes
+    (observado: 2301 vertices, corpo POST ~97KB) fazem o ArcGIS Web
+    Adaptor devolver HTTP 200 com uma pagina HTML de erro
+    ("Could not access any GIS Server machines") em vez de JSON — e
+    DETERMINISTICO para aquele poligono especifico (nao e o 429/503
+    transiente ja tratado pelo backoff), sobrevive a novas tentativas
+    idênticas. O envelope (bbox) do mesmo poligono, por ser um payload
+    muito menor, funciona sempre. Usar o envelope so pode ADICIONAR
+    candidatos falso-positivos (nunca remover um candidato correto) —
+    aceitavel porque o proprio algoritmo de desambiguacao (tie-break por
+    nome / maioria de contagem) ja lida com candidatos multiplos; afeta
+    so os ~poucos poligonos > ~1500-2000 vertices deste dataset.
+    """
+    if use_envelope:
+        geometry = json.dumps(_envelope_of(rings_utm))
+        geom_params = {"geometry": geometry, "geometryType": "esriGeometryEnvelope", "inSR": "31982"}
+    else:
+        geometry = json.dumps({"rings": rings_utm, "spatialReference": {"wkid": 31982}})
+        geom_params = {"geometry": geometry, "geometryType": "esriGeometryPolygon", "inSR": "31982"}
+
+    params = {**geom_params, "spatialRel": "esriSpatialRelIntersects", **extra_params}
+    if use_envelope:
+        return arcgis_post(LAYER3, params)
+    try:
+        return arcgis_post(LAYER3, params)
+    except json.JSONDecodeError:
+        return _query_layer3(rings_utm, extra_params, use_envelope=True)
+
+
 def reconcile_name(rings_utm, nm_bai_original):
     """Implementa o algoritmo autoritativo de reconciliacao espacial
     (DATA-NAMES.md 1.3): para o poligono de bairro (rings ainda em UTM
@@ -156,24 +233,20 @@ def reconcile_name(rings_utm, nm_bai_original):
     None quando motivo == "sem-parcela" (0 candidatos — gleba/terra vaga
     sem parcela cadastrada ainda; NAO fabrica nome).
     """
-    geometry = json.dumps({"rings": rings_utm, "spatialReference": {"wkid": 31982}})
-    base_params = {
-        "geometry": geometry,
-        "geometryType": "esriGeometryPolygon",
-        "inSR": "31982",
-        "spatialRel": "esriSpatialRelIntersects",
-    }
-
-    d = arcgis_post(LAYER3, {
-        **base_params,
+    # throttle antes de CADA POST a layer 3 (nao so entre chamadas dentro
+    # do mesmo poligono) — reduz a chance de disparar o 502-under-load sob
+    # a carga sustentada de ~3400 chamadas do loop de reconciliacao
+    # (Step 4.5); vale tanto pro caso de 1 candidato (so essa chamada)
+    # quanto pro caso multi-candidato (chamadas extras abaixo).
+    time.sleep(0.3)
+    d = _query_layer3(rings_utm, {
         "where": "cdbairro>0",
         "outFields": "cdbairro,nmbairro",
         "returnDistinctValues": "true",
         "returnGeometry": "false",
     })
-    time.sleep(0.25)
     candidates = [
-        (f["attributes"]["cdbairro"], f["attributes"]["nmbairro"])
+        (f["attributes"]["cdbairro"], (f["attributes"]["nmbairro"] or "").strip())
         for f in d.get("features", [])
     ]
 
@@ -191,12 +264,11 @@ def reconcile_name(rings_utm, nm_bai_original):
     # [7 parcelas], porque norm("Ofugi") e substring de norm("VI OFUGI")).
     counts = {}
     for cdbairro, nmbairro in candidates:
-        cd = arcgis_post(LAYER3, {
-            **base_params,
+        time.sleep(0.3)
+        cd = _query_layer3(rings_utm, {
             "where": f"cdbairro={cdbairro}",
             "returnCountOnly": "true",
         })
-        time.sleep(0.25)
         counts[cdbairro] = cd.get("count", 0)
 
     norm_original = norm(nm_bai_original)
@@ -287,7 +359,7 @@ def fetch_all_bairros(page_size=500):
     return features, dup_business_ids
 
 
-def write_report(total, named, unnamed, cdbairro_count, dup_business_ids=None):
+def write_report(total, named, unnamed, cdbairro_count, dup_business_ids=None, recon=None):
     with open(REPORT_OUT, "w", encoding="utf-8") as f:
         f.write("# Relatorio de geracao — bairros-goiania.json\n\n")
         f.write(f"Gerado em: {date.today().isoformat()}\n\n")
@@ -371,15 +443,161 @@ def write_report(total, named, unnamed, cdbairro_count, dup_business_ids=None):
             "e atual.\n"
         )
 
+        if recon:
+            _write_reconciliation_section(f, recon)
+
+
+def _write_reconciliation_section(f, recon):
+    """Secao de reconciliacao de nomes (NOMES-01/03) do report — contadores,
+    tabela de diff antes->depois por poligono, subsecao multi-candidatos.
+    `recon` = dict {id: {"cdbairro","nmbairro_reconciled","motivo",
+    "nm_bai_original"}} (RECON, produzido pelo Step 4.5)."""
+    f.write("\n## Reconciliacao de nomes (NOMES-01/03)\n\n")
+
+    total = len(recon)
+    motivo_counts = {"sem-parcela": 0, "unico": 0, "nome": 0, "maioria": 0, "erro-endpoint": 0}
+    recuperados_de_branco = 0
+    nomes_mudados = 0
+    nao_resolvidos = 0
+    diffs = []  # (id, original, reconciliado, motivo)
+    multi_candidatos = []  # (id, original, reconciliado, motivo)
+
+    for bid, r in sorted(recon.items()):
+        motivo = r["motivo"]
+        motivo_counts[motivo] = motivo_counts.get(motivo, 0) + 1
+        original = r["nm_bai_original"]
+        reconciliado = r["nmbairro_reconciled"] if r["nmbairro_reconciled"] else GLEBA_LABEL
+
+        if motivo == "sem-parcela":
+            nao_resolvidos += 1
+            if original is not None:
+                diffs.append((bid, original, reconciliado, motivo))
+            continue
+
+        if motivo == "erro-endpoint":
+            # Falha persistente de endpoint (502 apos retries) — poligono
+            # NAO foi reconciliado nesta execucao; fica com o nome
+            # original como fallback (nunca fabrica nome). Contabilizado
+            # como nao-resolvido; um re-run (resume) reprocessa so estes.
+            nao_resolvidos += 1
+            diffs.append((bid, original if original is not None else "(sem nome)", reconciliado, motivo))
+            continue
+
+        if original is None:
+            recuperados_de_branco += 1
+            diffs.append((bid, "(sem nome)", reconciliado, motivo))
+        elif norm(original) != norm(r["nmbairro_reconciled"]):
+            nomes_mudados += 1
+            diffs.append((bid, original, reconciliado, motivo))
+
+        if motivo in ("nome", "maioria"):
+            multi_candidatos.append((bid, original or "(sem nome)", reconciliado, motivo))
+
+    f.write(
+        f"- Total de poligonos reconciliados: **{total}**\n"
+        f"- Recuperados-de-branco (`nm_bai` original vazio, nome achado via join): "
+        f"**{recuperados_de_branco}**\n"
+        f"- Nomes-mudados (`nm_bai` original preenchido, mas divergia do nome autoritativo): "
+        f"**{nomes_mudados}**\n"
+        f"- Nao-resolvidos (0 candidatos espaciais — gleba/terra vaga sem parcela; rotulados "
+        f"`\"{GLEBA_LABEL}\"`): **{nao_resolvidos}**\n\n"
+        "Quebra por motivo de resolucao:\n\n"
+        f"- `unico` (1 candidato espacial, sem ambiguidade): **{motivo_counts.get('unico', 0)}**\n"
+        f"- `nome` (2+ candidatos, desambiguado por tie-break de nome): "
+        f"**{motivo_counts.get('nome', 0)}**\n"
+        f"- `maioria` (2+ candidatos, desambiguado por maior contagem de parcelas): "
+        f"**{motivo_counts.get('maioria', 0)}**\n"
+        f"- `sem-parcela` (0 candidatos — nao resolvido, rotulo generico aplicado): "
+        f"**{motivo_counts.get('sem-parcela', 0)}**\n"
+        f"- `erro-endpoint` (falha persistente do endpoint apos retries — nao resolvido "
+        f"nesta execucao, nome original mantido como fallback; reprocessavel num re-run/"
+        f"resume): **{motivo_counts.get('erro-endpoint', 0)}**\n\n"
+    )
+
+    f.write("### Tabela de diff — antes -> depois por poligono\n\n")
+    if diffs:
+        f.write("| id | nm_bai_original | nmbairro_reconciled | motivo |\n")
+        f.write("|---|---|---|---|\n")
+        for bid, original, reconciliado, motivo in diffs:
+            f.write(f"| {bid} | {original} | {reconciliado} | {motivo} |\n")
+        f.write(f"\nTotal de linhas na tabela de diff: **{len(diffs)}**\n\n")
+    else:
+        f.write("Nenhuma mudanca de nome detectada.\n\n")
+
+    f.write("### Multi-candidatos (conferencia)\n\n")
+    f.write(
+        "Poligonos que intersectaram 2+ setores cadastrais (`cdbairro`) distintos — "
+        "casos de risco (bordas administrativas) resolvidos por tie-break de nome "
+        "(`nome`) ou maioria de parcelas (`maioria`). Revisao humana por amostra e "
+        "item de acompanhamento **nao-bloqueante** (Open Decision #1).\n\n"
+    )
+    if multi_candidatos:
+        f.write("| id | nm_bai_original | nmbairro_reconciled (vencedor) | motivo |\n")
+        f.write("|---|---|---|---|\n")
+        for bid, original, reconciliado, motivo in multi_candidatos:
+            f.write(f"| {bid} | {original} | {reconciliado} | {motivo} |\n")
+        f.write(f"\nTotal de multi-candidatos: **{len(multi_candidatos)}**\n\n")
+    else:
+        f.write("Nenhum multi-candidato nesta execucao.\n\n")
+
+
+def apply_names():
+    """Modo --apply-names: injeta os nomes reconciliados (bairros-goiania.recon.json,
+    produzido por --verify) no bairros-goiania.json JA COMMITTED/simplificado,
+    tocando SO properties.nm_bai. NAO re-simplifica (mapshaper) — preserva
+    geometria/contagem BYTE-IDENTICAS. Glebas sem candidato (0 parcelas
+    intersectadas) recebem o rotulo generico GLEBA_LABEL; nenhum nome fiscal
+    e fabricado."""
+    print(f"carregando {RECON_OUT}…")
+    with open(RECON_OUT, encoding="utf-8") as f:
+        recon = json.load(f)
+    print(f"    {len(recon)} reconciliacoes carregadas")
+
+    print(f"carregando {FINAL_OUT} (artefato committed, geometria a preservar)…")
+    with open(FINAL_OUT, encoding="utf-8") as f:
+        data = json.load(f)
+    print(f"    {len(data['features'])} features carregadas")
+
+    changed = 0
+    missing = []
+    for feat in data["features"]:
+        bid = feat["properties"]["id"]
+        r = recon.get(bid)
+        if r is None:
+            missing.append(bid)
+            continue
+        new_name = r["nmbairro_reconciled"] if r["nmbairro_reconciled"] else GLEBA_LABEL
+        if feat["properties"]["nm_bai"] != new_name:
+            changed += 1
+        feat["properties"]["nm_bai"] = new_name
+
+    if missing:
+        raise SystemExit(
+            f"ERRO: {len(missing)} feature(s) do {FINAL_OUT} sem entrada correspondente em "
+            f"{RECON_OUT} (RECON incompleto ou dessincronizado) — abortado sem gravar. "
+            f"ids: {missing[:10]}{'…' if len(missing) > 10 else ''}"
+        )
+
+    with open(FINAL_OUT, "w", encoding="utf-8") as f:
+        json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
+    print(
+        f"gravado {FINAL_OUT}: {len(data['features'])} features, {changed} nomes mudados "
+        "(geometria/id/ordem preservados — so properties.nm_bai foi tocado)"
+    )
+
 
 def main():
+    if "--apply-names" in sys.argv:
+        apply_names()
+        return
+
     verify = "--verify" in sys.argv
 
-    print("1/5 consultando total de features (returnCountOnly)…")
+    print("1/6 consultando total de features (returnCountOnly)…")
     total = arcgis(LAYER2, {"where": "1=1", "returnCountOnly": "true"})["count"]
     print(f"    layer 2 reporta {total} features no total")
 
-    print("2/5 paginando explicitamente (resultOffset, paginas de 500)…")
+    print("2/6 paginando explicitamente (resultOffset, paginas de 500)…")
     features, dup_business_ids = fetch_all_bairros(page_size=500)
     if len(features) != total:
         raise SystemExit(
@@ -423,38 +641,108 @@ def main():
 
     RECON = {}
     if verify:
-        print("4/6 reconciliando nomes via spatial join POST a layer 3 (Step 4.5, ~13-15min, ~3400 chamadas)…")
-        motivo_counts = {"sem-parcela": 0, "unico": 0, "nome": 0, "maioria": 0}
-        recuperados_de_branco = 0
-        nomes_mudados = 0
-        nao_resolvidos = 0
-        for i, feat in enumerate(features):
+        # Resume/checkpoint: se ja existe um RECON_OUT de uma execucao
+        # anterior (completa ou interrompida por erro de endpoint), carrega
+        # e PULA os `id` ja RESOLVIDOS (qualquer motivo exceto
+        # "erro-endpoint") — um re-run continua em vez de reiniciar do
+        # zero, e reprocessa os que sobraram como "erro-endpoint" na
+        # execucao anterior. O endpoint (portalmapa.goiania.go.gov.br) e
+        # flaky sob carga sustentada (502-under-load, ~3400 chamadas POST
+        # deste loop); sem isso, uma falha perto do fim do dataset forcaria
+        # refazer TUDO.
+        limit = None
+        for arg in sys.argv:
+            if arg.startswith("--limit="):
+                limit = int(arg.split("=", 1)[1])
+        try:
+            with open(RECON_OUT, encoding="utf-8") as f:
+                RECON = json.load(f)
+            print(f"4/6 retomando reconciliacao — {len(RECON)} poligono(s) em {RECON_OUT} (resume)…")
+        except FileNotFoundError:
+            print("4/6 reconciliando nomes via spatial join POST a layer 3 (Step 4.5, ~13-15min, ~3400 chamadas)…")
+
+        pending = [
+            f for f in features
+            if f["attributes"]["id"] not in RECON
+            or RECON[f["attributes"]["id"]]["motivo"] == "erro-endpoint"
+        ]
+        if limit is not None:
+            pending = pending[:limit]
+        total_pending = len(pending)
+        erros_endpoint_nesta_execucao = 0
+
+        def _save_recon_checkpoint():
+            with open(RECON_OUT, "w", encoding="utf-8") as f:
+                json.dump(RECON, f, ensure_ascii=False, indent=2)
+
+        for i, feat in enumerate(pending):
             attrs = feat["attributes"]
             bid = attrs["id"]
             nm_bai_original = (attrs.get("nm_bai") or "").strip() or None
             src_rings = (feat.get("geometry") or {}).get("rings")
-            cdbairro, nmbairro, motivo = reconcile_name(src_rings, nm_bai_original)
+            try:
+                cdbairro, nmbairro, motivo = reconcile_name(src_rings, nm_bai_original)
+            except Exception as e:
+                # Continue-on-error: uma falha persistente de endpoint (502
+                # apos esgotar as tentativas de retry) NAO deve abortar a
+                # build inteira. Grava o poligono como nao-resolvido
+                # (motivo "erro-endpoint", nm_bai_original como fallback de
+                # nome — NUNCA None quando havia nome original), avisa, e
+                # segue pro proximo. Um re-run (resume, acima) reprocessa
+                # especificamente os "erro-endpoint" porque o filtro de
+                # `pending` os re-inclui mesmo ja estando em RECON.
+                erros_endpoint_nesta_execucao += 1
+                RECON[bid] = {
+                    "cdbairro": None,
+                    "nmbairro_reconciled": nm_bai_original,
+                    "motivo": "erro-endpoint",
+                    "nm_bai_original": nm_bai_original,
+                }
+                print(
+                    f"    AVISO: falha de endpoint no poligono id={bid} "
+                    f"({type(e).__name__}: {e}) — gravado motivo=erro-endpoint "
+                    "(fallback nm_bai_original), retry num re-run futuro."
+                )
+                if (i + 1) % 50 == 0:
+                    _save_recon_checkpoint()
+                    print(f"    progresso: {i + 1}/{total_pending} pendentes ({len(RECON)} total) — checkpoint salvo em {RECON_OUT}…")
+                continue
             RECON[bid] = {
                 "cdbairro": cdbairro,
                 "nmbairro_reconciled": nmbairro,
                 "motivo": motivo,
                 "nm_bai_original": nm_bai_original,
             }
-            motivo_counts[motivo] += 1
-            if motivo == "sem-parcela":
+            if (i + 1) % 50 == 0:
+                _save_recon_checkpoint()
+                print(f"    progresso: {i + 1}/{total_pending} pendentes ({len(RECON)} total) — checkpoint salvo em {RECON_OUT}…")
+
+        _save_recon_checkpoint()
+        motivo_counts = {"sem-parcela": 0, "unico": 0, "nome": 0, "maioria": 0, "erro-endpoint": 0}
+        recuperados_de_branco = 0
+        nomes_mudados = 0
+        nao_resolvidos = 0
+        for r in RECON.values():
+            motivo_counts[r["motivo"]] = motivo_counts.get(r["motivo"], 0) + 1
+            if r["motivo"] in ("sem-parcela", "erro-endpoint"):
                 nao_resolvidos += 1
             else:
-                if nm_bai_original is None:
+                if r["nm_bai_original"] is None:
                     recuperados_de_branco += 1
-                elif norm(nm_bai_original) != norm(nmbairro):
+                elif norm(r["nm_bai_original"]) != norm(r["nmbairro_reconciled"]):
                     nomes_mudados += 1
-            if (i + 1) % 100 == 0:
-                print(f"    progresso: {i + 1}/{len(features)} poligonos reconciliados…")
         print(
-            f"    reconciliacao completa: {recuperados_de_branco} recuperados-de-branco, "
-            f"{nomes_mudados} nomes-mudados, {nao_resolvidos} nao-resolvidos "
-            f"(motivos: {motivo_counts})"
+            f"    reconciliacao: {len(RECON)}/{len(features)} poligonos no RECON "
+            f"({erros_endpoint_nesta_execucao} com erro-endpoint nesta execucao), "
+            f"{recuperados_de_branco} recuperados-de-branco, {nomes_mudados} nomes-mudados, "
+            f"{nao_resolvidos} nao-resolvidos (motivos: {motivo_counts})"
         )
+        if motivo_counts.get("erro-endpoint", 0):
+            print(
+                f"    AVISO: {motivo_counts['erro-endpoint']} poligono(s) com motivo=erro-endpoint "
+                f"no RECON total — rode `python gerar-bairros.py --verify` de novo (resume) para "
+                "tentar reconciliar so esses pendentes."
+            )
 
     print("5/6 smoke test do bairro irregular (Campos Dourados, id=000400000603)…")
     campos_dourados = next(
