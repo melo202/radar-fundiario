@@ -19,7 +19,8 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-07-04)
 - [x] **Phase 4: Camada de Satélite** - Toggle ruas ⇄ satélite com legibilidade de rótulos e crossfade
  (completed 2026-07-04)
-- [x] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo (completed 2026-07-04)
+- [x] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
+ (completed 2026-07-04)
 - [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
 
 ## Phase Details
@@ -110,15 +111,17 @@ Plans:
 **Depends on**: Phase 2, Phase 3 (anima estrutura que precisa existir e estar estável antes)
 **Requirements**: MOT-01, MOT-02, MOT-03
 **Success Criteria** (what must be TRUE):
-  1. Motion (motion.dev) está integrado via CDN, com um bloco global `prefers-reduced-motion` presente desde o primeiro commit de motion (não retrofitado depois)
+  1. Motion (motion.dev) está embutido INLINE em `radar-goiania.html` (build UMD colado num `<script>`, com comentário de proveniência + licença MIT), com um bloco global `prefers-reduced-motion` presente desde o primeiro commit de motion (não retrofitado depois) — decisão do usuário em 06-CONTEXT.md revisou "via CDN" para inline (SEM CDN, SEM mudança de CSP, SEM mudança de sw.js)
   2. Toda transição é interrompível — uma busca rápida em campo nunca é bloqueada esperando uma animação terminar
   3. Transições de view (home ⇄ busca ⇄ detalhe), o spring do bottom-sheet e o feedback de tap usam Motion de forma perceptível e consistente
-  4. Os polígonos de lote no drill-in e a lista de cards de resultado entram com stagger, reaproveitando o timing/easing já usado no app
-  5. `sw.js` tem o allowlist de CDN atualizado para o host do Motion e a versão de cache bumped no mesmo commit da integração
-**Plans**: TBD
+  4. Os polígonos de lote no drill-in e a lista de cards de resultado entram com stagger (só na 1ª renderização), reaproveitando o timing/easing já usado no app
+  5. Motion é progressive enhancement: o app funciona 100% mesmo se o Motion falhar/estiver ausente; a contagem de `<script src>` continua 3 e o `sw.js`/CSP não mudam (consequência do embed inline)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md — Fundação: Motion UMD inline (eval-scan + proveniência MIT) + kill-switch CSS prefers-reduced-motion + guard JS REDUCE (reativo) + wrapper mAnimate() progressive-enhancement (MOT-01)
+- [ ] 06-02-PLAN.md — Transições de tela no setView (mobile + overlay .panel desktop, ±12px/180ms, interrompíveis) + spring do bottom-sheet .detail (420/38/1) coordenado com o drag do #grab (MOT-02)
+- [ ] 06-03-PLAN.md — Stagger só-na-1ª-render de cards (render) + lotes (refreshLots, gate firstReveal, cap 12) + feedback de tap :active CSS-only (MOT-02, MOT-03)
 
 ## Progress
 
@@ -133,4 +136,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 2/2 | Complete    | 2026-07-04 |
 | 4. Camada de Satélite | 2/2 | Complete    | 2026-07-04 |
 | 5. Seam de IA (dormant) | 1/1 | Complete    | 2026-07-04 |
-| 6. Motion no App Todo | 0/TBD | Not started | - |
+| 6. Motion no App Todo | 0/3 | Not started | - |
