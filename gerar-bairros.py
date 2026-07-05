@@ -3,7 +3,8 @@
 Gera bairros-goiania.wgs84-raw.json + bairros-goiania.report.md a partir da
 layer 2 (Divisas de Bairro) do ArcGIS publico da Prefeitura de Goiania.
 
-Uso:  python gerar-bairros.py --verify
+Uso:  python gerar-bairros.py --verify        (roda Step 4.5 e imprime RECON)
+      python gerar-bairros.py --apply-names   (aplica RECON no json committed)
 
 Script de build OFFLINE (nao roda no app). Etapas:
  1. Pergunta o total de features (returnCountOnly) — contagem de referencia.
@@ -15,17 +16,33 @@ Script de build OFFLINE (nao roda no app). Etapas:
  4. Reprojeta UTM 31982 -> WGS84 usando o MESMO proj4 do app
     (radar-goiania.html:568) — nunca re-derivar (historico: bug zona 22 vs 23,
     "pino na Bahia").
+ 4.5. (NOVO, so com --verify) Reconciliacao de nomes via spatial join POST a
+    layer 3 — GET com geometria de poligono da 404/414 intermitente nesse
+    servidor (quirk verificado ao vivo, DATA-NAMES.md 1.3); nomes vem de
+    `nmbairro` (layer 3, autoritativo, zero brancos), NUNCA de string-match
+    do `nm_bai` cru da layer 2 (que tem erros + mojibake, ex. "Petr�polis",
+    e cujo match por string falha ~99,5% medido). String-match e usado SO
+    como tie-break de desambiguacao entre candidatos espaciais multiplos
+    (ver `reconcile_name`), nunca como fonte primaria do nome. Roda em
+    coordenadas UTM 31982 CRUAS (antes da reprojecao) — reprojetar antes
+    corromperia o join silenciosamente. Persiste em bairros-goiania.recon.json.
  5. Smoke test: o bairro irregular Campos Dourados (id=000400000603) precisa
     cair dentro do bbox de Goiania — pega troca de eixo/zona.
  6. Grava bairros-goiania.wgs84-raw.json (GeoJSON bruto, ainda sem
     simplificacao — a simplificacao roda depois via mapshaper, script
-    separado/rerunavel).
- 7. Consulta a contagem distinta de cdbairro (layer 3) — outra unidade
+    separado/rerunavel) + bairros-goiania.recon.json (se --verify).
+    Consulta a contagem distinta de cdbairro (layer 3) — outra unidade
     administrativa, sem join confiavel com o id da layer 2.
- 8. Escreve bairros-goiania.report.md com o relatorio de integridade do join
-    (1206 vs 709) e completude de paginacao — NAO constroi lookup id->cdbairro.
+ 7. Escreve bairros-goiania.report.md com o relatorio de integridade do join
+    (1206 vs 709), completude de paginacao e (se houver RECON) a secao de
+    reconciliacao de nomes — NAO constroi lookup id->cdbairro.
+
+Modo --apply-names (separado, roda DEPOIS de --verify): carrega
+bairros-goiania.recon.json + bairros-goiania.json (o artefato simplificado
+committed) e injeta o nome reconciliado em properties.nm_bai por `id`,
+preservando geometria/contagem BYTE-IDENTICAS (Task 2).
 """
-import json, sys, time
+import json, sys, time, unicodedata
 import urllib.request, urllib.parse
 from datetime import date
 
@@ -71,6 +88,134 @@ def arcgis(url, params):
         raise RuntimeError(d["error"])
     return d
 
+
+def http_post(url, params, tries=3):
+    """Irmao do `http()` GET acima, mas envia o body como POST
+    form-encoded. Necessario para consultas espaciais com geometria de
+    poligono na layer 3 — GET intermitentemente 404/414 para poligonos
+    realistas (30+ vertices), quirk novo verificado ao vivo (DATA-NAMES.md
+    1.3). MESMO backoff 429/503 do `http()` GET — nao re-derivar."""
+    body = urllib.parse.urlencode(params).encode("utf-8")
+    headers = {**UA, "Content-Type": "application/x-www-form-urlencoded"}
+    delay = 2
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            return urllib.request.urlopen(req, timeout=60).read()
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503):
+                ra = e.headers.get("Retry-After")
+                wait = int(ra) if ra and ra.isdigit() else delay
+                if i + 1 == tries:
+                    raise
+                time.sleep(wait); delay *= 4
+            elif 400 <= e.code < 500:
+                raise
+            else:
+                if i + 1 == tries:
+                    raise
+                time.sleep(delay); delay *= 4
+        except Exception:
+            if i + 1 == tries:
+                raise
+            time.sleep(delay); delay *= 4
+
+
+def arcgis_post(url, params):
+    """Irmao POST de `arcgis()` — mesma injecao de f=json + raise em erro,
+    mas via `http_post` (body form-encoded, nao querystring)."""
+    p = dict(params); p["f"] = "json"
+    d = json.loads(http_post(url, p).decode("utf-8"))
+    if "error" in d:
+        raise RuntimeError(d["error"])
+    return d
+
+
+def norm(s):
+    """Normaliza para o tie-break de nome: accent-strip (NFKD) + uppercase +
+    collapse de espacos. Usado SO para desambiguar entre candidatos
+    espaciais multiplos — nunca como fonte primaria do nome (string-match
+    cru falha ~99,5% medido, DATA-NAMES.md 1.1)."""
+    if not s:
+        return ""
+    stripped = "".join(
+        c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c)
+    )
+    return " ".join(stripped.upper().split())
+
+
+def reconcile_name(rings_utm, nm_bai_original):
+    """Implementa o algoritmo autoritativo de reconciliacao espacial
+    (DATA-NAMES.md 1.3): para o poligono de bairro (rings ainda em UTM
+    31982, ANTES da reprojecao — reprojetar primeiro corromperia o join
+    silenciosamente), acha o(s) setor(es) cadastrais (layer 3,
+    cdbairro/nmbairro) que ele intersecta e resolve o nome vencedor.
+
+    Retorna (cdbairro, nmbairro, motivo) onde motivo in
+    {"sem-parcela", "unico", "nome", "maioria"}. cdbairro/nmbairro sao
+    None quando motivo == "sem-parcela" (0 candidatos — gleba/terra vaga
+    sem parcela cadastrada ainda; NAO fabrica nome).
+    """
+    geometry = json.dumps({"rings": rings_utm, "spatialReference": {"wkid": 31982}})
+    base_params = {
+        "geometry": geometry,
+        "geometryType": "esriGeometryPolygon",
+        "inSR": "31982",
+        "spatialRel": "esriSpatialRelIntersects",
+    }
+
+    d = arcgis_post(LAYER3, {
+        **base_params,
+        "where": "cdbairro>0",
+        "outFields": "cdbairro,nmbairro",
+        "returnDistinctValues": "true",
+        "returnGeometry": "false",
+    })
+    time.sleep(0.25)
+    candidates = [
+        (f["attributes"]["cdbairro"], f["attributes"]["nmbairro"])
+        for f in d.get("features", [])
+    ]
+
+    if len(candidates) == 0:
+        return (None, None, "sem-parcela")
+
+    if len(candidates) == 1:
+        cdbairro, nmbairro = candidates[0]
+        return (cdbairro, nmbairro, "unico")
+
+    # 2+ candidatos: contagem de parcelas por candidato (returnCountOnly) +
+    # tie-break assistido por nome (NAO maioria pura — contra-exemplo
+    # "Ofugi" verificado ao vivo: maioria-por-contagem escolheria
+    # "VI SANTA HELENA" [59 parcelas] em vez do correto "VI OFUGI"
+    # [7 parcelas], porque norm("Ofugi") e substring de norm("VI OFUGI")).
+    counts = {}
+    for cdbairro, nmbairro in candidates:
+        cd = arcgis_post(LAYER3, {
+            **base_params,
+            "where": f"cdbairro={cdbairro}",
+            "returnCountOnly": "true",
+        })
+        time.sleep(0.25)
+        counts[cdbairro] = cd.get("count", 0)
+
+    norm_original = norm(nm_bai_original)
+    name_matches = []
+    if norm_original:
+        for cdbairro, nmbairro in candidates:
+            norm_cand = norm(nmbairro)
+            if norm_cand and (norm_original in norm_cand or norm_cand in norm_original):
+                name_matches.append((cdbairro, nmbairro))
+
+    if len(name_matches) == 1:
+        cdbairro, nmbairro = name_matches[0]
+        return (cdbairro, nmbairro, "nome")
+
+    # senao (0 ou 2+ matches de nome — nome nao desambigua sozinho): maior
+    # contagem de parcelas vence (maioria).
+    winner_cd, winner_nm = max(candidates, key=lambda c: counts.get(c[0], 0))
+    return (winner_cd, winner_nm, "maioria")
+
 # radar-goiania.html:568 — copiado verbatim; NUNCA re-derivar (historico do
 # projeto: bug de zona 22-vs-23, "pino na Bahia")
 PROJ4_31982 = "+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
@@ -81,6 +226,9 @@ BBOX_LAT = (-16.85, -16.55)
 
 RAW_OUT = "bairros-goiania.wgs84-raw.json"
 REPORT_OUT = "bairros-goiania.report.md"
+RECON_OUT = "bairros-goiania.recon.json"  # RECON persistido p/ o modo --apply-names (Step 4.5)
+FINAL_OUT = "bairros-goiania.json"  # artefato simplificado committed (Task 2 injeta nomes aqui)
+GLEBA_LABEL = "Gleba não denominada"  # rotulo generico p/ poligonos sem parcela intersectada (0 candidatos)
 
 
 def fetch_all_bairros(page_size=500):
@@ -240,7 +388,7 @@ def main():
         )
     print(f"    coletado {len(features)} features via paginacao — bate com o total, completo")
 
-    print("3/5 reprojetando UTM 31982 -> WGS84 (proj4 do app, radar-goiania.html:568)…")
+    print("3/6 reprojetando UTM 31982 -> WGS84 (proj4 do app, radar-goiania.html:568)…")
     from pyproj import Transformer
     to_wgs = Transformer.from_crs(PROJ4_31982, "EPSG:4326", always_xy=True)
 
@@ -273,7 +421,42 @@ def main():
         })
     print(f"    reprojetado {len(geojson_features)} features ({named} nomeados, {unnamed} sem nome/Gleba)")
 
-    print("4/5 smoke test do bairro irregular (Campos Dourados, id=000400000603)…")
+    RECON = {}
+    if verify:
+        print("4/6 reconciliando nomes via spatial join POST a layer 3 (Step 4.5, ~13-15min, ~3400 chamadas)…")
+        motivo_counts = {"sem-parcela": 0, "unico": 0, "nome": 0, "maioria": 0}
+        recuperados_de_branco = 0
+        nomes_mudados = 0
+        nao_resolvidos = 0
+        for i, feat in enumerate(features):
+            attrs = feat["attributes"]
+            bid = attrs["id"]
+            nm_bai_original = (attrs.get("nm_bai") or "").strip() or None
+            src_rings = (feat.get("geometry") or {}).get("rings")
+            cdbairro, nmbairro, motivo = reconcile_name(src_rings, nm_bai_original)
+            RECON[bid] = {
+                "cdbairro": cdbairro,
+                "nmbairro_reconciled": nmbairro,
+                "motivo": motivo,
+                "nm_bai_original": nm_bai_original,
+            }
+            motivo_counts[motivo] += 1
+            if motivo == "sem-parcela":
+                nao_resolvidos += 1
+            else:
+                if nm_bai_original is None:
+                    recuperados_de_branco += 1
+                elif norm(nm_bai_original) != norm(nmbairro):
+                    nomes_mudados += 1
+            if (i + 1) % 100 == 0:
+                print(f"    progresso: {i + 1}/{len(features)} poligonos reconciliados…")
+        print(
+            f"    reconciliacao completa: {recuperados_de_branco} recuperados-de-branco, "
+            f"{nomes_mudados} nomes-mudados, {nao_resolvidos} nao-resolvidos "
+            f"(motivos: {motivo_counts})"
+        )
+
+    print("5/6 smoke test do bairro irregular (Campos Dourados, id=000400000603)…")
     campos_dourados = next(
         (f for f in geojson_features if f["properties"]["id"] == IRREGULAR_ID), None
     )
@@ -294,7 +477,12 @@ def main():
         )
     print(f"    gravado {RAW_OUT}")
 
-    print("5/5 consultando cdbairro distinto (layer 3) para relatorio de integridade do join…")
+    if RECON:
+        with open(RECON_OUT, "w", encoding="utf-8") as f:
+            json.dump(RECON, f, ensure_ascii=False, indent=2)
+        print(f"    gravado {RECON_OUT} ({len(RECON)} reconciliacoes)")
+
+    print("6/6 consultando cdbairro distinto (layer 3) para relatorio de integridade do join…")
     # NAO passar resultRecordCount em consultas de valores distintos — 400 em
     # algumas combinacoes neste servidor (quirk documentado na pesquisa).
     d3 = arcgis(LAYER3, {
@@ -306,7 +494,7 @@ def main():
     cdbairro_count = len(d3.get("features", []))
     print(f"    layer 3: {cdbairro_count} valores distintos de cdbairro")
 
-    write_report(total, named, unnamed, cdbairro_count, dup_business_ids)
+    write_report(total, named, unnamed, cdbairro_count, dup_business_ids, RECON if RECON else None)
     print(f"    gravado {REPORT_OUT}")
 
     if verify:
