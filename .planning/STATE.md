@@ -4,7 +4,7 @@ milestone: v2.0
 milestone_name: milestone
 status: executing
 stopped_at: "Fase 4 completa (satélite Esri keyless + rótulos + crossfade, verificado ao vivo). Próxima: Fase 5 (Seam de IA dormant)."
-last_updated: "2026-07-05T00:53:18.463Z"
+last_updated: "2026-07-05T00:58:51.011Z"
 last_activity: 2026-07-05
 progress:
   total_phases: 6

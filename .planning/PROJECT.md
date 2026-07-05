@@ -12,8 +12,15 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 ### Validated
 
-<!-- Shipped and confirmed valuable (milestone v1.0). -->
+<!-- Shipped and confirmed valuable. -->
 
+- ✓ Home = mapa interativo de Goiânia (mobile e desktop mapa-first) — v2.0
+- ✓ Bairros em linha com hover/toque→nome; clique→zoom→divisões dos lotes; breadcrumb — v2.0
+- ✓ Busca movida para pill/card flutuante sempre acessível — v2.0
+- ✓ Camada de satélite alternável (Esri keyless + rótulos + crossfade) — v2.0
+- ✓ Motion fluido no app todo (transições, sheet spring, stagger, tap), reduced-motion + progressive enhancement — v2.0
+- ✓ Seam de IA externa isolado e desativado (IIFE, whitelist anti-PII, fail-to-null, zero call-sites) — v2.0
+- ✓ Dataset estático de bairros (1.206 polígonos, offline, versionado) — v2.0
 - ✓ Busca por quadra+lote, endereço, inscrição (CI/nrinscr) e clique no mapa — v1.0
 - ✓ Filtro server-side (LIKE/UPPER no WHERE) que corrigiu o bug crítico dos setores grandes — v1.0
 - ✓ Autocomplete de setor acento-insensível com expansão de abreviações — v1.0
@@ -27,17 +34,11 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 ### Active
 
-<!-- Milestone v2.0 scope. Building toward these. -->
+<!-- Próximo milestone (v2.1) — definir via /gsd-new-milestone. Candidatos priorizados: -->
 
-- [x] Fundação de dados: GeoJSON estático de bairros (offline, versionado) + docs corrigidas — Validado na Fase 1 (DADOS-01/02/03)
-- [x] Home = mapa interativo com zoom em toda Goiânia — Validado na Fase 2 (MAPA-01; mobile e desktop mapa-first)
-- [x] Busca movida da home para pill/card flutuante sempre acessível — Validado na Fase 2 (MAPA-04)
-- [x] Bairros renderizados como polígonos (linha); hover mostra o nome — Validado na Fase 3 (MAPA-02)
-- [x] Clique no bairro → zoom no bairro + revela as divisões dos lotes + breadcrumb — Validado na Fase 3 (MAPA-03, MAPA-05)
-- [ ] Busca movida da tela inicial para um card clicável (deixa de ser a home)
-- [x] Motion fluido no app todo (transições, sheet spring, stagger, tap) — Validado na Fase 6 (MOT-01/02/03; Motion inline, reduced-motion, progressive enhancement)
-- [x] Camada de satélite alternável (Esri keyless + rótulos + crossfade) — Validado na Fase 4 (SAT-01, SAT-02)
-- [x] Seam de integração de IA externa (pesquisa de mercado), plugável e desativado — Validado na Fase 5 (IA-01; IIFE isolado, enabled:false, whitelist anti-PII, fail-to-null)
+- [ ] Ferramentas do corretor — **Território/captação** (prioridade do usuário): painel do setor (mediana R$/m², IPTU, idade), heatmap R$/m² por quadra, detector de lote subutilizado, farming com memória (localStorage), diff de cadastro, cruzamento com imóveis Caixa
+- [ ] Ativação da pesquisa de mercado por IA sobre o seam dormant (proxy Cloudflare Worker ou BYO-key; `glm-4.5-air:online`/`qwen3-14b`; opt-in, rotulada "não é dado oficial")
+- [ ] (stretch) Ortofoto própria de Goiânia (`Mapa_Ortofoto2016v2`, EPSG:31982, CRS custom no Leaflet)
 
 ### Out of Scope
 
@@ -52,9 +53,11 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 ## Context
 
-- **Entrega:** único HTML autossuficiente (`radar-goiania.html`, ~125 KB), roda no navegador desktop/celular, sem build, sem servidor. Publicável no GitHub Pages.
-- **Stack atual:** HTML+CSS+JS inline; Leaflet 1.9.4 (mapa), proj4js 2.11.0 (EPSG:31982 UTM 22S → WGS84), tiles CARTO light. JSONP para contornar ausência de CORS.
-- **Fonte de dados:** ArcGIS público da Prefeitura (`.../Feature_Base/MapServer/3`, Cadastro Imobiliário, ~310k lotes). Quirks documentados: só `outFields=*`, sem `returnGeometry`, aceita consulta espacial, aritmética no WHERE, `returnCountOnly`, paginação; 502 sob carga.
+- **Estado atual (pós-v2.0, 2026-07-05):** app é mapa-first — abre no mapa de Goiânia com 1.206 bairros em linha, drill até os lotes, breadcrumb, busca em pill, satélite alternável (Esri keyless) e motion inline (motion.dev, reduced-motion + progressive enhancement). Seam de IA externa isolado e desativado. Núcleo cadastral/estatístico segue determinístico. Novos artefatos: `bairros-goiania.json`, `gerar-bairros.py`, `check-bairros-geojson.py`; `sw.js` em `radar-v5`.
+- **Entrega:** único HTML autossuficiente (`radar-goiania.html`), roda no navegador desktop/celular, sem build, sem servidor. Publicável no GitHub Pages.
+- **Stack atual:** HTML+CSS+JS inline; Leaflet 1.9.4 (mapa), proj4js 2.11.0 (EPSG:31982 UTM 22S → WGS84), tiles CARTO light + Esri World Imagery (satélite keyless), Motion (motion.dev) inline. JSONP para contornar ausência de CORS.
+- **Fonte de dados:** ArcGIS público da Prefeitura (`.../Feature_Base/MapServer`, layers 0=lote/1=quadra/2=bairro/3=cadastro; ~310k lotes). Quirks: só `outFields=*`; **aceita** `returnGeometry=true` (verificado ao vivo 04/07/2026 — corrigido de "rejeita"); consulta espacial, aritmética no WHERE, `returnCountOnly`, paginação; 502 sob carga.
+- **Verificação de campo pendente (não-bloqueante):** legibilidade de rótulos sobre satélite + fluidez do motion em Android médio/baixo no 4G real.
 - **Dados abertos já mapeados p/ o mapa-first:** GeoJSON de bairros da Prefeitura **em EPSG:31982** (mesmo CRS do app), camadas de Plano Diretor no mesmo ArcGIS (point-in-polygon ao vivo).
 - **Docs de referência no repo:** `PROJETO-radar.md`, `ROADMAP-radar.md`, `INTELIGENCIA-radar.md`, `IDEIAS-hub-corretor.md`, `AUDITORIA-2026-07-03.md`.
 - **LGPD:** nunca exibir/exportar `dtnascimen` (data de nascimento do contribuinte). Titular só manual, na fonte oficial atrás de CAPTCHA.
@@ -76,13 +79,13 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 |----------|-----------|---------|
 | Arquivo único, sem backend, JSONP | Roda local/GitHub Pages sem servidor; endpoint não tem CORS | ✓ Good |
 | EPSG:31982 = UTM zona 22 South | Zona 23 dava 6° de erro ("pino na Bahia") | ✓ Good |
-| Inteligência 100% determinística, SEM IA no produto (02/07) | Auditabilidade + defesa LGPD do dado oficial | ⚠️ Revisit — evoluída em v2.0 (ver abaixo) |
+| Núcleo 100% determinístico; IA só isolada em pesquisa de mercado externa (evoluído em v2.0 de "SEM IA no produto") | Auditabilidade + defesa LGPD do dado oficial, mas com valor de IA para trabalho externo | ✓ Good — seam dormant entregue (v2.0), núcleo intacto |
 | Estimativa sempre como faixa, nunca número seco; padrões IAAO | PGV defasada e heterogênea; honestidade estatística | ✓ Good |
-| **v2.0: IA permitida, mas isolada em pesquisa de mercado externa** | Núcleo cadastral/laudo seguem determinísticos; IA opt-in, rotulada, sandbox | — Pending |
-| **v2.0: home vira mapa-first; busca vira card** | Corretor pensa espacialmente; mapa é o gesto mais intuitivo | — Pending |
-| **v2.0: fica no Leaflet 1.9.4 (sem MapLibre); + Motion via CDN** | Polígonos/view << crossover; geometria (layers 0/1/2) já existe e já é consumida | — Pending |
-| **v2.0: satélite = Esri World Imagery** | Drop-in Web Mercator, 2M/mês grátis; uso é baixo volume, não divulgado — enquadramento aceito p/ o free tier | — Pending (revisar se virar produto público) |
-| **v2.0: diferenciais premium incluídos** (breadcrumb, crossfade, stagger) | Esforço baixo, ganho de percepção alto; encaixam no motion pass | — Pending |
+| **v2.0: home vira mapa-first; busca vira pill** | Corretor pensa espacialmente; mapa é o gesto mais intuitivo | ✓ Good — verificado ao vivo |
+| **v2.0: fica no Leaflet 1.9.4 (sem MapLibre); Motion embutido INLINE (não CDN)** | Polígonos/view << crossover; geometria (layers 0/1/2) já existe; inline preserva arquivo-único/PWA offline (sem CSP/sw novo) | ✓ Good |
+| **v2.0: satélite = Esri World Imagery keyless (legado)** | Tiles Web Mercator drop-in sem chave; baixo volume, não divulgado — enquadramento aceito | ⚠️ Revisit se virar produto público de alto tráfego |
+| **v2.0: `returnGeometry=true` funciona no endpoint (verificado ao vivo 04/07)** | Reverteu a premissa: geometria de bairro/lote já existia, era só expor | ✓ Good — docs corrigidos |
+| **v2.0: diferenciais premium incluídos** (breadcrumb, crossfade, stagger) | Esforço baixo, ganho de percepção alto | ✓ Good |
 
 ## Evolution
 
@@ -102,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-04 after bootstrapping GSD structure + starting milestone v2.0 (Mapa-first + Motion + Satélite)*
+*Last updated: 2026-07-05 after v2.0 milestone (Mapa-first + Motion + Satélite) — shipped, audited (passed), archived*
