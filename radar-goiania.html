@@ -870,7 +870,11 @@ async function refreshLots(){
       outFields:"ci",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC);
   }catch(e){return;}
   if(tk!==LOTTOKEN)return; /* o mapa já se moveu de novo */
+  /* Fase 6 Plano 03: só stagger na PRIMEIRA revelação (transição sem-lotes -> com-lotes) —
+     capturado ANTES do addTo abaixo. Pans/refetches seguintes (mesmo com bounds novos) nunca resta-geram. */
+  const firstReveal=!map.hasLayer(lotLayer);
   lotLayer.clearLayers();
+  const newPolys=[];
   (d.features||[]).forEach(f=>{
     const g=f.geometry;if(!g||!g.rings||!g.rings.length)return;
     const ci=clean(f.attributes&&f.attributes.ci);
@@ -882,9 +886,16 @@ async function refreshLots(){
     poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(lotStyle());});
     poly.on("click",()=>loadCi(ci)); /* direto pelo ci: mais rápido que a consulta espacial */
     poly.addTo(lotLayer);
+    newPolys.push(poly);
   });
   if(!map.hasLayer(lotLayer))lotLayer.addTo(map);
   LOTLAST=map.getBounds(); /* memoriza a vista coberta — pans curtos não refazem a consulta */
+  if(firstReveal&&!REDUCE&&window.Motion&&newPolys.length){
+    /* pop-in dos primeiros ~12 polígonos (SVG path via getElement); canvas renderer (sem path element)
+       degrada silenciosamente para o estado normal (setStyle já aplicado acima, sem stagger). */
+    const els=newPolys.slice(0,12).map(p=>p.getElement&&p.getElement()).filter(Boolean);
+    if(els.length)mAnimate(els,{opacity:[0,1]},{duration:0.2,easing:[0.22,1,0.36,1],delay:mStagger(0.024)});
+  }
   if(!LOTHINT&&(d.features||[]).length){LOTHINT=true;
     toast(matchMedia("(hover:none)").matches?"Lotes delimitados — toque num lote para abrir os dados.":"Lotes delimitados — passe o mouse para identificar, clique para abrir.");}
 }
@@ -1273,7 +1284,7 @@ function finish(items,fromMap){
       toast(msg);
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
       return;}
-    render(units);
+    render(units,{stagger:true});
     plot(units);
     const nLotes=new Set(units.map(a=>clean(a.ci))).size;
     const ehPredio=units.length>1&&nLotes===1;
@@ -1358,7 +1369,10 @@ function unitLabel(a){
 }
 
 let RENDN=300; /* teto de cards por render — listas gigantes não travam o iPhone */
-function render(list){
+function render(list,opts){
+  /* Fase 6 Plano 03: stagger de entrada SÓ quando opts.stagger===true (finish() de uma busca nova).
+     "Mostrar mais" (render(LAST)) e qualquer outro re-render chamam sem opts -> nunca resta-gera. */
+  const doStagger=!!(opts&&opts.stagger)&&!REDUCE&&!!window.Motion;
   const box=document.getElementById("results");
   const cnt={},nomeEd={};
   list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;
@@ -1379,7 +1393,16 @@ function render(list){
   });
   if(list.length>RENDN)
     html+=`<button class="mais" onclick="RENDN+=500;render(LAST)">Mostrar mais (${(list.length-RENDN).toLocaleString("pt-BR")} restantes) — o CSV e o mapa já incluem todos</button>`;
-  box.innerHTML=html;
+  box.innerHTML=html; /* estado real: incondicional, cards existem/interativos mesmo sem Motion */
+  if(doStagger){
+    const cards=[...box.querySelectorAll(".card")];
+    if(cards.length){
+      mAnimate(cards.slice(0,12),
+        {opacity:[0,1],transform:["translateY(8px)","translateY(0)"]},
+        {duration:0.2,easing:[0.22,1,0.36,1],delay:mStagger(0.024)});
+      /* cards.slice(12) ficam no estado natural (opacidade 1) — sem cascata longa */
+    }
+  }
 }
 function cardHTML(a,i,isUnit){
   const addr=addrDe(a);
