@@ -443,7 +443,9 @@
       font:700 14px/1 "IBM Plex Sans";letter-spacing:.04em;cursor:pointer;transition:transform .1s ease}
     .viewbar button.on{background:var(--accent);color:#fff}
     .viewbar button:active{transform:scale(.97)}
-    .toast{position:fixed;top:calc(16px + env(safe-area-inset-top))} /* não fica sob o Dynamic Island */
+    /* snackbar no rodapé (acima da viewbar): NUNCA cobre o seletor Endereço/Quadra-Lote
+       nem os campos no topo do formulário da aba Consulta */
+    .toast{position:fixed;top:auto;bottom:calc(56px + 14px + env(safe-area-inset-bottom))}
     .loading{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom))}
     .moderow button{padding:13px 2px;min-height:44px}
     .combo-item{padding:13px 12px}
@@ -463,6 +465,12 @@
     .detail .x{width:44px;height:44px;top:0;right:4px;font-size:26px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
     .detail .acts a{min-height:44px;display:flex;align-items:center;justify-content:center}
+    /* Leaflet ancora a barra bottomright (satélite + atribuição) em z-1000 no seu
+       próprio container — acima do bottom-sheet (.detail z-500), então o botão de
+       satélite e a atribuição flutuavam POR CIMA do card (cortavam o preço). Enquanto
+       o sheet está aberto, rebaixa a barra inferior pra baixo dele; fechado, volta ao
+       normal (nada de marcador/pane sobreposto). :has() é suportado no iOS do device. */
+    .mapwrap:has(.detail.show) .leaflet-bottom{z-index:490}
   }
   @media(min-width:821px){
     .detail .grab{display:none}
