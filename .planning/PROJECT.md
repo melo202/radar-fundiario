@@ -36,6 +36,8 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 <!-- Próximo milestone (v2.1) — definir via /gsd-new-milestone. Candidatos priorizados: -->
 
+- [ ] **Auditoria de nomes de bairro** (data quality): os nomes exibidos no hover/toque vêm de `nm_bai` (layer 2, 1.206 polígonos, 466 sem nome, unidade administrativa diferente da busca) e têm **muitos nomes errados/inconsistentes**. Reconciliar o nome exibido contra a fonte confiável (`nmbairro`/`cdbairro` da layer 3 que a busca já usa, ou a lista oficial da Prefeitura) e corrigir no `bairros-goiania.json` (regenerar via `gerar-bairros.py` com o join de nomes). Tratar as 466 glebas sem nome.
+- [ ] **UX da malha de bairros no mobile** (feedback do usuário: fica "estranho/emaranhado" no celular): malha ociosa vira contexto (traço fino + baixa opacidade, "sussurra"), destaque no toque é que "grita" (accent+nome — reforçar contraste idle vs highlight); densidade/peso das linhas emerge com o zoom (calmo na cidade, detalhado ao aproximar); garantir toque na ÁREA do bairro (fill), não só na linha. Evolução futura: trocar a malha neutra por **choropleth** (pintar por R$/m² etc.) — encaixa no heatmap de Território/captação abaixo.
 - [ ] Ferramentas do corretor — **Território/captação** (prioridade do usuário): painel do setor (mediana R$/m², IPTU, idade), heatmap R$/m² por quadra, detector de lote subutilizado, farming com memória (localStorage), diff de cadastro, cruzamento com imóveis Caixa
 - [ ] Ativação da pesquisa de mercado por IA sobre o seam dormant (proxy Cloudflare Worker ou BYO-key; `glm-4.5-air:online`/`qwen3-14b`; opt-in, rotulada "não é dado oficial")
 - [ ] (stretch) Ortofoto própria de Goiânia (`Mapa_Ortofoto2016v2`, EPSG:31982, CRS custom no Leaflet)
