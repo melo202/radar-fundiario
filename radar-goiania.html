@@ -686,6 +686,9 @@ function mStagger(...args){
   if (REDUCE || !window.Motion || typeof Motion.stagger !== "function") return null;
   try { return Motion.stagger(...args); } catch(e){ return null; }
 }
+// Compartilhado com a IIFE do #grab (drag-to-dismiss do .detail): !=null enquanto o dedo está
+// na alça. showDetail/closeDetail consultam isso para nunca iniciar uma spring/anim durante o drag.
+let SHEETDRAGY0 = null;
 
 /* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
@@ -1536,6 +1539,12 @@ function showDetail(a,ll){
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
   d.classList.add("show");
+  /* Fase 6 Plano 02: spring de abertura do sheet mobile; fade sutil no card desktop.
+     Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null — a alça já está com o dedo). */
+  if(SHEETDRAGY0==null){
+    if(isMobile())mAnimate(d,{transform:["translateY(100%)","translateY(0)"]},{type:"spring",stiffness:420,damping:38,mass:1});
+    else mAnimate(d,{opacity:[0,1],transform:["translateY(8px)","translateY(0)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
+  }
 }
 function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
@@ -2052,7 +2061,22 @@ function exportCSV(){
   setTimeout(()=>URL.revokeObjectURL(u),5000);
   toast(LAST.length+" linhas exportadas para CSV.");
 }
-function closeDetail(){document.getElementById("detail").classList.remove("show");}
+function closeDetail(){
+  const d=document.getElementById("detail");
+  d.classList.remove("show");
+  /* Fase 6 Plano 02: fecho mais rápido (não-spring) via mAnimate; anima da posição ATUAL do
+     transform (que pode já estar em translateY(dy) se veio de um drag-to-dismiss — não zera antes).
+     Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null). */
+  if(SHEETDRAGY0==null){
+    let controls=null;
+    if(isMobile()){
+      const from=d.style.transform||"translateY(0)"; /* posição atual: translateY(dy) se veio do drag, senão 0 */
+      controls=mAnimate(d,{transform:[from,"translateY(100%)"]},{duration:0.16,easing:[0.4,0,1,1]});
+    }else controls=mAnimate(d,{opacity:[1,0],transform:["translateY(0)","translateY(8px)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
+    if(controls&&controls.finished)controls.finished.then(()=>{d.style.transform="";}).catch(()=>{d.style.transform="";});
+    else d.style.transform=""; /* Motion ausente/REDUCE: .show já removeu (display:none) — limpa o inline nesse instante */
+  }
+}
 
 /* ---------------- coach-mark de 1ª vez (Plan 02-02) ---------------- */
 function dismissCoach(){
@@ -2094,20 +2118,30 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
     setView("mapa");const p=document.getElementById("searchPill");if(p)p.focus();}
   else closeDetail();}); /* combo dá stopPropagation no seu Esc */
 
-/* bottom sheet: tocar na alça fecha; arrastar para baixo também */
+/* bottom sheet: tocar na alça fecha; arrastar para baixo também.
+   y0 (SHEETDRAGY0, compartilhado c/ showDetail/closeDetail) fica !=null enquanto o dedo está na
+   alça — Motion nunca inicia uma spring/anim nesse intervalo (o inline transform do drag já
+   vence por especificidade; ver Fase 6 Plano 02). */
 (function(){
   const d=document.getElementById("detail"),g=document.getElementById("grab");
-  let y0=null;
   g.addEventListener("click",()=>closeDetail());
   if(window.PointerEvent){
-    g.addEventListener("pointerdown",e=>{y0=e.clientY;g.setPointerCapture(e.pointerId);});
-    g.addEventListener("pointermove",e=>{if(y0==null)return;const dy=Math.max(0,e.clientY-y0);d.style.transform=`translateY(${dy}px)`;});
-    g.addEventListener("pointerup",e=>{const dy=y0==null?0:e.clientY-y0;y0=null;d.style.transform="";if(dy>70)closeDetail();});
-    g.addEventListener("pointercancel",()=>{y0=null;d.style.transform="";});
+    g.addEventListener("pointerdown",e=>{SHEETDRAGY0=e.clientY;g.setPointerCapture(e.pointerId);});
+    g.addEventListener("pointermove",e=>{if(SHEETDRAGY0==null)return;const dy=Math.max(0,e.clientY-SHEETDRAGY0);d.style.transform=`translateY(${dy}px)`;});
+    g.addEventListener("pointerup",e=>{
+      const dy=SHEETDRAGY0==null?0:e.clientY-SHEETDRAGY0; SHEETDRAGY0=null;
+      if(dy>70){ closeDetail(); }   /* sheet está em translateY(dy); closeDetail() anima da posição atual até 100% — não zera o transform aqui */
+      else { d.style.transform=""; } /* não descartado: volta a 0 (a spring de abertura já deixou aí — é um no-op visual) */
+    });
+    g.addEventListener("pointercancel",()=>{SHEETDRAGY0=null;d.style.transform="";});
   }else{ /* iOS antigo sem PointerEvent */
-    g.addEventListener("touchstart",e=>{y0=e.touches[0].clientY;},{passive:true});
-    g.addEventListener("touchmove",e=>{if(y0==null)return;const dy=Math.max(0,e.touches[0].clientY-y0);d.style.transform=`translateY(${dy}px)`;},{passive:true});
-    g.addEventListener("touchend",e=>{const dy=y0==null?0:(e.changedTouches[0].clientY-y0);y0=null;d.style.transform="";if(dy>70)closeDetail();});
+    g.addEventListener("touchstart",e=>{SHEETDRAGY0=e.touches[0].clientY;},{passive:true});
+    g.addEventListener("touchmove",e=>{if(SHEETDRAGY0==null)return;const dy=Math.max(0,e.touches[0].clientY-SHEETDRAGY0);d.style.transform=`translateY(${dy}px)`;},{passive:true});
+    g.addEventListener("touchend",e=>{
+      const dy=SHEETDRAGY0==null?0:(e.changedTouches[0].clientY-SHEETDRAGY0); SHEETDRAGY0=null;
+      if(dy>70){ closeDetail(); }
+      else { d.style.transform=""; }
+    });
   }
 })();
 document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero,#predio").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
