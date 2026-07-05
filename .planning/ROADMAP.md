@@ -28,15 +28,15 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 
 **Sequência de dependência (da pesquisa v2.1):** Fase 7 (fundação de dados) desbloqueia tudo — nomes corretos + CNEFE + tuning da malha idle/highlight. Fase 8 (busca) é um refactor incremental isolado sobre a base já endurecida (03/07). Fase 9 (setor-scan + choropleth + painel) constrói a infraestrutura de agregação que a Fase 10 (detector + farming) e a Fase 11 (diff + Caixa) reusam.
 
-- [ ] **Fase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes de bairro reconciliados por spatial join com revisão humana; malha idle sussurra / highlight grita; CNEFE destilado pronto para a busca
-- [ ] **Fase 8: Overhaul da Busca — Campo-Único Inteligente** — busca única com detecção de intenção, chip de confirmação, setor na frase, fuzzy corrigido sem perder recall, deep-link, autocomplete CNEFE — com acessibilidade re-auditada
-- [ ] **Fase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território** — infraestrutura de varredura de setor com orçamento de requisições; choropleth de R$/m² resolve o "emaranhado" da malha e é legível sobre satélite; painel do Meu Território
-- [ ] **Fase 10: Detector de Lote Subutilizado & Farming/Caderno** — detector barato sobre o scan da Fase 9; Farming com IndexedDB + allowlist anti-PII
-- [ ] **Fase 11: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas e cruzamento com imóveis Caixa sobre o território salvo
+- [ ] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes de bairro reconciliados por spatial join com revisão humana; malha idle sussurra / highlight grita; CNEFE destilado pronto para a busca
+- [ ] **Phase 8: Overhaul da Busca — Campo-Único Inteligente** — busca única com detecção de intenção, chip de confirmação, setor na frase, fuzzy corrigido sem perder recall, deep-link, autocomplete CNEFE — com acessibilidade re-auditada
+- [ ] **Phase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território** — infraestrutura de varredura de setor com orçamento de requisições; choropleth de R$/m² resolve o "emaranhado" da malha e é legível sobre satélite; painel do Meu Território
+- [ ] **Phase 10: Detector de Lote Subutilizado & Farming/Caderno** — detector barato sobre o scan da Fase 9; Farming com IndexedDB + allowlist anti-PII
+- [ ] **Phase 11: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas e cruzamento com imóveis Caixa sobre o território salvo
 
 ## Phase Details
 
-### Fase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha
+### Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha
 **Goal**: Os nomes de bairro exibidos no app são confiáveis e as fundações de dados (CNEFE, tuning visual da malha) estão prontas para as fases seguintes construírem em cima.
 **Depends on**: Nada (primeira fase do v2.1; parte da base v2.0 já shipped)
 **Requirements**: NOMES-01, NOMES-02, NOMES-03, MALHA-01
@@ -49,7 +49,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 **Plans**: TBD
 **Phase flags**: spot-check humano do diff de nomes nas bordas administrativas é item de verificação em aberto (quem faz, ver Open Decision #1 da pesquisa) — não bloqueia a fase, mas deve ser agendado antes do commit final.
 
-### Fase 8: Overhaul da Busca — Campo-Único Inteligente
+### Phase 8: Overhaul da Busca — Campo-Único Inteligente
 **Goal**: O corretor busca "de todos os jeitos possíveis" numa caixa única inteligente, sem perder nenhuma capacidade ou garantia de acessibilidade da busca atual (3 botões + link).
 **Depends on**: Fase 7 (CNEFE alimenta o autocomplete de logradouro desta fase)
 **Requirements**: BUSCA-01, BUSCA-02, BUSCA-03, BUSCA-04, BUSCA-05, BUSCA-06, BUSCA-07, BUSCA-08, BUSCA-09, BUSCA-10, BUSCA-11, BUSCA-12
@@ -65,7 +65,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 **Plans**: TBD
 **Phase flags**: calibração da regex do `detectMode()` contra nomes reais é MEDIUM confidence (pesquisa) — validar com amostra real de buscas durante a fase, não só fixtures sintéticas. As regressões de desktop mapa-first (busca não fechava, cards sobrepostos, unidades de prédio invisíveis) já foram corrigidas no hotfix `a7a4646` (04-05/07); esta fase INCORPORA e protege esses fixes ao reconstruir a busca — não pode reintroduzi-los.
 
-### Fase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território
+### Phase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território
 **Goal**: O corretor vê o "calor" de valor do território no mapa e um painel com as métricas do setor, sem gerar avalanche de requisições contra o endpoint frágil.
 **Depends on**: Fase 7 (tuning idle/highlight da malha, base do choropleth)
 **Requirements**: TERR-01, TERR-02, TERR-03
@@ -79,7 +79,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 **Phase flags**: orçamento real do heatmap em setor grande no 4G é item de verificação de campo em aberto (extrapolado, não medido ao vivo); legibilidade do choropleth sobre satélite em luz externa é não-bloqueante mas deve ser registrada como pendência de UAT, igual ao herdado do v2.0.
 **UI hint**: yes
 
-### Fase 10: Detector de Lote Subutilizado & Farming/Caderno
+### Phase 10: Detector de Lote Subutilizado & Farming/Caderno
 **Goal**: O corretor identifica oportunidades de lote subutilizado no setor e mantém um caderno de território com notas/status que persiste entre sessões, sem risco de vazamento de dado pessoal.
 **Depends on**: Fase 9 (reusa o setor-scan compartilhado)
 **Requirements**: TERR-04, TERR-05
@@ -90,7 +90,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   4. Uma função `sanitizeAttrs()`/allowlist central impede que qualquer campo fora da lista explícita — e nunca `dtnascimen` — chegue ao IndexedDB; inspecionar o IndexedDB no DevTools após usar o Farming confirma ausência de dado pessoal
 **Plans**: TBD
 
-### Fase 11: Diff de Cadastro & Cruzamento Caixa
+### Phase 11: Diff de Cadastro & Cruzamento Caixa
 **Goal**: O corretor vê o que mudou no cadastro de um lote desde a última visita e onde os imóveis Caixa se cruzam com o território que já salvou.
 **Depends on**: Fase 9 (setor-scan), Fase 10 (território salvo/IndexedDB)
 **Requirements**: TERR-06, TERR-07
