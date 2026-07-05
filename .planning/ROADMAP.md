@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP + Inteligência + Mobile** — pré-GSD (shipped 2026-07-03)
 - ✅ **v2.0 Mapa-first + Motion + Satélite** — Fases 1-6 (shipped 2026-07-05) · [detalhes](milestones/v2.0-ROADMAP.md) · [requisitos](milestones/v2.0-REQUIREMENTS.md) · [auditoria](milestones/v2.0-MILESTONE-AUDIT.md)
-- 🚧 **v2.1 Busca, Bairros & Território** — Fases 7-11 (em andamento)
+- 🚧 **v2.1 Cockpit Comercial** — Fases 7-17 (em andamento)
 
 ## Phases
 
@@ -22,90 +22,159 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 
 </details>
 
-### 🚧 v2.1 Busca, Bairros & Território (Fases 7-11)
+### 🚧 v2.1 Cockpit Comercial (Fases 7-17)
 
-**Milestone Goal:** Elevar a qualidade de dados e a UX core, e dar ao corretor a primeira leva de ferramentas de captação — nomes de bairro corrigidos, malha mobile legível, busca campo-único inteligente, e Território (choropleth, painel de setor, farming, diff, Caixa).
+**Milestone Goal:** Tirar o Radar de "consulta cadastral" e levar a **cockpit comercial de decisão e ação**: o corretor entende o imóvel em segundos e sai com uma **ação comercial pronta**. Núcleo **100% determinístico** e **client-side** (sem backend/contas/IA no core). Base: `Plano_UX_Radar_Fundiario_v3`.
 
-**Sequência de dependência (da pesquisa v2.1):** Fase 7 (fundação de dados) desbloqueia tudo — nomes corretos + CNEFE + tuning da malha idle/highlight. Fase 8 (busca) é um refactor incremental isolado sobre a base já endurecida (03/07). Fase 9 (setor-scan + choropleth + painel) constrói a infraestrutura de agregação que a Fase 10 (detector + farming) e a Fase 11 (diff + Caixa) reusam.
+**Decisões de escopo (2026-07-05):** (1) **cockpit primeiro**, Território depois; (2) **refinar** a identidade cartográfica atual (respiro + cor só p/ status), não rebrand; (3) **só client-side** — Hub/CRM/contas/IA-autônoma ficam p/ v2.2+.
 
-- [ ] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes de bairro reconciliados por spatial join com revisão humana; malha idle sussurra / highlight grita; CNEFE destilado pronto para a busca
-- [ ] **Phase 8: Overhaul da Busca — Campo-Único Inteligente** — busca única com detecção de intenção, chip de confirmação, setor na frase, fuzzy corrigido sem perder recall, deep-link, autocomplete CNEFE — com acessibilidade re-auditada
-- [ ] **Phase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território** — infraestrutura de varredura de setor com orçamento de requisições; choropleth de R$/m² resolve o "emaranhado" da malha e é legível sobre satélite; painel do Meu Território
-- [ ] **Phase 10: Detector de Lote Subutilizado & Farming/Caderno** — detector barato sobre o scan da Fase 9; Farming com IndexedDB + allowlist anti-PII
-- [ ] **Phase 11: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas e cruzamento com imóveis Caixa sobre o território salvo
+**Sequência de dependência:** Fase 7 (fundação de dados — **nomes ✅ entregues**) → Fase 8 (busca única) → Fases 9-12 constroem o cockpit sobre a ficha/lista existentes (9 ficha+scores → 10 ação/WhatsApp/salvos → 11 documentos → 12 prédio) → Fase 13 aplica o refino visual/motion/pinos/descoberta sobre tudo → Fase 14 é o gate de linguagem impecável → Fases 15-17 entregam o Território (choropleth, detector/farming, diff/Caixa) sobre o setor-scan compartilhado.
+
+- [~] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes reconciliados ✅ (07-01) + exibição amigável ✅; falta CNEFE (07-02) e tuning da malha mobile (07-03)
+- [ ] **Phase 8: Busca Única Inteligente** — caixa única com detecção de intenção, chip de confirmação, setor na frase, colar link do Maps, voz (mobile), deep-link, autocomplete CNEFE — a11y re-auditada, guarda das regressões desktop
+- [ ] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
+- [ ] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação
+- [ ] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF
+- [ ] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar
+- [ ] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
+- [ ] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
+- [ ] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor
+- [ ] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
+- [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
 
 ## Phase Details
 
 ### Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha
-**Goal**: Os nomes de bairro exibidos no app são confiáveis e as fundações de dados (CNEFE, tuning visual da malha) estão prontas para as fases seguintes construírem em cima.
-**Depends on**: Nada (primeira fase do v2.1; parte da base v2.0 já shipped)
-**Requirements**: NOMES-01, NOMES-02, NOMES-03, MALHA-01
-**Success Criteria** (o que precisa ser verdade):
-  1. Hover/toque/breadcrumb no mapa mostram nomes de bairro reconciliados contra a fonte autoritativa (layer 3 `nmbairro`/`cdbairro`), não mais o `nm_bai` cru da layer 2 (com seus erros/mojibake conhecidos)
-  2. `bairros-goiania.json` regenerado tem geometria e contagem de features **byte-idênticas** ao dataset anterior — um diff estrutural confirma que só `properties.nm_bai` mudou (assert automatizado, não só teste visual); o drill (`fitBounds`/zoom) continua funcionando em todos os bairros, incluindo os que mudaram de nome
-  3. Um relatório de diff (antes/depois, por polígono) foi gerado e passou por revisão humana nas bordas administrativas antes do commit; as 466 glebas sem nome recebem um rótulo genérico explícito ("Gleba não denominada"), não um nome fiscal forçado
-  4. `sw.js` teve o cache version bumped (`radar-v5` → próxima) cobrindo o novo `bairros-goiania.json`, e qualquer dataset novo (CNEFE) está no array `LOCAL` com estratégia de cache decidida explicitamente
-  5. No mobile, a malha ociosa é visualmente "sussurrada" (traço fino, baixa opacidade) e o destaque no toque "grita" (accent+nome, contraste reforçado vs. idle); a densidade de linhas responde ao zoom; o toque registra na ÁREA do bairro (fill), não só na linha fina
-**Plans**: 3 plans
-- [ ] 07-01-PLAN.md — Reconciliação de nomes por spatial join POST + geometria byte-idêntica (assert) + diff report (NOMES-01/02/03)
-- [ ] 07-02-PLAN.md — Destill do CNEFE (logradouros-goiania.json ~117KB gz) + bump sw.js radar-v6 + precache (NOMES-02, base BUSCA-10)
-- [ ] 07-03-PLAN.md — Tuning da malha mobile: idle sussurra / toque grita / densidade por zoom / toque na área (MALHA-01)
-**Phase flags**: spot-check humano do diff de nomes nas bordas administrativas é item de verificação em aberto (quem faz, ver Open Decision #1 da pesquisa) — não bloqueia a fase, mas deve ser agendado antes do commit final.
+**Goal**: Nomes de bairro confiáveis (✅) e fundações de dados (CNEFE, tuning da malha) prontas.
+**Depends on**: Nada.
+**Requirements**: NOMES-01/02/03/04 ✅, MALHA-01
+**Success Criteria**:
+  1. ✅ Hover/toque/breadcrumb mostram nomes reconciliados (layer 3) — **entregue e no ar** (commits 07-01) + `nm_disp` amigável (Vila/Chácara/… com acento)
+  2. ✅ `bairros-goiania.json` com geometria/contagem byte-idênticas (assert automatizado); drill continua funcionando
+  3. ✅ Relatório de diff gerado; glebas → "Gleba não denominada"
+  4. CNEFE (`logradouros-goiania.json`) versionado + `sw.js` cache bumped cobrindo os datasets
+  5. No mobile, malha ociosa "sussurrada" e destaque no toque "grita"; densidade por zoom; toque na ÁREA (fill)
+**Plans**: 07-01 ✅ · 07-02 (CNEFE) · 07-03 (tuning malha)
 
-### Phase 8: Overhaul da Busca — Campo-Único Inteligente
-**Goal**: O corretor busca "de todos os jeitos possíveis" numa caixa única inteligente, sem perder nenhuma capacidade ou garantia de acessibilidade da busca atual (3 botões + link).
-**Depends on**: Fase 7 (CNEFE alimenta o autocomplete de logradouro desta fase)
-**Requirements**: BUSCA-01, BUSCA-02, BUSCA-03, BUSCA-04, BUSCA-05, BUSCA-06, BUSCA-07, BUSCA-08, BUSCA-09, BUSCA-10, BUSCA-11, BUSCA-12
-**Success Criteria** (o que precisa ser verdade):
-  1. As funções puras de matching/detecção têm um harness de teste (Node + fixtures) rodando **antes** de qualquer mudança visível de comportamento — inclui os casos ambíguos conhecidos (135 sozinho, "Rua 135", "Q135", inscrição 10 vs 14 dígitos)
-  2. Digitar em qualquer formato ("marista quadra 128 lote 5", uma inscrição, um endereço, "135" sozinho) faz o app detectar a intenção certa e mostrar um chip de confirmação tocável **antes** de disparar a busca quando a confiança é baixa ou ambígua — nunca assume silenciosamente e só corrige depois do "nada encontrado"
-  3. Setor embutido na frase funciona, e quando a frase não traz setor o app assume o último setor usado (lembrado), com forma clara de trocar
-  4. Resultados fuzzy são ordenados por qualidade do match (número por igualdade de dígitos antes de substring; rua por fronteira de palavra) com selo "aproximado" no fallback — e o recall não piora: os casos históricos (lote "20/21", quadra "10E", apto "1901" vs "19") continuam encontrando o que encontravam antes
-  5. Estados de erro/vazio oferecem o próximo passo em 1 toque; deep-link `?insc=` abre o imóvel direto no boot e existe botão "copiar link do imóvel"; autocomplete de logradouro usa o CNEFE destilado da Fase 7
-  6. A checklist de acessibilidade da auditoria de 03/07 (ARIA combobox/activedescendant, `aria-pressed`, cards navegáveis por teclado, live regions, foco/trap) passa de novo sobre a busca nova — gate de aceite, não retrofit; `SEARCHTOKEN` é propagado em todo novo caminho assíncrono introduzido pelo detectMode/autocomplete; o quirk iOS (pointerdown + font-size 16px) é preservado e testado em iPhone real
-  7. **Coordenação busca⇄ficha no desktop mapa-first não regride** (guarda das regressões corrigidas no hotfix `a7a4646`): a busca é sempre fechável (× visível no desktop + Esc); abrir qualquer ficha/seletor fecha o overlay de busca (zero sobreposição de cards em ≥821px); clicar num prédio (na busca OU no mapa) mostra o seletor de unidades sobre o mapa, nunca numa "coluna ao lado" inexistente — verificado ao vivo em 1280 e 375. Nenhum caminho de código pode voltar a assumir a coluna lateral pré-v2.0.
-  8. **Auditoria de correção dos dados da ficha**: busca→ficha mostra a informação CORRETA em TODOS os modos (quadra/lote, endereço, prédio, inscrição 10 e 14 díg, e clique-no-mapa) — inscrição/edifício/apto/venal/áreas/bairro batem com o registro de origem; conferido contra o endpoint numa amostra por modo (não só um caso).
+### Phase 8: Busca Única Inteligente
+**Goal**: O corretor busca "de todos os jeitos" numa caixa única, sem perder capacidade nem acessibilidade.
+**Depends on**: Fase 7 (CNEFE alimenta o autocomplete)
+**Requirements**: BUSCA-01..14
+**Success Criteria**:
+  1. Funções puras de matching/detecção com harness de teste (Node + fixtures) **antes** de mudar comportamento — inclui casos ambíguos (135 sozinho, "Rua 135", "Q135", inscrição 10 vs 14 díg)
+  2. Digitar em qualquer formato detecta a intenção e mostra **chip de confirmação** tocável antes de disparar quando a confiança é baixa; nunca assume silenciosamente
+  3. Setor na frase funciona; sem setor, assume o último usado (lembrado), com forma clara de trocar
+  4. Fuzzy ordenado por qualidade (dígitos por igualdade antes de substring; rua por fronteira de palavra), selo "aproximado" no fallback — recall não piora
+  5. Erro/vazio oferecem próximo passo em 1 toque; **placeholder com exemplos tocáveis**; deep-link `?insc=` + "copiar link"; autocomplete CNEFE; **colar link do Google Maps/coordenada** cai no lote; **voz** no mobile (degrada onde não houver)
+  6. Checklist de a11y de 03/07 re-passa (ARIA combobox/activedescendant, teclado, live regions, foco/trap); `SEARCHTOKEN` propagado em todo caminho novo; quirk iOS preservado
+  7. **Coordenação busca⇄ficha no desktop não regride** (guarda do hotfix `a7a4646`): busca sempre fechável (× + Esc); abrir ficha/seletor fecha o overlay (zero sobreposição ≥821px); prédio abre seletor sobre o mapa
+  8. **Auditoria dos dados da ficha** em TODOS os modos (ql/endereço/prédio/inscrição 10-14 díg/clique-no-mapa) contra o registro de origem
 **Plans**: TBD
-**Phase flags**: calibração da regex do `detectMode()` contra nomes reais é MEDIUM confidence (pesquisa) — validar com amostra real de buscas durante a fase, não só fixtures sintéticas. As regressões de desktop mapa-first (busca não fechava, cards sobrepostos, unidades de prédio invisíveis) já foram corrigidas no hotfix `a7a4646` (04-05/07); esta fase INCORPORA e protege esses fixes ao reconstruir a busca — não pode reintroduzi-los.
+**Phase flags**: calibrar a regex do `detectMode()` com amostra real (MEDIUM confidence); INCORPORA e protege os fixes do hotfix `a7a4646`.
 
-### Phase 9: Setor-Scan Compartilhado, Choropleth & Painel do Território
-**Goal**: O corretor vê o "calor" de valor do território no mapa e um painel com as métricas do setor, sem gerar avalanche de requisições contra o endpoint frágil.
-**Depends on**: Fase 7 (tuning idle/highlight da malha, base do choropleth)
+### Phase 9: Ficha = Conclusão Comercial + Scores
+**Goal**: A ficha responde "quanto vale, qual a oportunidade e o que fazer" antes de mostrar dado técnico — tudo determinístico e explicável.
+**Depends on**: Fase 8 (a busca leva à ficha) — pode ser paralelizada em parte, mas a ordem de UX é busca→ficha.
+**Requirements**: FICHA-01, SCORE-01, SCORE-02, LEIT-01, CMP-01
+**Success Criteria**:
+  1. A ficha reordena: identificação+localização → **faixa de valor em destaque** → score de oportunidade → score de confiança → leitura prática → ações principais → comparáveis+mapa → **dados técnicos em accordion** → metodologia/fontes no fim
+  2. **Score de oportunidade** (0–100) por REGRA (posição vs mediana da vizinhança/faixa), com "por quê" visível — nunca caixa-preta, nunca LLM
+  3. **Score de confiança** (alta/média/baixa) por completude de dados (área, nº de comparáveis, imóvel atípico) + frase de "por quê"; o app **admite incerteza** (sem falsa precisão)
+  4. **Leitura prática** em linguagem comercial por template determinístico; jargão (mediana/percentil) só em "ver metodologia"
+  5. Comparáveis com **conclusão primeiro** ("8% abaixo da mediana da vizinhança"), estatística recolhida; cada comparação termina com ação
+  6. Zero regressão de dados vs Fase 8 §8 (venal 0 = "não informado", áreas/uso corretos) e a11y (foco/accordion navegável por teclado)
+**Plans**: TBD · **UI hint**: yes
+**Phase flags**: a fórmula dos scores precisa de calibração com casos reais (é decisão de produto documentável, não IA) — registrar a fórmula e seus limites na metodologia.
+
+### Phase 10: Camada de Ação + WhatsApp + Captação + Salvos
+**Goal**: Todo resultado vira próxima ação concreta; o corretor copia mensagens prontas e guarda o que interessa — sem servidor.
+**Depends on**: Fase 9 (as ações operam sobre a ficha comercial + scores)
+**Requirements**: ACAO-01, ZAP-01, SALV-01, CAPT-01
+**Success Criteria**:
+  1. **Lei da tela** aplicada: cada tela de resultado tem 1 ação principal em destaque, até 2 secundárias e "Mais opções" — resultado nunca termina sem ação útil
+  2. **Copiar p/ WhatsApp** em pt-BR impecável (soa como corretor): resumo, mensagem p/ proprietário, mensagem p/ comprador, argumento de preço, riscos/ressalvas — texto gerado por template determinístico
+  3. **Salvar oportunidade** + **histórico** de consultas + **favoritos** persistem em `localStorage` (allowlist de campos, sem PII de terceiros); reabrir o app dias depois mostra o mesmo; falha de escrita é visível (nunca silenciosa)
+  4. **Modo captação**: a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up — tudo copiável
+**Plans**: TBD
+**Phase flags**: nomenclatura consistente (não alternar "Oportunidades/Favoritos/Salvos" — decidir os nomes e travar; entra no gate LING-01).
+
+### Phase 11: Documentos em 3 Níveis
+**Goal**: O corretor escolhe a finalidade e recebe o documento certo (ficha rápida, relatório ou laudo/PTAM), sem peso jurídico indevido.
+**Depends on**: Fase 9 (valor/scores/leitura), Fase 10 (ações)
+**Requirements**: DOC-01, DOC-02, DOC-03
+**Success Criteria**:
+  1. Três saídas nomeadas — **Ficha rápida** / **Relatório de avaliação** (10+ comparáveis ou explica a limitação) / **Laudo-PTAM**; a UI pergunta a **finalidade** primeiro e **recomenda** o tipo
+  2. **Painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) antes de gerar; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
+  3. **Revisão/edição antes do PDF** (dados sensíveis e textos principais); reusa o wizard atual (não recomeça); o PDF continua saindo do clique do usuário (guarda do fix `ec9f129`)
+**Plans**: TBD · **UI hint**: yes
+
+### Phase 12: Prédio como Objeto Comercial
+**Goal**: Um prédio vira leitura comercial (faixa, padrão, unidades interessantes), não uma tabela longa de inscrições.
+**Depends on**: Fase 9 (scores por unidade), Fase 8 (busca de prédio)
+**Requirements**: PRED-01, PRED-02
+**Success Criteria**:
+  1. **Resumo do prédio** antes da lista: nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio, achar aptos mais interessantes)
+  2. Ordenação (maior oportunidade / menor valor estimado / maior área) e filtros (ocultar garagem/box, aptos prováveis, buscar unidade); marcar unidades p/ comparação
+  3. Guarda da correção do mobile já feita (lista não some atrás do form; garagem = "não informado") não regride
+**Plans**: TBD · **UI hint**: yes
+
+### Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva
+**Goal**: A cara "cockpit premium" — limpa, com cor só onde significa status, movimento que orienta e revelação progressiva do poder do app.
+**Depends on**: Fases 9-12 (o refino aplica-se sobre o cockpit já funcional)
+**Requirements**: VIS-01, PIN-01, MOT-01, DESC-01
+**Success Criteria**:
+  1. **Refino visual** preservando a identidade cartográfica: mais respiro entre blocos, menos textura/borda/caixa, hierarquia por tamanho/contraste/espaço; **cor reservada a status** (verde=oportunidade, amarelo=atenção, vermelho=risco), sem óxido parecendo alerta constante — paleta em variáveis, zero cor hard-coded nova fora do sistema
+  2. **Pinos semânticos** no mapa (verde/amarelo/vermelho/dourado Caixa/cinza sem-dado); clicar abre painel com valor + score + próximas ações
+  3. **Motion de busca em etapas** (Localizando → Consultando → Calculando → Buscando comparáveis → Preparando mapa) + **skeleton** em listas/cards; respeita `prefers-reduced-motion`; usa o Motion já embutido (sem nova dependência)
+  4. **Descoberta progressiva**: tela inicial com promessa + busca única + 3 benefícios; funções aparecem conforme o resultado; onboarding ≤3 telas; área discreta "O que o Radar faz"; a "lei da tela" vale em todo o app
+**Plans**: TBD · **UI hint**: yes
+**Phase flags**: legibilidade dos pinos/cores sobre satélite em luz externa é pendência de UAT (não bloqueante), igual ao herdado do v2.0.
+
+### Phase 14: Linguagem Impecável (pt-BR) — gate de release
+**Goal**: Nenhum texto amador chega ao usuário; microcopy é produto.
+**Depends on**: Fases 8-13 (revisa o texto de tudo que o cockpit introduziu)
+**Requirements**: LING-01
+**Success Criteria**:
+  1. Toda a microcopy (botões, placeholders, mensagens de erro, tooltips, títulos, descrições, PDFs, mensagens de WhatsApp) passou pelo checklist §26: acentuação correta; **verbo de ação** nos botões (gerar/copiar/salvar/comparar/enviar/criar); erro que explica e oferece saída; sem jargão na 1ª camada; sem caixa alta em bloco longo; sem ironia/gíria; consistência de nomenclatura
+  2. As mensagens copiadas p/ WhatsApp parecem escritas por um corretor profissional; os documentos usam linguagem formal e juridicamente cuidadosa
+**Plans**: TBD
+
+### Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território
+**Goal**: O corretor vê o "calor" de valor do território e as métricas do setor, sem avalanche de requisições.
+**Depends on**: Fase 7 (tuning idle/highlight da malha)
 **Requirements**: TERR-01, TERR-02, TERR-03
-**Success Criteria** (o que precisa ser verdade):
-  1. Existe uma função compartilhada de varredura de setor com cache de sessão, usada por todas as ferramentas de território (esta fase e as seguintes) — nenhuma ferramenta implementa sua própria varredura ad-hoc
-  2. Abrir o painel/choropleth do maior setor cadastrado (Bueno, ~57k lotes) dispara no máximo 1-3 requisições paginadas (nunca uma consulta por quadra) — verificado contando requisições de rede ao vivo; existe zoom-gate (nenhuma consulta de território dispara antes do usuário estar no nível de zoom/seleção de setor explícito)
-  3. O choropleth de R$/m² por quadra/lote (escala de quantis relativa ao setor) substitui a cor de preenchimento neutra da malha — não soma sobre ela — e resolve visualmente o "emaranhado" mobile (a hierarquia idle/highlight da Fase 7 permanece a base; a cor é a camada de dado por cima)
-  4. O choropleth permanece legível tanto sobre o basemap CARTO quanto sobre o satélite Esri (contraste AA verificado nos dois fundos); a troca de camada de dado usa `setStyle()` sobre polígonos existentes (não recria a geometria) e respeita `prefers-reduced-motion`
-  5. O Painel do Meu Território mostra mediana + Q1–Q3 de R$/m², IPTU mediano, idade do cadastro e mix de uso do setor selecionado, alimentado pela mesma varredura compartilhada
-**Plans**: TBD
-**Phase flags**: orçamento real do heatmap em setor grande no 4G é item de verificação de campo em aberto (extrapolado, não medido ao vivo); legibilidade do choropleth sobre satélite em luz externa é não-bloqueante mas deve ser registrada como pendência de UAT, igual ao herdado do v2.0.
-**UI hint**: yes
+**Success Criteria**:
+  1. Função compartilhada de varredura de setor com cache de sessão, usada por todas as ferramentas de território — nenhuma varredura ad-hoc
+  2. Abrir o painel/choropleth do maior setor (Bueno, ~57k lotes) dispara ≤1-3 requisições paginadas (nunca 1 por quadra) — verificado ao vivo; zoom-gate antes de qualquer consulta de território
+  3. Choropleth de R$/m² (quantis relativos ao setor) substitui a cor neutra da malha; resolve o "emaranhado" mobile (a hierarquia idle/highlight da Fase 7 é a base)
+  4. Choropleth legível sobre CARTO e satélite (AA nos dois); troca via `setStyle()` (não recria geometria); respeita `prefers-reduced-motion`
+  5. Painel do Meu Território: mediana + Q1–Q3 de R$/m², IPTU mediano, idade do cadastro e mix de uso
+**Plans**: TBD · **UI hint**: yes
+**Phase flags**: orçamento real em setor grande no 4G é verificação de campo em aberto; legibilidade sobre satélite em luz externa é UAT não-bloqueante.
 
-### Phase 10: Detector de Lote Subutilizado & Farming/Caderno
-**Goal**: O corretor identifica oportunidades de lote subutilizado no setor e mantém um caderno de território com notas/status que persiste entre sessões, sem risco de vazamento de dado pessoal.
-**Depends on**: Fase 9 (reusa o setor-scan compartilhado)
+### Phase 16: Detector de Lote Subutilizado & Farming/Caderno
+**Goal**: O corretor identifica lote subutilizado e mantém um caderno de território que persiste entre sessões, sem risco de PII.
+**Depends on**: Fase 15 (reusa o setor-scan compartilhado)
 **Requirements**: TERR-04, TERR-05
-**Success Criteria** (o que precisa ser verdade):
-  1. O detector de lote subutilizado (razão construído/terreno baixa em quadra de venal alto) roda como filtro sobre os dados já trazidos pelo scan da Fase 9 — não dispara requisições adicionais próprias
-  2. O corretor pode salvar setor/lotes, tags, notas e status no Caderno de Território, e esses dados persistem entre sessões (reabrir o app dias depois mostra o mesmo caderno)
-  3. A persistência usa IndexedDB (nunca localStorage) para os snapshots de lotes, com fallback visível ao usuário se a escrita falhar (nunca falha silenciosa)
-  4. Uma função `sanitizeAttrs()`/allowlist central impede que qualquer campo fora da lista explícita — e nunca `dtnascimen` — chegue ao IndexedDB; inspecionar o IndexedDB no DevTools após usar o Farming confirma ausência de dado pessoal
+**Success Criteria**:
+  1. Detector (razão construído/terreno baixa em quadra de venal alto) roda como filtro sobre o scan da Fase 15 — sem requisições próprias
+  2. Salvar setor/lotes, tags, notas e status no Caderno persiste entre sessões (reabrir dias depois mostra o mesmo)
+  3. Persistência em **IndexedDB** (nunca localStorage p/ snapshots), com fallback visível se a escrita falhar
+  4. `sanitizeAttrs()`/allowlist central impede qualquer campo fora da lista — e nunca `dtnascimen` — no IndexedDB; DevTools confirma ausência de PII
 **Plans**: TBD
 
-### Phase 11: Diff de Cadastro & Cruzamento Caixa
-**Goal**: O corretor vê o que mudou no cadastro de um lote desde a última visita e onde os imóveis Caixa se cruzam com o território que já salvou.
-**Depends on**: Fase 9 (setor-scan), Fase 10 (território salvo/IndexedDB)
+### Phase 17: Diff de Cadastro & Cruzamento Caixa
+**Goal**: O corretor vê o que mudou num lote desde a última visita e onde os imóveis Caixa cruzam com o território salvo.
+**Depends on**: Fase 15 (setor-scan), Fase 16 (território salvo/IndexedDB)
 **Requirements**: TERR-06, TERR-07
-**Success Criteria** (o que precisa ser verdade):
-  1. Revisitar um lote já salvo no Caderno mostra o que mudou no cadastro desde o snapshot anterior (diff enxuto, nunca dado pessoal) — o snapshot usa a mesma allowlist/`sanitizeAttrs()` da Fase 10
-  2. Os imóveis Caixa já plotados no mapa são cruzados com o território salvo do corretor, destacando quando um imóvel Caixa cai dentro de um setor/lote que o corretor já farmou
+**Success Criteria**:
+  1. Revisitar um lote salvo mostra o que mudou desde o snapshot (diff enxuto, nunca PII; mesma allowlist da Fase 16)
+  2. Imóveis Caixa plotados são cruzados com o território salvo, destacando quando um imóvel Caixa cai num setor/lote já farmado
 **Plans**: TBD
 
 ## Progress
 
-**Execution Order:**
-Fases executam em ordem numérica: 7 → 8 → 9 → 10 → 11
+**Execution Order:** 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
@@ -115,13 +184,19 @@ Fases executam em ordem numérica: 7 → 8 → 9 → 10 → 11
 | 4. Camada de Satélite | v2.0 | 2/2 | ✅ Complete | 2026-07-04 |
 | 5. Seam de IA (dormant) | v2.0 | 1/1 | ✅ Complete | 2026-07-04 |
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
-| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 0/3 | Not started | - |
-| 8. Overhaul da Busca | v2.1 | 0/TBD | Not started | - |
-| 9. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
-| 10. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
-| 11. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
+| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 1/3 | 🚧 Em andamento (nomes ✅; CNEFE + malha pendentes) | - |
+| 8. Busca Única Inteligente | v2.1 | 0/TBD | Not started | - |
+| 9. Ficha Comercial + Scores | v2.1 | 0/TBD | Not started | - |
+| 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
+| 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
+| 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
+| 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
+| 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
+| 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
+| 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
+| 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**
-**v2.1: 0/5 fases, 0/23 requisitos — em andamento.**
+**v2.1 (Cockpit Comercial): 11 fases (7-17). Fase 7 parcial (nomes ✅). Requisitos: NOMES ✅ + ~38 pendentes.**
 
-Próximo passo: `/gsd-plan-phase 7`.
+Próximo passo: `/gsd-plan-phase 7` (terminar 07-02/07-03) ou seguir no modo autônomo.

@@ -1,102 +1,135 @@
 # Requirements: Radar Fundiário Goiânia
 
 **Defined:** 2026-07-05
-**Milestone:** v2.1 — Busca, Bairros & Território
-**Core Value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
+**Milestone:** v2.1 — Cockpit Comercial (Busca única · Ficha comercial · Ação/WhatsApp · Documentos · Território)
+**Core Value:** O corretor entende o imóvel em segundos e sai com uma **ação comercial pronta** — dado oficial + análise auditável e **determinística**, sem servidor.
+
+> Origem: `Plano_UX_Radar_Fundiario_v3` (auditoria de UX). Decisões de escopo (2026-07-05):
+> (1) **Cockpit primeiro**, Território depois; (2) **refinar** a identidade cartográfica atual (respiro + cor só p/ status), não migrar p/ base branca; (3) **só client-side** — scores determinísticos, histórico/favoritos/oportunidades em `localStorage`, WhatsApp por texto. Hub/CRM/contas/IA-autônoma/clientes-compatíveis ficam p/ um milestone futuro com backend.
+> Núcleo permanece **100% determinístico** ([[sem-ia-no-radar]]): scores e "leitura prática" são por REGRA, nunca por LLM.
 
 ## Milestone v2.1 Requirements
 
-### Nomes de bairro (qualidade de dados)
+### Nomes de bairro (qualidade de dados) — ✅ entregue (Fase 7)
 
-- [ ] **NOMES-01**: Os nomes de bairro exibidos (hover/tap/breadcrumb) são reconciliados com a fonte autoritativa (layer 3 `nmbairro`/`cdbairro`) via spatial join (POST), corrigindo os erros/mojibake do `nm_bai` da layer 2
-- [ ] **NOMES-02**: `bairros-goiania.json` regenerado com nomes corretos e **geometria + contagem de features byte-idênticas** (só o campo de nome muda), com bump da versão de cache do `sw.js`
-- [ ] **NOMES-03**: O build emite um relatório de diff (antes/depois) para revisão humana das bordas antes de commitar; glebas sem nome recebem rótulo genérico
+- [x] **NOMES-01**: Nomes de bairro (hover/tap/breadcrumb) reconciliados com a fonte autoritativa (layer 3 `nmbairro`/`cdbairro`) via spatial join (POST), corrigindo erros/mojibake do `nm_bai` da layer 2
+- [x] **NOMES-02**: `bairros-goiania.json` regenerado com **geometria + contagem byte-idênticas** (só nome muda), com bump de cache do `sw.js`
+- [x] **NOMES-03**: Build emite relatório de diff (antes/depois) p/ revisão humana; glebas sem nome recebem rótulo genérico
+- [x] **NOMES-04**: Nome de exibição amigável (`nm_disp`): prefixo por extenso (VI→Vila, RES→Residencial…) + acento recuperado do nome cru; oficial preservado p/ matching
 
 ### Busca (campo-único inteligente)
 
-- [ ] **BUSCA-01**: Funções puras de matching/detecção extraídas e cobertas por um harness de teste (Node + fixtures) **antes** de qualquer mudança de comportamento
-- [ ] **BUSCA-02**: Caixa única com `detectMode(texto)` detecta a intenção (inscrição 14/10 díg · quadra+lote · endereço · prédio · setor) e dispara a busca correta
-- [ ] **BUSCA-03**: Chip de confirmação mostra o que foi entendido, tocável para corrigir
-- [ ] **BUSCA-04**: Setor embutido na própria frase ("marista quadra 128 lote 5")
-- [ ] **BUSCA-05**: App lembra o último setor usado e o assume quando a frase não traz setor
-- [ ] **BUSCA-06**: Desambiguação por chips quando a entrada é ambígua (ex.: "135" = rua/quadra/inscrição)
-- [ ] **BUSCA-07**: Fuzzy corrigido — número por igualdade de dígitos antes de substring; rua por fronteira de palavra; resultados ordenados por qualidade do match, com selo "aproximado" no fallback (sem perder recall)
-- [ ] **BUSCA-08**: Estados de erro/vazio oferecem o próximo passo em 1 toque; placeholder com exemplos tocáveis
-- [ ] **BUSCA-09**: Deep-link `?insc=` abre o imóvel direto no boot + botão "copiar link do imóvel"
-- [ ] **BUSCA-10**: Autocomplete de logradouro alimentado por um dataset CNEFE destilado (~9,8k ruas de Goiânia, ~39KB gz), versionado offline
-- [ ] **BUSCA-11**: Acessibilidade preservada — todo widget novo re-passa o checklist ARIA/teclado/iOS/`SEARCHTOKEN` da auditoria de 03/07 (gate de aceite, não retrofit)
-- [ ] **BUSCA-12**: Coordenação busca⇄ficha no desktop mapa-first não regride (guarda do hotfix `a7a4646`): busca sempre fechável (× + Esc); abrir ficha/seletor fecha o overlay (zero sobreposição de cards ≥821px); clicar prédio (busca ou mapa) mostra o seletor de unidades sobre o mapa. + Auditoria de correção dos dados da ficha em TODOS os modos (ql/endereço/prédio/inscrição 10-14 díg/clique-no-mapa) contra o registro de origem
+- [ ] **BUSCA-01**: Funções puras de matching/detecção com harness de teste (Node + fixtures) **antes** de qualquer mudança de comportamento
+- [ ] **BUSCA-02**: Caixa única `detectMode(texto)` detecta intenção (inscrição 14/10 díg · quadra+lote · endereço · prédio · setor) e dispara a busca certa
+- [ ] **BUSCA-03**: Chip de confirmação mostra o que foi entendido, tocável p/ corrigir (antes de disparar quando a confiança é baixa)
+- [ ] **BUSCA-04**: Setor embutido na frase ("marista quadra 128 lote 5")
+- [ ] **BUSCA-05**: Lembra o último setor usado e o assume quando a frase não traz setor
+- [ ] **BUSCA-06**: Desambiguação por chips na entrada ambígua ("135" = rua/quadra/inscrição)
+- [ ] **BUSCA-07**: Fuzzy corrigido — número por igualdade de dígitos antes de substring; rua por fronteira de palavra; ordenado por qualidade, selo "aproximado" no fallback (sem perder recall)
+- [ ] **BUSCA-08**: Estados de erro/vazio oferecem o próximo passo em 1 toque; placeholder com **exemplos tocáveis** (não texto explicativo longo)
+- [ ] **BUSCA-09**: Deep-link `?insc=` abre o imóvel no boot + botão "copiar link do imóvel"
+- [ ] **BUSCA-10**: Autocomplete de logradouro por dataset CNEFE destilado (~9,8k ruas, versionado offline)
+- [ ] **BUSCA-11**: Acessibilidade preservada — todo widget novo re-passa o checklist ARIA/teclado/iOS/`SEARCHTOKEN` da auditoria de 03/07 (gate de aceite)
+- [ ] **BUSCA-12**: Coordenação busca⇄ficha no desktop mapa-first não regride (guarda do hotfix `a7a4646`) + auditoria de correção dos dados da ficha em TODOS os modos contra o registro de origem
+- [ ] **BUSCA-13**: A caixa única aceita **coordenada ou link do Google Maps** colado (extrai lat/lon e cai no lote)
+- [ ] **BUSCA-14**: Busca por **voz** no mobile (Web Speech API; degrada silenciosamente onde não houver suporte) — P1
 
-### Malha de bairros (UX mobile)
+### Ficha do imóvel = conclusão comercial (§6, §9, §17 do plano)
 
-- [ ] **MALHA-01**: Malha ociosa de-enfatizada (traço fino/baixa opacidade) + destaque forte no toque + densidade por zoom + toque na área (não na linha fina) — resolve o "emaranhado" no celular sem remover a malha
+- [ ] **FICHA-01**: A ficha reordena p/ conclusão-primeiro: identificação+localização → **faixa de valor em destaque** → score de oportunidade → score de confiança → leitura prática → ações → comparáveis+mapa → **dados técnicos em accordion** → metodologia/fontes no fim
+- [ ] **SCORE-01**: **Score de oportunidade** (0–100) determinístico e explicável, derivado da posição vs mediana da vizinhança / faixa estimada (mostra o "porquê", não só o número)
+- [ ] **SCORE-02**: **Score de confiança** (alta/média/baixa) determinístico pela completude dos dados (área, nº de comparáveis, imóvel atípico), com frase de "por quê"; o app **admite incerteza** — nada de falsa precisão
+- [ ] **LEIT-01**: **Leitura prática** em linguagem comercial (regra/template determinístico) — "alinhado à região, boa liquidez se área e conservação confirmarem", nunca jargão cru (mediana/percentil) na 1ª camada
+- [ ] **CMP-01**: Comparáveis com **conclusão primeiro** ("este imóvel está 8% abaixo da mediana da vizinhança"), estatística (mediana/Q1–Q3) recolhida em "ver metodologia"; cada comparação termina com ação (usar no relatório, copiar argumento, ver no mapa)
 
-### Território / captação
+### Camada de ação + WhatsApp + Captação (§11, §12, §13, §16)
 
-- [ ] **TERR-01**: Função compartilhada de varredura de setor com cache de sessão e **orçamento de requisições** que respeita o endpoint frágil (base de todas as ferramentas de território)
-- [ ] **TERR-02**: Choropleth de R$/m² venal por quadra/lote (escala de quantis relativa ao setor) — entrega a camada de "calor de valor" E compõe com o satélite (legibilidade tratada)
+- [ ] **ACAO-01**: **Toda tela de resultado termina com uma ação útil** — aplica a "lei da tela": 1 ação principal em destaque, até 2 secundárias, resto em "Mais opções"
+- [ ] **ZAP-01**: Botões de **copiar p/ WhatsApp** em pt-BR impecável (soa como corretor, não robô): resumo, mensagem p/ proprietário, mensagem p/ comprador, argumento de preço, riscos/ressalvas
+- [ ] **SALV-01**: **Salvar oportunidade** + **histórico** de últimas consultas + **favoritos** em `localStorage` (allowlist de campos, sem PII de terceiros); reabrir o app mostra o mesmo
+- [ ] **CAPT-01**: **Modo captação** — a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up (tudo texto pronto p/ copiar)
+
+### Documentos em 3 níveis (§10, §31)
+
+- [ ] **DOC-01**: Três saídas nomeadas corretamente — **Ficha rápida** (WhatsApp/apresentação), **Relatório de avaliação** (comercial, 10+ comparáveis), **Laudo/PTAM** (formal); a UI pergunta a **finalidade** primeiro e **recomenda** o documento adequado (reduz peso jurídico indevido)
+- [ ] **DOC-02**: Antes de gerar, um **painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) aparece; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
+- [ ] **DOC-03**: **Revisão/edição antes do PDF final** (dados sensíveis e textos principais editáveis); reusa o wizard atual, não recomeça do zero
+
+### Prédio como objeto comercial (§7)
+
+- [ ] **PRED-01**: **Resumo do prédio** antes da lista — nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio)
+- [ ] **PRED-02**: Ordenação (maior oportunidade / menor valor / maior área) e filtros (ocultar garagem/box, aptos prováveis, buscar unidade), com marcar unidades p/ comparação
+
+### Direção visual, pinos, motion & descoberta progressiva (§8, §14, §15, §19, §28, §29, §30)
+
+- [ ] **VIS-01**: **Refino visual clean** mantendo a identidade cartográfica — mais respiro entre blocos, menos textura/borda/caixa, hierarquia por tamanho/contraste/espaço; **cor reservada a status** (verde=oportunidade, amarelo=atenção, vermelho=risco), sem óxido parecendo alerta constante
+- [ ] **PIN-01**: **Pinos semânticos** no mapa — verde (oportunidade/abaixo da média), amarelo (dados incompletos/incerto), vermelho (risco/acima da média), dourado (Caixa), cinza (sem dados); clicar abre painel com valor+score+próximas ações
+- [ ] **MOT-01**: **Motion de busca em etapas** (Localizando → Consultando cadastro → Calculando estimativa → Buscando comparáveis → Preparando mapa) + **skeleton** em listas/cards — performance percebida, não spinner genérico (respeita `prefers-reduced-motion`)
+- [ ] **DESC-01**: **Descoberta progressiva** — tela inicial mostra a promessa + busca única + 3 benefícios (avaliar / achar oportunidade / gerar ficha); funções aparecem conforme o resultado; onboarding ≤3 telas; área discreta "O que o Radar faz"
+
+### Linguagem — português impecável (§2, §26) — gate de release
+
+- [ ] **LING-01**: Passar **toda a microcopy** (botões, placeholders, erros, tooltips, títulos, PDFs, mensagens de WhatsApp) pelo checklist §26 — acentuação correta, verbo de ação nos botões, erro que oferece saída, zero jargão na 1ª camada, sem caixa alta em bloco longo, sem ironia/gíria; consistência de nomenclatura (não alternar "Oportunidades/Favoritos/Salvos" sem motivo)
+
+### Território / captação de área (rebaixado — após o cockpit)
+
+- [ ] **TERR-01**: Função compartilhada de varredura de setor com cache de sessão e **orçamento de requisições** (respeita o endpoint frágil; base de todas as ferramentas de território)
+- [ ] **TERR-02**: Choropleth de R$/m² venal por quadra/lote (quantis relativos ao setor) — camada de "calor de valor" legível também sobre o satélite
 - [ ] **TERR-03**: Painel do Meu Território (mediana + Q1–Q3 de R$/m², IPTU mediano, idade do cadastro, mix de uso por setor)
-- [ ] **TERR-04**: Detector de lote subutilizado (razão construído/terreno baixa em quadra de venal alto)
-- [ ] **TERR-05**: Farming/Caderno de território — salvar setor/lotes, tags, notas e status em IndexedDB (anotação do próprio corretor; allowlist de campos anti-PII, nunca `dtnascimen`)
-- [ ] **TERR-06**: Diff de cadastro entre visitas (snapshot enxuto por lote em IndexedDB; nunca dado pessoal)
+- [ ] **TERR-04**: Detector de lote subutilizado (razão construído/terreno baixa em quadra de venal alto) sobre o scan compartilhado
+- [ ] **TERR-05**: Farming/Caderno de território em **IndexedDB** — salvar setor/lotes, tags, notas, status (allowlist anti-PII, nunca `dtnascimen`)
+- [ ] **TERR-06**: Diff de cadastro entre visitas (snapshot enxuto por lote; nunca dado pessoal)
 - [ ] **TERR-07**: Cruzamento dos imóveis Caixa (já plotados) com o território salvo do corretor
 
-## Future Requirements (v2.2+)
+## Future Requirements (v2.2+ — precisa de backend/IA)
 
-- **IA-02**: Ativar a pesquisa de mercado por IA sobre o seam dormant (proxy Cloudflare Worker ou BYO-key; `glm-4.5-air:online`/`qwen3-14b`; opt-in, rotulada "não é dado oficial")
-- **SAT-03**: Ortofoto própria de Goiânia (`Mapa_Ortofoto2016v2`, EPSG:31982, CRS custom no Leaflet)
-- **TERR-08+**: Marketing/compartilhamento (ficha-imagem, QR, one-pager PDF), fechamento/custos (ITBI/escritura/SFH), locação/investidor (yield, cap rate, SAC×Price) — famílias de ferramentas das outras lentes do IDEIAS-hub-corretor
+- **HUB-01+**: Hub/CRM — clientes compatíveis, pipeline, banco de imóveis na conta, campanhas por imóvel, alertas automáticos, radar de demanda reprimida, favoritos-na-conta (§12 Modo Hub, §22, P2 do §23)
+- **SCORE-03+**: Scores de **liquidez** e **captação** (dependem de dado de demanda/mercado que hoje não é confiável client-side)
+- **IA-02**: Ativar pesquisa de mercado por IA sobre o seam dormant (proxy Worker ou BYO-key; opt-in, rotulada "não é dado oficial")
+- **SAT-03**: Ortofoto própria de Goiânia (`Mapa_Ortofoto2016v2`, EPSG:31982)
 
-## Out of Scope
+## Out of Scope (deste milestone)
 
 | Feature | Reason |
 |---------|--------|
-| Rewrite total da busca (greenfield) | É refactor estrito sobre a base de 3 botões já endurecida; rewrite regride a11y/token |
-| Join automático de nomes por string | Match por string falha 99,5% (medido); só spatial join + revisão humana |
-| Alterar geometria dos polígonos de bairro no fix de nomes | Fix é display-data-only; geometria/contagem byte-idênticas (não quebrar o drill) |
-| Heatmap com 1 stats-query por quadra | Centenas de requisições → 502; agregar em 1–3 páginas + zoom-gate |
-| localStorage para farming/diff | Quota/síncrono inadequado; IndexedDB obrigatório |
-| Ativação de IA / ortofoto própria | Deferido p/ v2.2 |
-| Coleta de dado pessoal de terceiros | LGPD — farming é anotação do próprio corretor, allowlist de campos |
+| Hub/CRM, contas, clientes compatíveis, campanhas, alertas | Precisa de backend/contas — decisão: só client-side agora |
+| IA gerando scores/leitura prática | Núcleo é determinístico ([[sem-ia-no-radar]]); scores/leitura por regra |
+| Migração p/ base visual branca/minimalista | Decisão: **refinar** a identidade cartográfica atual, não rebrand |
+| Rewrite total da busca (greenfield) | Refactor estrito sobre a base de 3 botões; rewrite regride a11y |
+| Join de nomes por string | Match por string falha 99,5%; só spatial join (já entregue) |
+| Alterar geometria dos polígonos no fix de nomes | Display-data-only; geometria byte-idêntica (já garantido) |
+| Heatmap com 1 stats-query por quadra | 502; agregar em 1–3 páginas + zoom-gate |
+| localStorage p/ farming/diff | Quota/síncrono; IndexedDB obrigatório (histórico/favoritos leves ficam em localStorage) |
+| Coleta de dado pessoal de terceiros | LGPD — anotação do próprio corretor, allowlist de campos |
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| NOMES-01 | Fase 7 | Pending |
-| NOMES-02 | Fase 7 | Pending |
-| NOMES-03 | Fase 7 | Pending |
-| MALHA-01 | Fase 7 | Pending |
-| BUSCA-01 | Fase 8 | Pending |
-| BUSCA-02 | Fase 8 | Pending |
-| BUSCA-03 | Fase 8 | Pending |
-| BUSCA-04 | Fase 8 | Pending |
-| BUSCA-05 | Fase 8 | Pending |
-| BUSCA-06 | Fase 8 | Pending |
-| BUSCA-07 | Fase 8 | Pending |
-| BUSCA-08 | Fase 8 | Pending |
-| BUSCA-09 | Fase 8 | Pending |
-| BUSCA-10 | Fase 8 | Pending |
-| BUSCA-11 | Fase 8 | Pending |
-| BUSCA-12 | Fase 8 | Pending |
-| TERR-01 | Fase 9 | Pending |
-| TERR-02 | Fase 9 | Pending |
-| TERR-03 | Fase 9 | Pending |
-| TERR-04 | Fase 10 | Pending |
-| TERR-05 | Fase 10 | Pending |
-| TERR-06 | Fase 11 | Pending |
-| TERR-07 | Fase 11 | Pending |
+| Requirement | Fase | Status |
+|-------------|------|--------|
+| NOMES-01/02/03/04 | 7 | ✅ Done |
+| MALHA-01 | 7 | Pending (07-03) |
+| BUSCA-01..14 | 8 | Pending |
+| FICHA-01, SCORE-01/02, LEIT-01, CMP-01 | 9 | Pending |
+| ACAO-01, ZAP-01, SALV-01, CAPT-01 | 10 | Pending |
+| DOC-01/02/03 | 11 | Pending |
+| PRED-01/02 | 12 | Pending |
+| VIS-01, PIN-01, MOT-01, DESC-01 | 13 | Pending |
+| LING-01 | 14 | Pending |
+| TERR-01/02/03 | 15 | Pending |
+| TERR-04/05 | 16 | Pending |
+| TERR-06/07 | 17 | Pending |
 
 **Coverage:**
-- Requisitos v2.1: 23 total
-- Mapeados para fases: 23/23 (100%) ✓
-- Fase 7 (Fundação de Dados): 4 requisitos — NOMES-01/02/03, MALHA-01
-- Fase 8 (Busca): 12 requisitos — BUSCA-01..12
-- Fase 9 (Setor-Scan + Choropleth + Painel): 3 requisitos — TERR-01/02/03
-- Fase 10 (Detector + Farming): 2 requisitos — TERR-04/05
-- Fase 11 (Diff + Caixa): 2 requisitos — TERR-06/07
+- Fase 7 (Fundação de Dados): NOMES-01/02/03/04 ✅, MALHA-01 (07-03 pendente)
+- Fase 8 (Busca única): BUSCA-01..14
+- Fase 9 (Ficha comercial + scores): FICHA-01, SCORE-01/02, LEIT-01, CMP-01
+- Fase 10 (Ação + WhatsApp + salvos + captação): ACAO-01, ZAP-01, SALV-01, CAPT-01
+- Fase 11 (Documentos em 3 níveis): DOC-01/02/03
+- Fase 12 (Prédio comercial): PRED-01/02
+- Fase 13 (Visual + pinos + motion + descoberta): VIS-01, PIN-01, MOT-01, DESC-01
+- Fase 14 (Linguagem impecável): LING-01
+- Fases 15–17 (Território): TERR-01..07
 - Órfãos: nenhum
 
 ---
-*Requirements defined: 2026-07-05*
-*Traceability preenchida: 2026-07-05 (roadmap v2.1, Fases 7-11)*
+*Requirements definidos: 2026-07-05 · Re-escopo Cockpit Comercial (Plano UX v3): 2026-07-05*
