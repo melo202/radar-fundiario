@@ -1,17 +1,21 @@
 /* Service worker do Radar Fundiário.
    Estratégia: NETWORK-FIRST para o app e os dados (HTML, caixa-goiania.js,
    manifest) — o cache é só fallback offline, nunca congela versão.
-   CACHE-FIRST apenas para bibliotecas de CDN e ícones (imutáveis).
+   CACHE-FIRST apenas para bibliotecas de CDN e ícones (imutáveis), e para
+   os assets estáticos versionados (bairros-goiania.json e, desde a Fase 7,
+   logradouros-goiania.json — dataset CNEFE destilado para autocomplete de
+   logradouro): o bump de CACHE abaixo é o que invalida a cópia antiga.
    Consultas ao ArcGIS (JSONP) e tiles do mapa (CARTO e, desde a Fase 4, os
    tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
    nunca cache — dado vivo, e tiles de satélite são pesados demais para
    inchar o storage do PWA. */
-const CACHE = "radar-v5";
+const CACHE = "radar-v6";
 const LOCAL = [
   "./",
   "./radar-goiania.html",
   "./caixa-goiania.js",
   "./bairros-goiania.json",
+  "./logradouros-goiania.json",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
