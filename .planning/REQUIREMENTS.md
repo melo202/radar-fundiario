@@ -29,9 +29,9 @@ Requisitos desta milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Motion
 
-- [ ] **MOT-01**: Motion (motion.dev) integrado via CDN, com bloco global `prefers-reduced-motion` desde o 1º commit e transições sempre interrompíveis (nunca bloqueiam o corretor em campo)
-- [ ] **MOT-02**: Motion aplicado no app: transições de view (home ⇄ busca ⇄ detalhe), spring do bottom-sheet e feedback de tap
-- [ ] **MOT-03**: Stagger-in dos polígonos de lote no drill e da lista de cards, reusando o timing/easing já existente
+- [x] **MOT-01**: Motion (motion.dev) integrado **inline** (embutido no arquivo — revisado de "via CDN" p/ manter arquivo-único/PWA offline, decisão do usuário na Fase 6), com bloco global `prefers-reduced-motion` desde o 1º commit e transições sempre interrompíveis (nunca bloqueiam o corretor em campo)
+- [x] **MOT-02**: Motion aplicado no app: transições de view (home ⇄ busca ⇄ detalhe), spring do bottom-sheet e feedback de tap
+- [x] **MOT-03**: Stagger-in dos polígonos de lote no drill e da lista de cards, reusando o timing/easing já existente
 
 ### Seam de IA (dormant)
 
@@ -90,9 +90,9 @@ Preenchido durante a criação do roadmap.
 | SAT-01 | Phase 4 | Complete |
 | SAT-02 | Phase 4 | Complete |
 | IA-01 | Phase 5 | Complete |
-| MOT-01 | Phase 6 | Pending |
-| MOT-02 | Phase 6 | Pending |
-| MOT-03 | Phase 6 | Pending |
+| MOT-01 | Phase 6 | Complete |
+| MOT-02 | Phase 6 | Complete |
+| MOT-03 | Phase 6 | Complete |
 
 **Coverage:**
 - Requisitos v2.0: 14 total

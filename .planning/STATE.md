@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: milestone
 status: executing
 stopped_at: "Fase 4 completa (satélite Esri keyless + rótulos + crossfade, verificado ao vivo). Próxima: Fase 5 (Seam de IA dormant)."
-last_updated: "2026-07-04T23:11:49.179Z"
-last_activity: 2026-07-04
+last_updated: "2026-07-05T00:53:18.463Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 6
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 5 — Seam de IA (dormant)
+**Current focus:** Phase 6 — Motion no App Todo
 
 ## Current Position
 
 Phase: 6
 Plan: Not started
-Status: Executing Phase 5
-Last activity: 2026-07-04
+Status: Executing Phase 6
+Last activity: 2026-07-05
 
 Progress: [██████▋░░░] 67%
 

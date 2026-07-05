@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-07-04)
 - [x] **Phase 5: Seam de IA (dormant)** - Encaixe isolado e desativado para pesquisa de mercado por IA, sem UI e sem tocar o núcleo
  (completed 2026-07-04)
-- [ ] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit
+- [x] **Phase 6: Motion no App Todo** - Transições, spring do bottom-sheet e stagger-in fluidos, com `prefers-reduced-motion` desde o primeiro commit (completed 2026-07-05)
 
 ## Phase Details
 
@@ -119,9 +119,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Fundação: Motion UMD inline (eval-scan + proveniência MIT) + kill-switch CSS prefers-reduced-motion + guard JS REDUCE (reativo) + wrapper mAnimate() progressive-enhancement (MOT-01)
-- [ ] 06-02-PLAN.md — Transições de tela no setView (mobile + overlay .panel desktop, ±12px/180ms, interrompíveis) + spring do bottom-sheet .detail (420/38/1) coordenado com o drag do #grab (MOT-02)
-- [ ] 06-03-PLAN.md — Stagger só-na-1ª-render de cards (render) + lotes (refreshLots, gate firstReveal, cap 12) + feedback de tap :active CSS-only (MOT-02, MOT-03)
+- [x] 06-01-PLAN.md — Fundação: Motion UMD inline (eval-scan + proveniência MIT) + kill-switch CSS prefers-reduced-motion + guard JS REDUCE (reativo) + wrapper mAnimate() progressive-enhancement (MOT-01)
+- [x] 06-02-PLAN.md — Transições de tela no setView (mobile + overlay .panel desktop, ±12px/180ms, interrompíveis) + spring do bottom-sheet .detail (420/38/1) coordenado com o drag do #grab (MOT-02)
+- [x] 06-03-PLAN.md — Stagger só-na-1ª-render de cards (render) + lotes (refreshLots, gate firstReveal, cap 12) + feedback de tap :active CSS-only (MOT-02, MOT-03)
 
 ## Progress
 
@@ -136,4 +136,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Render de Bairro + Hover/Tap + Click-to-Drill | 2/2 | Complete    | 2026-07-04 |
 | 4. Camada de Satélite | 2/2 | Complete    | 2026-07-04 |
 | 5. Seam de IA (dormant) | 1/1 | Complete    | 2026-07-04 |
-| 6. Motion no App Todo | 0/3 | Not started | - |
+| 6. Motion no App Todo | 3/3 | Complete    | 2026-07-05 |

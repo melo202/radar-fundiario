@@ -35,7 +35,7 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 - [x] Bairros renderizados como polígonos (linha); hover mostra o nome — Validado na Fase 3 (MAPA-02)
 - [x] Clique no bairro → zoom no bairro + revela as divisões dos lotes + breadcrumb — Validado na Fase 3 (MAPA-03, MAPA-05)
 - [ ] Busca movida da tela inicial para um card clicável (deixa de ser a home)
-- [ ] Motion fluido no app todo (transições, sheet, cards) — liso no mobile
+- [x] Motion fluido no app todo (transições, sheet spring, stagger, tap) — Validado na Fase 6 (MOT-01/02/03; Motion inline, reduced-motion, progressive enhancement)
 - [x] Camada de satélite alternável (Esri keyless + rótulos + crossfade) — Validado na Fase 4 (SAT-01, SAT-02)
 - [x] Seam de integração de IA externa (pesquisa de mercado), plugável e desativado — Validado na Fase 5 (IA-01; IIFE isolado, enabled:false, whitelist anti-PII, fail-to-null)
 
