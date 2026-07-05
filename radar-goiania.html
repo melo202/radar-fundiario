@@ -1115,11 +1115,20 @@ function loading(on,msg){const l=document.getElementById("loading");
 /* ---------------- telas mobile: Busca ⇄ Mapa ---------------- */
 const isMobile=()=>window.matchMedia("(max-width:820px)").matches;
 function setView(v){
+  const prev=document.body.dataset.view;
   document.body.dataset.view=v;
   [["vbBusca","busca"],["vbMapa","mapa"]].forEach(([id,x])=>{
     const b=document.getElementById(id);b.classList.toggle("on",v===x);b.setAttribute("aria-pressed",v===x);});
   /* o Leaflet precisa remedir o container quando ele volta a ficar visível */
   if(v==="mapa"&&map)setTimeout(()=>{map.invalidateSize();refreshLots();},60);
+  /* Fase 6 Plano 02: transição sutil de entrada (fade+±12px), independente do remeasure acima.
+     viewbar tem busca à ESQUERDA de mapa: ir p/ busca entra da esquerda (-12px), ir p/ mapa entra da direita (+12px).
+     Mobile: a view que fica visível troca (mapwrap<->panel). Desktop: só o .panel (overlay) entra ao mostrar busca. */
+  if(prev!==v&&prev!==undefined){
+    const startX=v==="busca"?-12:12;
+    const incoming=isMobile()?(v==="busca"?document.querySelector(".panel"):document.querySelector(".mapwrap")):(v==="busca"?document.querySelector(".panel"):null);
+    if(incoming)mAnimate(incoming,{opacity:[0,1],transform:[`translateX(${startX}px)`,"translateX(0)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
+  }
 }
 
 async function fetchWhere(where,maxPages=30){
