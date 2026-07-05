@@ -484,7 +484,7 @@
   <!-- PAINEL -->
   <aside class="panel">
     <div class="brand">
-      <button id="pillClose" class="pillclose" aria-label="Fechar busca" onclick="setView('mapa');document.getElementById('searchPill').focus()" style="display:none">×</button>
+      <button id="pillClose" class="pillclose" aria-label="Fechar busca" onclick="setView('mapa');document.getElementById('searchPill').focus()">×</button>
       <div class="eyebrow">Cadastro Imobiliário · SIGGO</div>
       <h1>Radar Fundiário<span>Consulta de imóveis — Goiânia/GO</span></h1>
       <div class="stamp">Dado público · uso próprio</div>
@@ -1304,8 +1304,8 @@ function finish(items,fromMap){
         if(units.length>1)toast(units.length+" imóveis no mapa — a lista completa está na aba Consulta.");
       }
     }else if(ehPredio){
-      /* desktop: a lista completa já está na coluna da esquerda — avisa para não parecer "só 1 apto" */
-      toast("🏢 "+units.length+" imóveis neste prédio — lista completa na coluna ao lado.");
+      /* desktop mapa-first: a lista está no card de busca (overlay) — toque num imóvel para abrir a ficha */
+      toast("🏢 "+units.length+" imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha).");
     }
 }
 
@@ -1486,7 +1486,7 @@ function showChooser(ci){
   ci=clean(ci);
   const units=(LAST||[]).filter(a=>clean(a.ci)===ci);
   if(units.length<=1){ const gi=LAST.indexOf(units[0]); if(gi>=0)pick(gi); return; }
-  if(!isMobile()){ revealList(ci); return; } /* desktop: a lista já vive na coluna ao lado */
+  /* desktop agora é mapa-first (sem coluna lateral): o seletor de unidades vira um card sobre o mapa, igual mobile */
   const a0=units[0], ed=esc(clean(a0.nmedificio))||"Imóveis no mesmo lote";
   document.getElementById("chNm").innerHTML="🏢 "+ed;
   document.getElementById("chSub").textContent=`Q ${clean(a0.nrquadra)||"—"} · L ${clean(a0.nrlote)||"—"} · ${units.length} imóveis — escolha um`;
@@ -1509,7 +1509,7 @@ function pick(i){
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
   markers.forEach(m=>{if(m&&!done.has(m)){done.add(m);m.setStyle({radius:m===selMk?12:8,fillColor:m===selMk?"#c9691f":"#b5451f"});}});
-  if(isMobile())setView("mapa"); /* o sheet mora na tela do mapa */
+  setView("mapa"); /* fecha o overlay de busca ao abrir a ficha — mobile E desktop mapa-first (evita sobreposição de cards) */
   if(a.x_coord&&a.y_coord){
     const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);showDetail(a,ll);
   }else{
