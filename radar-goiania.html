@@ -435,6 +435,11 @@
     .wrap{display:block;height:100vh;height:100dvh;overflow:hidden}
     .panel,.mapwrap{height:calc(100vh - 56px);height:calc(100dvh - 56px - env(safe-area-inset-bottom))}
     .panel{border-right:0}
+    /* no desktop .results é flex:1 c/ scroll próprio (form fixo no topo). No mobile o
+       form tem ~630px e sobra ~0 pro flex:1 -> a lista virava um sliver de ~12px com
+       scroll interno escondido ("não lista as unidades"). Aqui o .panel inteiro rola
+       como um só: lista com altura natural, sem scroll aninhado. */
+    .results{flex:none;overflow-y:visible}
     body[data-view="busca"] .mapwrap{display:none}
     body[data-view="mapa"] .panel{display:none}
     .viewbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:800;background:var(--ink);
@@ -1306,7 +1311,8 @@ function finish(items,fromMap){
       if(ehPredio){
         /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
         setView("busca");
-        toast("🏢 "+units.length+" imóveis deste prédio listados abaixo ⬇");
+        scrollToResults(); /* o formulário é alto e empurrava a lista p/ baixo da dobra — parecia "não listar nada" */
+        toast("🏢 "+units.length+" imóveis deste prédio — veja a lista abaixo");
       }else{
         setView("mapa");
         if(units.length>1)toast(units.length+" imóveis no mapa — a lista completa está na aba Consulta.");
@@ -1412,6 +1418,18 @@ function render(list,opts){
       /* cards.slice(12) ficam no estado natural (opacidade 1) — sem cascata longa */
     }
   }
+}
+function scrollToResults(){
+  /* mobile: .search tem ~630px de altura e empurra a lista p/ baixo da dobra;
+     após uma busca com resultados, rola o .panel até o topo da lista pra ela
+     não ficar escondida atrás do formulário (bug: "não lista as unidades"). */
+  const doScroll=()=>{
+    const panel=document.querySelector(".panel"), box=document.getElementById("results");
+    if(!panel||!box)return;
+    const delta=box.getBoundingClientRect().top-panel.getBoundingClientRect().top; /* robusto ao offsetParent */
+    panel.scrollTop=Math.max(0,panel.scrollTop+delta-8); /* direto: scrollTo(smooth) era engolido pelo relayout do setView */
+  };
+  setTimeout(doScroll,60); /* setTimeout (não rAF): dispara mesmo com rAF estrangulado; 60ms cobre o relayout do setView */
 }
 function cardHTML(a,i,isUnit){
   const addr=addrDe(a);
