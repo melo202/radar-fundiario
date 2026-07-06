@@ -55,6 +55,15 @@
 - [ ] **DOC-02**: Antes de gerar, um **painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) aparece; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
 - [ ] **DOC-03**: **Revisão/edição antes do PDF final** (dados sensíveis e textos principais editáveis); reusa o wizard atual, não recomeça do zero
 
+### Documentos da negociação — minutas do negócio (extensão do plano)
+
+> Papelada real do corretor. Templates DETERMINÍSTICOS preenchidos com o imóvel (cadastro) + partes/valores digitados → minuta EDITÁVEL → PDF pt-BR com ressalvas. Reusa a infra de documento da Fase 11. Sempre "minuta" (nunca promete validade automática; registro em cartório/RGI é do usuário).
+
+- [ ] **NEG-01**: Gerar **Proposta de Compra e Venda** (intenção de compra) — pré-preenchida com o imóvel + partes/valor/condições/prazo de validade; minuta editável → PDF
+- [ ] **NEG-02**: Gerar **Termo de Autorização/Exclusividade de Venda** (proprietário ↔ corretor) — imóvel + proprietário + corretor (CRECI) + prazo + % de comissão; liga ao Modo Captação (NEG ← CAPT-01); minuta editável → PDF
+- [ ] **NEG-03**: Gerar **Contrato de Compra e Venda** (minuta) — vendedor/comprador, descrição do imóvel + matrícula/RGI, preço/forma de pagamento, cláusulas padrão; disclaimer forte (revisão jurídica + registro em cartório); minuta editável → PDF
+- [ ] **NEG-04** (opcional/best-effort): **OCR da escritura/matrícula** client-side (Tesseract.js WASM — determinístico, NÃO LLM) para pré-preencher matrícula/partes/descrição do contrato; o corretor SEMPRE revisa/corrige; fallback = digitar/colar texto; degrada silenciosamente onde o OCR não estiver disponível
+
 ### Prédio como objeto comercial (§7)
 
 - [ ] **PRED-01**: **Resumo do prédio** antes da lista — nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio)
@@ -112,6 +121,7 @@
 | FICHA-01, SCORE-01/02, LEIT-01, CMP-01 | 9 | Pending |
 | ACAO-01, ZAP-01, SALV-01, CAPT-01 | 10 | Pending |
 | DOC-01/02/03 | 11 | Pending |
+| NEG-01/02/03/04 | 11.1 | Pending |
 | PRED-01/02 | 12 | Pending |
 | VIS-01, PIN-01, MOT-01, DESC-01 | 13 | Pending |
 | LING-01 | 14 | Pending |
@@ -125,6 +135,7 @@
 - Fase 9 (Ficha comercial + scores): FICHA-01, SCORE-01/02, LEIT-01, CMP-01
 - Fase 10 (Ação + WhatsApp + salvos + captação): ACAO-01, ZAP-01, SALV-01, CAPT-01
 - Fase 11 (Documentos em 3 níveis): DOC-01/02/03
+- Fase 11.1 (Documentos da negociação): NEG-01/02/03 + NEG-04 (OCR opcional)
 - Fase 12 (Prédio comercial): PRED-01/02
 - Fase 13 (Visual + pinos + motion + descoberta): VIS-01, PIN-01, MOT-01, DESC-01
 - Fase 14 (Linguagem impecável): LING-01

@@ -35,6 +35,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [ ] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
 - [ ] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação
 - [ ] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF
+- [ ] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11
 - [ ] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar
 - [ ] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
 - [ ] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
@@ -108,6 +109,19 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   3. **Revisão/edição antes do PDF** (dados sensíveis e textos principais); reusa o wizard atual (não recomeça); o PDF continua saindo do clique do usuário (guarda do fix `ec9f129`)
 **Plans**: TBD · **UI hint**: yes
 
+### Phase 11.1: Documentos da Negociação (Proposta · Exclusividade · Contrato)
+**Goal**: O corretor gera as minutas do negócio (Proposta de C&V, Termo de Exclusividade/Autorização, Contrato de C&V) já preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas — a papelada que fecha a captação e a venda, sem sair do app.
+**Depends on**: Fase 11 (infra de documento/wizard/PDF), Fase 10 (Modo Captação — o Termo de Exclusividade sai da captação), Fase 9 (dados/valor do imóvel)
+**Requirements**: NEG-01, NEG-02, NEG-03, NEG-04
+**Success Criteria**:
+  1. As 3 minutas (Proposta, Exclusividade, Contrato) são geradas por **template determinístico** pré-preenchido com o imóvel (cadastro: inscrição/endereço/quadra-lote/área) + campos de partes/valor/condições editáveis — **nunca por LLM** (núcleo determinístico)
+  2. Cada documento é uma **minuta editável** antes do PDF (mesma etapa de revisão da Fase 11) e traz **ressalva clara** ("minuta para conferência; recomenda-se revisão jurídica e registro em cartório/RGI") — jamais promete validade automática
+  3. O **Termo de Exclusividade** puxa proprietário/corretor(CRECI)/prazo/comissão e se integra ao Modo Captação (Fase 10); a **Proposta** traz validade da oferta; o **Contrato** traz matrícula/RGI + forma de pagamento + cláusulas padrão
+  4. **NEG-04 (opcional)**: OCR da escritura/matrícula via **Tesseract.js** (WASM client-side, determinístico) pré-preenche matrícula/partes/descrição, com o corretor **sempre revisando**; fallback = digitar/colar; degrada onde o OCR não estiver disponível — nunca é fonte confiável sozinho
+  5. Toda a microcopy e os textos das minutas passam no gate de linguagem (Fase 14); zero campo pessoal de terceiros persistido além do necessário à minuta
+**Plans**: TBD · **UI hint**: yes
+**Phase flags**: OCR de scan de cartório é notoriamente ruidoso — NEG-04 é best-effort/opcional, com revisão humana obrigatória; se o custo/qualidade não compensar, entrega-se as minutas com preenchimento manual e adia-se o OCR.
+
 ### Phase 12: Prédio como Objeto Comercial
 **Goal**: Um prédio vira leitura comercial (faixa, padrão, unidades interessantes), não uma tabela longa de inscrições.
 **Depends on**: Fase 9 (scores por unidade), Fase 8 (busca de prédio)
@@ -174,7 +188,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 
 ## Progress
 
-**Execution Order:** 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
+**Execution Order:** 7 → 8 → 9 → 10 → 11 → 11.1 → 12 → 13 → 14 → 15 → 16 → 17
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
@@ -184,11 +198,12 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 4. Camada de Satélite | v2.0 | 2/2 | ✅ Complete | 2026-07-04 |
 | 5. Seam de IA (dormant) | v2.0 | 1/1 | ✅ Complete | 2026-07-04 |
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
-| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 1/3 | 🚧 Em andamento (nomes ✅; CNEFE + malha pendentes) | - |
+| 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete   | 2026-07-05 |
 | 8. Busca Única Inteligente | v2.1 | 0/TBD | Not started | - |
 | 9. Ficha Comercial + Scores | v2.1 | 0/TBD | Not started | - |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
+| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
