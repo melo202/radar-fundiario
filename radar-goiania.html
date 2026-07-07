@@ -788,15 +788,23 @@ function matchScoreRua(log,rCore,rD){
    da frase — mais estrito que resolveBairro() generico (que casa em qualquer posicao), reduzindo
    falso-positivo quando a origem e texto livre da caixa unica (risco documentado: prefixo acidental
    de uma palavra do inicio da frase casando um setor por coincidencia). Em caso de multiplos hits no
-   mesmo prefixo, prefere o de search mais LONGO (nome mais especifico). */
+   mesmo prefixo, prefere o de search mais CURTO (o generico/mais proximo do exato). */
 function extractSetor(raw,combo){
   const words=String(raw||"").trim().split(/\s+/).filter(Boolean);
   for(let take=Math.min(4,words.length);take>=1;take--){
     const prefix=norm(words.slice(0,take).join(" "));
     if(!prefix)continue;
-    const hits=(combo||[]).filter(b=>b.search.indexOf(prefix)===0);
+    /* match em 2 niveis, sempre com o prefixo vindo do INICIO DA FRASE digitada (precisao):
+       (a) inicio do search do cadastro ("setor marista" -> "SETOR MARISTA ...");
+       (b) fronteira de palavra dentro do search — cobre o uso real "marista"/"bueno"/"oeste"
+           SEM a palavra-tipo (o cadastro guarda "SETOR MARISTA" e o proprio placeholder do
+           app ensina a digitar sem o tipo). Padding de espaco, sem regex dinamica. */
+    let hits=(combo||[]).filter(b=>b.search.indexOf(prefix)===0);
+    if(!hits.length)hits=(combo||[]).filter(b=>(" "+b.search+" ").includes(" "+prefix+" "));
     if(hits.length){
-      hits.sort((a,b)=>b.search.length-a.search.length); // nome mais especifico (search mais longo) primeiro
+      /* tie-break: search mais CURTO primeiro — o generico vence o submercado
+         ("Jardim Goias" antes de "Jardim Goias Area I"; "Vila Nova" antes de "Vila Nova Canaa") */
+      hits.sort((a,b)=>a.search.length-b.search.length);
       const rest=words.slice(take).join(" ");
       return {code:hits[0].code,disp:hits[0].disp,rest};
     }

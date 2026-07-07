@@ -32,14 +32,19 @@ const P = loadPureBlock();
 // - "Marista" (setor real usado no caso obrigatorio "marista quadra 128 lote 5")
 // - "Setor Sul"/"Setor Sudoeste" (prefixo comum "Setor" que testa o caso de risco documentado:
 //   prefixo textual de uma palavra so nao deve "vencer" sem checar candidatos mais especificos)
+// REALISTA: em producao search = norm(disp+" "+raw), onde disp expande o prefixo
+// ("SET"->"Setor") e raw e o nmbairro do endpoint — ou seja, o search de "Marista" e
+// "SETOR MARISTA SET MARISTA" (NAO comeca com "MARISTA"). Uma fixture simplificada
+// mascarou exatamente esse gap (digitar "marista" sem a palavra-tipo falhava ao vivo).
 const COMBO_FIXTURE = [
-  { code: "101", raw: "MARISTA", disp: "Marista", search: "MARISTA" },
-  { code: "102", raw: "JARDIM GOIAS", disp: "Jardim Goiás", search: "JARDIM GOIAS" },
-  { code: "103", raw: "SETOR SUL", disp: "Setor Sul", search: "SETOR SUL" },
-  { code: "104", raw: "SETOR SUDOESTE", disp: "Setor Sudoeste", search: "SETOR SUDOESTE" },
-  { code: "105", raw: "CAMPINAS", disp: "Campinas", search: "CAMPINAS" },
-  { code: "106", raw: "BUENO", disp: "Bueno", search: "BUENO" },
-  { code: "107", raw: "PARQUE AMAZONIA", disp: "Parque Amazônia", search: "PARQUE AMAZONIA" },
+  { code: "101", raw: "SET MARISTA", disp: "Setor Marista", search: "SETOR MARISTA SET MARISTA" },
+  { code: "102", raw: "JD GOIAS", disp: "Jardim Goiás", search: "JARDIM GOIAS JD GOIAS" },
+  { code: "108", raw: "JD GOIAS AREA I", disp: "Jardim Goias Area I", search: "JARDIM GOIAS AREA I JD GOIAS AREA I" },
+  { code: "103", raw: "SET SUL", disp: "Setor Sul", search: "SETOR SUL SET SUL" },
+  { code: "104", raw: "SET SUDOESTE", disp: "Setor Sudoeste", search: "SETOR SUDOESTE SET SUDOESTE" },
+  { code: "105", raw: "SET CAMPINAS", disp: "Setor Campinas", search: "SETOR CAMPINAS SET CAMPINAS" },
+  { code: "106", raw: "SET BUENO", disp: "Setor Bueno", search: "SETOR BUENO SET BUENO" },
+  { code: "107", raw: "PRQ AMAZONIA", disp: "Parque Amazônia", search: "PARQUE AMAZONIA PRQ AMAZONIA" },
 ];
 
 test("TIPOVIA_DETECT — casa tipo de via em qualquer posicao (nao ancorado)", () => {
@@ -89,6 +94,26 @@ test("extractSetor — nao acha setor quando a frase e so texto de predio", () =
   const r = P.extractSetor("sumer park", COMBO_FIXTURE);
   assert.equal(r.code, null);
   assert.equal(r.rest, "sumer park");
+});
+
+test("extractSetor — REGRESSAO ao vivo: nome SEM a palavra-tipo ('marista', 'bueno') casa por fronteira de palavra", () => {
+  // o cadastro guarda "SETOR MARISTA ..." — digitar so "marista" (como o placeholder ensina) TEM que funcionar
+  const r = P.extractSetor("marista quadra 128 lote 5", COMBO_FIXTURE);
+  assert.equal(r.code, "101");
+  assert.equal(r.rest, "quadra 128 lote 5");
+  const b = P.extractSetor("bueno q 5", COMBO_FIXTURE);
+  assert.equal(b.code, "106");
+});
+
+test("extractSetor — tie-break prefere o generico (search mais curto): 'jardim goias' vence 'Jardim Goias Area I'", () => {
+  const r = P.extractSetor("jardim goias quadra 10", COMBO_FIXTURE);
+  assert.equal(r.code, "102", "deveria escolher o Jardim Goias generico, nao o submercado Area I");
+});
+
+test("extractSetor — fronteira de palavra NAO casa substring de meio de palavra", () => {
+  // "sul" e palavra completa em "SETOR SUL SET SUL" mas "udoeste" nao pode casar SUDOESTE
+  const r = P.extractSetor("udoeste quadra 1", COMBO_FIXTURE);
+  assert.equal(r.code, null);
 });
 
 test("getLastBairroCode — nunca lanca excecao (localStorage indisponivel no sandbox vm)", () => {
@@ -144,7 +169,7 @@ test("detectMode — 'quadra 128 lote 5' decide ql com quadra e lote", () => {
 test("detectMode — setor-na-frase: 'marista quadra 128 lote 5' extrai o setor ANTES das regras de modo", () => {
   const r = P.detectMode("marista quadra 128 lote 5", COMBO_FIXTURE);
   assert.equal(r.bairroCode, "101"); // code do Marista na fixture
-  assert.equal(r.bairroDisp, "Marista");
+  assert.equal(r.bairroDisp, "Setor Marista");
   assert.equal(r.mode, "ql");
   assert.equal(r.quadra, "128");
   assert.equal(r.lote, "5");
