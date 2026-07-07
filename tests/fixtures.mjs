@@ -239,10 +239,222 @@ export const FIXTURES = {
       perfil: null,
       comparaveis: [
         "Rua A — 8% abaixo da faixa desta região",
-        "Rua B — 5% abaixo da faixa desta região",
+        "Rua B — 5% acima da faixa desta região",
         "Rua C — 2% acima da faixa desta região",
         "Rua D — 10% abaixo da faixa desta região",
       ],
     },
+  },
+
+  // Fase 11.1 (11.1-01): fixtures de propostaTexto/termoExclusividadeTexto/contratoTexto/
+  // parseMatricula/numeroPorExtenso — funcoes novas no bloco RADAR_PURE (NEG-01/02/03). Contrato
+  // de HONESTIDADE: campo de parte/valor/matricula ausente NUNCA e inventado, sempre "________";
+  // nenhuma das 3 minutas retorna "undefined"/"NaN" em nenhum caso.
+
+  // imovel comum, reusado pelos 3 tipos de minuta.
+  negImovel: {
+    endereco: "Rua Portugal, 582",
+    bairro: "Setor Bueno",
+    quadra: "45",
+    lote: "12",
+    areaTerr: 450,
+    areaEdif: 220,
+    inscricao: "3020150346",
+    tipoImovel: "Apartamento",
+  },
+
+  propostaCasos: {
+    // caso completo — todos os campos preenchidos.
+    completo: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proponente: { nome: "João da Silva", doc: "123.456.789-00", endereco: "Rua A, 10" },
+      vendedor: { nome: "Maria Souza", doc: "987.654.321-00", endereco: "Rua B, 20" },
+      valorOfertado: 500000,
+      formaPagamento: "À vista",
+      validadeDias: 10,
+      foro: "Goiânia/GO",
+    },
+    // proponente.nome vazio — minuta deve usar CAMPO_VAZIO, nunca nome vazio silencioso/"undefined".
+    proponenteSemNome: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proponente: { nome: "", doc: "", endereco: "" },
+      vendedor: { nome: "Maria Souza", doc: "", endereco: "" },
+      valorOfertado: 500000,
+      formaPagamento: "À vista",
+      validadeDias: 10,
+      foro: null,
+    },
+    // valorOfertado ausente — clausula de valor deve usar CAMPO_VAZIO, nunca "R$ null"/"R$ NaN".
+    semValor: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proponente: { nome: "João da Silva", doc: null, endereco: null },
+      vendedor: { nome: "Maria Souza", doc: null, endereco: null },
+      valorOfertado: null,
+      formaPagamento: null,
+      validadeDias: null,
+      foro: null,
+    },
+  },
+
+  termoCasos: {
+    exclusivaSimComAnuncio: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proprietario: { nome: "Maria Souza", doc: "987.654.321-00", endereco: "Rua B, 20" },
+      corretor: { nome: "Ana Souza", creci: "12345" },
+      prazoDias: 90,
+      comissaoPct: 6,
+      exclusiva: true,
+      autorizaAnuncio: true,
+      foro: "Goiânia/GO",
+    },
+    abertaSemAnuncio: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proprietario: { nome: "Maria Souza", doc: null, endereco: null },
+      corretor: { nome: "Ana Souza", creci: "12345" },
+      prazoDias: 90,
+      comissaoPct: 6,
+      exclusiva: false,
+      autorizaAnuncio: null,
+      foro: null,
+    },
+    autorizaAnuncioFalse: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      proprietario: { nome: "Maria Souza", doc: null, endereco: null },
+      corretor: { nome: "Ana Souza", creci: "12345" },
+      prazoDias: 90,
+      comissaoPct: 6,
+      exclusiva: null,
+      autorizaAnuncio: false,
+      foro: null,
+    },
+  },
+
+  contratoCasos: {
+    completo: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      vendedor: { nome: "Maria Souza", doc: "987.654.321-00", endereco: "Rua B, 20" },
+      comprador: { nome: "João da Silva", doc: "123.456.789-00", endereco: "Rua A, 10" },
+      matricula: "12.345",
+      cartorio: "3º Ofício de Registro de Imóveis",
+      precoTotal: 500000,
+      foro: "Goiânia/GO",
+    },
+    semMatriculaCartorio: {
+      imovel: {
+        endereco: "Rua Portugal, 582",
+        bairro: "Setor Bueno",
+        quadra: "45",
+        lote: "12",
+        areaTerr: 450,
+        areaEdif: 220,
+        inscricao: "3020150346",
+        tipoImovel: "Apartamento",
+      },
+      vendedor: { nome: "Maria Souza", doc: null, endereco: null },
+      comprador: { nome: "João da Silva", doc: null, endereco: null },
+      matricula: null,
+      cartorio: null,
+      precoTotal: null,
+      foro: null,
+    },
+  },
+
+  // parseMatricula: 2 ordens de frase real ("Matrícula nº X, situado no Nº Ofício de Registro de
+  // Imóveis" vs. "Cartório do Nº Ofício" sem "registro de imóveis" no fim — fix plan-check), mais
+  // sem-match e string vazia (nunca lança excecao).
+  parseMatriculaCasos: {
+    canonico: {
+      texto: "Matrícula nº 12.345, situado no 3º Ofício de Registro de Imóveis desta Comarca",
+      expectMatriculaContains: "12.345",
+      expectCartorioContains: "3",
+    },
+    ordemCartorioOficio: {
+      texto: "MATRICULA N. 45678, Cartório do 2° Ofício",
+      expectMatriculaContains: "45678",
+      expectCartorioContains: "2",
+    },
+    semMatch: {
+      texto: "texto qualquer sem nenhum padrão de matrícula ou cartório",
+    },
+    vazio: {
+      texto: "",
+    },
+  },
+
+  // numeroPorExtenso: casos basicos + fronteiras do extenso pt-BR (fix plan-check) — um milhao
+  // singular, milhoes plural, cem vs cento, mil sem "um", null nunca "R$ NaN"/"R$ null".
+  extensoCasos: {
+    quinhentosMil: { valor: 500000, expectContains: ["quinhentos mil reais", "R$ 500.000,00"] },
+    noventa: { valor: 90, expectContains: ["noventa reais"] },
+    decimalGrande: { valor: 1234567.89, expectContains: ["R$ 1.234.567,89", "R$"] },
+    umMilhao: { valor: 1000000, expectContains: ["um milhão de reais"], expectNotContains: ["um milhões", "milhões"] },
+    doisMilhoes: { valor: 2000000, expectContains: ["dois milhões de reais"] },
+    cem: { valor: 100, expectContains: ["cem reais"], expectNotContains: ["cento"] },
+    centoCinquenta: { valor: 150, expectContains: ["cento e cinquenta reais"] },
+    mil: { valor: 1000, expectContains: ["mil reais"], expectNotContains: ["um mil"] },
+    nulo: { valor: null, expectEmpty: true },
   },
 };
