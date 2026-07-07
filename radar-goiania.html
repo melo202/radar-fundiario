@@ -422,6 +422,46 @@
   .wnext{display:block;width:100%;max-width:560px;margin:0 auto;background:var(--accent);color:#fff;border:0;
     font:700 17px/1 "IBM Plex Sans";padding:17px;border-radius:14px;cursor:pointer}
   .wnext:active{transform:translateY(1px)}
+  /* Fase 11-02: Seletor de Finalidade (Componente 1 do UI-SPEC) — zero token novo */
+  .fingrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .finop{min-height:76px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+    font:700 13px/1.3 "IBM Plex Sans";border-radius:12px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:6px;text-align:center;padding:10px 8px;cursor:pointer}
+  .finop:hover{border-color:var(--ink)}
+  .finop[aria-pressed="true"]{border-color:var(--accent);border-width:2px}
+  .finrec{background:var(--paper-2);border:1.5px solid var(--accent);border-radius:14px;padding:14px;margin-top:16px}
+  .finrec-selo{font:700 10px/1 "IBM Plex Mono",monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+  .finrec-doc{font:800 17px/1.2 "IBM Plex Sans";color:var(--ink);margin:6px 0}
+  .finrec-porque{font:500 12.5px/1.5 "IBM Plex Sans";color:var(--muted)}
+  .findocs{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .findoc{min-height:44px;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;
+    padding:10px 14px;text-align:left;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+  .findoc.is-rec{border-color:var(--accent);border-width:2px}
+  .findoc-selo{font:700 9px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:2px;display:block}
+  .findoc-nome{font:700 14px/1.25 "IBM Plex Sans";color:var(--ink)}
+  .findoc-desc{font:500 12px/1.4 "IBM Plex Sans";color:var(--muted)}
+  /* Fase 11-02: Painel de Confiança + Pendências (Componente 2 do UI-SPEC) */
+  .confcard{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+  .confcard.conf-baixa{border-color:var(--accent);border-width:2px}
+  .conf-nivel{font:700 16px/1.2 "IBM Plex Sans";color:var(--ink)}
+  .conf-porque{font:500 12.5px/1.5 "IBM Plex Sans";color:var(--muted);margin-top:6px}
+  .checklist{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .checkitem{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);flex-wrap:wrap}
+  .checkitem.is-ok{opacity:.75}
+  .checkitem-txt{font:500 13.5px/1.4 "IBM Plex Sans";color:var(--ink)}
+  .checkitem-input{max-width:150px;margin:0}
+  .checkitem-seg button{padding:8px 14px;font-size:13px;min-height:38px}
+  .confwarn{border-left:3px solid var(--accent);background:var(--paper);padding:10px 12px;
+    font:600 12.5px/1.4 "IBM Plex Sans";color:var(--ink);margin-bottom:10px;border-radius:2px}
+  /* Fase 11-02: Revisão Pré-PDF (Componente 3 do UI-SPEC) */
+  .revsec{margin-bottom:16px}
+  .revsec-lbl{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .revsec-val{font:700 15px/1.3 "IBM Plex Sans";color:var(--ink)}
+  .revprev{background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:8px 10px;
+    font:500 13px/1.4 "IBM Plex Sans";color:var(--ink)}
+  .revlink{min-height:32px;font:600 11px/1 "IBM Plex Sans";text-decoration:underline;color:var(--muted);
+    background:transparent;border:0;cursor:pointer;display:block;margin-top:8px;padding:0}
   /* ===== LAUDO — layout premium em cards; tela (#laudoView) e PDF (#laudo) compartilham as classes ===== */
   #laudo{display:none}
   #laudo .lbrand,#laudoView .lbrand{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 2px 20px}
@@ -2483,7 +2523,7 @@ function showDetail(a,ll){
      ⭐ Salvar oportunidade). O botão de copiar a inscrição foi movido para o bloco de Mais opções
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
-    <button type="button" class="primary" onclick="abrirLaudo()">📄 Gerar documento</button>
+    <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Gerar documento</button>
     <button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar oportunidade</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
@@ -2904,17 +2944,39 @@ const CONSERVS=["Novo","Ótimo","Bom","Regular","Precisa reforma"];
 /* ajuste do valor sugerido pelo estado declarado (depreciação simplificada) */
 const FATOR_CONSERV={"Novo":1.06,"Ótimo":1.03,"Bom":1,"Regular":0.93,"Precisa reforma":0.85};
 const DIFS=["Reformado","Armários planejados","Área gourmet","Piscina","Esquina","Sol da manhã","Andar alto","Vaga extra","Quintal amplo","Documentação ok"];
+const NOMES_DOC={ficha:"Ficha rápida",relatorio:"Relatório de avaliação",ptam:"Laudo / PTAM"};
 let LZ=null;
-function abrirLaudo(){
+/* abrirSeletorFinalidade(): novo entry point de #dActsPrim (11-02, DOC-01) — substitui a antiga
+   abrirLaudo() direta. Cria LZ com LZ.fase="finalidade" (sem step numerico ainda); os passos
+   numerados (0..5) só existem depois que o usuário escolhe um documento em finEscolherDoc(). */
+function abrirSeletorFinalidade(){
   if(!DCUR)return;
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
-  const hojeISO=new Date().toISOString().slice(0,10);
-  LZ={a:DCUR,step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],prof,comps:null,
-      vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",privativa:null};
-  const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
-  getComps(DCUR).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
+  LZ={a:DCUR,fase:"finalidade",finalidadeUso:null,tipoDoc:null,prof};
   WIZRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
   document.getElementById("wiz").hidden=false;
+  wizRender();
+  document.querySelector(".finop")?.focus();
+}
+/* finSet(finalidadeUso): grava a escolha e re-renderiza a MESMA tela do seletor (mostra a
+   recomendação + os 3 documentos, sem navegação extra). */
+function finSet(finalidadeUso){
+  if(!LZ)return;
+  LZ.finalidadeUso=finalidadeUso;
+  wizRender();
+}
+/* finEscolherDoc(tipoDoc): grava o documento escolhido, sai da fase "finalidade" e inicializa os
+   campos numéricos do wizard (mesmos defaults de abrirLaudo() antigo), avançando ao passo 0. */
+function finEscolherDoc(tipoDoc){
+  if(!LZ)return;
+  LZ.tipoDoc=tipoDoc;
+  delete LZ.fase;
+  const hojeISO=new Date().toISOString().slice(0,10);
+  Object.assign(LZ,{step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],comps:null,
+    vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",privativa:null,docOk:undefined});
+  const wf=document.querySelector("#wiz .wfoot");if(wf)wf.style.display="";
+  const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
+  getComps(LZ.a).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   wizRender();
 }
 let WIZRET=null;
@@ -2956,7 +3018,11 @@ function copyCapt(tipo){
   const par=MAPA[tipo];if(!par)return;
   copyTexto(par[0](d),par[1]);
 }
-function wizBack(){if(LZ&&LZ.step>0){LZ.step--;wizRender();}}
+function wizBack(){
+  if(!LZ)return;
+  if(LZ.fase==="finalidade"){fecharLaudo();return;}
+  if(LZ.step>0){LZ.step--;wizRender();}
+}
 function wizSet(k,v){if(!LZ)return;LZ[k]=v;wizRender();}
 function wizDif(d){if(!LZ)return;const i=LZ.difs.indexOf(d);i<0?LZ.difs.push(d):LZ.difs.splice(i,1);wizRender();}
 /* redimensiona a foto do iPhone (3-8 MB) para ~1600px JPEG — evita estourar a memória do Safari */
@@ -2979,12 +3045,55 @@ function wizFoto(inp){
   inp.value="";
 }
 function wizRmFoto(i){if(LZ){LZ.fotos.splice(i,1);wizRender();}}
+/* renderSeletorFinalidade(): tela "Para que você precisa do documento?" (Componente 1 do UI-SPEC,
+   DOC-01) — não é um passo numerado de LZ.step, é uma fase própria (LZ.fase==="finalidade").
+   Esconde o .wfoot (fix contratual pos plan-check: o botão #wNext ficaria órfão e disparia
+   montarLaudo() com LZ incompleto se o rodapé permanecesse visível aqui). */
+function renderSeletorFinalidade(){
+  const b=document.getElementById("wBody");
+  document.getElementById("wDots").innerHTML="";
+  document.getElementById("wBack").disabled=false;
+  const wf=document.querySelector("#wiz .wfoot");if(wf)wf.style.display="none";
+  const OPCOES=[
+    ["apresentar","📱","Apresentar ao cliente"],
+    ["captar","🏠","Captar o proprietário"],
+    ["justificar","💲","Justificar o preço"],
+    ["formal","🧾","Documento técnico formal"],
+  ];
+  let recHtml="";
+  if(LZ.finalidadeUso){
+    const cnai=!!(LZ.prof.cnai||"").trim();
+    const rec=recomendaDocumento(LZ.finalidadeUso,cnai);
+    const ORDEM=["relatorio","ficha","ptam"];
+    const DESCS={
+      relatorio:"Comparativo com dados e metodologia — uso comercial",
+      ficha:"1 página, direto ao ponto — pra enviar por WhatsApp",
+      ptam:"Estrutura formal, com identificação e responsabilidade técnica",
+    };
+    const ordemFinal=[rec.doc,...ORDEM.filter(d=>d!==rec.doc)];
+    recHtml=`<div class="finrec">
+        <div class="finrec-selo">Recomendado para você</div>
+        <div class="finrec-doc">${esc(NOMES_DOC[rec.doc]||"")}</div>
+        <div class="finrec-porque">${esc(rec.porque)}</div>
+      </div>
+      <div class="findocs">${ordemFinal.map(doc=>`<button type="button" class="findoc${doc===rec.doc?" is-rec":""}" onclick="finEscolherDoc('${doc}')">
+          ${doc===rec.doc?'<span class="findoc-selo">Recomendado</span>':""}
+          <span class="findoc-nome">${esc(NOMES_DOC[doc]||"")}</span>
+          <span class="findoc-desc">${esc(DESCS[doc]||"")}</span>
+        </button>`).join("")}</div>`;
+  }
+  b.innerHTML=`<div class="wh1">Para que você precisa do documento?</div>
+    <div class="wsub">Escolha a finalidade — recomendamos o tipo certo pra você. As 3 opções continuam disponíveis.</div>
+    <div class="fingrid">${OPCOES.map(([v,ic,txt])=>`<button type="button" class="finop" aria-pressed="${LZ.finalidadeUso===v}" onclick="finSet('${v}')">${ic}<br>${esc(txt)}</button>`).join("")}</div>
+    ${recHtml}`;
+}
 function wizRender(){
   if(!LZ)return;
+  if(LZ.fase==="finalidade"){renderSeletorFinalidade();return;}
   const a=LZ.a,b=document.getElementById("wBody");
-  document.getElementById("wDots").innerHTML=[0,1,2,3].map(i=>`<i class="${i===LZ.step?'on':''}"></i>`).join("");
+  document.getElementById("wDots").innerHTML=[0,1,2,3,4,5].map(i=>`<i class="${i===LZ.step?'on':''}"></i>`).join("");
   document.getElementById("wBack").disabled=LZ.step===0;
-  document.getElementById("wNext").textContent=LZ.step===3?"Gerar PDF":"Continuar";
+  document.getElementById("wNext").textContent=LZ.step===5?"Gerar PDF":"Continuar";
   const stepMudou=LZ._st!==LZ.step;LZ._st=LZ.step;
   const addr=logradouroDe(a);
   if(LZ.step===0){
