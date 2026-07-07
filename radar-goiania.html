@@ -1605,8 +1605,12 @@ function finish(items,fromMap){
          como palpite de nome de predio; bd vazio so foca a caixa unica p/ tentar outro nome. */
       let acao="";
       if(MODE==="addr"){
-        const ruaTxt=esc(clean(document.getElementById("rua").value));
-        if(ruaTxt)acao=`<button type="button" onclick="document.getElementById('predio').value='${ruaTxt}';forceMode('bd');buscar()">Buscar como Prédio</button>`;
+        const ruaTxt=clean(document.getElementById("rua").value);
+        /* NUNCA interpolar texto livre dentro de string JS de onclick inline (ver CR-01 08-REVIEW.md):
+           esc() so e seguro em atributo/HTML lido de volta via .dataset — nunca reanalisado como JS.
+           data-rua fica escapado por esc(); tentarComoPredio(this) le o valor cru via .dataset, sem
+           jamais reconstruir uma string JS com o texto do usuario. */
+        if(ruaTxt)acao=`<button type="button" data-rua="${esc(ruaTxt)}" onclick="tentarComoPredio(this)">Buscar como Prédio</button>`;
       }else if(MODE==="bd"){
         acao=`<button type="button" onclick="document.getElementById('caixaInput').focus()">Tentar outro nome</button>`;
       }
@@ -1635,6 +1639,17 @@ function finish(items,fromMap){
       /* desktop mapa-first: a lista está no card de busca (overlay) — toque num imóvel para abrir a ficha */
       toast("🏢 "+units.length+" imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha).");
     }
+}
+
+/* handler do botao "Buscar como Predio" (fallback vazio de finish(), modo addr).
+   Le o texto CRU da rua via data-rua/.dataset — nunca reconstroi string JS com texto do
+   usuario (CR-01 08-REVIEW.md: onclick inline com ${esc(x)} dentro de string JS single-quoted
+   sofre HTML-decode antes do parse e permite breakout via apostrofo). btn e o proprio elemento,
+   passado por referencia (this), nao por texto interpolado. */
+function tentarComoPredio(btn){
+  document.getElementById('predio').value=btn.dataset.rua||"";
+  forceMode('bd');
+  buscar();
 }
 
 /* ---------------- estimativa de mercado (melhor fonte disponível) ----------------
