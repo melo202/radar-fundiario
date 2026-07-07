@@ -36,7 +36,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
  (completed 2026-07-07)
 - [x] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação (completed 2026-07-07)
-- [ ] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF
+- [x] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF (completed 2026-07-07)
 - [ ] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11
 - [ ] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar
 - [ ] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
@@ -114,11 +114,11 @@ Plans:
   1. Três saídas nomeadas — **Ficha rápida** / **Relatório de avaliação** (10+ comparáveis ou explica a limitação) / **Laudo-PTAM**; a UI pergunta a **finalidade** primeiro e **recomenda** o tipo
   2. **Painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) antes de gerar; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
   3. **Revisão/edição antes do PDF** (dados sensíveis e textos principais); reusa o wizard atual (não recomeça); o PDF continua saindo do clique do usuário (guarda do fix `ec9f129`)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 11-01-PLAN.md — RADAR_PURE: recomendaDocumento + pendenciasDocumento + fichaRapidaTexto (TDD)
 - [x] 11-02-PLAN.md — Seletor de Finalidade + passo Confiança/Pendencias + CNAI separado + Revisao pre-PDF
-- [ ] 11-03-PLAN.md — Titulo PTAM por CNAI + montarFichaRapida() (Ficha rapida)
+- [x] 11-03-PLAN.md — Titulo PTAM por CNAI + montarFichaRapida() (Ficha rapida)
 
 ### Phase 11.1: Documentos da Negociação (Proposta · Exclusividade · Contrato)
 **Goal**: O corretor gera as minutas do negócio (Proposta de C&V, Termo de Exclusividade/Autorização, Contrato de C&V) já preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas — a papelada que fecha a captação e a venda, sem sair do app.
@@ -227,7 +227,7 @@ Plans:
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11. Documentos em 3 Níveis | v2.1 | 2/3 | In Progress|  |
+| 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
