@@ -284,6 +284,15 @@
   .maisopcoes>summary::before{content:"▸ "}
   .maisopcoes[open]>summary::before{content:"▾ "}
   .maisopcoes .footbody.acts{padding-top:8px}
+  /* Fase 10 ZAP-01/CAPT-01 (10-03): grupo "Copiar para WhatsApp" + "Captar este imóvel" dentro de
+     #dActsMore — separador tracejado, botões full-width empilhados (nao a grade flex do .acts). */
+  .zapgroup{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);width:100%}
+  .zapgroup-lbl{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  /* especificidade OBRIGATORIA (0,3,0) > .detail .acts button (0,2,1): #dActsMore tem
+     class "footbody acts", entao o generico (flex:1/center) vence .zapbtn (0,1,0) por contagem de
+     classe. Seletor incondicional — mesmo padrao do fix WR-01 (button.primary). */
+  .detail .acts .zapbtn{width:100%;flex:none;min-height:44px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:600 13.5px/1 "IBM Plex Sans";border-radius:2px;text-align:left;justify-content:flex-start;padding:0 14px;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .detail .acts .zapbtn:hover{border-color:var(--ink)}
 
   .dtecnico .dgrid{margin-bottom:10px}
   /* comparáveis da vizinhança */
@@ -2396,7 +2405,18 @@ function showDetail(a,ll){
     <button type="button" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
-    ${mapLinks}`;
+    ${mapLinks}
+    <div class="zapgroup">
+      <div class="zapgroup-lbl">Copiar para WhatsApp</div>
+      <button type="button" class="zapbtn" onclick="copyZap('resumo')">💬 Resumo do imóvel ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('proprietario')">🏠 Mensagem para o proprietário ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('comprador')">🔑 Mensagem para o comprador ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('preco')">💲 Argumento de preço ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('riscos')">⚠️ Riscos e ressalvas ⧉</button>
+    </div>
+    <div class="zapgroup">
+      <button type="button" class="zapbtn" onclick="abrirCaptacao()">🧾 Captar este imóvel</button>
+    </div>`;
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
     <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
@@ -2611,6 +2631,61 @@ function copyLink(insc){
   const url=location.origin+location.pathname+"?insc="+encodeURIComponent(insc);
   navigator.clipboard.writeText(url)
     .then(()=>toast("Link copiado."),()=>toast("Não foi possível copiar o link."));
+}
+/* Fase 10 ZAP-01/CAPT-01 (10-03): monta o objeto data (shape travado em 10-01-SUMMARY) a partir
+   da ficha atualmente aberta (DCUR) — usado tanto pelo grupo WhatsApp quanto pelo Modo Captação.
+   Sem DCUR -> null (guard honesto, nenhuma acao dependente de ficha roda sem ficha aberta). */
+function dadosFicha(){
+  if(!DCUR)return null;
+  const em=mercadoEstimado(DCUR);
+  const sc=DCUR.__scores||{};
+  const conf=sc.conf||null, op=sc.op||null;
+  const tipo=unitLabel(DCUR)||USO[DCUR.uso]||"Imóvel";
+  let prof=null;try{const p=JSON.parse(localStorage.getItem("radar_prof")||"{}");if(p&&p.nome)prof=p;}catch(e){}
+  return {
+    endereco:addrDe(DCUR), bairro:clean(DCUR.nmbairro),
+    quadra:clean(DCUR.nrquadra), lote:clean(DCUR.nrlote),
+    tipoImovel:tipo,
+    faixa:em?{lo:em.lo,hi:em.hi}:null,
+    scoreOp:op, scoreConf:conf,
+    leitura:leituraPratica({tipoImovel:tipo,bairro:clean(DCUR.nmbairro),oportunidade:op,confianca:conf}),
+    perfil:prof
+  };
+}
+/* copyTexto: ÚNICO ponto de escrita no clipboard para os textos novos (copyZap/copyCapt) — SEMPRE
+   com fallback (copyInsc/copyLink existentes NÃO são retrofitados, fora de escopo desta plan) e
+   SEMPRE com feedback (nunca falha silenciosa — T-10-11). */
+function copyTexto(texto,okMsg){
+  const falhou=()=>toast("Não foi possível copiar — tente selecionar o texto manualmente.");
+  const fallback=()=>{
+    try{
+      const ta=document.createElement("textarea");
+      ta.value=texto;
+      ta.style.position="fixed";ta.style.opacity="0";ta.style.top="0";ta.style.left="0";
+      document.body.appendChild(ta);
+      ta.focus();ta.select();
+      const ok=document.execCommand("copy");
+      document.body.removeChild(ta);
+      if(ok)toast(okMsg);else falhou();
+    }catch(e){falhou();}
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(()=>toast(okMsg),fallback);
+  }else fallback();
+}
+/* copyZap(tipo): mapeia os 5 tipos de mensagem WhatsApp (ZAP-01) para o template puro correspondente
+   (RADAR_PURE, 10-01) + toast ESPECIFICO por tipo (nunca "Copiado" generico). */
+function copyZap(tipo){
+  const d=dadosFicha();if(!d)return;
+  const MAPA={
+    resumo:[zapResumo,"Resumo copiado — cole no WhatsApp."],
+    proprietario:[zapProprietario,"Mensagem para o proprietário copiada — cole no WhatsApp."],
+    comprador:[zapComprador,"Mensagem para o comprador copiada — cole no WhatsApp."],
+    preco:[zapArgumento,"Argumento de preço copiado — cole no WhatsApp."],
+    riscos:[zapRiscos,"Texto de riscos e ressalvas copiado — cole no WhatsApp."]
+  };
+  const par=MAPA[tipo];if(!par)return;
+  copyTexto(par[0](d),par[1]);
 }
 
 /* ---------------- comparáveis da vizinhança (metodologia: mediana + Q1-Q3, Tukey, n>=5) ---------------- */
