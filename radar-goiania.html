@@ -483,8 +483,8 @@
     border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s,transform .1s ease;cursor:pointer}
   .detail .acts a:hover,.detail .acts button:hover{background:var(--ink);color:var(--paper-2)}
   .detail .acts a:active,.detail .acts button:active{transform:scale(.98)}
-  .detail .acts a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  .detail .acts a.primary:hover{background:var(--accent-ink)}
+  .detail .acts a.primary,.detail .acts button.primary{background:var(--accent);border-color:var(--accent);color:#fff} /* WR-01: a CTA primária nova é <button> */
+  .detail .acts a.primary:hover,.detail .acts button.primary:hover{background:var(--accent-ink)}
 
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
@@ -1000,7 +1000,7 @@ function scoreOportunidade(myPm2, stats, flags){
   else pct=lerp(myPm2,q3,max,75,100);
   const score=Math.round(100-pct);
   const diffPct=Math.round(Math.abs(myPm2-med)/med*100);
-  const abaixo=myPm2<med;
+  const abaixo=myPm2<=med; /* IN-01: mesmo comparador (<=) da conclusao de renderComps — diffPct=0 vira "na mediana" na frase de qualquer forma */
   let rotulo, porque;
   if(score>=66){
     rotulo="Boa oportunidade";
@@ -2329,6 +2329,7 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   const temBase=r&&r.med>0&&myPm2>0, abaixo=temBase&&myPm2<=r.med;
   const diffPct=temBase?Math.round(Math.abs(myPm2-r.med)/r.med*100):null;
   const conclusaoTxt=!temBase?"Posição na vizinhança não pôde ser calculada — confira a estatística completa.":diffPct===0?`<b>Na mediana</b> da vizinhança — alinhado à região.`:abaixo?`<b class="abaixo">${diffPct}% abaixo da mediana</b> da vizinhança — posição favorável para negociar.`:`<b class="acima">${diffPct}% acima da mediana</b> da vizinhança — acima do preço típico da região.`;
+  r.radius=radius; /* WR-02: raio REAL da busca (400 ou 800 m) — o porquê do score citava sempre "400 m" mesmo quando a busca alargou */
   atualizarScores(a, r); /* fecha o wiring com a Wave 2 (09-02) -- nao depende do innerHTML abaixo */
   box.innerHTML=`<div class="cmp"><div class="cmp-conclusao">${conclusaoTxt}</div><div class="cmp-acts"><button type="button" class="cmpbtn-sm" onclick="abrirMetodologiaCmp(this)">Ver metodologia</button></div><details class="cmp-detalhe"><summary>Estatística completa</summary><div class="footbody"><div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m <span class="badge ${conf[0]}">${conf[1]}</span></div><div class="bar">${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div><div class="med" style="left:${px(r.med)}%"></div>`:""}<div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div></div><div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div><div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — mais caro que <b>${pctl}%</b> dos vizinhos`:""}${pctl!=null&&pctl<=25?" · 💰 entre os mais baratos":pctl!=null&&pctl>=75?" · entre os mais caros":""}</div><div class="mkt">Preço de mercado estimado na vizinhança: <b>${fx(r.q1*cEff)}–${fx(r.q3*cEff)}/m²</b>. Base: cadastro da prefeitura — estimativa, não avaliação.</div></div></details></div>`;
 }
