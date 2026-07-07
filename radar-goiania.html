@@ -531,7 +531,7 @@
           placeholder="quadra 128 lote 5 · rua portugal 582 · sumer park · 3020150346"
           role="combobox" aria-expanded="false" aria-controls="caixaList" aria-autocomplete="list"
           aria-describedby="detectChip">
-        <button id="caixaVoz" class="caixa-ic" aria-label="Buscar por voz" style="display:none">🎤</button>
+        <button id="caixaVoz" class="caixa-ic" aria-label="Buscar por voz" aria-pressed="false" style="display:none">🎤</button>
         <button id="caixaClear" class="caixa-ic" aria-label="Limpar busca" style="display:none">×</button>
       </div>
       <div id="caixaList" class="combo-list" role="listbox" aria-label="Sugestões de setor e rua"></div>
@@ -1559,7 +1559,17 @@ async function buscar(){
     finish(items);
     if(aviso&&items.length)setTimeout(()=>toast(aviso),450); /* depois do toast do finish */
   }catch(e){
-    if(tk===SEARCHTOKEN)toast(navigator.onLine?"Falha ao consultar o cadastro. Tente de novo.":"Você está offline — a busca precisa de internet.");
+    if(tk===SEARCHTOKEN){
+      const off=!navigator.onLine;
+      const msg=off?"Você está offline — a busca precisa de internet.":"Falha ao consultar o cadastro. Tente de novo.";
+      toast(msg);
+      /* proxima acao em 1 toque (SEARCH.md §3.6): o #toast atual e so texto (role=status simples,
+         usado em dezenas de call-sites) — adicionar um botao dentro dele exigiria reescrever toast()
+         em todo o app; decisao documentada no SUMMARY: a acao "Tentar de novo" vive em #results
+         (mesma superficie ja usada pelos outros estados de erro/vazio desta plan). */
+      document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Falha na busca</div>${msg}
+        <div class="chips" style="justify-content:center;margin-top:14px"><button type="button" onclick="buscar()">Tentar de novo</button></div></div>`;
+    }
   }finally{if(tk===SEARCHTOKEN){loading(false);btn.disabled=false;}}
 }
 
@@ -1591,7 +1601,16 @@ function finish(items,fromMap){
         (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua — ou, se for prédio, use o modo \"Prédio\" com o nome do edifício.":
         (MODE!=="insc"&&document.getElementById("apto").value?"Nenhum imóvel com esse número. Tente sem o apartamento para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
-      document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}</div>`;
+      /* proxima acao em 1 toque, roteada pelo MODE (SEARCH.md §3.6): addr vazio reusa a rua digitada
+         como palpite de nome de predio; bd vazio so foca a caixa unica p/ tentar outro nome. */
+      let acao="";
+      if(MODE==="addr"){
+        const ruaTxt=esc(clean(document.getElementById("rua").value));
+        if(ruaTxt)acao=`<button type="button" onclick="document.getElementById('predio').value='${ruaTxt}';forceMode('bd');buscar()">Buscar como Prédio</button>`;
+      }else if(MODE==="bd"){
+        acao=`<button type="button" onclick="document.getElementById('caixaInput').focus()">Tentar outro nome</button>`;
+      }
+      document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}${acao?`<div class="chips" style="justify-content:center;margin-top:14px">${acao}</div>`:""}</div>`;
       return;}
     render(units,{stagger:true});
     plot(units);
