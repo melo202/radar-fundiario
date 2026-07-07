@@ -269,6 +269,12 @@
   .foot[open]>summary::before{content:"▾ "}
   .foot .footbody{margin-top:8px}
 
+  /* Fase 13 DESC-01: "O que o Radar faz" — reusa .foot/.footbody, zero CSS novo na moldura */
+  .oqf-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .oqf-lista li{font:500 12px/1.5 "IBM Plex Sans";color:var(--muted)}
+  .oqf-lista li b{color:var(--ink);font-weight:600}
+  .oqf-lista button{display:inline;border:0;background:transparent;color:var(--accent);font:600 12px/1 "IBM Plex Sans";cursor:pointer;padding:2px 4px;margin-left:2px;text-decoration:underline;text-underline-offset:2px}
+
   /* ---------- mapa ---------- */
   .mapwrap{position:relative}
   #map{position:absolute;inset:0;background:var(--paper)}
@@ -882,6 +888,21 @@
         </div>
       </div>
     </div>
+
+    <!-- Fase 13 DESC-01: "O que o Radar faz" — segunda <details class="foot"> irmã, entrada
+         discreta de descoberta; cada item chama a AÇÃO REAL (nunca texto explicativo genérico). -->
+    <details class="foot" id="oQueFaz">
+      <summary>O que o Radar faz</summary>
+      <div class="footbody">
+        <ul class="oqf-lista">
+          <li><b>Busca unificada</b> — endereço, quadra/lote, prédio ou inscrição numa caixa só. <button type="button" onclick="focusFirstField()">Buscar agora →</button></li>
+          <li><b>Valor e oportunidade</b> — faixa estimada, score de oportunidade e leitura em linguagem simples. <button type="button" onclick="onbAbrirDireto(1)">Ver como →</button></li>
+          <li><b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Ver como →</button></li>
+          <li><b>Ação comercial</b> — mensagens prontas pro WhatsApp, modo captação, salvar oportunidades. <button type="button" onclick="onbAbrirDireto(2)">Ver como →</button></li>
+          <li><b>Oportunidades da Caixa</b> — imóveis à venda da Caixa, plotados no mapa. <button type="button" onclick="toggleCaixa()">Ver no mapa →</button></li>
+        </ul>
+      </div>
+    </details>
 
     <details class="foot">
       <summary>Fontes &amp; metodologia</summary>
