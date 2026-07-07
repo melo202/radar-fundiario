@@ -2944,6 +2944,7 @@ const CONSERVS=["Novo","Ótimo","Bom","Regular","Precisa reforma"];
 /* ajuste do valor sugerido pelo estado declarado (depreciação simplificada) */
 const FATOR_CONSERV={"Novo":1.06,"Ótimo":1.03,"Bom":1,"Regular":0.93,"Precisa reforma":0.85};
 const DIFS=["Reformado","Armários planejados","Área gourmet","Piscina","Esquina","Sol da manhã","Andar alto","Vaga extra","Quintal amplo","Documentação ok"];
+const FINS=["Venda / compra","Locação","Partilha ou inventário","Garantia","Instrução judicial","Outra"];
 const NOMES_DOC={ficha:"Ficha rápida",relatorio:"Relatório de avaliação",ptam:"Laudo / PTAM"};
 let LZ=null;
 /* abrirSeletorFinalidade(): novo entry point de #dActsPrim (11-02, DOC-01) — substitui a antiga
@@ -3137,28 +3138,81 @@ function wizRender(){
       <button class="waddph" onclick="document.getElementById('wFile').click()">＋ Adicionar fotos</button>
       <input id="wFile" type="file" accept="image/*" multiple hidden onchange="wizFoto(this)">
       <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${esc(f)}" alt="Foto ${i+1}"><button class="rm" onclick="wizRmFoto(${i})" aria-label="Remover foto ${i+1}">×</button></div>`).join("")}</div>`;
-  }else{
+  }else if(LZ.step===3){
     const p=LZ.prof;
-    const FINS=["Venda / compra","Locação","Partilha ou inventário","Garantia","Instrução judicial","Outra"];
-    b.innerHTML=`<div class="wh1">Solicitante e você</div><div class="wsub">Com CRECI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
+    b.innerHTML=`<div class="wh1">Solicitante e você</div><div class="wsub">Com CNAI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
       <span class="wlabel">Solicitante (opcional)</span>
       <input class="winput" placeholder="quem pediu o parecer" value="${esc(LZ.solicitante)}" oninput="LZ.solicitante=this.value">
       <span class="wlabel">Finalidade</span>
       <select class="winput" oninput="LZ.finalidade=this.value">${FINS.map(f=>`<option ${LZ.finalidade===f?"selected":""}>${f}</option>`).join("")}</select>
       <span class="wlabel">Nome completo *</span>
       <input class="winput" value="${esc(p.nome||"")}" oninput="LZ.prof.nome=this.value">
-      <span class="wlabel">CRECI / CNAI (opcional)</span>
-      <input class="winput" placeholder="CRECI 12345 · CNAI 6789" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
+      <span class="wlabel">CRECI (opcional)</span>
+      <input class="winput" placeholder="ex.: 12345" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
+      <span class="wlabel">CNAI (opcional) — habilita o PTAM</span>
+      <input class="winput" placeholder="ex.: 6789" value="${esc(p.cnai||"")}" oninput="LZ.prof.cnai=this.value">
       <span class="wlabel">Telefone / e-mail (opcional)</span>
       <input class="winput" value="${esc(p.contato||"")}" oninput="LZ.prof.contato=this.value">`;
+  }else if(LZ.step===4){
+    const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
+    const areaOk=!!(LZ.privativa||(isU?a.areaedif:a.areaterr));
+    const venalOk=(a.vlvenal||0)>0;
+    const atipico=isGarage(a);
+    const nComps=(LZ.comps&&LZ.comps.res)?LZ.comps.res.n:0;
+    const {conf,itens}=pendenciasDocumento({areaOk,nComps,atipico,venalOk,docOk:LZ.docOk});
+    const nivelTxt={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
+    b.innerHTML=`<div class="wh1">Antes de gerar</div><div class="wsub">Confira o nível de confiança dos dados — algumas informações ajudam a refinar o documento.</div>
+      <div class="confcard${conf.nivel==='baixa'?' conf-baixa':''}">
+        <div class="conf-nivel">Confiança: ${nivelTxt}</div>
+        <div class="conf-porque">${esc((conf.porque||[]).join("; "))}</div>
+      </div>
+      <div class="checklist">${itens.map(it=>{
+        if(it.id==="area"){
+          return it.resolvido
+            ?`<div class="checkitem is-ok"><span class="checkitem-txt">✓ ${esc(it.texto)}</span></div>`
+            :`<div class="checkitem"><span class="checkitem-txt">${esc(it.texto)}</span>
+                <input class="winput checkitem-input" inputmode="numeric" placeholder="ex.: 84 m²" value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null;wizRender()"></div>`;
+        }
+        if(it.id==="conservacao"){
+          return `<div class="checkitem is-ok"><span class="checkitem-txt">✓ ${esc(it.texto)}</span></div>`;
+        }
+        if(it.id==="documentacao"){
+          return `<div class="checkitem"><span class="checkitem-txt">${esc(it.texto)}</span>
+              <div class="seg checkitem-seg"><button aria-pressed="${LZ.docOk===true}" class="${LZ.docOk===true?'on':''}" onclick="wizSet('docOk',true)">Em ordem</button><button aria-pressed="${LZ.docOk===false}" class="${LZ.docOk===false?'on':''}" onclick="wizSet('docOk',false)">Pendências</button></div></div>`;
+        }
+        return "";
+      }).join("")}</div>`;
+  }else if(LZ.step===5){
+    const p=LZ.prof;
+    const comCreci=!!(p.creci||"").trim();
+    const isU5=!!unitLabel(a)||(a.cdedificio||0)>0;
+    const conf5=pendenciasDocumento({areaOk:!!(LZ.privativa||(isU5?a.areaedif:a.areaterr)),
+      nComps:(LZ.comps&&LZ.comps.res)?LZ.comps.res.n:0,atipico:isGarage(a),venalOk:(a.vlvenal||0)>0,docOk:LZ.docOk}).conf;
+    b.innerHTML=`<div class="wh1">Revisão final</div>
+      <div class="wsub">Confira e ajuste o que for preciso — o PDF sai do jeito que você deixar aqui.</div>
+      ${conf5.nivel==='baixa'?`<div class="confwarn">Confiança baixa: recomenda-se confirmar os pontos acima antes de compartilhar este documento.</div>`:""}
+      <div class="revsec"><div class="revsec-lbl">Documento</div>
+        <div class="revsec-val">${esc(NOMES_DOC[LZ.tipoDoc]||"Relatório de avaliação")}</div></div>
+      <div class="revsec"><span class="wlabel">Solicitante</span>
+        <input class="winput" value="${esc(LZ.solicitante)}" oninput="LZ.solicitante=this.value"></div>
+      <div class="revsec"><span class="wlabel">Finalidade declarada</span>
+        <select class="winput" oninput="LZ.finalidade=this.value">${FINS.map(f=>`<option ${LZ.finalidade===f?"selected":""}>${f}</option>`).join("")}</select></div>
+      <div class="revsec"><span class="wlabel">Valor de venda sugerido</span>
+        <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null"></div>
+      <div class="revsec"><span class="wlabel">Observações / ressalvas adicionais</span>
+        <textarea class="winput" oninput="LZ.obs=this.value">${esc(LZ.obs)}</textarea></div>
+      <div class="revsec revsec-preview"><span class="wlabel">Como vai aparecer — assinatura</span>
+        <div class="revprev">${esc(LZ.prof.nome)}${comCreci?" · CRECI "+esc(LZ.prof.creci):""}</div></div>
+      <button type="button" class="revlink" onclick="LZ.step=3;wizRender()">Editar perfil</button>
+      <button type="button" class="revlink" onclick="LZ.fase='finalidade';LZ.finalidadeUso=null;LZ.tipoDoc=null;wizRender()">Trocar documento</button>`;
   }
   /* leitor de tela: anuncia a troca de passo focando o título (só quando o passo muda) */
   if(stepMudou){const h=b.querySelector(".wh1");if(h){h.tabIndex=-1;h.focus({preventScroll:true});}b.scrollTop=0;}
 }
 function wizNext(){
   if(!LZ)return;
-  if(LZ.step<3){LZ.step++;wizRender();return;}
-  if(!(LZ.prof.nome||"").trim()){toast("Preencha seu nome para assinar o documento.");return;}
+  if(LZ.step<5){LZ.step++;wizRender();return;}
+  if(!(LZ.prof.nome||"").trim()){toast("Preencha seu nome para assinar o documento.");LZ.step=3;wizRender();return;}
   if(LZ.valor==null){toast("Informe o valor de venda sugerido (passo Valor).");LZ.step=1;wizRender();return;}
   try{localStorage.setItem("radar_prof",JSON.stringify(LZ.prof));}catch(e){}
   montarLaudo();
