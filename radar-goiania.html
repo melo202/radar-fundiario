@@ -115,6 +115,26 @@
   .combo-item:hover .raw,.combo-item.active .raw{color:var(--line)}
   .combo-item .code{float:right;font:600 11px/1 "IBM Plex Mono",monospace;color:var(--muted)}
   .combo-empty{padding:12px;text-align:center;color:var(--muted);font-size:12px}
+  /* caixa unica (08-04, Fase 8): input unico que substitui a moderow como busca padrao.
+     Reusa exclusivamente as variaveis --paper/--paper-2/--ink/--line/--muted/--accent (08-UI-SPEC.md).
+     font-size:16px mandatorio (mata autozoom iOS, mesmo contrato do resto do app). */
+  .caixa{position:relative;margin-bottom:8px}
+  .caixa-input{width:100%;background:var(--paper);border:1.5px solid var(--line);color:var(--ink);
+    font:500 16px/1 "IBM Plex Sans";padding:12px 46px 12px 11px;border-radius:2px;margin-bottom:0;min-height:44px}
+  .caixa-input:focus{outline:none;border-color:var(--accent)}
+  .caixa-ic{position:absolute;top:0;right:0;width:44px;height:44px;border:0;background:transparent;
+    color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .caixa-ic:hover{color:var(--ink)}
+  .caixa-ic#caixaVoz{right:38px}
+  .caixa-ic#caixaVoz.on{background:var(--accent);color:#fff;border-radius:2px}
+  .caixa-input:has(~ #caixaVoz[style*="flex"]){padding-right:84px}
+  /* chip de confirmacao — informativo (default) vs media/setor-lembrado (borda accent) */
+  .detectchip{display:none;min-height:44px;box-sizing:border-box;align-items:center;gap:6px;
+    background:var(--paper-2);border:1.5px solid var(--line);border-radius:2px;padding:11px 12px;
+    margin-bottom:8px;font:500 14px/1.2 "IBM Plex Sans";color:var(--ink);cursor:pointer}
+  .detectchip.show{display:flex}
+  .detectchip.media{border-color:var(--accent)}
+  .detectchip .unc{color:var(--muted);font-weight:500;margin-left:4px}
   .chk{display:flex;align-items:center;gap:8px;font:500 12px/1 "IBM Plex Sans"!important;letter-spacing:0!important;
     text-transform:none!important;color:var(--muted)!important;cursor:pointer;margin:4px 0 0!important}
   .chk input{width:auto;margin:0;accent-color:var(--accent)}
@@ -505,15 +525,32 @@
     </div>
 
     <div class="search">
-      <label>Buscar por</label>
-      <div class="moderow">
-        <button id="mAD" class="on" onclick="setMode('addr')">Endereço</button>
-        <button id="mBD" onclick="setMode('bd')">Prédio</button>
-        <button id="mQL" onclick="setMode('ql')">Quadra/Lote</button>
+      <label for="caixaInput">Buscar</label>
+      <div class="caixa">
+        <input id="caixaInput" class="caixa-input" autocomplete="off" inputmode="text"
+          placeholder="quadra 128 lote 5 · rua portugal 582 · sumer park · 3020150346"
+          role="combobox" aria-expanded="false" aria-controls="caixaList" aria-autocomplete="list"
+          aria-describedby="detectChip">
+        <button id="caixaVoz" class="caixa-ic" aria-label="Buscar por voz" style="display:none">🎤</button>
+        <button id="caixaClear" class="caixa-ic" aria-label="Limpar busca" style="display:none">×</button>
       </div>
-      <button class="modemore" id="mIN" onclick="setMode('insc')">ou buscar pela inscrição cadastral (CI)</button>
+      <div id="caixaList" class="combo-list" role="listbox" aria-label="Sugestões de setor e rua"></div>
+      <div id="detectChip" class="detectchip" role="status" aria-live="polite" tabindex="0"
+           aria-label="Toque para corrigir o modo de busca detectado" onclick="toggleCorrectMenu()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCorrectMenu();}"></div>
+      <div class="chips" id="ambigChips" role="group" aria-label="Escolha o que você quis dizer" hidden></div>
 
-      <div id="needBairro">
+      <!-- menu de correcao: reaproveita .moderow/.modemore existentes, SEM CSS novo -->
+      <div id="correctMenu" class="moderow" hidden>
+        <button id="cAD" onclick="forceMode('addr')">Endereço</button>
+        <button id="cBD" onclick="forceMode('bd')">Prédio</button>
+        <button id="cQL" onclick="forceMode('ql')">Quadra/Lote</button>
+      </div>
+      <button class="modemore" id="cIN" hidden onclick="forceMode('insc')">ou buscar pela inscrição cadastral (CI)</button>
+
+      <!-- paineis de campo: permanecem no DOM, agora usados so pelo menu de correcao manual
+           (setMode()/forceMode() continuam controlando a visibilidade quando o usuario forca um modo) -->
+      <div id="needBairro" style="display:none">
         <label for="bairroInput">Setor / Bairro</label>
         <div class="combo">
           <input id="bairroInput" placeholder="digite: faiçalville, oeste, marista…" autocomplete="off"
@@ -530,14 +567,14 @@
         </div>
       </div>
 
-      <div id="paneAddr">
+      <div id="paneAddr" style="display:none">
         <label for="rua">Logradouro (rua / avenida)</label>
         <input id="rua" placeholder="ex.: 135, 85, portugal" autocomplete="off">
         <label for="numero">Número</label>
         <input id="numero" placeholder="ex.: 582" autocomplete="off">
       </div>
 
-      <div id="paneUnit">
+      <div id="paneUnit" style="display:none">
         <label for="apto">Apartamento <span style="text-transform:none;font-weight:400;color:var(--muted)">— opcional, só se for prédio</span></label>
         <input id="apto" placeholder="ex.: 1901 (vazio = prédio todo)" autocomplete="off">
         <label class="chk"><input type="checkbox" id="hideGar" checked> ocultar garagens e boxes</label>
@@ -559,7 +596,16 @@
     </div>
 
     <div class="results" id="results">
-      <div class="empty"><div class="big">Encontre qualquer imóvel de Goiânia</div>Veja na hora o <b>preço estimado</b>, gere um <b>laudo em PDF</b> e descubra <b>oportunidades da Caixa</b> por perto.<br><br>Comece escolhendo o <b>setor</b> acima e informe a quadra e o lote — ou troque o modo para <b>Endereço</b>, <b>Prédio</b> ou <b>Inscrição</b>. Você também pode clicar direto no mapa sobre o imóvel.</div>
+      <div class="empty" id="emptyState">
+        <div class="big">Encontre qualquer imóvel de Goiânia</div>
+        Veja na hora o <b>preço estimado</b>, gere um <b>laudo em PDF</b> e descubra <b>oportunidades da Caixa</b> por perto. Toque num exemplo para começar:
+        <div class="chips examplechips" id="exampleChips" role="group" aria-label="Exemplos de busca">
+          <button data-example="quadra 128 lote 5">quadra 128 lote 5</button>
+          <button data-example="rua portugal 582">rua portugal 582</button>
+          <button data-example="sumer park">sumer park</button>
+          <button data-example="3020150346">3020150346</button>
+        </div>
+      </div>
     </div>
 
     <details class="foot">
