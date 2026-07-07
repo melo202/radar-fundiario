@@ -23,6 +23,7 @@ function loadPureBlock() {
   for (const fn of [
     "function resumoPredio",
     "function ordenaUnidades",
+    "function remapPredio",
     "function ehAptoProvavel",
     "function analisePredicoTexto",
   ]) {
@@ -31,7 +32,7 @@ function loadPureBlock() {
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {resumoPredio,ordenaUnidades,ehAptoProvavel,analisePredicoTexto};",
+    src + "\n;globalThis.__exports = {resumoPredio,ordenaUnidades,remapPredio,ehAptoProvavel,analisePredicoTexto};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -154,6 +155,53 @@ test('ordenaUnidades(units,"criterio-invalido") comporta-se como "padrao" (fallb
   assert.doesNotThrow(() => P.ordenaUnidades(caso.units, "criterio-invalido"));
   const out = P.ordenaUnidades(caso.units, "criterio-invalido");
   assert.deepEqual(out.map((u) => u.id), caso.expectOrderIds);
+});
+
+// --- remapPredio (fix CR-01, 12-REVIEW.md) -------------------------------------------------
+
+test("remapPredio: com insubprinc colidente (fixture real do bug), nenhuma unidade duplicada/perdida — identidades preservadas por posicao", () => {
+  const caso = FIXTURES.remapPredioCasos.colisaoInsubprinc;
+  const porId = Object.fromEntries(caso.list.map((u) => [u.id, u]));
+  const ordenadas = caso.ordenadasIds.map((id) => porId[id]); // mesmas referencias (identidade), ordem Z,Y,X
+  const out = P.remapPredio(caso.list, ordenadas, (u) => u.ci === caso.chaveP1);
+  assert.equal(out.length, caso.list.length, "nunca muda o tamanho da lista");
+  assert.deepEqual(out.map((u) => u.id), caso.expectOrderIds);
+  // identidade (===), nao so valor: prova que sao os MESMOS objetos, nao copias reconstruidas por chave
+  assert.equal(out[0], porId.Z);
+  assert.equal(out[1], porId.OUTRO, "unidade de OUTRO predio jamais deveria ser tocada/substituida");
+  assert.equal(out[2], porId.Y);
+  assert.equal(out[3], porId.X);
+  // nenhuma duplicacao: todo id aparece exatamente 1 vez
+  const ids = out.map((u) => u.id);
+  assert.deepEqual([...ids].sort(), [...caso.list.map((u) => u.id)].sort());
+});
+
+test("remapPredio: NAO muta list nem ordenadas (retorna array novo)", () => {
+  const caso = FIXTURES.remapPredioCasos.colisaoInsubprinc;
+  const porId = Object.fromEntries(caso.list.map((u) => [u.id, u]));
+  const ordenadas = caso.ordenadasIds.map((id) => porId[id]);
+  const listSnapshot = [...caso.list];
+  const ordenadasSnapshot = [...ordenadas];
+  const out = P.remapPredio(caso.list, ordenadas, (u) => u.ci === caso.chaveP1);
+  assert.notEqual(out, caso.list, "deveria retornar um array NOVO, nunca a mesma referencia de list");
+  assert.deepEqual(caso.list, listSnapshot, "list nao deveria ser mutada");
+  assert.deepEqual(ordenadas, ordenadasSnapshot, "ordenadas nao deveria ser mutada");
+});
+
+test("remapPredio: fila vazia (nenhum item casa pertence) retorna list intacta, sem lancar", () => {
+  const caso = FIXTURES.remapPredioCasos.filaVazia;
+  assert.doesNotThrow(() => P.remapPredio(caso.list, caso.ordenadasIds, (u) => u.ci === caso.chaveP1));
+  const out = P.remapPredio(caso.list, caso.ordenadasIds, (u) => u.ci === caso.chaveP1);
+  assert.deepEqual(out.map((u) => u.id), caso.expectOrderIds);
+});
+
+test("remapPredio: contagem preservada por construcao mesmo com N unidades colidentes grande (sanity extra)", () => {
+  const list = Array.from({ length: 10 }, (_, i) => ({ id: i, ci: "PX", insubprinc: 0 }));
+  const ordenadas = [...list].reverse();
+  const out = P.remapPredio(list, ordenadas, () => true);
+  assert.equal(out.length, 10);
+  assert.deepEqual(out.map((u) => u.id).sort((a, b) => a - b), list.map((u) => u.id));
+  assert.deepEqual(out.map((u) => u.id), ordenadas.map((u) => u.id));
 });
 
 // --- ehAptoProvavel ------------------------------------------------------------------------

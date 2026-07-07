@@ -1844,6 +1844,20 @@ function ordenaUnidades(units,criterio){
   return arr.map(x=>x.u);
 }
 
+/* remapPredio(list, ordenadas, pertence): remapeamento POSICIONAL (nunca por chave/lookup) —
+   fix de CR-01 (12-REVIEW.md): ordenarBldg fazia LAST.find(orig=>ci+insubprinc===...) dentro de
+   um .map(), que duplica/derruba unidades quando duas unidades do mesmo predio colidem em
+   (ci,insubprinc) (comum em boxes/garagens sem sub-inscricao formal). Aqui NENHUMA chave e usada:
+   `ordenadas` e uma fila dos objetos REAIS (mesma identidade de `list`) na ordem final desejada;
+   percorre `list` sequencialmente e, a cada posicao para a qual `pertence(item)` e true, consome
+   (shift) o PROXIMO da fila — contagem preservada por construcao (fila tem exatamente tantos itens
+   quanto posicoes que casam pertence, pois `ordenadas` deriva do mesmo subconjunto). Nunca muta
+   `list`/`ordenadas` (retorna um array novo; shift() opera sobre a copia local da fila). */
+function remapPredio(list,ordenadas,pertence){
+  const fila=(ordenadas||[]).slice();
+  return (list||[]).map(item=>pertence(item)?fila.shift():item);
+}
+
 /* ehAptoProvavel(a): heurística determinística (NÃO é certeza absoluta) para o filtro "só
    aptos prováveis" — uso residencial(1) ou misto(5) E não-garagem (reusa isGarage já
    existente no mesmo bloco, não duplica a regex). Uso comercial/outros (salas/lojas) -> false. */
@@ -2748,7 +2762,9 @@ function render(list,opts){
    AQUI (mercadoEstimado, fora do bloco puro) e NUNCA persistido em LAST/a.__scores. */
 function unidadesEnriquecidasDoPredio(ci){
   ci=clean(ci);
-  return LAST.filter(a=>clean(a.ci)===ci).map(a=>Object.assign({},a,{__est:mercadoEstimado(a)}));
+  /* __orig: referencia (identidade, nunca chave) ao objeto REAL de LAST — usada por ordenarBldg
+     para remapear de volta via remapPredio (CR-01, 12-REVIEW.md), nunca por (ci,insubprinc). */
+  return LAST.filter(a=>clean(a.ci)===ci).map(a=>Object.assign({},a,{__est:mercadoEstimado(a),__orig:a}));
 }
 function bldgSumarioHTML(ci){
   ci=clean(ci);
@@ -2810,17 +2826,13 @@ function ordenarBldg(ci,criterio){
   BLDGSTATE[ci].criterio=criterio;
   const enriquecidas=unidadesEnriquecidasDoPredio(ci);
   const reordenadas=ordenaUnidades(enriquecidas,criterio);
-  /* remapeia de volta para os objetos ORIGINAIS de LAST (nunca os enriquecidos com __est) —
-     percorre LAST sequencialmente, consumindo a lista reordenada em ordem: preserva a posicao
-     relativa dos OUTROS predios (T-12-04). */
-  let cursor=0;
-  LAST=LAST.map(a=>{
-    if(clean(a.ci)!==ci)return a;
-    const prox=reordenadas[cursor++];
-    /* prox e a versao enriquecida (__est) da mesma unidade original — acha o objeto real de LAST
-       pela mesma chave estavel usada pela comparacao (ci+insubprinc), nunca por indice. */
-    return LAST.find(orig=>clean(orig.ci)===clean(prox.ci)&&String(orig.insubprinc||0)===String(prox.insubprinc||0))||a;
-  });
+  /* CR-01 fix (12-REVIEW.md): remapeia de volta para os objetos ORIGINAIS de LAST por POSICAO
+     (remapPredio, RADAR_PURE), nunca por chave (ci,insubprinc) — chave que colide quando duas
+     unidades do mesmo predio nao tem sub-inscricao formal (boxes/garagens), o que antes duplicava
+     uma unidade e derrubava outra silenciosamente. `reordenadas` e a fila dos objetos REAIS (via
+     __orig) na ordem final; `pertence` decide, por posicao em LAST, quais slots sao consumidos. */
+  const fila=reordenadas.map(u=>u.__orig);
+  LAST=remapPredio(LAST,fila,a=>clean(a.ci)===ci);
   render(LAST); /* sem stagger: reordenacao, RENDN aplica o slice sobre o LAST ja reordenado */
 }
 function toggleAptosProvaveis(ciOuBtn){

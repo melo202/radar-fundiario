@@ -603,6 +603,36 @@ export const FIXTURES = {
     },
   },
 
+  // remapPredio (Fase 12, fix CR-01 12-REVIEW.md): remapeamento POSICIONAL, nunca por chave —
+  // cobre exatamente o cenario que quebrava antes do fix: 2 unidades do MESMO predio com
+  // (ci,insubprinc) colidentes (boxes/garagens sem sub-inscricao formal, insubprinc undefined/0).
+  remapPredioCasos: {
+    // 3 unidades do predio "P1" (X,Y,Z) com insubprinc colidente (todas 0/undefined) + 1 unidade
+    // de outro predio "P2" que NUNCA deveria ser tocada. ordenadas chega em ordem REVERSA (Z,Y,X)
+    // simulando um criterio de ordenacao qualquer — o teste verifica que as 3 identidades sao
+    // preservadas (nenhuma duplicada, nenhuma perdida) e a unidade de P2 fica intacta na mesma posicao.
+    colisaoInsubprinc: {
+      list: [
+        { id: "X", ci: "P1", insubprinc: 0 },
+        { id: "OUTRO", ci: "P2", insubprinc: 0 },
+        { id: "Y", ci: "P1", insubprinc: undefined },
+        { id: "Z", ci: "P1", insubprinc: 0 },
+      ],
+      // ordenadas: fila com as MESMAS referencias (identidade) dos itens de P1, em ordem Z,Y,X
+      ordenadasIds: ["Z", "Y", "X"],
+      chaveP1: "P1",
+      expectOrderIds: ["Z", "OUTRO", "Y", "X"], // P2 intocado na posicao 1; P1 consome a fila em ordem
+    },
+    // fila vazia (ex.: predio sem unidades) -> list retorna INTACTA (nenhum pertence() deveria
+    // ser true nesse caso de uso real, mas a funcao nao deve lancar nem embaralhar se for).
+    filaVazia: {
+      list: [{ id: "A", ci: "P3" }],
+      ordenadasIds: [],
+      chaveP1: "NENHUM",
+      expectOrderIds: ["A"],
+    },
+  },
+
   // ehAptoProvavel (Fase 12, 12-01, PRED-02): heuristica uso residencial(1)/misto(5) E nao-garagem.
   ehAptoProvavelCasos: {
     residencial: { a: { uso: 1, incompl: "APTO 302" }, expect: true },
