@@ -458,4 +458,183 @@ export const FIXTURES = {
     nulo: { valor: null, expectEmpty: true },
     negativo: { valor: -500, expectEmpty: true }, // WR-01 (11.1-REVIEW): preço negativo não é válido — "" honesto, nunca Math.abs silencioso
   },
+
+  // resumoPredio (Fase 12, 12-01, PRED-01): amostra vazia/parcial/completa — honesto, nunca NaN.
+  // Cada unidade e um subconjunto do objeto `a` do cadastro + __est opcional (mercadoEstimado ja
+  // calculado pela Wave 2, fora do bloco puro).
+  resumoPredioCasos: {
+    vazio: {
+      units: [],
+      expect: { n: 0, areaMedia: null, venalMedio: null, estimadoMedio: null, faixaLo: null, faixaHi: null },
+    },
+    semArea: {
+      // 3 unidades, nenhuma com areaedif>0 (undefined/0/negativo tratado como ausente)
+      units: [
+        { areaedif: 0, vlvenal: 100000, incompl: "APTO 101", uso: 1 },
+        { areaedif: undefined, vlvenal: 150000, incompl: "APTO 102", uso: 1 },
+        { areaedif: null, vlvenal: 0, incompl: "APTO 103", uso: 1 },
+      ],
+      expectAreaMedia: null,
+      expectVenalMedio: 125000, // media so das 2 com vlvenal>0 (100000+150000)/2
+    },
+    semVenalNenhuma: {
+      units: [
+        { areaedif: 80, vlvenal: 0, incompl: "APTO 201", uso: 1 },
+        { areaedif: 90, vlvenal: undefined, incompl: "APTO 202", uso: 1 },
+      ],
+      expectVenalMedio: null,
+      expectAreaMedia: 85,
+    },
+    mistaComZeros: {
+      // area/venal mistos: alguns 0 (excluidos da media), outros >0 (entram na media); n conta todas
+      units: [
+        { areaedif: 100, vlvenal: 200000, incompl: "APTO 301", uso: 1 },
+        { areaedif: 0, vlvenal: 0, incompl: "APTO 302", uso: 1 },
+        { areaedif: 120, vlvenal: 240000, incompl: "APTO 303", uso: 1 },
+      ],
+      expectN: 3,
+      expectAreaMedia: 110, // (100+120)/2, ignora a de 0
+      expectVenalMedio: 220000, // (200000+240000)/2, ignora a de 0
+    },
+    comEstimativaParcial: {
+      // 3 unidades, 2 com __est preenchido, 1 sem (null) — estimadoMedio/faixa SO sobre as 2
+      units: [
+        { areaedif: 80, vlvenal: 160000, incompl: "APTO 401", uso: 1, __est: { lo: 150000, hi: 190000 } },
+        { areaedif: 90, vlvenal: 180000, incompl: "APTO 402", uso: 1, __est: null },
+        { areaedif: 100, vlvenal: 200000, incompl: "APTO 403", uso: 1, __est: { lo: 190000, hi: 230000 } },
+      ],
+      expectEstimadoMedio: 190000, // media de (150000+190000)/2=170000 e (190000+230000)/2=210000 -> 190000
+      expectFaixaLo: 150000, // min dos lo
+      expectFaixaHi: 230000, // max dos hi
+    },
+    semEstimativaNenhuma: {
+      units: [
+        { areaedif: 80, vlvenal: 160000, incompl: "APTO 501", uso: 1 },
+        { areaedif: 90, vlvenal: 180000, incompl: "APTO 502", uso: 1, __est: undefined },
+      ],
+      expectEstimadoMedio: null,
+      expectFaixaLo: null,
+      expectFaixaHi: null,
+    },
+    // CHECKER RECOMMENDATION: __est parcialmente malformado (lo ausente/undefined, hi presente) —
+    // resumoPredio deve manter o invariante "estimadoMedio/faixaLo/faixaHi existem juntos ou nenhum"
+    // mesmo com entrada suja. Guarda: so conta __est com AMBOS lo>0 e hi>0.
+    estimativaMalformadaParcial: {
+      units: [
+        { areaedif: 80, vlvenal: 160000, incompl: "APTO 601", uso: 1, __est: { lo: undefined, hi: 100 } },
+        { areaedif: 90, vlvenal: 180000, incompl: "APTO 602", uso: 1, __est: { lo: 0, hi: 200 } },
+      ],
+      expectEstimadoMedio: null,
+      expectFaixaLo: null,
+      expectFaixaHi: null,
+    },
+    nContaTodas: {
+      units: [
+        { areaedif: 0, vlvenal: 0, incompl: "APTO 701", uso: 1 },
+        { areaedif: 0, vlvenal: 0, incompl: "APTO 702", uso: 1 },
+        { areaedif: 100, vlvenal: 200000, incompl: "APTO 703", uso: 1 },
+      ],
+      expectN: 3,
+    },
+  },
+
+  // ordenaUnidades (Fase 12, 12-01, PRED-02): 4 criterios + nao-mutacao + estabilidade.
+  ordenaUnidadesCasos: {
+    // pm2 = vlvenal/areaedif; unidade B tem pm2 mais baixo (mais barata por m2) -> vem primeiro
+    // em "oportunidade" (ASC); unidade C nao tem areaedif/vlvenal validos -> vai pro fim.
+    oportunidade: {
+      units: [
+        { id: "A", areaedif: 100, vlvenal: 300000 }, // pm2 = 3000
+        { id: "B", areaedif: 100, vlvenal: 200000 }, // pm2 = 2000 (mais barato, vem primeiro)
+        { id: "C", areaedif: 0, vlvenal: 0 }, // sem base -> fim
+      ],
+      expectFirstId: "B",
+      expectLastId: "C",
+    },
+    oportunidadeEmpate: {
+      // A e B tem pm2 identico -> mantem ordem original (indice 0 antes de indice 1)
+      units: [
+        { id: "A", areaedif: 100, vlvenal: 200000 }, // pm2 = 2000
+        { id: "B", areaedif: 50, vlvenal: 100000 }, // pm2 = 2000 (empate)
+        { id: "C", areaedif: 100, vlvenal: 500000 }, // pm2 = 5000
+      ],
+      expectOrderIds: ["A", "B", "C"],
+    },
+    estimadoAsc: {
+      units: [
+        { id: "A", __est: { lo: 200000, hi: 300000 } }, // media 250000
+        { id: "B", __est: { lo: 100000, hi: 150000 } }, // media 125000 (menor, vem primeiro)
+        { id: "C" }, // sem __est -> fim
+      ],
+      expectFirstId: "B",
+      expectLastId: "C",
+    },
+    areaDesc: {
+      units: [
+        { id: "A", areaedif: 80 },
+        { id: "B", areaedif: 150 }, // maior area, vem primeiro
+        { id: "C", areaedif: 0 }, // sem area -> fim
+        { id: "D", areaedif: undefined }, // sem area -> fim
+      ],
+      expectFirstId: "B",
+      expectLastIds: ["C", "D"],
+    },
+    padrao: {
+      units: [
+        { id: "A", areaedif: 80 },
+        { id: "B", areaedif: 150 },
+        { id: "C", areaedif: 10 },
+      ],
+      expectOrderIds: ["A", "B", "C"],
+    },
+    criterioInvalido: {
+      units: [
+        { id: "A", areaedif: 80 },
+        { id: "B", areaedif: 150 },
+      ],
+      expectOrderIds: ["A", "B"], // fallback = padrao
+    },
+    naoMutacao: {
+      units: [
+        { id: "A", areaedif: 80, vlvenal: 100000 },
+        { id: "B", areaedif: 150, vlvenal: 300000 },
+        { id: "C", areaedif: 10, vlvenal: 50000 },
+      ],
+    },
+  },
+
+  // ehAptoProvavel (Fase 12, 12-01, PRED-02): heuristica uso residencial(1)/misto(5) E nao-garagem.
+  ehAptoProvavelCasos: {
+    residencial: { a: { uso: 1, incompl: "APTO 302" }, expect: true },
+    misto: { a: { uso: 5, incompl: "APTO 10" }, expect: true },
+    residencialGaragem: { a: { uso: 1, incompl: "BOX 12" }, expect: false },
+    comercial: { a: { uso: 3, incompl: "SALA 5" }, expect: false },
+    mistoGaragem: { a: { uso: 5, incompl: "VAGA 08" }, expect: false },
+    residencialSubsolo: { a: { uso: 1, incompl: "APTO 302 SUBSOLO" }, expect: false },
+  },
+
+  // analisePredicoTexto (Fase 12, 12-01, PRED-01): omissao condicional por metrica ausente, honesto,
+  // sem "undefined"/"NaN"/"null" em nenhuma combinacao.
+  analisePredicoTextoCasos: {
+    completo: {
+      resumo: { n: 26, areaMedia: 94, venalMedio: 412000, estimadoMedio: 720000, faixaLo: 650000, faixaHi: 890000 },
+      meta: { nome: "Edifício Sumer Park", quadra: "12", lote: "5", endereco: "Rua das Flores, 123" },
+    },
+    semEstimativa: {
+      resumo: { n: 10, areaMedia: 70, venalMedio: 300000, estimadoMedio: null, faixaLo: null, faixaHi: null },
+      meta: { nome: "Edifício Alfa", quadra: "3", lote: "2", endereco: "Av. Central, 45" },
+    },
+    semArea: {
+      resumo: { n: 8, areaMedia: null, venalMedio: 250000, estimadoMedio: 400000, faixaLo: 350000, faixaHi: 450000 },
+      meta: { nome: "Edifício Beta", quadra: "7", lote: "1", endereco: "Rua B, 10" },
+    },
+    semEndereco: {
+      resumo: { n: 12, areaMedia: 60, venalMedio: 200000, estimadoMedio: 300000, faixaLo: 280000, faixaHi: 320000 },
+      meta: { nome: "Edifício Gama", quadra: "1", lote: "1", endereco: null },
+    },
+    zerado: {
+      resumo: { n: 0, areaMedia: null, venalMedio: null, estimadoMedio: null, faixaLo: null, faixaHi: null },
+      meta: { nome: null, quadra: null, lote: null, endereco: null },
+    },
+  },
 };
