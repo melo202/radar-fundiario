@@ -71,7 +71,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   6. Checklist de a11y de 03/07 re-passa (ARIA combobox/activedescendant, teclado, live regions, foco/trap); `SEARCHTOKEN` propagado em todo caminho novo; quirk iOS preservado
   7. **Coordenação busca⇄ficha no desktop não regride** (guarda do hotfix `a7a4646`): busca sempre fechável (× + Esc); abrir ficha/seletor fecha o overlay (zero sobreposição ≥821px); prédio abre seletor sobre o mapa
   8. **Auditoria dos dados da ficha** em TODOS os modos (ql/endereço/prédio/inscrição 10-14 díg/clique-no-mapa) contra o registro de origem
-**Plans**: TBD
+**Plans**: 08-01 (harness+RADAR_PURE) · 08-02 (fuzzy-fix+ranking) · 08-03 (detectMode+setor-na-frase) · 08-04 (caixa única UI+dropdown CNEFE) · 08-05 (deep-link+voz+erros+auditoria de dados)
 **Phase flags**: calibrar a regex do `detectMode()` com amostra real (MEDIUM confidence); INCORPORA e protege os fixes do hotfix `a7a4646`.
 
 ### Phase 9: Ficha = Conclusão Comercial + Scores
@@ -214,7 +214,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 5. Seam de IA (dormant) | v2.0 | 1/1 | ✅ Complete | 2026-07-04 |
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
 | 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 8. Busca Única Inteligente | v2.1 | 0/TBD | Not started | - |
+| 8. Busca Única Inteligente | v2.1 | 0/5 | Planned | - |
 | 9. Ficha Comercial + Scores | v2.1 | 0/TBD | Not started | - |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
