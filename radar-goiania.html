@@ -324,14 +324,8 @@
   .cxp .dc{display:inline-block;background:var(--lot);color:#fff;font:700 10px/1 "IBM Plex Mono";padding:3px 5px;border-radius:2px}
   .cxp .ap{color:var(--muted);font-size:10.5px}
   .cxp a{color:var(--accent);font-weight:700}
-  /* laudo + custos: botões de entrada */
-  .dlaudo{margin:0 0 12px;display:flex;flex-direction:column;gap:8px}
-  .laudobtn{width:100%;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper-2);
-    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
-  .laudobtn:hover{background:var(--accent);border-color:var(--accent)}
-  .custosbtn{width:100%;border:1.5px solid var(--gold);background:var(--paper);color:#7d621f;
-    font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
-  .custosbtn:hover{background:var(--gold);color:#fff}
+  /* .dlaudo/.laudobtn/.custosbtn (bloco fixo pré-Fase 9) removidos — absorvidos pela Lei da
+     Tela em #dActsPrim/#dActsMore (Fase 9, FICHA-01); confirmado sem referência no HTML. */
   /* calculadora de custos (overlay) */
   .calc{position:fixed;inset:0;z-index:2000;background:var(--paper-2);display:flex;flex-direction:column}
   .calc[hidden]{display:none}
@@ -2049,6 +2043,44 @@ function pick(i){
   }
 }
 
+/* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()
+   e (Wave 3, 09-03) por atualizarScores() ao concluir compare(). op=retorno de scoreOportunidade
+   (ou null), conf=retorno de scoreConfianca (sempre objeto, nunca null). */
+function renderScoresInto(op,conf){
+  const box=document.getElementById("dScores");
+  let opCls="score-op",opBody;
+  if(!op){
+    opBody=`<span class="score-lbl-main">Sem base para estimar</span>`;
+  }else{
+    opCls+= op.score>=66?" alta":op.score>=33?" media":" baixa";
+    opBody=`<span class="score-num">${op.score}<span class="score-max">/100</span></span><span class="score-lbl">${esc(op.rotulo)}</span>`;
+  }
+  const opWhy=op?esc(op.porque.join(" ")):"Sem comparáveis suficientes na vizinhança para calcular a posição de preço.";
+  const confCls="score conf-"+conf.nivel;
+  const confLbl={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
+  const confWhy=esc(conf.porque.join(" "));
+  box.innerHTML=`
+    <button type="button" class="score ${opCls}" aria-expanded="false" aria-controls="scoreOpWhy" onclick="toggleScoreWhy(this)">${opBody}<span class="score-chev" aria-hidden="true">▸</span></button>
+    <div id="scoreOpWhy" class="score-why" hidden>${opWhy}</div>
+    <button type="button" class="${confCls}" aria-expanded="false" aria-controls="scoreConfWhy" onclick="toggleScoreWhy(this)"><span class="score-lbl-main">Confiança: <b>${confLbl}</b></span><span class="score-chev" aria-hidden="true">▸</span></button>
+    <div id="scoreConfWhy" class="score-why" hidden>${confWhy}</div>`;
+}
+/* alterna o "por quê" do score clicado (aria-expanded no próprio botão, sem estado global —
+   mesmo padrão de toggle já usado no arquivo); o .score-why correspondente é o PRÓXIMO elemento
+   irmão no DOM (sempre renderizado em par pelo innerHTML acima). */
+function toggleScoreWhy(btn){
+  const why=btn.nextElementSibling;if(!why)return;
+  const open=btn.getAttribute("aria-expanded")==="true";
+  btn.setAttribute("aria-expanded",open?"false":"true");
+  why.hidden=open;
+  const chev=btn.querySelector(".score-chev");if(chev)chev.textContent=open?"▸":"▾";
+}
+/* Wave 3 (09-03) implementa: re-renderiza #dScores/#dLeitura com stats de compare() —
+   chamada por compare()/renderComps() ao concluir a análise de vizinhança, sem re-abrir a ficha
+   nem re-fetch. Esta plan (09-02) só declara a assinatura para não quebrar nenhuma referência futura. */
+function atualizarScores(a){
+  /* Wave 3 (09-03) implementa: re-renderiza #dScores/#dLeitura com stats de compare() */
+}
 function showDetail(a,ll){
   const d=document.getElementById("detail");
   const addr=addrDe(a);
@@ -2059,12 +2091,45 @@ function showDetail(a,ll){
   // p/ apartamento, a inscrição que serve na consulta do IPTU é a de 14 dígitos (unidade)
   document.getElementById("dInsc").textContent="Inscrição "+(insc||ci||"—")+(ul&&ci?"  ·  lote "+ci:"");
   const pm2=m2Edif(a),pm2t=m2Terr(a),isU=!!ul;
+
+  /* 2. #dValor — faixa de valor em destaque, NUNCA número inventado (FICHA-01) */
+  const estM=mercadoEstimado(a);
+  const dValor=document.getElementById("dValor");
+  if(estM){
+    dValor.innerHTML=`<div class="dvalor-k">Faixa estimada de mercado</div>
+      <div class="dvalor-v">${brlC(estM.lo)} – ${brlC(estM.hi)}</div>
+      <div class="dvalor-m">${esc(estM.metodo)}</div>`;
+  }else{
+    dValor.innerHTML=`<div class="dvalor-k">Faixa estimada de mercado</div>
+      <div class="dvalor-v muted">Sem base para estimar</div>
+      <div class="dvalor-m">Faltam dados suficientes (venal ou área) para calcular uma faixa. Consulte o dado técnico abaixo.</div>`;
+  }
+
+  /* 3. #dScores — scoreOportunidade fica null até compare() popular stats (Wave 3 chama
+     atualizarScores() depois); scoreConfianca já roda com o que há disponível sem rede (nComps=0). */
+  const myPm2=isU?pm2:pm2t;
+  const areaOk=!!(isU?a.areaedif:a.areaterr);
+  const venalOk=(a.vlvenal||0)>0;
+  const atipico=isGarage(a);
+  const conf=scoreConfianca({areaOk,nComps:0,atipico,venalOk});
+  const op=scoreOportunidade(myPm2,null,{});
+  renderScoresInto(op,conf);
+
+  /* 4. #dLeitura — leitura prática por template (zero jargão); op é null pré-compare(), então
+     o template retorna a frase "Dados insuficientes..." honesta (LEIT-01). */
+  document.getElementById("dLeitura").innerHTML=`<p>${esc(leituraPratica({
+    tipoImovel: unitLabel(a)||USO[a.uso]||"Imóvel",
+    bairro: clean(a.nmbairro),
+    oportunidade: op,
+    confianca: conf
+  }))}</p>`;
+
   document.getElementById("dGrid").innerHTML=`
     <div class="cell"><div class="k">${isU?"Área total (c/ comum)":"Terreno"}</div><div class="v">${isU?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${venalTxt(a.vlvenal)}</div></div>
-    <div class="cell hl"><div class="k">Mercado (estimado)</div><div class="v">${(()=>{const e=mercadoEstimado(a);return e?brlC(e.lo)+"–"+brlC(e.hi):"—";})()}</div></div>
+    <div class="cell hl"><div class="k">Mercado (estimado)</div><div class="v">${estM?brlC(estM.lo)+"–"+brlC(estM.hi):"—"}</div></div>
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
     <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
@@ -2077,7 +2142,6 @@ function showDetail(a,ll){
   else compsBox.innerHTML=
     (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
-  const estM=mercadoEstimado(a);
   let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
   if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
   document.getElementById("dNote").textContent=nota;
@@ -2085,16 +2149,30 @@ function showDetail(a,ll){
      abre JÁ PREENCHIDA; o usuário só resolve o CAPTCHA e a certidão sai com o titular. */
   const inscUse=esc(insc||ci);
   const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(clean(insc||ci).replace(/\D/g,""));
+  /* 5. #dActsPrim — Lei da Tela: 1 primária (Gerar documento) + 2 secundárias (Ver comparáveis, Copiar inscrição) */
+  document.getElementById("dActsPrim").innerHTML=`
+    <button type="button" class="primary" onclick="abrirLaudo()">📄 Gerar documento</button>
+    <button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>
+    <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>`;
+  /* 6. #dActsMore — resto (custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
   let mapLinks="";
   if(ll){ /* imóvel sem coordenada abre a ficha mesmo assim — só perde os links de mapa */
     const [lat,lon]=ll;
-    mapLinks=`<a class="primary" href="https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Google Maps ↗</a>
+    mapLinks=`<a href="https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Google Maps ↗</a>
     <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
-  document.getElementById("dActs").innerHTML=mapLinks+`
+  document.getElementById("dActsMore").innerHTML=`
+    <button type="button" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
-    <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>`;
+    <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
+    ${mapLinks}`;
+  /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
+  document.getElementById("dMetodologia").innerHTML=`
+    <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
+    <p><b>Score de confiança:</b> alta/média/baixa por completude — presença de área confirmada, número de comparáveis (≥8 = alta) e se o imóvel é atípico dentro da amostra.</p>
+    <p><b>Faixa de valor:</b> preço de mercado do bairro (FipeZap/imprensa 2025-26, fator oferta 0,90) ou laudos reais da Caixa no setor, quando disponíveis.</p>
+    <p>Fonte: ArcGIS público da Prefeitura de Goiânia (Cadastro Imobiliário). O nome do titular não é lido por aqui — é consultado manualmente na CND oficial.</p>`;
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
   d.classList.add("show");
