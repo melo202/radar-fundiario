@@ -114,9 +114,9 @@ Plans:
   1. Três saídas nomeadas — **Ficha rápida** / **Relatório de avaliação** (10+ comparáveis ou explica a limitação) / **Laudo-PTAM**; a UI pergunta a **finalidade** primeiro e **recomenda** o tipo
   2. **Painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) antes de gerar; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
   3. **Revisão/edição antes do PDF** (dados sensíveis e textos principais); reusa o wizard atual (não recomeça); o PDF continua saindo do clique do usuário (guarda do fix `ec9f129`)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
-- [ ] 11-01-PLAN.md — RADAR_PURE: recomendaDocumento + pendenciasDocumento + fichaRapidaTexto (TDD)
+- [x] 11-01-PLAN.md — RADAR_PURE: recomendaDocumento + pendenciasDocumento + fichaRapidaTexto (TDD)
 - [ ] 11-02-PLAN.md — Seletor de Finalidade + passo Confiança/Pendencias + CNAI separado + Revisao pre-PDF
 - [ ] 11-03-PLAN.md — Titulo PTAM por CNAI + montarFichaRapida() (Ficha rapida)
 
@@ -227,7 +227,7 @@ Plans:
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11. Documentos em 3 Níveis | v2.1 | 0/3 | Not started | - |
+| 11. Documentos em 3 Níveis | v2.1 | 1/3 | In Progress|  |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
