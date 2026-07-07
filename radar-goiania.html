@@ -514,7 +514,7 @@
   .savedblock-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .savedblock-tt{font:700 13px/1.2 "IBM Plex Sans";color:var(--ink)}
   .savedblock-count{font:700 11px/1 "IBM Plex Mono",monospace;color:var(--muted);background:var(--paper-2);border:1px solid var(--line);border-radius:2px;padding:3px 7px;min-width:20px;text-align:center}
-  .savedblock-clear{font:600 11px/1 "IBM Plex Sans";color:var(--muted);background:transparent;border:0;text-decoration:underline;min-height:32px;cursor:pointer}
+  .savedblock-clear{font:600 11px/1 "IBM Plex Sans";color:var(--muted);background:transparent;border:0;text-decoration:underline;min-height:44px;padding:0 8px;cursor:pointer} /* WR (10-REVIEW): 44px — ação destrutiva segue a convenção de toque */
   .saveditem-row{display:flex;align-items:stretch;gap:4px;border-top:1px solid var(--line)}
   .saveditem-row:first-child{border-top:0}
   .saveditem{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:44px;padding:8px 4px;background:transparent;border:0;cursor:pointer;text-align:left;font-family:inherit}
@@ -2479,14 +2479,17 @@ function showDetail(a,ll){
 /* Leitura: try/catch silencioso (mesmo padrão de radar_prof, linha ~2515) — [] em falha/ausência.
    Escrita: try/catch + toast de falha SEMPRE visível (T-10-06, nunca finge sucesso) + return false. */
 function oppLoad(){
-  try{return JSON.parse(localStorage.getItem("radar_oportunidades")||"[]");}catch(e){return [];}
+  /* CR (10-REVIEW): JSON válido mas NÃO-array (ex.: outra aba gravou um objeto) explodia .map/.some
+     no init e abortava o boot inteiro do app — Array.isArray obrigatório, nunca confiar no shape. */
+  try{const v=JSON.parse(localStorage.getItem("radar_oportunidades")||"[]");return Array.isArray(v)?v:[];}catch(e){return [];}
 }
 function oppSave(arr){
   try{localStorage.setItem("radar_oportunidades",JSON.stringify(arr));return true;}
   catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio.");return false;}
 }
 function histLoad(){
-  try{return JSON.parse(localStorage.getItem("radar_historico")||"[]");}catch(e){return [];}
+  /* CR (10-REVIEW): mesma guarda Array.isArray de oppLoad — histPush roda a cada abertura de ficha. */
+  try{const v=JSON.parse(localStorage.getItem("radar_historico")||"[]");return Array.isArray(v)?v:[];}catch(e){return [];}
 }
 function histSave(arr){
   try{localStorage.setItem("radar_historico",JSON.stringify(arr));return true;}
@@ -2699,13 +2702,16 @@ function copyTexto(texto,okMsg){
   const falhou=()=>toast("Não foi possível copiar — tente selecionar o texto manualmente.");
   const fallback=()=>{
     try{
+      const antes=document.activeElement; /* WR (10-REVIEW): devolver o foco ao gatilho depois */
       const ta=document.createElement("textarea");
       ta.value=texto;
+      ta.setAttribute("readonly",""); /* WR (10-REVIEW): iOS não abre teclado nem briga com a seleção */
       ta.style.position="fixed";ta.style.opacity="0";ta.style.top="0";ta.style.left="0";
       document.body.appendChild(ta);
-      ta.focus();ta.select();
+      ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length); /* iOS: select() sozinho não seleciona */
       const ok=document.execCommand("copy");
       document.body.removeChild(ta);
+      if(antes&&antes.focus)try{antes.focus();}catch(e){}
       if(ok)toast(okMsg);else falhou();
     }catch(e){falhou();}
   };
