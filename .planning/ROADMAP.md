@@ -31,7 +31,8 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 **Sequência de dependência:** Fase 7 (fundação de dados — **nomes ✅ entregues**) → Fase 8 (busca única) → Fases 9-12 constroem o cockpit sobre a ficha/lista existentes (9 ficha+scores → 10 ação/WhatsApp/salvos → 11 documentos → 12 prédio) → Fase 13 aplica o refino visual/motion/pinos/descoberta sobre tudo → Fase 14 é o gate de linguagem impecável → Fases 15-17 entregam o Território (choropleth, detector/farming, diff/Caixa) sobre o setor-scan compartilhado.
 
 - [~] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes reconciliados ✅ (07-01) + exibição amigável ✅; falta CNEFE (07-02) e tuning da malha mobile (07-03)
-- [x] **Phase 8: Busca Única Inteligente** — caixa única com detecção de intenção, chip de confirmação, setor na frase, colar link do Maps, voz (mobile), deep-link, autocomplete CNEFE — a11y re-auditada, guarda das regressões desktop (completed 2026-07-07)
+- [x] **Phase 8: Busca Única Inteligente** — caixa única com detecção de intenção, chip de confirmação, setor na frase, colar link do Maps, voz (mobile), deep-link, autocomplete CNEFE — a11y re-auditada, guarda das regressões desktop
+ (completed 2026-07-07)
 - [ ] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
 - [ ] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação
 - [ ] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF
@@ -85,7 +86,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   4. **Leitura prática** em linguagem comercial por template determinístico; jargão (mediana/percentil) só em "ver metodologia"
   5. Comparáveis com **conclusão primeiro** ("8% abaixo da mediana da vizinhança"), estatística recolhida; cada comparação termina com ação
   6. Zero regressão de dados vs Fase 8 §8 (venal 0 = "não informado", áreas/uso corretos) e a11y (foco/accordion navegável por teclado)
-**Plans**: TBD · **UI hint**: yes
+**Plans**: 09-01 (scores puros: scoreOportunidade/scoreConfianca/leituraPratica + harness) · 09-02 (ficha reordenada FICHA-01) · 09-03 (comparaveis conclusao-primeiro CMP-01 + wiring de scores)
 **Phase flags**: a fórmula dos scores precisa de calibração com casos reais (é decisão de produto documentável, não IA) — registrar a fórmula e seus limites na metodologia.
 
 ### Phase 10: Camada de Ação + WhatsApp + Captação + Salvos
@@ -215,7 +216,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
 | 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
-| 9. Ficha Comercial + Scores | v2.1 | 0/TBD | Not started | - |
+| 9. Ficha Comercial + Scores | v2.1 | 0/3 | Not started | - |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
