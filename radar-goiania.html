@@ -502,6 +502,12 @@
   #laudo .lass,#laudoView .lass{margin-top:28px;text-align:center}
   #laudo .lass .linha,#laudoView .lass .linha{border-top:1.5px solid var(--l-ink);width:56%;margin:0 auto 6px}
   #laudo .lass-resp,#laudoView .lass-resp{font:500 10.5px/1.4 "IBM Plex Sans";color:var(--muted);margin-top:4px}
+  #laudo .fr-hero,#laudoView .fr-hero{background:var(--paper-2);border:2px solid var(--accent);border-radius:2px;padding:18px;text-align:center;margin:16px 0}
+  #laudo .fr-faixa,#laudoView .fr-faixa{font:800 28px/1.1 "IBM Plex Sans";color:var(--ink)}
+  #laudo .fr-faixa-lbl,#laudoView .fr-faixa-lbl{font:600 11px/1.2 "IBM Plex Mono";letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  #laudo .fr-comps,#laudoView .fr-comps{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
+  #laudo .fr-comps li,#laudoView .fr-comps li{font:500 13px/1.4 "IBM Plex Sans"}
+  #laudo .fr-contato,#laudoView .fr-contato{font:700 13px/1.3 "IBM Plex Sans";color:var(--ink);margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
   #laudo .foot,#laudoView .foot{margin-top:4px;text-align:right;font:600 9.5px/1 "Open Sans",sans-serif;color:var(--l-label);letter-spacing:.02em}
   #laudoView .lrun{display:none}
   @media print{
@@ -3219,6 +3225,7 @@ function wizNext(){
   montarLaudo();
 }
 function montarLaudo(){
+  if(LZ.tipoDoc==="ficha"){montarFichaRapida();return;}
   const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a,LZ.privativa),g=LZ.comps,ul=unitLabel(a);
   const hoje=new Date().toLocaleDateString("pt-BR");
   const addr=addrDe(a);
@@ -3308,6 +3315,61 @@ function montarLaudo(){
      e acaba imprimindo a página errada (o mapa). Mostramos o laudo NA TELA; o PDF
      sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
      é ele que vai para o PDF — e só é limpo ao fechar (fecharLaudoView). */
+  document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
+}
+/* montarFichaRapida(): monta o objeto `data` a partir de LZ (nunca DCUR — dentro do wizard a fonte
+   de verdade é LZ, mesma regra "DCUR fechado" do Estado Transversal) e chama fichaRapidaTexto()
+   (RADAR_PURE, 11-01) — zero recalculo duplicado; renderFichaRapida() decide o HTML. */
+function montarFichaRapida(){
+  const a=LZ.a,p=LZ.prof,g=LZ.comps,ul=unitLabel(a);
+  const isU=!!ul||(a.cdedificio||0)>0;
+  const myPm2=isU?m2Edif(a):m2Terr(a);
+  const areaOk=!!(LZ.privativa||(isU?a.areaedif:a.areaterr));
+  const venalOk=(a.vlvenal||0)>0;
+  const atipico=isGarage(a);
+  const conf=scoreConfianca({areaOk,nComps:(g&&g.res)?g.res.n:0,atipico,venalOk});
+  const stats=g&&g.res?{med:g.res.med,q1:g.res.q1,q3:g.res.q3,n:g.res.n,min:g.res.min,max:g.res.max}:null;
+  const op=scoreOportunidade(myPm2,stats,{radius:g?g.radius:400});
+  const tipo=ul||USO[a.uso]||"Imóvel";
+  const leitura=leituraPratica({tipoImovel:tipo,bairro:clean(a.nmbairro),oportunidade:op,confianca:conf});
+  const est=mercadoEstimado(a,LZ.privativa);
+  let comparaveis;
+  if(g&&g.res&&g.res.n>=3){
+    const diffPct=Math.round(Math.abs(myPm2-g.res.med)/g.res.med*100);
+    const abaixo=myPm2<=g.res.med;
+    comparaveis=[`Este imóvel está ${diffPct}% ${abaixo?"abaixo":"acima"} da faixa média desta região (${g.res.n} imóveis parecidos em ${g.radius} m).`];
+  }
+  let perfil=null;if(p&&p.nome)perfil={nome:p.nome,creci:p.creci,contato:p.contato};
+  const data={
+    endereco:addrDe(a), bairro:clean(a.nmbairro), quadra:clean(a.nrquadra), lote:clean(a.nrlote),
+    tipoImovel:tipo, faixa:est?{lo:est.lo,hi:est.hi}:null, scoreOp:op, scoreConf:conf,
+    leitura, perfil, comparaveis
+  };
+  const fr=fichaRapidaTexto(data);
+  renderFichaRapida(a,data,fr);
+}
+/* renderFichaRapida(a,data,fr): passo de RENDER HTML (Componente 4 do UI-SPEC), separado da
+   montagem de dados — mesmo pipeline #laudo -> #laudoView -> imprimirLaudo() de montarLaudo()
+   (guarda ec9f129 preservada, reuso total da mecanica de exibicao/impressao). */
+function renderFichaRapida(a,data,fr){
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  document.getElementById("laudo").innerHTML=`
+    <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
+    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>Ficha rápida do imóvel</div>
+      <div class="m">${data.perfil?esc(data.perfil.nome)+(data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""):""}<br>Goiânia/GO · ${hoje}</div></div>
+    <div class="fr-hero">
+      <div class="fr-faixa">${fr.faixaTxt?esc(fr.faixaTxt):"Sem faixa estimada"}</div>
+      <div class="fr-faixa-lbl">Faixa estimada de valor</div>
+    </div>
+    <div class="lcard"><h3>Resumo do imóvel</h3>
+      <p>${esc(data.endereco)||"Endereço não cadastrado"} — ${esc(data.bairro)}. Q ${esc(data.quadra)||"—"} · L ${esc(data.lote)||"—"}${a.areaedif?" · "+Math.round(a.areaedif)+" m²":a.areaterr?" · "+Math.round(a.areaterr)+" m²":""}.</p></div>
+    <div class="lcard"><h3>Leitura prática</h3><p>${esc(fr.leitura)}</p></div>
+    ${fr.comparaveis.length?`<div class="lcard"><h3>Comparáveis</h3><ul class="fr-comps">${fr.comparaveis.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
+    <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">${esc(fr.ressalva)}</p></div>
+    ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
+    <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
+  fecharLaudo();
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
 }
