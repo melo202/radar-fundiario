@@ -123,14 +123,19 @@ Plans:
 ### Phase 11.1: Documentos da Negociação (Proposta · Exclusividade · Contrato)
 **Goal**: O corretor gera as minutas do negócio (Proposta de C&V, Termo de Exclusividade/Autorização, Contrato de C&V) já preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas — a papelada que fecha a captação e a venda, sem sair do app.
 **Depends on**: Fase 11 (infra de documento/wizard/PDF), Fase 10 (Modo Captação — o Termo de Exclusividade sai da captação), Fase 9 (dados/valor do imóvel)
-**Requirements**: NEG-01, NEG-02, NEG-03, NEG-04
+**Requirements**: NEG-01, NEG-02, NEG-03 (NEG-04 DEFERIDO — decisão 11.1-CONTEXT: OCR adiado, substituído por colar texto + parse leve)
 **Success Criteria**:
   1. As 3 minutas (Proposta, Exclusividade, Contrato) são geradas por **template determinístico** pré-preenchido com o imóvel (cadastro: inscrição/endereço/quadra-lote/área) + campos de partes/valor/condições editáveis — **nunca por LLM** (núcleo determinístico)
   2. Cada documento é uma **minuta editável** antes do PDF (mesma etapa de revisão da Fase 11) e traz **ressalva clara** ("minuta para conferência; recomenda-se revisão jurídica e registro em cartório/RGI") — jamais promete validade automática
   3. O **Termo de Exclusividade** puxa proprietário/corretor(CRECI)/prazo/comissão e se integra ao Modo Captação (Fase 10); a **Proposta** traz validade da oferta; o **Contrato** traz matrícula/RGI + forma de pagamento + cláusulas padrão
   4. **NEG-04 (opcional)**: OCR da escritura/matrícula via **Tesseract.js** (WASM client-side, determinístico) pré-preenche matrícula/partes/descrição, com o corretor **sempre revisando**; fallback = digitar/colar; degrada onde o OCR não estiver disponível — nunca é fonte confiável sozinho
   5. Toda a microcopy e os textos das minutas passam no gate de linguagem (Fase 14); zero campo pessoal de terceiros persistido além do necessário à minuta
-**Plans**: TBD · **UI hint**: yes
+**Plans**: 3 plans
+Plans:
+- [ ] 11.1-01-PLAN.md — RADAR_PURE (TDD): propostaTexto/termoExclusividadeTexto/contratoTexto + parseMatricula + numeroPorExtenso
+- [ ] 11.1-02-PLAN.md — Wizard NEG próprio (#negSheet, estado em memória, nunca persistido) + extração de matrícula + entradas em #dActsMore e #captSheet
+- [ ] 11.1-03-PLAN.md — Template A4 impresso (cláusulas/disclaimer/assinaturas) via pipeline #laudo→#laudoView + verificação end-to-end/privacidade
+**UI hint**: yes
 **Phase flags**: OCR de scan de cartório é notoriamente ruidoso — NEG-04 é best-effort/opcional, com revisão humana obrigatória; se o custo/qualidade não compensar, entrega-se as minutas com preenchimento manual e adia-se o OCR.
 
 ### Phase 12: Prédio como Objeto Comercial
@@ -228,7 +233,7 @@ Plans:
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
+| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/3 | Planned | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
