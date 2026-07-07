@@ -133,7 +133,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 11.1-01-PLAN.md — RADAR_PURE (TDD): propostaTexto/termoExclusividadeTexto/contratoTexto + parseMatricula + numeroPorExtenso
-- [ ] 11.1-02-PLAN.md — Wizard NEG próprio (#negSheet, estado em memória, nunca persistido) + extração de matrícula + entradas em #dActsMore e #captSheet
+- [x] 11.1-02-PLAN.md — Wizard NEG próprio (#negSheet, estado em memória, nunca persistido) + extração de matrícula + entradas em #dActsMore e #captSheet
 - [ ] 11.1-03-PLAN.md — Template A4 impresso (cláusulas/disclaimer/assinaturas) via pipeline #laudo→#laudoView + verificação end-to-end/privacidade
 **UI hint**: yes
 **Phase flags**: OCR de scan de cartório é notoriamente ruidoso — NEG-04 é best-effort/opcional, com revisão humana obrigatória; se o custo/qualidade não compensar, entrega-se as minutas com preenchimento manual e adia-se o OCR.
@@ -233,7 +233,7 @@ Plans:
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 1/3 | In Progress|  |
+| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 2/3 | In Progress|  |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
