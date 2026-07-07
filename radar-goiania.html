@@ -667,7 +667,6 @@ const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"
 /* venal 0/ausente é dado NÃO LANÇADO no cadastro (comum em garagem/box/imóvel não avaliado),
    não "R$ 0" de verdade — mostrar "não informado" em vez de um zero enganoso. */
 const venalTxt=v=>(v>0)?brl(v):"não informado";
-const clean=v=>String(v==null?"":v).trim();
 const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 /* remove campos pessoais do titular já na entrada (defesa em profundidade — LGPD) */
 const SENS=["dtnascimen","cpf","cnpj","nmcontrib","nmproprie","nome"];
@@ -678,8 +677,30 @@ const logradouroDe=a=>{const tp=clean(a.tplogradou),nm=clean(a.nmlogradou);
   const s=(!tp||norm(nm).startsWith(norm(tp)+" ")||norm(nm)===norm(tp))?nm:(tp+" "+nm);
   return s.replace(/\s+/g," ").trim();};
 const addrDe=a=>logradouroDe(a)+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
+
+// RADAR_PURE_START — funções puras de matching/normalização. Testadas por tests/busca.test.mjs
+// (que lê e avalia este bloco isoladamente via node:vm — não editar sem rodar `node --test tests/`).
+const clean=v=>String(v==null?"":v).trim();
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/\s+/g," ").trim();
+/* núcleo do nome da rua: sem acento, sem "RUA/AV/R." na frente — o cadastro embute o tipo no nome ("R  MARAJO") */
+const TIPOVIA=/^(RUA|R|AVENIDA|AVN?|ALAMEDA|AL|TRAVESSA|TV|PRACA|PC|ESTRADA|EST|RODOVIA|ROD|VIELA|VIA)\.?\s+/;
+const ruaCore=s=>norm(s).replace(/'/g,"").replace(TIPOVIA,"");
 /* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
 const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
+function isGarage(a){return /\b(BOX|GARAG|VAGA|DEPOSITO|DEP\b|SUBSOLO)/.test(norm(a.incompl));}
+function matchApto(a,q){
+  const digits=String(q).replace(/\D/g,"");if(!digits)return true;
+  const inc=norm(a.incompl);
+  return inc.includes("APT"+digits)||inc.includes("AP"+digits)||inc.includes("APTO"+digits)||
+         (inc.match(/\d+/g)||[]).includes(digits);
+}
+/* modo Quadra/Lote: match exato, dígitos-iguais ou substring (fallback SEM prioridade — 08-02 corrige isto) */
+function okQ(nq,qU){ return !qU||nq===qU||nq.replace(/\D/g,"")===qU.replace(/\D/g,"")||nq.includes(qU); }
+function okL(nl,lU){ return !lU||nl===lU||nl.replace(/[^0-9\/]/g,"").split("/").includes(lU)||nl.includes(lU); }
+/* modo Endereço: rua bate por substring do núcleo OU por igualdade de token numérico */
+function casaRuaCore(log,rCore,rD){ return log.includes(rCore)||(rD&&(log.match(/\d+/g)||[]).includes(rD)); }
+// RADAR_PURE_END
+
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
 let streetTile, satTile, satRef; /* Fase 4 SAT-01: camadas de base alternáveis, ruas é o default */
 let satelliteOn=false;
@@ -1023,10 +1044,6 @@ const PFX={RES:"Residencial",JD:"Jardim",VI:"Vila",VL:"Vila",VILA:"Vila",VLG:"Vi
   LOT:"Loteamento",PRQ:"Parque",PQ:"Parque",BRO:"Bairro",CH:"Chácara",FAZ:"Fazenda",CONJ:"Conjunto",
   COD:"Condomínio",SIT:"Sítio",GRJ:"Granja",AER:"Aeroporto",DIS:"Distrito",REC:"Recanto",ZON:"Zona",
   AREA:"Área",ESP:"Espaço"};
-const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim();
-/* n\u00facleo do nome da rua: sem acento, sem "RUA/AV/R." na frente \u2014 o cadastro embute o tipo no nome ("R  MARAJO") */
-const TIPOVIA=/^(RUA|R|AVENIDA|AVN?|ALAMEDA|AL|TRAVESSA|TV|PRACA|PC|ESTRADA|EST|RODOVIA|ROD|VIELA|VIA)\.?\s+/;
-const ruaCore=s=>norm(s).replace(/'/g,"").replace(TIPOVIA,"");
 const titano=s=>s.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 function displayName(raw){
   const p=raw.trim().split(/\s+/);
@@ -1219,8 +1236,7 @@ async function buscar(){
       let all=await fetchWhere(whereA);
       /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
       if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`,8);
-      const casaRua=a=>{const log=ruaCore(a.nmlogradou);
-        return log.includes(rCore)||(rD&&(log.match(/\d+/g)||[]).includes(rD));};
+      const casaRua=a=>casaRuaCore(ruaCore(a.nmlogradou),rCore,rD);
       items=all.filter(a=>{
         const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
         return casaRua(a)&&okN;
@@ -1270,9 +1286,7 @@ async function buscar(){
       items=all.filter(a=>{
         const nq=clean(a.nrquadra).toUpperCase();
         const nl=clean(a.nrlote).toUpperCase();
-        const okQ=!q||nq===qU||nq.replace(/\D/g,"")===qU.replace(/\D/g,"")||nq.includes(qU);
-        const okL=!l||nl===lU||nl.replace(/[^0-9\/]/g,"").split("/").includes(lU)||nl.includes(lU);
-        return okQ&&okL;
+        return okQ(nq,qU)&&okL(nl,lU);
       });
     }
     if(tk!==SEARCHTOKEN)return;
@@ -1379,13 +1393,6 @@ function mercadoEstimado(a,privReal){
 /* ---------------- render lista ---------------- */
 function m2Terr(a){const vv=a.vlvenal||0,at=a.areaterr||0;return (vv>0&&at>0)?vv/at:null;}
 function m2Edif(a){const vv=a.vlvenal||0,ae=a.areaedif||0;return (vv>0&&ae>0)?vv/ae:null;}
-function isGarage(a){return /\b(BOX|GARAG|VAGA|DEPOSITO|DEP\b|SUBSOLO)/.test(norm(a.incompl));}
-function matchApto(a,q){
-  const digits=String(q).replace(/\D/g,"");if(!digits)return true;
-  const inc=norm(a.incompl);
-  return inc.includes("APT"+digits)||inc.includes("AP"+digits)||inc.includes("APTO"+digits)||
-         (inc.match(/\d+/g)||[]).includes(digits);
-}
 function unitLabel(a){
   let s=clean(a.incompl);if(!s)return null;
   s=s.replace(/^APTO?\s*/i,"Apto ").replace(/^BOX\s*/i,"Box ").replace(/^SALA\s*/i,"Sala ").replace(/^LOJA\s*/i,"Loja ");
