@@ -483,6 +483,17 @@
   .negdisclaimer-txt{font:500 11.5px/1.5 "IBM Plex Sans";color:var(--ink)}
   .negcta{background:var(--accent);border-color:var(--accent);color:#fff}
   .negcta:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+  /* Fase 11.1 (11.1-03): template A4 impresso das 3 minutas — reusa #laudo/#laudoView .lbrand/.lrun/
+     .foot/.lass já existentes; classes abaixo só cobrem cláusula/disclaimer/testemunhas, zero hex
+     novo (var(--l-accent) já existe, #fff já usado no bloco do laudo). */
+  #laudo .negclausulas,#laudoView .negclausulas{margin:8px 0 16px}
+  #laudo .negclausula-item,#laudoView .negclausula-item{margin-bottom:14px;page-break-inside:avoid}
+  #laudo .negclausula-item b,#laudoView .negclausula-item b{font:700 13px/1.3 "Open Sans","Segoe UI",sans-serif;color:var(--l-accent);display:block;margin-bottom:3px}
+  #laudo .negclausula-item p,#laudoView .negclausula-item p{margin:0;white-space:pre-line}
+  #laudo .negdisclaimer-print,#laudoView .negdisclaimer-print{border:1.5px solid var(--l-accent);border-radius:8px;padding:14px 16px;margin:18px 0;font-size:10.5px;line-height:1.5;background:#fff}
+  #laudo .negdisclaimer-print b,#laudoView .negdisclaimer-print b{color:var(--l-accent)}
+  #laudo .lass-testemunhas,#laudoView .lass-testemunhas{display:flex;gap:24px;margin-top:20px}
+  #laudo .lass-testemunhas .lass,#laudoView .lass-testemunhas .lass{flex:1;margin-top:0}
   /* ===== LAUDO — layout premium em cards; tela (#laudoView) e PDF (#laudo) compartilham as classes ===== */
   #laudo{display:none}
   #laudo .lbrand,#laudoView .lbrand{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 2px 20px}
@@ -539,7 +550,7 @@
       -webkit-print-color-adjust:exact;print-color-adjust:exact}
     #laudo .lcard{box-shadow:none}
     #laudo h3{page-break-after:avoid}                                        /* título não fica órfão */
-    #laudo .prow,#laudo .subs,#laudo .subcard,#laudo .lbar,#laudo .lass,#laudo .kv{page-break-inside:avoid} /* blocos atômicos não partem */
+    #laudo .prow,#laudo .subs,#laudo .subcard,#laudo .lbar,#laudo .lass,#laudo .kv,#laudo .negclausula-item,#laudo .negdisclaimer-print{page-break-inside:avoid} /* blocos atômicos não partem */
     #laudo .foot{display:none}                                               /* no PDF o rodapé é o .lrun repetido */
     #laudo .lrun{position:fixed;bottom:-9mm;left:0;right:0;display:flex;justify-content:space-between;
       font:600 7.5pt/1 "Open Sans",sans-serif;color:var(--l-label);border-top:.6pt solid var(--l-border);padding-top:4pt}
@@ -3523,19 +3534,57 @@ function negNext(){
   }
   montarNeg();
 }
-/* Wave 2 (11.1-02): versão MÍNIMA mas FUNCIONAL (Wave 3, 11.1-03, substitui o corpo por template
-   A4 estruturado — cláusulas em blocos, disclaimer em caixa, .lass — sem tocar no contrato/
-   pipeline). esc() OBRIGATÓRIO no texto (minutaEditada é texto livre do usuário, IN-01). */
+/* Wave 3 (11.1-03): template A4 estruturado dos 3 documentos — CAMINHO A (facts do
+   11.1-03-PLAN.md): o corpo impresso é o TEXTO REVISADO (NEG.minutaEditada quando o usuário
+   editou, senão NEG.minutaTexto — edição NUNCA descartada) dividido em blocos por linha em
+   branco (mesmo formato que as funções puras de 11.1-01 emitem via "\n\n"). O bloco do
+   disclaimer é SEMPRE renderizado na caixa .negdisclaimer-print com o texto literal de
+   DISCLAIMER_NEG, MESMO que o usuário o tenha apagado na edição — decisão de responsabilidade
+   (T-11.1-09): o disclaimer não é removível do impresso. Blocos de assinatura ("____"+papel) são
+   descartados do fluxo de cláusulas (duplicariam os blocos .lass estruturados abaixo, que usam
+   os nomes de NEG diretamente). esc() em TODO conteúdo digitado/editado antes do innerHTML
+   (IN-01) — sem tocar no contrato de chamada (negNext -> este único gatilho -> fecharNeg ->
+   cópia para #laudoViewBody -> #laudoView.hidden=false, guarda ec9f129). */
 function montarNeg(){
   if(!NEG)return;
   const texto=NEG.minutaEditada!=null?NEG.minutaEditada:NEG.minutaTexto;
   const titulo={proposta:"Proposta de Compra e Venda",exclusividade:"Termo de Autorização/Exclusividade de Venda",contrato:"Contrato de Compra e Venda"}[NEG.tipo];
   const hoje=new Date().toLocaleDateString("pt-BR");
+  const blocosBrutos=String(texto||"").split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);
+  const clausulasHtml=blocosBrutos
+    .filter(b=>b.indexOf("Minuta para conferência das partes")<0)  // disclaimer sai do fluxo — vai pra caixa
+    .filter(b=>!/^_{5,}/.test(b))                                   // linhas de assinatura ("____...") não duplicam os .lass abaixo
+    .map(b=>{
+      const linhas=b.split("\n");
+      const primeira=linhas[0];
+      const resto=linhas.slice(1).join("\n");
+      const ehTitulo=/^Cláusula\s+\d+ª?\s*—?/.test(primeira)||primeira===primeira.toUpperCase();
+      return `<div class="negclausula-item">${ehTitulo?`<b>${esc(primeira)}</b>`:""}${resto||!ehTitulo?`<p>${esc(ehTitulo?resto:b)}</p>`:""}</div>`;
+    }).join("");
+  const corretorLinha=(NEG.corretor&&NEG.corretor.nome)?`Corretor(a): ${esc(NEG.corretor.nome)}${NEG.corretor.creci?" · CRECI "+esc(NEG.corretor.creci):""} · Goiânia/GO · ${hoje}`:`Goiânia/GO · ${hoje}`;
+  const lassBloco=(nome,papel,creciTxt)=>`<div class="lass"><div class="linha"></div>${esc(nome||CAMPO_VAZIO)} — ${esc(papel)}${creciTxt?`<div class="lass-resp">${creciTxt}</div>`:""}</div>`;
+  let assinaturasHtml="";
+  if(NEG.tipo==="proposta"){
+    assinaturasHtml=lassBloco(NEG.proponente.nome,"Proponente")+lassBloco(NEG.vendedor.nome,"Vendedor/Proprietário");
+  }else if(NEG.tipo==="exclusividade"){
+    const creciTxt=NEG.corretor.creci?`CRECI ${esc(NEG.corretor.creci)}`:"";
+    assinaturasHtml=lassBloco(NEG.proprietario.nome,"Proprietário")+lassBloco(NEG.corretor.nome,"Corretor",creciTxt)+
+      `<div class="lass lass-testemunhas">`+
+      lassBloco(null,"Testemunha 1")+lassBloco(null,"Testemunha 2")+
+      `</div>`;
+  }else{ /* contrato */
+    assinaturasHtml=lassBloco(NEG.vendedor.nome,"Vendedor")+lassBloco(NEG.comprador.nome,"Comprador")+
+      `<div class="lass lass-testemunhas">`+
+      lassBloco(null,"Testemunha 1")+lassBloco(null,"Testemunha 2")+
+      `</div>`;
+  }
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA</span><span>EMITIDO EM ${hoje}</span></div>
     <div class="lbrand"><div class="t"><small>Radar Fundiário · Documentos da Negociação</small>${esc(titulo)}</div>
-      <div class="m">Goiânia/GO · ${hoje}</div></div>
-    <div style="white-space:pre-wrap">${esc(texto)}</div>
+      <div class="m">${corretorLinha}</div></div>
+    <div class="negclausulas">${clausulasHtml}</div>
+    <div class="negdisclaimer-print"><b>ATENÇÃO</b> — ${esc(DISCLAIMER_NEG)}</div>
+    ${assinaturasHtml}
     <div class="foot">RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA · EMITIDO EM ${hoje}</div>`;
   fecharNeg();
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
