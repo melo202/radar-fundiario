@@ -1272,6 +1272,60 @@ function pickBairro(code){
   document.getElementById("bairroList").classList.remove("show");
   comboExpanded(false);
 }
+/* ---------------- dropdown unificado da caixa unica: Setor (COMBO) + Rua (CNEFE) — 08-04 Task 3 ----------------
+   Mesma logica de ordenacao por posicao do termo ja usada em filterCombo (nao 2 blocos separados) —
+   os 2 tipos de item sao mapeados para uma forma comum {kind,label,sub,id,code} ANTES de ordenar juntos. */
+let caixaActive=-1;
+function updateCaixaList(qtext){
+  const list=document.getElementById("caixaList");
+  const inp=document.getElementById("caixaInput");
+  const q=norm(qtext);
+  if(!q){list.classList.remove("show");inp.setAttribute("aria-expanded","false");return;}
+  const setorHits=COMBO.filter(b=>b.search.includes(q)).map(b=>({kind:"setor",label:b.disp,sub:b.raw,
+    code:b.code,id:"opt-bai-"+String(b.code).replace(/\D/g,""),pos:b.search.indexOf(q)}));
+  const ruaHits=(CNEFE||[]).filter(r=>r.search.includes(q)).map((r,i)=>({kind:"rua",label:titano(r.nome),sub:r.tipo,
+    id:"opt-rua-"+i,pos:r.search.indexOf(q),__nome:r.nome}));
+  let hits=setorHits.concat(ruaHits);
+  hits.sort((a,b)=>a.pos-b.pos||a.label.localeCompare(b.label,"pt"));
+  hits=hits.slice(0,50);
+  caixaActive=-1;
+  inp.setAttribute("aria-expanded","true");
+  if(!hits.length){list.innerHTML='<div class="combo-empty">nenhuma sugestão</div>';list.classList.add("show");return;}
+  list.innerHTML=hits.map(h=>`<div class="combo-item" role="option" id="${h.id}" aria-selected="false"
+      data-kind="${h.kind}" data-code="${h.code||""}" data-nome="${esc(h.__nome||"")}"
+      onclick="pickCaixaItem(this)">
+    <span class="code">${h.kind==="setor"?"Setor":"Rua"}</span>${esc(h.label)}<span class="raw">${esc(h.sub)}</span></div>`).join("");
+  list.classList.add("show");
+}
+/* selecionar Setor: pickBairro() (existente). Selecionar Rua: preenche o modo Endereco (rua implicito),
+   fecha o dropdown, deixa o usuario confirmar com Enter/Buscar (nao dispara buscar() sozinho). */
+function pickCaixaItem(el){
+  const kind=el.dataset.kind;
+  if(kind==="setor"){
+    pickBairro(el.dataset.code);
+    const disp=COMBO.find(x=>String(x.code)===String(el.dataset.code));
+    if(disp)document.getElementById("caixaInput").value=disp.disp;
+  }else{
+    const nome=el.dataset.nome;
+    setMode("addr");
+    document.getElementById("rua").value=nome;
+    document.getElementById("caixaInput").value=nome;
+    LASTDETECT={mode:"addr",rua:nome,numero:"",confidence:"alta",label:`Endereço · ${nome}`};
+    document.getElementById("detectChip").textContent=LASTDETECT.label;
+    document.getElementById("detectChip").hidden=false;document.getElementById("detectChip").classList.add("show");
+  }
+  closeCaixaList();
+  document.getElementById("caixaInput").focus();
+}
+/* Enter com o dropdown aberto e um item ativo (seta): seleciona o item ativo em vez de disparar
+   detectMode/buscar direto — chamado pelo listener de keydown do #caixaInput (Task 2). Retorna
+   true se consumiu o Enter (item selecionado), false senao (deixa o fluxo normal do Enter agir). */
+function caixaEnterSelect(){
+  const list=document.getElementById("caixaList");
+  const items=[...list.querySelectorAll(".combo-item")];
+  if(caixaActive>=0&&items[caixaActive]){pickCaixaItem(items[caixaActive]);return true;}
+  return false;
+}
 /* bairro sem quadra/lote: desenha a divisa do setor e leva o mapa até lá */
 let bairroOutline=null;
 async function mostrarBairro(code){
@@ -2558,8 +2612,25 @@ function loadCnefe(){
   inp.addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(runDetect,150);});
   inp.addEventListener("focus",()=>{loadCnefe();if(inp.value&&typeof updateCaixaList==="function")updateCaixaList(inp.value);});
   inp.addEventListener("keydown",e=>{
+    const list=document.getElementById("caixaList");
+    const open=list.classList.contains("show");
+    /* navegacao por teclado do dropdown unificado (08-04 Task 3) — replica 1:1 o padrao ja
+       implementado no combo de setor (aria-activedescendant sincronizado, seta ↑/↓/Enter/Esc). */
+    if(open&&e.key==="ArrowDown"){e.preventDefault();
+      const items=[...list.querySelectorAll(".combo-item")];
+      caixaActive=Math.min(caixaActive+1,items.length-1);
+      items.forEach((it,i)=>{const on=i===caixaActive;it.classList.toggle("active",on);it.setAttribute("aria-selected",on);});
+      if(items[caixaActive]){items[caixaActive].scrollIntoView({block:"nearest"});inp.setAttribute("aria-activedescendant",items[caixaActive].id);}
+      return;}
+    if(open&&e.key==="ArrowUp"){e.preventDefault();
+      const items=[...list.querySelectorAll(".combo-item")];
+      caixaActive=Math.max(caixaActive-1,0);
+      items.forEach((it,i)=>{const on=i===caixaActive;it.classList.toggle("active",on);it.setAttribute("aria-selected",on);});
+      if(items[caixaActive]){items[caixaActive].scrollIntoView({block:"nearest"});inp.setAttribute("aria-activedescendant",items[caixaActive].id);}
+      return;}
+    if(open&&e.key==="Escape"){e.stopPropagation();closeCaixaList();return;}
     if(e.key==="Enter"){
-      if(document.getElementById("caixaList").classList.contains("show")&&typeof caixaEnterSelect==="function"&&caixaEnterSelect())return;
+      if(open&&caixaEnterSelect())return;
       e.preventDefault();
       if(!LASTDETECT||LASTDETECT.confidence==="baixa")return; /* baixa confianca NUNCA dispara busca no Enter */
       applyDetectAndSearch(LASTDETECT.mode,LASTDETECT);
