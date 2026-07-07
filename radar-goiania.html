@@ -830,7 +830,10 @@ function getLastBairroCode(){
       rodam sobre o "rest" (frase sem o trecho de setor), e o resultado final ganha {bairroCode,bairroDisp}.
    1. Inscricao — so digitos, comprimento decide o campo (mesmo limiar de buscar(): >10 = nrinscr, senao ci).
       Confianca ALTA (digitos puros 10/14).
-   2. Quadra+Lote — regex tolerante a "q128 lote 5"/"quadra 128 lt 5"/"128/5". Confianca ALTA.
+   2. Quadra+Lote — regex tolerante a "q128 lote 5"/"quadra 128 lt 5". Confianca ALTA.
+   2b. Quadra+Lote CRU (bare), sem palavra Q/L — SO quando a frase inteira e exatamente
+      "digitos[letra]/digitos[letra]" (ex.: "128/5", "20/21"): 1o numero=quadra, 2o=lote
+      (WR-01 08-REVIEW.md — fecha o gap entre este docstring/SEARCH.md §2 e o regex real).
    3. Endereco — tipo de via presente em qualquer posicao (TIPOVIA_DETECT, nao ancorada). Confianca ALTA.
    4. Predio — prefixo textual tipico (ED/EDF/EDIFICIO/RES/RESIDENCIAL/COND/CONDOMINIO). Confianca ALTA.
    5. Numero curto isolado (1-4 digitos, sem contexto) — AMBIGUO, confianca BAIXA, NAO decide modo
@@ -865,6 +868,19 @@ function detectMode(textoBruto,combo){
   if(mQL){
     return attachSetor({mode:"ql",quadra:mQL[1],lote:mQL[2]||"",confidence:"alta",
       label:mQL[2]?`Quadra ${mQL[1]} · Lote ${mQL[2]}`:`Quadra ${mQL[1]}`});
+  }
+  // 2b. Quadra/Lote em formato "cru" (bare), SEM nenhuma palavra Q/QUADRA/L/LOTE — ex.: "128/5".
+  // WR-01 (08-REVIEW.md): docstring e SEARCH.md §2 prometem isso desde sempre, mas o regex acima
+  // exige o token "Q"/"QUADRA" literal e nunca casou "128/5" puro. Semantica adotada (documentada
+  // aqui para nao regredir de novo): a frase TEM que ser SO "digitos[letra opcional]/digitos[letra
+  // opcional]" (^...$, nenhum texto extra antes/depois) para nao roubar casos ambiguos de outras
+  // regras (ex.: enderecos com barra em nome de rua) — 1o numero é quadra, 2o é lote, SEMPRE nessa
+  // ordem (mesma convencao de "quadra X lote Y"). Cobre tambem "20/21" (roadmap: caso historico de
+  // confusao) => aqui interpretado como quadra 20, lote 21, mesma regra sem excecao.
+  const mQLBare=n.match(/^(\d+[A-Z]?)\/(\d+[A-Z]?)$/);
+  if(mQLBare){
+    return attachSetor({mode:"ql",quadra:mQLBare[1],lote:mQLBare[2],confidence:"alta",
+      label:`Quadra ${mQLBare[1]} · Lote ${mQLBare[2]}`});
   }
 
   // 3. Endereco — tipo de via explicito, NAO ancorado (TIPOVIA_DETECT, derivado de TIPOVIA)

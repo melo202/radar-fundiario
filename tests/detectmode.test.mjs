@@ -188,4 +188,46 @@ test("detectMode — 'ed. central park' prefixo textual de predio -> confianca a
   assert.equal(r.confidence, "alta");
 });
 
+// WR-01 (08-REVIEW.md) — regressao: docstring/SEARCH.md §2 prometem "128/5" bare (sem Q/L) desde
+// sempre, mas o regex so casava com o token Q/QUADRA literal presente. Semantica travada aqui:
+// frase INTEIRA = "digitos[letra]/digitos[letra]" -> quadra = 1o numero, lote = 2o numero.
+test("detectMode — '128/5' bare (sem palavra Q/L) decide ql com quadra=128 e lote=5", () => {
+  const r = P.detectMode("128/5", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "128");
+  assert.equal(r.lote, "5");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — '20/21' bare (caso historico do roadmap) decide ql com quadra=20 e lote=21", () => {
+  // Convencao adotada: SEMPRE 1o numero=quadra, 2o=lote, sem heuristica adicional de qual "parece"
+  // mais quadra/lote — mesma ordem de "quadra 20 lote 21". Documentado pois e o caso citado no
+  // roadmap histórico como fonte de confusao (nao havia contrato explicito antes deste fix).
+  const r = P.detectMode("20/21", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "20");
+  assert.equal(r.lote, "21");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — 'q128/5' (com Q mas sem palavra L/LOTE) preserva quadra=128 e lote=5", () => {
+  // Regressao apontada no WR-01: antes do fix, "q128/5" so casava a alternativa quadra-only
+  // (regex 2) porque "/5" sem um token L/LT/LOTE subsequente nao era capturado pelo grupo de lote
+  // — o lote era silenciosamente descartado. A 1a alternativa de regex 2 (com .*?) NAO exige a
+  // palavra L quando o proprio numero de lote já vem colado com "/", entao "q128/5" deve continuar
+  // batendo ali (nao na regra 2b, que so aceita a frase bare sem nenhum "Q").
+  const r = P.detectMode("q128/5", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "128");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — '128/5abc' (bare com texto extra colado) NAO deveria casar a regra 2b (bare exige frase exata)", () => {
+  // Regra 2b so decide quando a frase INTEIRA é o padrao bare — evita roubar casos ambiguos como
+  // enderecos com barra dentro de um nome maior. Sem tipo de via/prefixo de predio, cai na regra 6
+  // (predio, confianca media) — nao crasha, so nao ganha o tratamento especial de quadra/lote.
+  const r = P.detectMode("128/5abc", COMBO_FIXTURE);
+  assert.notEqual(r.mode, "ql");
+});
+
 export { loadPureBlock, COMBO_FIXTURE };
