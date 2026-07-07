@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP + Inteligência + Mobile** — pré-GSD (shipped 2026-07-03)
 - ✅ **v2.0 Mapa-first + Motion + Satélite** — Fases 1-6 (shipped 2026-07-05) · [detalhes](milestones/v2.0-ROADMAP.md) · [requisitos](milestones/v2.0-REQUIREMENTS.md) · [auditoria](milestones/v2.0-MILESTONE-AUDIT.md)
-- 🚧 **v2.1 Cockpit Comercial** — Fases 7-17 (em andamento)
+- 🚧 **v2.1 Cockpit Comercial** — Fases 7-18 (em andamento)
 
 ## Phases
 
@@ -22,7 +22,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 
 </details>
 
-### 🚧 v2.1 Cockpit Comercial (Fases 7-17)
+### 🚧 v2.1 Cockpit Comercial (Fases 7-18)
 
 **Milestone Goal:** Tirar o Radar de "consulta cadastral" e levar a **cockpit comercial de decisão e ação**: o corretor entende o imóvel em segundos e sai com uma **ação comercial pronta**. Núcleo **100% determinístico** e **client-side** (sem backend/contas/IA no core). Base: `Plano_UX_Radar_Fundiario_v3`.
 
@@ -42,6 +42,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [ ] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor
 - [ ] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
 - [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
+- [ ] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial
 
 ## Phase Details
 
@@ -186,9 +187,23 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   2. Imóveis Caixa plotados são cruzados com o território salvo, destacando quando um imóvel Caixa cai num setor/lote já farmado
 **Plans**: TBD
 
+### Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)
+**Goal**: A ficha responde "o que este lote PODE SER" — zona/unidade territorial do Modelo Espacial, coeficiente de aproveitamento, usos — e essa inteligência alimenta o score de oportunidade e o detector de subutilizado. Tudo dado oficial determinístico (lei + GIS da prefeitura), zero IA.
+**Depends on**: Fase 9 (ficha comercial — a seção Urbanístico entra nela), Fase 16 (detector — recebe o upgrade de potencial)
+**Requirements**: PD-01, PD-02, PD-03, PD-04, PD-05
+**Evidence base**: `.planning/research/v2.1/PLANO-DIRETOR.md` (verificado AO VIVO 2026-07-07): o ArcGIS já usado pelo app expõe `MapaServer/Mapa_ModeloEspacial/MapServer` — 49 camadas do Modelo Espacial da LC 349/2022 (macrozoneamento=33, área adensável=31, AEIS, vazios, eixos…), queryáveis por PONTO via GET no mesmo CRS (`x_coord`/`y_coord`) que o app extrai por lote. Caminho A (consulta ao vivo) confirmado; zero infra nova.
+**Success Criteria**:
+  1. Abrir a ficha de um lote dispara consulta point-in-polygon às camadas relevantes do Modelo Espacial (mesmo padrão `jsonp`/token/retry do app; consultas agrupadas/lazy — sem avalanche no endpoint frágil) e resolve a(s) zona(s) do lote
+  2. Tabela estática zona→regras (CA básico/máximo, outorga/Vi, usos) versionada no repo — com CADA número conferido contra o Anexo oficial da LC 349/2022 (fonte primária); a divergência conhecida (Área Adensável 6x vs 7,5x nas fontes secundárias) é resolvida ANTES de qualquer exibição; alterações posteriores (LC 358/363/364/371/373/379) checadas e anotadas
+  3. Seção "Urbanístico" na ficha (accordion, padrão Fase 9): macrozona/unidade, CA, usos, eixo/adensamento — com disclaimer fixo: "informação urbanística indicativa — a consulta oficial é a Certidão de Uso do Solo (SEPLANH)"; linguagem passa o gate da Fase 14
+  4. Inteligência integrada: score de oportunidade ganha o fator potencial-construtivo (construído atual ÷ potencial do PD), e o detector da Fase 16 passa a usar construído/POTENCIAL-do-PD (não só construído/terreno) — ambos explicáveis ("por quê" cita a zona)
+  5. Camada de zonas disponível como toggle no Território (choropleth por zona), legível sobre CARTO e satélite
+**Plans**: TBD · **UI hint**: yes
+**Phase flags**: a conferência dos números de CA contra o Anexo oficial (PDF ~10MB) é tarefa da fase (baixar + ler); se algum número não puder ser confirmado na fonte primária, a UI mostra a ZONA sem o número (nunca exibe valor não-conferido). Usuário é advogado — revisão final dos valores/disclaimer é um HUMAN-UAT natural.
+
 ## Progress
 
-**Execution Order:** 7 → 8 → 9 → 10 → 11 → 11.1 → 12 → 13 → 14 → 15 → 16 → 17
+**Execution Order:** 7 → 8 → 9 → 10 → 11 → 11.1 → 12 → 13 → 14 → 15 → 16 → 17 → 18
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
@@ -210,8 +225,9 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
+| 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**
-**v2.1 (Cockpit Comercial): 11 fases (7-17). Fase 7 parcial (nomes ✅). Requisitos: NOMES ✅ + ~38 pendentes.**
+**v2.1 (Cockpit Comercial): 13 fases (7-18, incl. 11.1). Fase 7 ✅ (2 HUMAN-UAT diferidos). Requisitos: NOMES ✅ + ~47 pendentes.**
 
-Próximo passo: `/gsd-plan-phase 7` (terminar 07-02/07-03) ou seguir no modo autônomo.
+Próximo passo: modo autônomo em curso (Fase 8) — corre até a 18 + lifecycle; para antes de IA/CRM (v2.2).
