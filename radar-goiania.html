@@ -2785,7 +2785,7 @@ function bldgSumarioHTML(ci){
     </div>
     <div class="bldg-acoes">
       <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">🔍 Ordenar / filtrar</button>
-      <button type="button" class="bldg-zap" onclick="copyZapPredio('${esc(ci)}')">💬 Copiar análise do prédio ⧉</button>
+      <button type="button" class="bldg-zap" onclick="copyZapPredio(this)">💬 Copiar análise do prédio ⧉</button>
     </div>
   </div>`;
 }
@@ -2797,17 +2797,21 @@ function bldgOrdHTML(ci){
   /* WR-01 fix (12-REVIEW.md): `hidden` agora reflete BLDGSTATE[ci].aberto (persistido), nunca
      um valor fixo — sem isso, toda acao DENTRO do painel (chip/toggle/busca) chama render(LAST),
      que recria este HTML do zero e o painel "esquecia" que estava aberto. */
-  return `<div class="bldg-ord" id="bldgOrd-${esc(ci)}"${st.aberto?"":" hidden"}>
+  /* IN-03 fix (12-REVIEW.md): data-ci no wrapper (nao existia antes) + todos os handlers internos
+     passam a receber o ELEMENTO (this) e leem o ci via .closest(".bldg-ord").dataset.ci — mesmo
+     padrao de verNoMapa/toggleBldgOrd. Fecha os call-sites que ainda faziam onclick="fn(ci-interpolado)"
+     (banido desde CR-01 08-REVIEW.md: esc() e seguro em atributo, nunca dentro de string JS inline). */
+  return `<div class="bldg-ord" id="bldgOrd-${esc(ci)}" data-ci="${esc(ci)}"${st.aberto?"":" hidden"}>
     <div class="zapgroup-lbl">Ordenar por</div>
     <div class="chips" role="group" aria-label="Ordenar unidades">
-      <button type="button"${onOf("padrao")} onclick="ordenarBldg('${esc(ci)}','padrao')">Padrão</button>
-      <button type="button"${onOf("oportunidade")} onclick="ordenarBldg('${esc(ci)}','oportunidade')">Maior oportunidade</button>
-      <button type="button"${onOf("estimado-asc")} onclick="ordenarBldg('${esc(ci)}','estimado-asc')">Menor estimado</button>
-      <button type="button"${onOf("area-desc")} onclick="ordenarBldg('${esc(ci)}','area-desc')">Maior área</button>
+      <button type="button"${onOf("padrao")} onclick="ordenarBldg(this,'padrao')">Padrão</button>
+      <button type="button"${onOf("oportunidade")} onclick="ordenarBldg(this,'oportunidade')">Maior oportunidade</button>
+      <button type="button"${onOf("estimado-asc")} onclick="ordenarBldg(this,'estimado-asc')">Menor estimado</button>
+      <button type="button"${onOf("area-desc")} onclick="ordenarBldg(this,'area-desc')">Maior área</button>
     </div>
     <div class="bldg-filtros">
-      <button type="button" class="bldg-toggle-provaveis" aria-pressed="${st.provaveis?"true":"false"}" onclick="toggleAptosProvaveis('${esc(ci)}')">${st.provaveis?"☑":"☐"} Só aptos prováveis</button>
-      <input type="search" class="bldg-buscaunidade" value="${esc(st.busca||"")}" placeholder="Buscar unidade (ex.: apto 302)" oninput="buscarUnidadeBldg('${esc(ci)}',this.value)" aria-label="Buscar unidade neste prédio">
+      <button type="button" class="bldg-toggle-provaveis" aria-pressed="${st.provaveis?"true":"false"}" onclick="toggleAptosProvaveis(this)">${st.provaveis?"☑":"☐"} Só aptos prováveis</button>
+      <input type="search" class="bldg-buscaunidade" value="${esc(st.busca||"")}" placeholder="Buscar unidade (ex.: apto 302)" oninput="buscarUnidadeBldg(this,this.value)" aria-label="Buscar unidade neste prédio">
     </div>
   </div>`;
 }
@@ -2829,7 +2833,12 @@ function toggleBldgOrd(btn){
     if(primeiro)primeiro.focus();
   }
 }
-function ordenarBldg(ci,criterio){
+/* IN-03 fix (12-REVIEW.md): aceita o ELEMENTO do chip (onclick="ordenarBldg(this,criterio)") e le
+   o ci via .closest(".bldg-ord").dataset.ci — string ainda aceita p/ compatibilidade programatica
+   (mesmo padrao de verNoMapa/toggleBldgOrd). NUNCA mais onclick="ordenarBldg(ci-interpolado,...)". */
+function ordenarBldg(ciOuBtn,criterio){
+  let ci=ciOuBtn;
+  if(ci&&ci.nodeType===1){const o=ci.closest(".bldg-ord");ci=o?o.dataset.ci:"";}
   ci=clean(ci);
   BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].criterio=criterio;
@@ -2846,7 +2855,9 @@ function ordenarBldg(ci,criterio){
 }
 function toggleAptosProvaveis(ciOuBtn){
   let ci=ciOuBtn;
-  if(ci&&ci.nodeType===1){const h=ci.closest(".bldg-head");ci=h?h.dataset.ci:"";}
+  /* IN-03 fix (12-REVIEW.md): o botao vive dentro de .bldg-ord (irmao de .bldg-head, nao filho) —
+     .closest(".bldg-ord") e o ancestral correto para ler data-ci deste elemento. */
+  if(ci&&ci.nodeType===1){const o=ci.closest(".bldg-ord");ci=o?o.dataset.ci:"";}
   ci=clean(ci);
   BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].provaveis=!BLDGSTATE[ci].provaveis;
@@ -2857,7 +2868,12 @@ function toggleAptosProvaveis(ciOuBtn){
    apos o 1o caractere. Aqui capturamos foco+selecao do elemento ATIVO (so quando for de fato o
    proprio input desta busca, nunca "rouba" foco de outro elemento) ANTES do render, e restauramos
    no mesmo input recriado (mesmo id, mesma posicao no DOM) DEPOIS. */
-function buscarUnidadeBldg(ci,q){
+/* IN-03 fix (12-REVIEW.md): oninput="buscarUnidadeBldg(this,this.value)" — o proprio <input> e
+   passado por referencia (this) e le o ci via .closest(".bldg-ord").dataset.ci; string ainda
+   aceita p/ compatibilidade programatica. */
+function buscarUnidadeBldg(ciOuInput,q){
+  let ci=ciOuInput;
+  if(ci&&ci.nodeType===1){const o=ci.closest(".bldg-ord");ci=o?o.dataset.ci:"";}
   ci=clean(ci);
   BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].busca=q;
@@ -2870,7 +2886,11 @@ function buscarUnidadeBldg(ci,q){
     if(de){de.focus();try{de.setSelectionRange(sel[0],sel[1]);}catch(e){}}
   }
 }
-function copyZapPredio(ci){
+/* IN-03 fix (12-REVIEW.md): onclick="copyZapPredio(this)" — o botao vive dentro de .bldg-sumario,
+   filho de .bldg-head (que ja tem data-ci); string ainda aceita p/ compatibilidade programatica. */
+function copyZapPredio(ciOuBtn){
+  let ci=ciOuBtn;
+  if(ci&&ci.nodeType===1){const h=ci.closest(".bldg-head");ci=h?h.dataset.ci:"";}
   ci=clean(ci);
   const enriquecidas=unidadesEnriquecidasDoPredio(ci);
   const resumo=resumoPredio(enriquecidas);
