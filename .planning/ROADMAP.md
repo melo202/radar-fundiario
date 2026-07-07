@@ -162,7 +162,7 @@ Plans:
   4. **Descoberta progressiva**: tela inicial com promessa + busca única + 3 benefícios; funções aparecem conforme o resultado; onboarding ≤3 telas; área discreta "O que o Radar faz"; a "lei da tela" vale em todo o app
 **Plans**: 3 plans · **UI hint**: yes
 Plans:
-- [ ] 13-01-PLAN.md — Sistema --status-* (aliases) + refino de respiro (10 seletores) + statusDeUnidade() no RADAR_PURE (TDD)
+- [x] 13-01-PLAN.md — Sistema --status-* (aliases) + refino de respiro (10 seletores) + statusDeUnidade() no RADAR_PURE (TDD)
 - [ ] 13-02-PLAN.md — Pinos semânticos em plot()/pick() + legenda sempre-visível + tooltip a11y + motion de busca em etapas + skeleton shimmer
 - [ ] 13-03-PLAN.md — Onboarding 3 cartões (radar_onboard) + "O que o Radar faz" + auditoria do .chooser (lei da tela)
 **Phase flags**: legibilidade dos pinos/cores sobre satélite em luz externa é pendência de UAT (não bloqueante), igual ao herdado do v2.0.
@@ -242,7 +242,7 @@ Plans:
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 12. Prédio Comercial | v2.1 | 2/2 | Complete    | 2026-07-07 |
-| 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/3 | Not started | - |
+| 13. Visual + Pinos + Motion + Descoberta | v2.1 | 1/3 | In Progress|  |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
