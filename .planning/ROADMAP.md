@@ -33,7 +33,8 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [~] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes reconciliados ✅ (07-01) + exibição amigável ✅; falta CNEFE (07-02) e tuning da malha mobile (07-03)
 - [x] **Phase 8: Busca Única Inteligente** — caixa única com detecção de intenção, chip de confirmação, setor na frase, colar link do Maps, voz (mobile), deep-link, autocomplete CNEFE — a11y re-auditada, guarda das regressões desktop
  (completed 2026-07-07)
-- [x] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro (completed 2026-07-07)
+- [x] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
+ (completed 2026-07-07)
 - [ ] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação
 - [ ] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF
 - [ ] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11
@@ -98,8 +99,12 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   2. **Copiar p/ WhatsApp** em pt-BR impecável (soa como corretor): resumo, mensagem p/ proprietário, mensagem p/ comprador, argumento de preço, riscos/ressalvas — texto gerado por template determinístico
   3. **Salvar oportunidade** + **histórico** de consultas + **favoritos** persistem em `localStorage` (allowlist de campos, sem PII de terceiros); reabrir o app dias depois mostra o mesmo; falha de escrita é visível (nunca silenciosa)
   4. **Modo captação**: a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up — tudo copiável
-**Plans**: TBD
-**Phase flags**: nomenclatura consistente (não alternar "Oportunidades/Favoritos/Salvos" — decidir os nomes e travar; entra no gate LING-01).
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Templates puros WhatsApp/Captação + oportunidadeItem/histAdd no RADAR_PURE (TDD, allowlist anti-PII)
+- [ ] 10-02-PLAN.md — Persistência localStorage (radar_oportunidades/radar_historico) + ⭐ Salvar na ficha + blocos Oportunidades/Histórico no painel Consulta
+- [ ] 10-03-PLAN.md — Grupo "Copiar para WhatsApp" (5 botões) + Modo Captação (sheet .wiz) + sweep ACAO-01
+**Phase flags**: nomenclatura consistente (não alternar "Oportunidades/Favoritos/Salvos" — decidir os nomes e travar; entra no gate LING-01). Nomes travados no 10-CONTEXT.md: "Oportunidades" (explícito) e "Histórico" (automático).
 
 ### Phase 11: Documentos em 3 Níveis
 **Goal**: O corretor escolhe a finalidade e recebe o documento certo (ficha rápida, relatório ou laudo/PTAM), sem peso jurídico indevido.
@@ -217,7 +222,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
+| 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/3 | Planned | - |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
