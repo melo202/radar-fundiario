@@ -2764,6 +2764,16 @@ function render(list,opts){
    Consomem resumoPredio/ordenaUnidades/ehAptoProvavel/analisePredicoTexto (12-01, RADAR_PURE)
    diretamente — nenhuma reimplementacao de logica de agregacao/ordenacao aqui. __est e calculado
    AQUI (mercadoEstimado, fora do bloco puro) e NUNCA persistido em LAST/a.__scores. */
+/* IN-02 (12-REVIEW.md): mercadoEstimado(a) e recalculado aqui e de novo em cardHTML para as
+   mesmas unidades visiveis a cada render(LAST) (inclusive a cada tecla em buscarUnidadeBldg,
+   WR-02) — redundante, mas deliberadamente NAO memoizado: mercadoEstimado(a,privReal) tem um 2o
+   parametro que VARIA entre chamadas para o MESMO objeto `a` em outros pontos do arquivo
+   (laudo/detail usam LZ.privativa; aqui/cardHTML nao passam privReal) — uma memo por identidade
+   de `a` teria que ser chaveada tambem por privReal para nao servir estimativa errada a partir
+   do cache, o que exigiria tocar 13 call-sites so para uma otimizacao de custo (pura,
+   sem rede) marcada Info/fora do escopo de performance desta fase. Deixado documentado; revisitar
+   se predios de 100+ unidades tornarem-se comuns (RENDN=300 limita cards, mas o agregado do
+   sumario roda sobre o predio inteiro). */
 function unidadesEnriquecidasDoPredio(ci){
   ci=clean(ci);
   /* __orig: referencia (identidade, nunca chave) ao objeto REAL de LAST — usada por ordenarBldg
