@@ -3449,6 +3449,29 @@ function negRender(){
       ${matBlock}`;
     }
     b.innerHTML=html;
+  }else if(NEG.step===1){
+    /* Passo 1 — Revisão da minuta: regenera NEG.minutaTexto SEMPRE ao entrar 0->1 (dados podem
+       ter mudado) e zera minutaEditada — edição vale para a geração corrente (comportamento
+       simples e previsível, documentado no 11.1-02-PLAN.md). */
+    if(stepMudou){
+      const a=NEG.a;
+      const im={
+        endereco:addrDe(a), bairro:clean(a.nmbairro), quadra:clean(a.nrquadra), lote:clean(a.nrlote),
+        areaTerr:a.areaterr?Math.round(a.areaterr):null, areaEdif:a.areaedif?Math.round(a.areaedif):null,
+        inscricao:clean(a.nrinscr)||clean(a.ci), tipoImovel:unitLabel(a)||USO[a.uso]||"Imóvel"
+      };
+      const data=Object.assign({imovel:im,foro:"Goiânia/GO"},NEG);
+      const FN={proposta:propostaTexto,exclusividade:termoExclusividadeTexto,contrato:contratoTexto}[NEG.tipo];
+      NEG.minutaTexto=FN(data);
+      NEG.minutaEditada=null;
+    }
+    b.innerHTML=`<div class="wh1">Revisão da minuta</div>
+      <div class="wsub">O texto abaixo já está pronto — edite qualquer trecho antes de gerar o PDF.</div>
+      <textarea class="winput negminuta" oninput="NEG.minutaEditada=this.value">${esc(NEG.minutaTexto)}</textarea>
+      <div class="negdisclaimer">
+        <div class="negdisclaimer-eyebrow">Atenção</div>
+        <div class="negdisclaimer-txt">Minuta para conferência das partes — recomenda-se revisão por advogado; a transmissão da propriedade exige escritura pública (quando aplicável) e registro na matrícula do imóvel no cartório de registro de imóveis competente.</div>
+      </div>`;
   }
   /* leitor de tela: anuncia a troca de passo focando o título (mesmo padrão de wizRender/stepMudou) */
   if(stepMudou){const h=b.querySelector(".wh1");if(h){h.tabIndex=-1;h.focus({preventScroll:true});}b.scrollTop=0;}
@@ -3476,6 +3499,47 @@ function negExtrair(){
     return;
   }
   box.tabIndex=-1;box.focus({preventScroll:true});
+}
+/* negNext(): passo 0 valida por documento (toast, foco de volta ao passo 0 — CPF/CNPJ e endereço
+   NUNCA obrigatorios) antes de avançar; passo 1 (CTA "Gerar PDF") chama a montagem da minuta —
+   ÚNICO gatilho, guarda ec9f129 (clique real, nenhuma chamada assíncrona). */
+function negNext(){
+  if(!NEG)return;
+  if(NEG.step===0){
+    if(NEG.tipo==="proposta"){
+      if(!(NEG.proponente.nome||"").trim()||NEG.valorOfertado==null){
+        toast("Preencha o nome do proponente e o valor ofertado para continuar.");negRender();return;
+      }
+    }else if(NEG.tipo==="exclusividade"){
+      if(!(NEG.proprietario.nome||"").trim()||!(NEG.corretor.nome||"").trim()){
+        toast("Preencha o nome do proprietário e do corretor para continuar.");negRender();return;
+      }
+    }else{ /* contrato */
+      if(!(NEG.vendedor.nome||"").trim()||!(NEG.comprador.nome||"").trim()||NEG.precoTotal==null){
+        toast("Preencha o nome das partes e o preço total para continuar.");negRender();return;
+      }
+    }
+    NEG.step=1;negRender();return;
+  }
+  montarNeg();
+}
+/* Wave 2 (11.1-02): versão MÍNIMA mas FUNCIONAL (Wave 3, 11.1-03, substitui o corpo por template
+   A4 estruturado — cláusulas em blocos, disclaimer em caixa, .lass — sem tocar no contrato/
+   pipeline). esc() OBRIGATÓRIO no texto (minutaEditada é texto livre do usuário, IN-01). */
+function montarNeg(){
+  if(!NEG)return;
+  const texto=NEG.minutaEditada!=null?NEG.minutaEditada:NEG.minutaTexto;
+  const titulo={proposta:"Proposta de Compra e Venda",exclusividade:"Termo de Autorização/Exclusividade de Venda",contrato:"Contrato de Compra e Venda"}[NEG.tipo];
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  document.getElementById("laudo").innerHTML=`
+    <div class="lrun"><span>RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA</span><span>EMITIDO EM ${hoje}</span></div>
+    <div class="lbrand"><div class="t"><small>Radar Fundiário · Documentos da Negociação</small>${esc(titulo)}</div>
+      <div class="m">Goiânia/GO · ${hoje}</div></div>
+    <div style="white-space:pre-wrap">${esc(texto)}</div>
+    <div class="foot">RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA · EMITIDO EM ${hoje}</div>`;
+  fecharNeg();
+  document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
 }
 /* copyCapt(tipo): recalcula dadosFicha() (barato, garante consistência se os scores atualizaram
    com o sheet aberto) e copia o template correspondente com toast especifico. */
