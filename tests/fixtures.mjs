@@ -667,4 +667,27 @@ export const FIXTURES = {
       meta: { nome: null, quadra: null, lote: null, endereco: null },
     },
   },
+
+  // statusDeUnidade (Fase 13, 13-01, VIS-01/PIN-01): mapeia score -> 'bom'|'atencao'|'risco'|'semdado'
+  // usando as MESMAS bandas 66/33 de scoreOportunidade (Fase 9) — nunca reimplementa os limiares.
+  // Aceita {op:{score}} OU numero direto; score ausente/invalido -> 'semdado', nunca lanca excecao.
+  statusDeUnidadeCasos: [
+    { input: { op: { score: 78 } }, esperado: "bom" }, // score >= 66
+    { input: { op: { score: 66 } }, esperado: "bom" }, // limite exato da banda, inclusive
+    { input: { op: { score: 65 } }, esperado: "atencao" }, // 1 abaixo do limite bom
+    { input: { op: { score: 50 } }, esperado: "atencao" }, // 33 <= score < 66
+    { input: { op: { score: 33 } }, esperado: "atencao" }, // limite exato da banda, inclusive
+    { input: { op: { score: 32 } }, esperado: "risco" }, // 1 abaixo do limite atencao
+    { input: { op: { score: 0 } }, esperado: "risco" },
+    { input: { op: null }, esperado: "semdado" }, // score ainda nao calculado
+    { input: { op: undefined }, esperado: "semdado" },
+    { input: null, esperado: "semdado" },
+    { input: undefined, esperado: "semdado" },
+    { input: {}, esperado: "semdado" }, // objeto sem campo op
+    { input: NaN, esperado: "semdado" }, // nunca propaga NaN
+    { input: 78, esperado: "bom" }, // forma numero direto, sem wrapper op
+    { input: 33, esperado: "atencao" }, // forma numero direto, limite inclusive
+    { input: -5, esperado: "risco" }, // numero negativo tratado como risco, nunca excecao
+    { input: "78", esperado: "semdado" }, // string nao-numerica pura nunca e coagida silenciosamente
+  ],
 };

@@ -26,10 +26,11 @@ function loadPureBlock() {
   assert.ok(src.includes("function scoreOportunidade"), "scoreOportunidade ausente do bloco RADAR_PURE (dependencia da Task 1 nao cumprida)");
   assert.ok(src.includes("function scoreConfianca"), "scoreConfianca ausente do bloco RADAR_PURE (dependencia da Task 1 nao cumprida)");
   assert.ok(src.includes("function leituraPratica"), "leituraPratica ausente do bloco RADAR_PURE (dependencia da Task 1 nao cumprida)");
+  assert.ok(src.includes("function statusDeUnidade"), "statusDeUnidade ausente do bloco RADAR_PURE (Fase 13, 13-01)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {scoreOportunidade,scoreConfianca,leituraPratica};",
+    src + "\n;globalThis.__exports = {scoreOportunidade,scoreConfianca,leituraPratica,statusDeUnidade};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -86,5 +87,31 @@ test("leituraPratica", () => {
         );
       }
     }
+  }
+});
+
+// --- statusDeUnidade (Fase 13, 13-01, VIS-01/PIN-01) ---------------------------------------
+// Mapeia score (ou {op:{score}}) -> 'bom'|'atencao'|'risco'|'semdado' usando as MESMAS bandas
+// 66/33 de scoreOportunidade — nunca reimplementa os limiares, nunca lanca excecao, nunca
+// retorna 'caixa' (essa distincao e decidida pelo CALLER, fora desta funcao).
+
+test("statusDeUnidade: bandas 66/33 idênticas a scoreOportunidade, formas {op:{score}} e número direto, entradas ausentes/malformadas sempre 'semdado', nunca lança exceção", () => {
+  for (const caso of FIXTURES.statusDeUnidadeCasos) {
+    let result;
+    assert.doesNotThrow(() => {
+      result = P.statusDeUnidade(caso.input);
+    }, `statusDeUnidade(${JSON.stringify(caso.input)}) nunca deveria lançar exceção`);
+    assert.equal(
+      result,
+      caso.esperado,
+      `statusDeUnidade(${JSON.stringify(caso.input)}) deveria ser "${caso.esperado}", obteve: ${result}`
+    );
+  }
+});
+
+test("statusDeUnidade: nunca retorna 'caixa' (distinção decidida pelo CALLER, fora desta função)", () => {
+  for (const caso of FIXTURES.statusDeUnidadeCasos) {
+    const result = P.statusDeUnidade(caso.input);
+    assert.notEqual(result, "caixa", `statusDeUnidade(${JSON.stringify(caso.input)}) nunca deveria retornar "caixa"`);
   }
 });
