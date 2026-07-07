@@ -216,7 +216,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 | 6. Motion no App Todo | v2.0 | 3/3 | ✅ Complete | 2026-07-05 |
 | 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
-| 9. Ficha Comercial + Scores | v2.1 | 1/3 | In Progress|  |
+| 9. Ficha Comercial + Scores | v2.1 | 2/3 | In Progress|  |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/TBD | Not started | - |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
