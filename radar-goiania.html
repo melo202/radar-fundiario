@@ -1071,6 +1071,172 @@ function leituraPratica(inputs){
   }
   return `${sujeito} ${local}. Preço acima da média da vizinhança — negociação pode ser necessária para boa liquidez.`;
 }
+
+/* ZAP-01/CAPT-01 (Fase 10, 10-01): templates deterministicos de WhatsApp/Captacao + helpers
+   puros de persistencia (SALV-01). Recebem o objeto `data` documentado no 10-01-PLAN.md (<facts>):
+   {endereco,bairro,quadra,lote,tipoImovel,faixa:{lo,hi}|null,scoreOp|null,scoreConf|null,
+   leitura,perfil:{nome,creci,contato}|null}. Contrato de honestidade (UI-SPEC "Copywriting
+   Contract"): faixa=null NUNCA gera valor inventado; perfil ausente/sem nome NUNCA gera
+   placeholder de assinatura (a linha e simplesmente omitida). */
+
+/* assinatura condicional — SOMENTE quando perfil.nome existe; sem perfil, string vazia
+   (nunca um marcador tipo "[seu nome]" que poderia ser copiado por engano, ver T-10-03). */
+function assinatura(perfil){
+  if(!perfil||!perfil.nome) return "";
+  return "\n\n— "+perfil.nome+(perfil.creci?", CRECI "+perfil.creci:"");
+}
+/* formatacao de moeda MINIMA e AUTONOMA dentro do bloco puro (nao importa brl/brlC do resto do
+   arquivo, para nao acoplar o bloco testavel a funcoes fora dele — mesma logica, nao precisa ser
+   byte-idêntica). */
+function brlSimples(n){
+  if(n==null||!isFinite(n)) return null;
+  return n>=1000 ? "R$ "+Math.round(n/1000).toLocaleString("pt-BR")+" mil" : "R$ "+Math.round(n);
+}
+function faixaTxt(faixa){
+  return faixa ? (brlSimples(faixa.lo)+" e "+brlSimples(faixa.hi)) : null;
+}
+
+/* zapResumo(data): "[Tipo] no [bairro]. [leitura]. Faixa estimada: [lo]–[hi]." — sem faixa,
+   variante honesta (nunca interpola undefined/NaN). */
+function zapResumo(data){
+  const d=data||{};
+  const abertura=`${d.tipoImovel||"Imóvel"} no ${d.bairro||"região"}.`;
+  const leitura=d.leitura?` ${d.leitura}`:"";
+  const ft=faixaTxt(d.faixa);
+  const faixaLinha=ft
+    ? ` Faixa estimada: ${ft}.`
+    : " Ainda não tenho uma faixa estimada para este imóvel — os dados técnicos completos estão na ficha.";
+  return abertura+leitura+faixaLinha+assinatura(d.perfil);
+}
+
+/* zapProprietario(data): esqueleto UI-SPEC — "Olá! Encontrei seu imóvel no [bairro]..." —
+   sem faixa, adapta sem travar o convite; pendencias de scoreConf (se nivel!=="alta") citadas. */
+function zapProprietario(data){
+  const d=data||{};
+  const ft=faixaTxt(d.faixa);
+  const faixaFrase=ft
+    ? `a faixa de valor fica entre ${ft}`
+    : "ainda não consegui estimar uma faixa de valor com os dados disponíveis, mas gostaria de conversar sobre o seu imóvel";
+  const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&d.scoreConf.porque&&d.scoreConf.porque.length)
+    ? ` Recomendo confirmar ${d.scoreConf.porque.join("; ")} para uma avaliação mais precisa.`
+    : "";
+  return `Olá! Encontrei seu imóvel no ${d.bairro||"região"} no Radar e, pela análise cadastral e comparáveis da região, ${faixaFrase}.`+
+    pendencias+" Podemos conversar?"+assinatura(d.perfil);
+}
+
+/* zapComprador(data): esqueleto/exemplo canonico §13 — sem faixa, adapta para recomendar avaliacao. */
+function zapComprador(data){
+  const d=data||{};
+  const ft=faixaTxt(d.faixa);
+  const faixaFrase=ft
+    ? `a faixa estimada fica entre ${ft}`
+    : "recomendo uma avaliação para estimar melhor o valor deste imóvel";
+  return `Encontrei esse imóvel no ${d.bairro||"região"}. Pela análise cadastral e pelos comparáveis próximos, ${faixaFrase}.`+
+    " Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar."+
+    assinatura(d.perfil);
+}
+
+/* zapArgumento(data): usa scoreOp (score/rotulo/porque) — sem scoreOp, variante honesta
+   (nunca inventa percentual). */
+function zapArgumento(data){
+  const d=data||{};
+  if(!d.scoreOp){
+    return "Ainda não tenho comparáveis suficientes na região para um argumento de preço baseado em dados — recomendo aguardar a análise de vizinhança."+
+      assinatura(d.perfil);
+  }
+  const base=(d.scoreOp.porque&&d.scoreOp.porque[0])
+    ? d.scoreOp.porque[0]
+    : `Está na faixa "${d.scoreOp.rotulo}" (score ${d.scoreOp.score}) em relação à mediana dos comparáveis.`;
+  return `Sobre o valor: este imóvel ${base.charAt(0).toLowerCase()+base.slice(1)} Isso reforça o valor pedido.`+
+    assinatura(d.perfil);
+}
+
+/* zapRiscos(data): lista de pontos a confirmar (scoreConf.porque OU generica default) + frase de
+   responsabilidade OBRIGATORIA (nunca promete validade juridica). */
+function zapRiscos(data){
+  const d=data||{};
+  const pontos=(d.scoreConf&&d.scoreConf.porque&&d.scoreConf.porque.length)
+    ? d.scoreConf.porque.join("; ")
+    : "área privativa, estado de conservação, documentação e número de comparáveis na região";
+  return `Alguns pontos para confirmar antes de avançar: ${pontos}. `+
+    "Esta é uma faixa estimada, não uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
+    assinatura(d.perfil);
+}
+
+/* captAbordagem(data): esqueleto UI-SPEC Bloco 1 — abordagem por WhatsApp para captacao. */
+function captAbordagem(data){
+  const d=data||{};
+  const ql=(d.quadra||d.lote)?` (Q ${d.quadra||"—"}, L ${d.lote||"—"})`:"";
+  return `Olá! Sou corretor(a) e trabalho com imóveis no ${d.bairro||"região"}. Notei seu imóvel na ${d.endereco||"região"}${ql} `+
+    "e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?"+
+    assinatura(d.perfil);
+}
+
+/* captScript(data): esqueleto UI-SPEC Bloco 2 — 4 passos numerados, SEM assinatura (script de
+   ligação, nao mensagem enviada). */
+function captScript(data){
+  const d=data||{};
+  return `1. Se apresente e explique o motivo da ligação (imóvel no ${d.bairro||"região"}).\n`+
+    "2. Pergunte se o proprietário já pensou em vender ou tem interesse em uma avaliação gratuita.\n"+
+    "3. Se houver interesse, agende uma visita ou envie a faixa estimada por WhatsApp.\n"+
+    "4. Encerre agradecendo o tempo, mesmo se a resposta for negativa.";
+}
+
+/* captChecklist(data): texto ESTATICO UI-SPEC Bloco 3 — 5 itens documentais genericos de
+   Goiania, SEM assinatura, nao depende de `data`. */
+function captChecklist(data){
+  return "• Matrícula/RGI atualizada (últimos 30 dias)\n"+
+    "• IPTU do ano em dia + CND municipal\n"+
+    "• Certidões pessoais do(s) vendedor(es) (nada consta cível/criminal/protesto)\n"+
+    "• Convenção e ata de condomínio, se aplicável\n"+
+    "• Documento de identidade e CPF do(s) proprietário(s)";
+}
+
+/* captFollowup(data): esqueleto UI-SPEC Bloco 4 — tarefa interna, SEM assinatura, interpola
+   data.endereco. */
+function captFollowup(data){
+  const d=data||{};
+  return `Follow-up: retornar contato com proprietário/interessado do imóvel na ${d.endereco||"região"} em até 3 dias úteis para confirmar interesse na captação.`;
+}
+
+/* endereco minimo local (copia da logica de logradouroDe/addrDe, que vivem fora do bloco puro) —
+   evita mover codigo existente e mantem o bloco RADAR_PURE autossuficiente/testavel por node:vm. */
+function enderecoSimples(a){
+  const tp=clean(a.tplogradou),nm=clean(a.nmlogradou);
+  const log=(!tp||norm(nm).startsWith(norm(tp)+" ")||norm(nm)===norm(tp))?nm:(tp+" "+nm);
+  return log.replace(/\s+/g," ").trim()+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?", "+clean(a.nrimovel):"");
+}
+
+/* oportunidadeItem(a, extras): ALLOWLIST ESTRITA (SALV-01/T-10-01) — recebe o objeto cadastral
+   BRUTO (pode conter dtnascimen/nome de terceiro) e retorna SOMENTE os 12 campos travados; NENHUM
+   outro campo de `a` e copiado, mesmo que exista. `extras` = {faixaLo,faixaHi,scoreOportunidade,
+   scoreConfianca} ja calculados pela ficha. savedAt/visitedAt sao responsabilidade da Wave 2. */
+function oportunidadeItem(a, extras){
+  a=a||{};
+  const ex=extras||{};
+  return {
+    insc: clean(a.nrinscr||a.ci),
+    endereco: enderecoSimples(a),
+    bairro: clean(a.nmbairro),
+    quadra: clean(a.nrquadra),
+    lote: clean(a.nrlote),
+    areaTerr: a.areaterr||null,
+    areaEdif: a.areaedif||null,
+    vlvenal: a.vlvenal||null,
+    faixaLo: ex.faixaLo!=null?ex.faixaLo:null,
+    faixaHi: ex.faixaHi!=null?ex.faixaHi:null,
+    scoreOportunidade: ex.scoreOportunidade!=null?ex.scoreOportunidade:null,
+    scoreConfianca: ex.scoreConfianca||null,
+  };
+}
+
+/* histAdd(lista, item, cap): FIFO puro — nao muta `lista`; retorna NOVO array truncado do INICIO
+   (mais antigo) quando excede o cap. 29+1=30 NAO excede (nenhuma remocao); 30+1=31 excede (remove
+   o mais antigo, indice 0). */
+function histAdd(lista, item, cap){
+  const next=[...(lista||[]), item];
+  return next.length>cap ? next.slice(next.length-cap) : next;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
