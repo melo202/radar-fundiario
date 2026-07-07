@@ -248,6 +248,44 @@
   .detail .dgrid .cell .v{font:700 15px/1 "IBM Plex Sans"}
   .detail .dgrid .cell.hl .v{color:var(--accent)}
   .detail .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
+  /* Fase 9 FICHA-01: conclusão comercial primeiro — faixa de valor, scores, leitura prática */
+  .dvalor{background:var(--paper);border:2px solid var(--ink);border-radius:2px;padding:16px 18px;margin-bottom:12px}
+  .dvalor-k{font:600 11px/1.2 "IBM Plex Sans";color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+  .dvalor-v{font:800 22px/1.15 "IBM Plex Sans";color:var(--ink);margin:4px 0 2px}
+  .dvalor-v.muted{color:var(--muted)}
+  .dvalor-m{font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
+
+  .dscores{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .score{flex:1;min-width:150px;min-height:44px;display:block;text-align:left;background:var(--paper);
+    border:1.5px solid var(--line);border-radius:2px;padding:8px 12px;cursor:pointer;font-family:inherit}
+  .score-op{border-left:4px solid var(--line)}
+  .score-op.alta{border-left-color:var(--lot)}
+  .score-op.media{border-left-color:var(--gold)}
+  .score-op.baixa{border-left-color:var(--accent)}
+  .conf-alta{border-left:4px solid var(--lot)}
+  .conf-media{border-left:4px solid var(--gold)}
+  .conf-baixa{border-left:4px solid var(--accent)}
+  .score-num{font:800 20px/1 "IBM Plex Sans";color:var(--ink)}
+  .score-op.alta .score-num{color:var(--lot)}
+  .score-op.media .score-num{color:#7d621f}
+  .score-op.baixa .score-num{color:var(--accent)}
+  .score-max{font:600 12px/1;color:var(--muted)}
+  .score-lbl,.score-lbl-main{display:block;font:700 13px/1.2 "IBM Plex Sans";margin-top:2px}
+  .score-chev{float:right;color:var(--muted)}
+  .score-why{font:500 12px/1.5 "IBM Plex Sans";color:var(--muted);padding:8px 12px 2px}
+
+  .dleitura{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:12px 14px;margin-bottom:12px}
+  .dleitura p{font:500 13.5px/1.55 "IBM Plex Sans";color:var(--ink);margin:0}
+
+  .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
+  .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted);padding:9px 0;list-style:none}
+  .maisopcoes>summary::-webkit-details-marker{display:none}
+  .maisopcoes>summary::before{content:"▸ "}
+  .maisopcoes[open]>summary::before{content:"▾ "}
+  .maisopcoes .footbody.acts{padding-top:8px}
+
+  .dtecnico .dgrid{margin-bottom:10px}
   /* comparáveis da vizinhança */
   .dcomps{margin:0 0 12px}
   .cmpbtn{width:100%;border:1.5px solid var(--lot);background:var(--paper);color:var(--lot);
@@ -638,12 +676,33 @@
       <div class="dtag" id="dTag"></div>
       <h3 id="dAddr"></h3>
       <div class="insc" id="dInsc"></div>
-      <div class="dgrid" id="dGrid"></div>
+
+      <div class="dvalor" id="dValor"></div>
+
+      <div class="dscores" id="dScores"></div>
+
+      <div class="dleitura" id="dLeitura"></div>
+
+      <div class="acts" id="dActsPrim"></div>
+      <details class="maisopcoes">
+        <summary>Mais opções</summary>
+        <div class="footbody acts" id="dActsMore"></div>
+      </details>
+
       <div class="dcomps" id="dComps"></div>
-      <div class="dlaudo"><button class="custosbtn" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
-        <button class="laudobtn" onclick="abrirLaudo()">📄 Gerar laudo de avaliação (PDF)</button></div>
-      <div class="dnote" id="dNote"></div>
-      <div class="acts" id="dActs"></div>
+
+      <details class="foot dtecnico">
+        <summary>Dados técnicos</summary>
+        <div class="footbody">
+          <div class="dgrid" id="dGrid"></div>
+          <div class="dnote" id="dNote"></div>
+        </div>
+      </details>
+
+      <details class="foot dmetodologia">
+        <summary>Metodologia e fontes</summary>
+        <div class="footbody" id="dMetodologia"></div>
+      </details>
     </div>
 
     <!-- SELETOR de imóvel: aparece ao clicar num prédio no mapa; escolhe o apto -> abre a ficha -->
