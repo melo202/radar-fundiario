@@ -282,6 +282,18 @@
   #breadcrumb .crumb.city:hover{color:var(--accent-ink)}
   #breadcrumb .crumb.sep{color:var(--line);font-weight:400;padding:0 2px;min-height:0}
   #breadcrumb .crumb.bairro{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Fase 13 PIN-01: legenda discreta e sempre-visível quando há pinos plotados (não é toggle) —
+     mesma família visual de card flutuante sobre o mapa (.coachmark/#breadcrumb). Diferenciador
+     Atenção×Caixa é o ÍCONE/RÓTULO textual (🏦), nunca border-style na bolinha (ilegível em 8px). */
+  .pino-legenda{position:absolute;z-index:390;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;
+    transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+    max-width:calc(100vw - 32px);background:var(--paper-2);border:1px solid var(--line);border-radius:2px;
+    padding:6px 10px;font:600 10.5px/1.3 "IBM Plex Sans";color:var(--muted);box-shadow:var(--shadow)}
+  .pino-legenda[hidden]{display:none}
+  @media(max-width:820px){.pino-legenda{bottom:calc(56px + 12px + env(safe-area-inset-bottom))}}
+  .pl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--ink);
+    margin-right:4px;vertical-align:middle}
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
     border:2px solid var(--ink);border-radius:3px;padding:20px 22px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none;
     max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto} /* iPhone paisagem cai no desktop: precisa rolar */
@@ -861,6 +873,17 @@
       <span class="crumb sep" aria-hidden="true">›</span>
       <span class="crumb bairro" id="crumbBairro"></span>
     </nav>
+    <!-- Fase 13 PIN-01: legenda SEMPRE-visível quando há pinos plotados (não é toggle) — hidden
+         removido/adicionado por atualizarLegenda(), chamada ao fim de plot(). Diferenciador entre
+         Atenção/Caixa (mesmo hex --gold) é o RÓTULO+ÍCONE, nunca border-style na bolinha (plan-check:
+         tracejado é ilegível em círculo de 8px entre browsers). -->
+    <div id="pinoLegenda" class="pino-legenda" hidden aria-label="Legenda dos pinos no mapa">
+      <span><i class="pl-dot" style="background:#2c5545"></i>Boa oportunidade</span>
+      <span><i class="pl-dot" style="background:#a8842c"></i>Atenção</span>
+      <span><i class="pl-dot" style="background:#b5451f"></i>Abaixo da mediana</span>
+      <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
+      <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
+    </div>
     <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
       <div class="shead">
         <div class="grab" id="grab" aria-hidden="true"></div>
@@ -3039,21 +3062,63 @@ function cardHTML(a,i,isUnit){
     </div>`;
 }
 
+/* Fase 13 PIN-01: mapeia status de EXIBIÇÃO do pino — nunca recalcula score, só lê
+   a.__scores já disponível (Fases 9/10). Reusa statusDeUnidade (RADAR_PURE, 13-01) —
+   não reimplementa bandas. PINO_STYLE usa hex literal (não var()) pois Leaflet não lê
+   CSS var em opções de estilo de marker. */
+function statusPino(a){
+  return statusDeUnidade(a.__scores); /* 'bom'|'atencao'|'risco'|'semdado', nunca 'caixa' aqui —
+    pinos de plot() NUNCA são da camada CAIXA (caixaLayer é separada, ver toggleCaixa) */
+}
+const PINO_STYLE={
+  bom:      {fillColor:"#2c5545", radius:9},
+  atencao:  {fillColor:"#a8842c", radius:9},
+  risco:    {fillColor:"#b5451f", radius:8},
+  semdado:  {fillColor:"#57503f", radius:7},
+};
+const STATUS_LABEL={
+  bom:"Boa oportunidade", atencao:"Atenção", risco:"Abaixo da mediana", semdado:"Sem dado ainda",
+};
+/* T-13-05: prioridade única de "melhor status por CI" (prédio) — usada IDENTICAMENTE
+   por plot() e pick(), nunca duplicada com critérios diferentes (mais otimista vence). */
+const STATUS_PRIORIDADE=["bom","atencao","risco","semdado"];
+function melhorStatus(s1,s2){
+  return STATUS_PRIORIDADE.indexOf(s1)<=STATUS_PRIORIDADE.indexOf(s2)?s1:s2;
+}
+/* calcula, para uma lista de unidades, o melhor status por CI (lote) — fonte única de
+   verdade reusada por plot() (ao criar os markers) e pick() (ao restaurar o estilo). */
+function bestStatusPorCi(list){
+  const out={};
+  list.forEach(a=>{
+    const ci=clean(a.ci), s=statusPino(a);
+    out[ci]=out[ci]===undefined?s:melhorStatus(out[ci],s);
+  });
+  return out;
+}
+function atualizarLegenda(temPinos){
+  const el=document.getElementById("pinoLegenda");if(el)el.hidden=!temPinos;
+}
+
 /* ---------------- plotar no mapa (1 pino por lote) ---------------- */
 function plot(list){
   layerGroup.clearLayers();
   if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;} /* tira a divisa do setor ao plotar resultados */
   const byCi={},pts=[],cntCi={};
   list.forEach(a=>{const k=clean(a.ci);cntCi[k]=(cntCi[k]||0)+1;});
+  const bestStatusByCi=bestStatusPorCi(list);
   list.forEach((a,i)=>{
     if(!a.x_coord||!a.y_coord)return;
     const ci=clean(a.ci);
     if(byCi[ci]===undefined){
       const ll=toWGS(a.x_coord,a.y_coord);pts.push(ll);
       const idx=i, predio=cntCi[ci]>1;
+      const status=predio?bestStatusByCi[ci]:statusPino(a);
+      const style=PINO_STYLE[status];
+      const tip=`${STATUS_LABEL[status]} · ${esc(unitLabel(a)||addrDe(a)||"Imóvel")}`;
       /* bubblingMouseEvents:false — sem isso o clique no pino também dispara o
          clique do mapa (identificar lote), que apagava a lista de resultados */
-      const mk=L.circleMarker(ll,{radius:8,color:"#141a1f",weight:2,fillColor:"#b5451f",fillOpacity:.9,bubblingMouseEvents:false})
+      const mk=L.circleMarker(ll,{radius:style.radius,color:"#141a1f",weight:2,fillColor:style.fillColor,fillOpacity:.9,bubblingMouseEvents:false})
+        .bindTooltip(tip)
         /* pino de prédio abre o SELETOR de imóvel; pino de imóvel único abre a ficha direto */
         .addTo(layerGroup).on("click",()=>predio?showChooser(ci):pick(idx));
       byCi[ci]=mk;
@@ -3067,6 +3132,7 @@ function plot(list){
     else flashList();}
   else if(pts.length>1){map.fitBounds(L.latLngBounds(pts).pad(.3));}
   else toast("Encontrado, mas sem coordenada cadastrada.");
+  atualizarLegenda(list.length>0);
 }
 
 /* rola a lista ao topo e pisca o cabeçalho do prédio — deixa claro onde está a listagem
@@ -3126,7 +3192,17 @@ function pick(i){
   document.querySelectorAll(".card").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
-  markers.forEach(m=>{if(m&&!done.has(m)){done.add(m);m.setStyle({radius:m===selMk?12:8,fillColor:m===selMk?"#c9691f":"#b5451f"});}});
+  /* Fase 13 PIN-01/T-13-05: desselecionar restaura o status REAL do pino (mesma fonte de
+     verdade de plot(), bestStatusPorCi sobre LAST) em vez do fixo "#b5451f" antigo. A cor de
+     SELECIONADO (accent-2) permanece ortogonal ao status, inalterada. */
+  const bestStatusByCi=bestStatusPorCi(LAST||[]);
+  const cntCiPick={};(LAST||[]).forEach(x=>{const k=clean(x.ci);cntCiPick[k]=(cntCiPick[k]||0)+1;});
+  markers.forEach((m,mi)=>{if(m&&!done.has(m)){done.add(m);
+    const unit=LAST[mi], ci=clean(unit.ci);
+    const status=cntCiPick[ci]>1?bestStatusByCi[ci]:statusPino(unit);
+    const style=PINO_STYLE[status];
+    m.setStyle({radius:m===selMk?12:style.radius,fillColor:m===selMk?"#c9691f":style.fillColor});
+  }});
   setView("mapa"); /* fecha o overlay de busca ao abrir a ficha — mobile E desktop mapa-first (evita sobreposição de cards) */
   if(a.x_coord&&a.y_coord){
     const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);showDetail(a,ll);
