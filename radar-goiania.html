@@ -2784,17 +2784,20 @@ function bldgSumarioHTML(ci){
       <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>estimado médio · faixa</span></div>
     </div>
     <div class="bldg-acoes">
-      <button type="button" class="bldg-ord-toggle" onclick="toggleBldgOrd(this)" aria-expanded="false">🔍 Ordenar / filtrar</button>
+      <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">🔍 Ordenar / filtrar</button>
       <button type="button" class="bldg-zap" onclick="copyZapPredio('${esc(ci)}')">💬 Copiar análise do prédio ⧉</button>
     </div>
   </div>`;
 }
 function bldgOrdHTML(ci){
   ci=clean(ci);
-  const st=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:""};
+  const st=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   const crit=st.criterio||"padrao";
   const onOf=c=>crit===c?' class="on" aria-pressed="true"':' aria-pressed="false"';
-  return `<div class="bldg-ord" id="bldgOrd-${esc(ci)}" hidden>
+  /* WR-01 fix (12-REVIEW.md): `hidden` agora reflete BLDGSTATE[ci].aberto (persistido), nunca
+     um valor fixo — sem isso, toda acao DENTRO do painel (chip/toggle/busca) chama render(LAST),
+     que recria este HTML do zero e o painel "esquecia" que estava aberto. */
+  return `<div class="bldg-ord" id="bldgOrd-${esc(ci)}"${st.aberto?"":" hidden"}>
     <div class="zapgroup-lbl">Ordenar por</div>
     <div class="chips" role="group" aria-label="Ordenar unidades">
       <button type="button"${onOf("padrao")} onclick="ordenarBldg('${esc(ci)}','padrao')">Padrão</button>
@@ -2808,21 +2811,27 @@ function bldgOrdHTML(ci){
     </div>
   </div>`;
 }
+/* WR-01 fix (12-REVIEW.md): toggleBldgOrd agora e uma acao de ESTADO (BLDGSTATE[ci].aberto),
+   nao so manipulacao de DOM — o proximo render(LAST) (disparado por QUALQUER acao dentro do
+   painel: chip/toggle/busca) preserva o painel aberto porque bldgOrdHTML le esse estado.
+   btn recebe o elemento OU string ci (mesmo padrao de toggleAptosProvaveis/verNoMapa). */
 function toggleBldgOrd(btn){
-  const head=btn.closest(".bldg-head");if(!head)return;
-  const ord=head.nextElementSibling; /* bldgOrdHTML() e inserido IMEDIATAMENTE apos o .bldg-head, ver render() */
-  if(!ord||!ord.classList.contains("bldg-ord"))return;
-  const abrir=ord.hidden;
-  ord.hidden=!abrir;
-  btn.setAttribute("aria-expanded",abrir?"true":"false");
-  if(abrir){
-    const primeiro=ord.querySelector(".chips button");
+  let ci=btn;
+  if(ci&&ci.nodeType===1)ci=btn.dataset.ci;
+  ci=clean(ci);
+  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
+  BLDGSTATE[ci].aberto=!BLDGSTATE[ci].aberto;
+  const abrindo=BLDGSTATE[ci].aberto;
+  render(LAST);
+  if(abrindo){
+    const ord=document.getElementById("bldgOrd-"+ci);
+    const primeiro=ord&&ord.querySelector(".chips button");
     if(primeiro)primeiro.focus();
   }
 }
 function ordenarBldg(ci,criterio){
   ci=clean(ci);
-  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:""};
+  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].criterio=criterio;
   const enriquecidas=unidadesEnriquecidasDoPredio(ci);
   const reordenadas=ordenaUnidades(enriquecidas,criterio);
@@ -2839,15 +2848,27 @@ function toggleAptosProvaveis(ciOuBtn){
   let ci=ciOuBtn;
   if(ci&&ci.nodeType===1){const h=ci.closest(".bldg-head");ci=h?h.dataset.ci:"";}
   ci=clean(ci);
-  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:""};
+  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].provaveis=!BLDGSTATE[ci].provaveis;
   render(LAST);
 }
+/* WR-02 fix (12-REVIEW.md): render(LAST) faz box.innerHTML=html incondicional (render(), acima) —
+   isso destroi e recria o <input> a cada tecla, entao o input perde foco/cursor imediatamente
+   apos o 1o caractere. Aqui capturamos foco+selecao do elemento ATIVO (so quando for de fato o
+   proprio input desta busca, nunca "rouba" foco de outro elemento) ANTES do render, e restauramos
+   no mesmo input recriado (mesmo id, mesma posicao no DOM) DEPOIS. */
 function buscarUnidadeBldg(ci,q){
   ci=clean(ci);
-  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:""};
+  BLDGSTATE[ci]=BLDGSTATE[ci]||{criterio:"padrao",provaveis:false,busca:"",aberto:false};
   BLDGSTATE[ci].busca=q;
+  const ativo=document.activeElement;
+  const eraEsteInput=ativo&&ativo.classList&&ativo.classList.contains("bldg-buscaunidade")&&ativo.closest("#bldgOrd-"+ci);
+  const sel=eraEsteInput?[ativo.selectionStart,ativo.selectionEnd]:null;
   render(LAST);
+  if(sel){
+    const de=document.querySelector("#bldgOrd-"+ci+" .bldg-buscaunidade");
+    if(de){de.focus();try{de.setSelectionRange(sel[0],sel[1]);}catch(e){}}
+  }
 }
 function copyZapPredio(ci){
   ci=clean(ci);
