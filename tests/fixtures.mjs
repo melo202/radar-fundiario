@@ -158,4 +158,91 @@ export const FIXTURES = {
     novoItem: { insc: "novo" },
     cap: 30,
   },
+
+  // Fase 11 (11-01): fixtures de recomendaDocumento/pendenciasDocumento/fichaRapidaTexto — funcoes
+  // novas no bloco RADAR_PURE. Contrato de HONESTIDADE (11-UI-SPEC.md/11-CONTEXT.md): PTAM nunca
+  // e recomendado sem CNAI (explica o porque, nunca bloqueia); pendencias nunca marcam conservacao
+  // como pendente (default "Bom"); fichaRapidaTexto nunca inventa faixa/comparaveis nem usa jargao.
+
+  // matriz completa das 4 finalidades x 2 estados de CNAI (8 combinacoes) do Componente 1 do UI-SPEC.
+  recomendaDocumentoCasos: [
+    { finalidadeUso: "apresentar", cnai: false, expectDoc: "ficha", expectPorqueContains: "apresentar" },
+    { finalidadeUso: "apresentar", cnai: true, expectDoc: "ficha", expectPorqueContains: "apresentar" },
+    { finalidadeUso: "captar", cnai: false, expectDoc: "ficha", expectPorqueContains: "captar" },
+    { finalidadeUso: "captar", cnai: true, expectDoc: "ficha", expectPorqueContains: "captar" },
+    { finalidadeUso: "justificar", cnai: false, expectDoc: "relatorio", expectPorqueContains: "justificar" },
+    { finalidadeUso: "justificar", cnai: true, expectDoc: "relatorio", expectPorqueContains: "justificar" },
+    { finalidadeUso: "formal", cnai: false, expectDoc: "relatorio", expectPorqueContains: "CNAI" },
+    { finalidadeUso: "formal", cnai: true, expectDoc: "ptam", expectPorqueContains: "CNAI" },
+  ],
+
+  // pendenciasDocumento: 2 casos completos do <behavior> do 11-01-PLAN.md — media (1 pendencia,
+  // docOk indefinido = pendente) e alta (tudo confirmado, docOk=true = resolvido).
+  pendenciasDocumentoCasos: [
+    {
+      inputs: { areaOk: false, nComps: 6, atipico: false, venalOk: true, docOk: undefined },
+      expectNivel: "media",
+      expectItens: {
+        area: false,
+        conservacao: true,
+        documentacao: false,
+      },
+    },
+    {
+      inputs: { areaOk: true, nComps: 10, atipico: false, venalOk: true, docOk: true },
+      expectNivel: "alta",
+      expectItens: {
+        area: true,
+        conservacao: true,
+        documentacao: true,
+      },
+    },
+  ],
+
+  // fichaRapidaTexto: casos de honestidade de faixa/comparaveis — mesmo shape `data` de zapComData.
+  fichaRapidaCasos: {
+    comFaixaSemComparaveis: {
+      endereco: "Rua Portugal, 582",
+      bairro: "Setor Bueno",
+      quadra: "45",
+      lote: "12",
+      tipoImovel: "Apartamento",
+      faixa: { lo: 300000, hi: 400000 },
+      scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: [] },
+      scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
+      leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+      perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
+    },
+    semFaixaComComparaveis: {
+      endereco: "Rua Portugal, 582",
+      bairro: "Setor Bueno",
+      quadra: "45",
+      lote: "12",
+      tipoImovel: "Apartamento",
+      faixa: null,
+      scoreOp: null,
+      scoreConf: null,
+      leitura: "Apartamento no Setor Bueno. Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.",
+      perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
+      comparaveis: ["Rua X, nº 100 — 8% abaixo da faixa desta região"],
+    },
+    comMaisDe3Comparaveis: {
+      endereco: "Rua Portugal, 582",
+      bairro: "Setor Bueno",
+      quadra: "45",
+      lote: "12",
+      tipoImovel: "Apartamento",
+      faixa: { lo: 300000, hi: 400000 },
+      scoreOp: null,
+      scoreConf: null,
+      leitura: "Apartamento no Setor Bueno.",
+      perfil: null,
+      comparaveis: [
+        "Rua A — 8% abaixo da faixa desta região",
+        "Rua B — 5% abaixo da faixa desta região",
+        "Rua C — 2% acima da faixa desta região",
+        "Rua D — 10% abaixo da faixa desta região",
+      ],
+    },
+  },
 };
