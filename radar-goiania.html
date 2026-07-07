@@ -214,6 +214,19 @@
   .card .vals .venal{text-align:right;font:600 10px/1.2 "IBM Plex Sans";color:var(--muted)}
   .card .vals .venal b{display:block;font:600 12px/1 "IBM Plex Mono";color:var(--muted);margin-top:3px;white-space:nowrap}
 
+  /* Fase 13 MOT-01: skeleton shimmer — CSS only, reusa --line/--paper-2 já existentes.
+     REDUCE: fica ESTÁTICO (sem animation), nunca esconde a affordance de "carregando". */
+  .skel-card{margin:8px 16px;background:var(--paper-2);border:1.5px solid var(--line);border-radius:2px;
+    padding:14px 16px;height:92px;overflow:hidden;position:relative}
+  .skel-line{height:10px;border-radius:2px;background:var(--line);margin-bottom:8px;
+    background-image:linear-gradient(90deg,var(--line) 0%,var(--paper) 50%,var(--line) 100%);
+    background-size:200% 100%;animation:skel-shimmer 1.4s ease-in-out infinite}
+  .skel-line.w60{width:60%}.skel-line.w40{width:40%}.skel-line.w80{width:80%}
+  @keyframes skel-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @media (prefers-reduced-motion: reduce){
+    .skel-line{animation:none;background-image:none;background:var(--line)} /* ESTÁTICO — mesma cor sólida, zero movimento */
+  }
+
   /* Fase 12 (12-02) Componente 3: toggle de marcacao para comparar, no topo do card de unidade */
   .cmp-toggle{position:absolute;top:8px;right:8px;width:32px;height:32px;min-width:44px;min-height:44px;margin:-6px;
     border:1.5px solid var(--line);background:var(--paper-2);color:var(--muted);font-size:16px;border-radius:2px;
@@ -2475,6 +2488,23 @@ function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3600);}
 function loading(on,msg){const l=document.getElementById("loading");
   if(msg)document.getElementById("loadmsg").textContent=msg;l.classList.toggle("show",on);}
+/* Fase 13 MOT-01: as 5 mensagens são literais e fixas — nunca strings interpoladas.
+   Reusa loading(on,msg) já existente, zero mudança de assinatura. */
+const MOTION_MSG={
+  localizando:  "Localizando imóvel…",
+  cadastro:     "Consultando cadastro…",
+  estimativa:   "Calculando estimativa…",
+  comparaveis:  "Buscando comparáveis…",
+  mapa:         "Preparando mapa…",
+};
+/* Fase 13 MOT-01: skeleton shimmer injetado em #results no início de buscar(), sempre
+   substituído por render() real ou pelo bloco de erro do catch — nunca "pendurado". */
+const SKELETON_HTML=Array.from({length:3},()=>
+  `<div class="skel-card"><div class="skel-line w80"></div><div class="skel-line w60"></div><div class="skel-line w40"></div></div>`
+).join("");
+function mostrarSkeleton(){
+  const box=document.getElementById("results");if(box)box.innerHTML=SKELETON_HTML;
+}
 
 /* ---------------- telas mobile: Busca ⇄ Mapa ---------------- */
 const isMobile=()=>window.matchMedia("(max-width:820px)").matches;
@@ -2514,12 +2544,16 @@ async function buscar(){
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
   const tk=++SEARCHTOKEN;
   btn.disabled=true;closeDetail();
+  /* Fase 13 MOT-01: mensagem 1 (fases REAIS de buscar()) — cobre TODOS os modos, antes de
+     qualquer branch/rede. Skeleton shimmer complementa o overlay de loading em #results. */
+  loading(true,MOTION_MSG.localizando);
+  mostrarSkeleton();
   try{
     let items=[],aviso=null;
     if(MODE==="insc"){
       const ci=clean(document.getElementById("insc").value).replace(/\D/g,"");
       if(!ci){toast("Digite a inscrição cadastral.");return;}
-      loading(true,"consultando inscrição…");
+      loading(true,MOTION_MSG.cadastro);
       /* 14 dígitos = inscrição da unidade (nrinscr); 10 = inscrição do lote (ci) */
       const field=ci.length>10?"nrinscr":"ci";
       const d=await jsonp({where:`${field}='${ci}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
@@ -2531,7 +2565,7 @@ async function buscar(){
       const num=clean(document.getElementById("numero").value);
       if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
       if(!rua){toast("Digite a rua/avenida.");return;}
-      loading(true,"consultando o endereço…");
+      loading(true,MOTION_MSG.cadastro);
       /* rCore ignora "rua/av/r." e espaços duplicados — o cadastro grava tipo dentro do nome ("R  MARAJO") */
       const rCore=ruaCore(rua), rD=rCore.replace(/\D/g,""), nN=num.replace(/\D/g,"");
       if(!rCore&&!rD){toast("Digite o nome da rua (além de \"rua/av\").");return;}
@@ -2574,7 +2608,7 @@ async function buscar(){
       if(!toks.length||toks.join("").length<3){toast("Digite o nome do edifício (mínimo 3 letras).");return;}
       resolveBairro();
       const b=document.getElementById("bairro").value;
-      loading(true,"procurando o edifício…");
+      loading(true,MOTION_MSG.cadastro);
       const likes=toks.map(t=>`UPPER(nmedificio) LIKE '%${t}%'`).join(" AND ");
       let all=await fetchWhere((b?`cdbairro=${+b} AND `:"")+`vlvenal>0 AND ${likes}`);
       /* se o setor escolhido não tem o prédio, tenta a cidade inteira */
@@ -2591,7 +2625,7 @@ async function buscar(){
         if(await mostrarBairro(b))return;
         toast("Digite ao menos a quadra.");return;
       }
-      loading(true,"consultando a quadra…");
+      loading(true,MOTION_MSG.cadastro);
       let whereQ=`cdbairro=${b} AND vlvenal>0`;
       if(q)whereQ+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
       if(l)whereQ+=` AND UPPER(nrlote) LIKE '%${likeTerm(l)}%'`;
@@ -2673,7 +2707,12 @@ function finish(items,fromMap){
       }
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}${acao?`<div class="chips" style="justify-content:center;margin-top:14px">${acao}</div>`:""}</div>`;
       return;}
+    /* Fase 13 MOT-01: mensagem 3, imediatamente antes de render() real (fase real de finish()) */
+    loading(true,MOTION_MSG.estimativa);
     render(units,{stagger:true});
+    /* Fase 13 MOT-01: mensagem 5, imediatamente antes de plot() — plot() já faz fitBounds/setView
+       internamente, então o CALLER (finish) seta a mensagem, sem tocar a assinatura de plot() */
+    loading(true,MOTION_MSG.mapa);
     plot(units);
     const nLotes=new Set(units.map(a=>clean(a.ci))).size;
     const ehPredio=units.length>1&&nLotes===1;
@@ -3678,6 +3717,9 @@ async function getComps(a){
 }
 async function compare(){
   const a=DCUR;if(!a||!a.x_coord||!a.y_coord)return;
+  /* Fase 13 MOT-01 T-13-07: mensagem 4 (condicional) — só atualiza o texto do overlay de loading
+     SE ele já estiver visível no momento (nunca reabre/força o overlay só para mostrá-la). */
+  if(document.getElementById("loading").classList.contains("show"))loading(true,MOTION_MSG.comparaveis);
   const box=document.getElementById("dComps");
   box.innerHTML='<div class="cmp-load">⏳ analisando a vizinhança… (até ~20s no celular)</div>';
   box.scrollIntoView({block:"nearest",behavior:"smooth"});
