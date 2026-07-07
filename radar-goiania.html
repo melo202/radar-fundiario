@@ -151,6 +151,7 @@
   .card:active{transform:scale(.98);filter:brightness(.97)}
   .card .addr{font:700 15px/1.25 "IBM Plex Sans";color:var(--ink);margin:0 0 3px} /* endereço = manchete do card */
   .card .ql-tag{font:600 11px/1 "IBM Plex Mono",monospace;color:var(--muted);letter-spacing:.03em;margin-bottom:8px} /* referência técnica = sublinha */
+  .card .matchapprox{color:var(--accent);font-weight:600} /* selo "match aproximado" — reusa fonte/cor do ql-tag, sem hex/transition novo (08-UI-SPEC) */
   .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--muted)}
   .card .grid2 b{color:var(--ink);font-weight:600}
   .card .vals{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
@@ -1354,8 +1355,14 @@ function finish(items,fromMap){
     }else if(hideGar&&MODE!=="insc"){
       units=units.filter(a=>cntCi[clean(a.ci)]<=1||!isGarage(a));
     }
-    units.sort((x,y)=>{const cx=clean(x.ci),cy=clean(y.ci);
-      return cx<cy?-1:cx>cy?1:(x.insubprinc||0)-(y.insubprinc||0);});
+    /* qualidade do match (addr/ql) como criterio PRIMARIO — score menor (melhor match) primeiro;
+       ci/insubprinc como secundario mantem as unidades do mesmo predio agrupadas (empate/modos bd/insc). */
+    units.sort((x,y)=>{
+      const sx=x.__matchScore??0,sy=y.__matchScore??0;
+      if(sx!==sy)return sx-sy;
+      const cx=clean(x.ci),cy=clean(y.ci);
+      return cx<cy?-1:cx>cy?1:(x.insubprinc||0)-(y.insubprinc||0);
+    });
     LAST=units;markers=[];if(layerGroup)layerGroup.clearLayers();sel=null;RENDN=300;
     if(!units.length){
       const msg=(MODE==="bd")?"Nenhum edifício com esse nome no cadastro. Tente parte do nome (ex.: só \"riviera\").":
@@ -1496,7 +1503,7 @@ function cardHTML(a,i,isUnit){
   return `<div class="card" data-i="${i}" role="button" tabindex="0" onclick="pick(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pick(${i})}">
       ${isUnit&&ul?`<div class="unit">${esc(ul)}</div>`:""}
       <div class="addr">${esc(addr)||"Endereço não cadastrado"}</div>
-      <div class="ql-tag">Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</div>
+      <div class="ql-tag">Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}${a.__matchScore===2?` <span class="matchapprox" title="Este item casou por aproximação — confira quadra/lote/rua">~aproximado</span>`:""}</div>
       <div class="grid2">
         <div>${isUnit?"Área const.":"Terreno"} <b>${isUnit?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</b></div>
         <div>${isUnit?"Terreno":"Construção"} <b>${isUnit?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</b></div>
