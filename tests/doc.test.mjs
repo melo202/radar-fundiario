@@ -139,7 +139,7 @@ test("pendenciasDocumento reusa scoreConfianca internamente (mesmo nivel/porque 
     const bruto = P.scoreConfianca({ areaOk, nComps, atipico, venalOk });
     const result = P.pendenciasDocumento(caso.inputs);
     assert.equal(result.conf.nivel, bruto.nivel, `pendenciasDocumento.conf.nivel deveria ser IDENTICO ao scoreConfianca bruto, obteve ${result.conf.nivel} vs ${bruto.nivel}`);
-    assert.deepEqual(result.conf.porque, bruto.porque, `pendenciasDocumento.conf.porque deveria ser IDENTICO ao scoreConfianca bruto`);
+    assert.equal(JSON.stringify(result.conf.porque), JSON.stringify(bruto.porque), `pendenciasDocumento.conf.porque deveria ser IDENTICO ao scoreConfianca bruto`);
   }
 });
 
@@ -169,20 +169,21 @@ test('fichaRapidaTexto: nenhum campo do retorno contem "mediana"/"percentil"/"qu
 
 test("fichaRapidaTexto com data.comparaveis ausente retorna comparaveis:[] (nunca inventa 3 comparaveis genericos)", () => {
   const result = P.fichaRapidaTexto(FIXTURES.fichaRapidaCasos.comFaixaSemComparaveis);
-  assert.deepEqual(result.comparaveis, [], `comparaveis deveria ser [] quando data.comparaveis ausente, obteve: ${JSON.stringify(result.comparaveis)}`);
+  assert.ok(Array.isArray(result.comparaveis), `comparaveis deveria ser um array, obteve: ${JSON.stringify(result.comparaveis)}`);
+  assert.equal(result.comparaveis.length, 0, `comparaveis deveria ser [] quando data.comparaveis ausente, obteve: ${JSON.stringify(result.comparaveis)}`);
 });
 
 test("fichaRapidaTexto com data.comparaveis preenchido (<=3) retorna o mesmo array", () => {
   const data = FIXTURES.fichaRapidaCasos.semFaixaComComparaveis;
   const result = P.fichaRapidaTexto(data);
-  assert.deepEqual(result.comparaveis, data.comparaveis, `comparaveis deveria repassar o array de data.comparaveis, obteve: ${JSON.stringify(result.comparaveis)}`);
+  assert.equal(JSON.stringify(result.comparaveis), JSON.stringify(data.comparaveis), `comparaveis deveria repassar o array de data.comparaveis, obteve: ${JSON.stringify(result.comparaveis)}`);
 });
 
 test("fichaRapidaTexto trunca comparaveis em no maximo 3 quando data.comparaveis tem mais de 3", () => {
   const data = FIXTURES.fichaRapidaCasos.comMaisDe3Comparaveis;
   const result = P.fichaRapidaTexto(data);
   assert.equal(result.comparaveis.length, 3, `comparaveis deveria ser truncado em 3, obteve length ${result.comparaveis.length}`);
-  assert.deepEqual(result.comparaveis, data.comparaveis.slice(0, 3), `comparaveis truncado deveria ser os 3 PRIMEIROS itens, obteve: ${JSON.stringify(result.comparaveis)}`);
+  assert.equal(JSON.stringify(result.comparaveis), JSON.stringify(data.comparaveis.slice(0, 3)), `comparaveis truncado deveria ser os 3 PRIMEIROS itens, obteve: ${JSON.stringify(result.comparaveis)}`);
 });
 
 test('fichaRapidaTexto: ressalva contem "recomenda-se confirmar" (linguagem de responsabilidade travada)', () => {

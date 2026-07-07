@@ -1312,6 +1312,61 @@ function histAdd(lista, item, cap){
   const next=[...(lista||[]), item];
   return next.length>cap ? next.slice(next.length-cap) : next;
 }
+
+/* DOC-01/DOC-02 (Fase 11, 11-01): recomendação de documento + pendências + texto da Ficha
+   rápida — puro, sem IA. */
+
+/* recomendaDocumento(finalidadeUso, cnai): mapa determinístico literal da tabela do UI-SPEC
+   (Componente 1) — apresentar/captar sempre "ficha"; justificar sempre "relatorio"; formal
+   depende de cnai (true="ptam", false/ausente="relatorio", nunca bloqueia acesso ao PTAM, so
+   recomenda diferente). Fallback (finalidadeUso desconhecido/ausente) = mesmo resultado de
+   "justificar" (default seguro, nunca lança exceção). Textos EXATOS do Copywriting Contract. */
+function recomendaDocumento(finalidadeUso, cnai){
+  if(finalidadeUso==="apresentar"){
+    return {doc:"ficha", porque:"Você quer apresentar ao cliente — a Ficha rápida é direta, cabe numa tela e vai bem no WhatsApp."};
+  }
+  if(finalidadeUso==="captar"){
+    return {doc:"ficha", porque:"Você quer captar o proprietário — a Ficha rápida é direta, cabe numa tela e vai bem no WhatsApp."};
+  }
+  if(finalidadeUso==="formal"){
+    return cnai
+      ? {doc:"ptam", porque:"Você pediu um documento técnico formal — com sua habilitação CNAI, o PTAM é o parecer técnico completo, com responsabilidade profissional."}
+      : {doc:"relatorio", porque:"O PTAM pressupõe habilitação CNAI — preencha no perfil se possuir. Por enquanto, recomendamos o Relatório de avaliação."};
+  }
+  // "justificar" e fallback (finalidadeUso desconhecido/ausente) compartilham o mesmo resultado.
+  return {doc:"relatorio", porque:"Você quer justificar o preço com dados — o Relatório traz comparáveis e metodologia, sem o peso formal do PTAM."};
+}
+
+/* pendenciasDocumento(inputs): chama scoreConfianca({areaOk,nComps,atipico,venalOk}) internamente
+   (reuso, nao duplica a logica de completude) e monta o checklist estruturado (Componente 2 do
+   UI-SPEC) na ordem area -> conservacao -> documentacao. "conservacao" sempre resolvido:true
+   (tem default "Bom" no wizard, nunca e uma pendencia real). "documentacao" so resolve com
+   docOk===true (undefined ou false permanecem pendentes). */
+function pendenciasDocumento(inputs){
+  const inp = inputs||{};
+  const conf = scoreConfianca({areaOk:inp.areaOk, nComps:inp.nComps, atipico:inp.atipico, venalOk:inp.venalOk});
+  const itens = [
+    {id:"area", texto:"Área privativa confirmada", resolvido: !!inp.areaOk, editavel:true},
+    {id:"conservacao", texto:"Estado de conservação declarado", resolvido:true, editavel:false},
+    {id:"documentacao", texto:"Estado da documentação", resolvido: inp.docOk===true, editavel:true},
+  ];
+  return {conf, itens};
+}
+
+/* fichaRapidaTexto(data): texto PURO (nao-HTML) da Ficha rápida (Componente 4 do UI-SPEC) —
+   reusa faixaTxt/leitura ja calculados, nunca inventa faixa/comparaveis, nunca usa jargao
+   (mediana/percentil/quartil). Retorna um OBJETO com os textos de cada bloco — Wave 3 decide
+   como montar o HTML (esc() campo a campo). */
+function fichaRapidaTexto(data){
+  const d=data||{};
+  return {
+    faixaTxt: faixaTxt(d.faixa),
+    resumo: (d.tipoImovel||"Imóvel")+" no "+(d.bairro||"região")+".",
+    leitura: d.leitura||"",
+    comparaveis: Array.isArray(d.comparaveis) ? d.comparaveis.slice(0,3) : [],
+    ressalva: "Faixa estimada com base em dados públicos do cadastro municipal — recomenda-se confirmar área, estado de conservação e documentação antes de decidir. Não substitui avaliação formal.",
+  };
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
