@@ -37,7 +37,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
  (completed 2026-07-07)
 - [x] **Phase 10: Camada de Ação + WhatsApp + Captação + Salvos** — toda tela termina com ação; copiar mensagens de WhatsApp (proprietário/comprador/argumento); salvar oportunidade + histórico + favoritos; modo captação (completed 2026-07-07)
 - [x] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF (completed 2026-07-07)
-- [ ] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11
+- [x] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11 (completed 2026-07-07)
 - [ ] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar
 - [ ] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
 - [ ] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
@@ -134,7 +134,7 @@ Plans:
 Plans:
 - [x] 11.1-01-PLAN.md — RADAR_PURE (TDD): propostaTexto/termoExclusividadeTexto/contratoTexto + parseMatricula + numeroPorExtenso
 - [x] 11.1-02-PLAN.md — Wizard NEG próprio (#negSheet, estado em memória, nunca persistido) + extração de matrícula + entradas em #dActsMore e #captSheet
-- [ ] 11.1-03-PLAN.md — Template A4 impresso (cláusulas/disclaimer/assinaturas) via pipeline #laudo→#laudoView + verificação end-to-end/privacidade
+- [x] 11.1-03-PLAN.md — Template A4 impresso (cláusulas/disclaimer/assinaturas) via pipeline #laudo→#laudoView + verificação end-to-end/privacidade
 **UI hint**: yes
 **Phase flags**: OCR de scan de cartório é notoriamente ruidoso — NEG-04 é best-effort/opcional, com revisão humana obrigatória; se o custo/qualidade não compensar, entrega-se as minutas com preenchimento manual e adia-se o OCR.
 
@@ -233,7 +233,7 @@ Plans:
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 2/3 | In Progress|  |
+| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
