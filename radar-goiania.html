@@ -1414,6 +1414,273 @@ function fichaRapidaTexto(data){
     ressalva: "Faixa estimada com base em dados públicos do cadastro municipal — recomenda-se confirmar área, estado de conservação e documentação antes de decidir. Não substitui avaliação formal.",
   };
 }
+
+/* NEG-01/02/03 (Fase 11.1, 11.1-01): minutas da negociação (Proposta/Termo/Contrato) + parse de
+   matrícula + número por extenso — puro, sem IA, nunca inventa campo ausente. */
+
+/* CAMPO_VAZIO: placeholder LITERAL usado pelas 3 funções de minuta quando um subcampo de parte/
+   valor/matrícula está ausente — nunca inventa nome/valor/data (contrato de honestidade,
+   T-11.1-01 do threat_model). As 3 funções usam a MESMA constante (nunca strings divergentes). */
+const CAMPO_VAZIO="________";
+
+const DISCLAIMER_NEG="Minuta para conferência das partes — recomenda-se revisão por advogado; a transmissão da propriedade exige escritura pública (quando aplicável) e registro na matrícula do imóvel no cartório de registro de imóveis competente.";
+
+/* extensoInteiro(n): escreve por extenso (pt-BR) a parte INTEIRA de um numero >=0, sem casas
+   decimais — tabela de unidades/dezenas/centenas + escala (mil/milhao), cobrindo valores de
+   imovel (ate centenas de milhoes). Fronteiras travadas por fixture (11.1-01-PLAN.md fix
+   plan-check): 100="cem" (nunca "cento"), 1000="mil" (nunca "um mil"), 1000000="um milhão"
+   (singular), 2000000+="N milhões" (plural). Funcao auxiliar interna, nao exportada. */
+function extensoInteiro(n){
+  if(n===0) return "zero";
+  const UNI=["","um","dois","três","quatro","cinco","seis","sete","oito","nove"];
+  const DEZ10_19=["dez","onze","doze","treze","catorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
+  const DEZ=["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
+  const CEM=["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
+  // ate 999 -> string (sem conector de escala; "e" interno entre centena/dezena/unidade, regra (d)).
+  function ate999(n){
+    if(n===0) return "";
+    if(n===100) return "cem"; // regra (a): 100 = "cem", nunca "cento".
+    const c=Math.floor(n/100), r=n%100;
+    const partes=[];
+    if(c>0) partes.push(CEM[c]);
+    if(r>0){
+      if(r<10) partes.push(UNI[r]);
+      else if(r<20) partes.push(DEZ10_19[r-10]);
+      else{
+        const d=Math.floor(r/10), u=r%10;
+        partes.push(u>0 ? DEZ[d]+" e "+UNI[u] : DEZ[d]);
+      }
+    }
+    return partes.join(" e "); // regra (d): conector "e" entre centena e dezena/unidade.
+  }
+  const milhoes=Math.floor(n/1000000);
+  const milhares=Math.floor((n%1000000)/1000);
+  const resto=n%1000;
+  const blocos=[];
+  if(milhoes>0){
+    // regra (c): 1.000.000 = "um milhão" (singular); 2.000.000+ = "N milhões" (plural).
+    blocos.push(milhoes===1 ? "um milhão" : ate999(milhoes)+" milhões");
+  }
+  if(milhares>0){
+    // regra (b): 1000 = "mil" (NUNCA "um mil") — só escreve o numeral quando milhares!==1.
+    blocos.push(milhares===1 ? "mil" : ate999(milhares)+" mil");
+  }
+  if(resto>0 || blocos.length===0){
+    blocos.push(ate999(resto));
+  }
+  // conector "e" final entre o ultimo bloco de escala e o resto (quando resto<100 e ha bloco anterior).
+  if(blocos.length>1 && resto>0 && resto<100){
+    const ultimo=blocos.pop();
+    return blocos.join(" e ")+" e "+ultimo;
+  }
+  return blocos.join(" e ");
+}
+
+/* numeroPorExtenso(valor): formato hibrido "R$ X.XXX,XX (extenso reais)" — valor null/NaN
+   retorna string vazia (nunca "R$ NaN"/"R$ null"). Centavos NAO sao escritos por extenso (so a
+   parte inteira em portugues) — o valor formatado em R$ traz os centavos numericos. Regra (c):
+   "de reais" apos milhão/milhões quando NAO ha casa de milhar/centena ("um milhão DE reais", mas
+   "um milhão e cem mil reais" sem "de"). */
+function numeroPorExtenso(valor){
+  if(valor==null||isNaN(valor)) return "";
+  const n=Math.abs(Number(valor));
+  const inteiro=Math.floor(n);
+  const valorFmt="R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const ext=extensoInteiro(inteiro);
+  // "de reais" somente quando o valor é um multiplo exato de milhao (sem milhares/resto) — regra (c).
+  const somenteMilhoes=inteiro>=1000000 && (inteiro%1000000===0);
+  const reaisTxt=somenteMilhoes ? "de reais" : "reais";
+  return valorFmt+" ("+ext+" "+reaisTxt+")";
+}
+
+/* parseMatricula(textoColado): extracao best-effort de matricula/cartorio/proprietario por regex
+   CONSERVADORA — nunca lanca excecao, nunca inventa dado. Retorna null quando NENHUM dos 2
+   regex principais (matricula/cartorio) casa; parse parcial (so 1 dos 2) retorna objeto com o
+   campo ausente como null. proprietario e best-effort adicional, pode ficar ausente com
+   frequencia (nao e requisito central do parse — nota de limitacao no SUMMARY). */
+function parseMatricula(textoColado){
+  const t=String(textoColado||"");
+  if(!t) return null;
+  const mMat=t.match(/matr[íi]cula\s*(?:n[ºo°.]?\s*)?([\d.]+)/i);
+  // cartorio: 2 ordens de frase — (1) canonica "Nº Ofício de Registro de Imóveis" (numero ANTES,
+  // termina em "registro de imoveis"); (2) "Cartório do/de Nº Ofício" (numero DEPOIS da palavra
+  // "cartório", sem "registro de imoveis" no fim — fix plan-check, fraseado real comum).
+  const mCartCanonico=t.match(/(\d+)[ºo°]?\s*(?:of[íi]cio|cart[óo]rio)\s*(?:de\s*)?registro\s*de\s*im[óo]veis/i);
+  const mCartAlt=t.match(/cart[óo]rio\s*(?:do|de)?\s*(\d+)[ºo°]?\s*of[íi]cio/i);
+  const mCart=mCartCanonico||mCartAlt;
+  const mProp=t.match(/propriet[áa]rio[:\s]+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+){1,4})/);
+  if(!mMat&&!mCart) return null;
+  return {
+    matricula: mMat ? mMat[1] : null,
+    cartorio: mCart ? (mCart[1]+"º Ofício de Registro de Imóveis") : null,
+    proprietario: mProp ? mProp[1] : null,
+  };
+}
+
+/* nomeOuVazio(parte): nome da parte (proponente/vendedor/comprador/proprietario/corretor) ou
+   CAMPO_VAZIO quando ausente/vazio — nunca "undefined"/nome vazio silencioso. */
+function nomeOuVazio(parte){
+  return (parte&&parte.nome) ? parte.nome : CAMPO_VAZIO;
+}
+/* docEnderecoTxt(parte): sufixo opcional "— CPF/CNPJ X, Y" — omitido por completo quando ambos
+   ausentes (CPF/CNPJ e endereço NUNCA obrigatorios, CONTEXT.md). */
+function docEnderecoTxt(parte){
+  if(!parte) return "";
+  const bits=[];
+  if(parte.doc) bits.push("CPF/CNPJ "+parte.doc);
+  if(parte.endereco) bits.push(parte.endereco);
+  return bits.length ? ", "+bits.join(", ") : "";
+}
+/* imovelDescTxt(im): descricao textual do imovel comum as 3 minutas. */
+function imovelDescTxt(im){
+  const i=im||{};
+  const areaTxt=[i.areaTerr?("área do terreno de "+i.areaTerr+" m²"):"", i.areaEdif?("área edificada de "+i.areaEdif+" m²"):""].filter(Boolean).join(", ");
+  return (i.endereco||CAMPO_VAZIO)+", "+(i.bairro||CAMPO_VAZIO)+", Quadra "+(i.quadra||CAMPO_VAZIO)+", Lote "+(i.lote||CAMPO_VAZIO)+
+    (areaTxt?(", "+areaTxt):"")+(i.inscricao?(", inscrição cadastral "+i.inscricao):"")+
+    (i.tipoImovel?(" ("+i.tipoImovel+")"):"");
+}
+/* blocoAssinatura(nome, papel): 1 linha de assinatura padrao (nome sobre linha + papel). */
+function blocoAssinatura(nome, papel){
+  return "\n\n_________________________________\n"+(nome||CAMPO_VAZIO)+" — "+papel;
+}
+
+/* propostaTexto(data): minuta completa da Proposta de Compra e Venda (NEG-01) — texto puro
+   pt-BR juridico, clausulas numeradas 1a-5a (UI-SPEC Componente 4), disclaimer literal e 2
+   blocos de assinatura (Proponente / Vendedor-Proprietário). Campo ausente -> CAMPO_VAZIO. */
+function propostaTexto(data){
+  const d=data||{};
+  const im=d.imovel||{};
+  const proponente=d.proponente||{};
+  const vendedor=d.vendedor||{};
+  const valorTxt=(d.valorOfertado!=null&&!isNaN(d.valorOfertado)) ? numeroPorExtenso(d.valorOfertado) : CAMPO_VAZIO;
+  const formaPagto=d.formaPagamento||"a combinar entre as partes";
+  const validade=(d.validadeDias!=null) ? (d.validadeDias+" dias") : "10 dias";
+  const foro=d.foro||"Goiânia/GO";
+
+  let texto="PROPOSTA DE COMPRA E VENDA\n\n";
+  texto+="Proponente: "+nomeOuVazio(proponente)+docEnderecoTxt(proponente)+".\n";
+  texto+="Vendedor/Proprietário: "+nomeOuVazio(vendedor)+docEnderecoTxt(vendedor)+".\n\n";
+
+  texto+="Cláusula 1ª — Do Objeto\n";
+  texto+="O presente instrumento tem por objeto a proposta de compra e venda do imóvel situado em "+imovelDescTxt(im)+".\n\n";
+
+  texto+="Cláusula 2ª — Do Valor Ofertado e da Forma de Pagamento\n";
+  texto+="O Proponente oferece pelo imóvel o valor de "+valorTxt+", a ser pago da seguinte forma: "+formaPagto+".\n\n";
+
+  texto+="Cláusula 3ª — Da Validade da Proposta\n";
+  texto+="A presente proposta é válida pelo prazo de "+validade+", contados da data de sua entrega ao Vendedor/Proprietário, decorrido o qual, sem manifestação expressa de aceite, considerar-se-á caduca.\n\n";
+
+  texto+="Cláusula 4ª — Das Condições\n";
+  texto+=(d.obs?d.obs:"Sem condições especiais além das descritas neste instrumento.")+"\n\n";
+
+  texto+="Cláusula 5ª — Do Foro\n";
+  texto+="Fica eleito o foro da Comarca de "+foro+" para dirimir quaisquer questões oriundas do presente instrumento.\n";
+
+  texto+="\n"+DISCLAIMER_NEG+"\n";
+  texto+=blocoAssinatura(proponente.nome, "Proponente");
+  texto+=blocoAssinatura(vendedor.nome, "Vendedor/Proprietário");
+  return texto;
+}
+
+/* termoExclusividadeTexto(data): minuta completa do Termo de Autorização/Exclusividade de Venda
+   (NEG-02) — clausulas 1a-7a (5a condicional, so aparece com autorizaAnuncio!==null), disclaimer
+   literal, assinaturas (Proprietário / Corretor). Campo ausente -> CAMPO_VAZIO. */
+function termoExclusividadeTexto(data){
+  const d=data||{};
+  const im=d.imovel||{};
+  const proprietario=d.proprietario||{};
+  const corretor=d.corretor||{};
+  const prazo=(d.prazoDias!=null) ? (d.prazoDias+" dias") : "90 dias";
+  const comissao=(d.comissaoPct!=null) ? (d.comissaoPct+"%") : CAMPO_VAZIO;
+  const foro=d.foro||"Goiânia/GO";
+
+  const exclusividadeTxt = d.exclusiva===true
+    ? "A presente autorização é outorgada em caráter EXCLUSIVO, obrigando-se o Proprietário a não contratar outro corretor ou imobiliária para a intermediação da venda durante o prazo de vigência."
+    : d.exclusiva===false
+      ? "A presente autorização é outorgada em caráter NÃO EXCLUSIVO (aberta), podendo o Proprietário contratar outros corretores ou imobiliárias simultaneamente."
+      : "O caráter da presente autorização (exclusiva ou não exclusiva) fica a definir entre as partes.";
+
+  let texto="TERMO DE AUTORIZAÇÃO/EXCLUSIVIDADE DE VENDA\n\n";
+  texto+="Proprietário: "+nomeOuVazio(proprietario)+docEnderecoTxt(proprietario)+".\n";
+  texto+="Corretor: "+nomeOuVazio(corretor)+(corretor.creci?(", CRECI "+corretor.creci):"")+".\n\n";
+
+  texto+="Cláusula 1ª — Do Objeto e da Autorização\n";
+  texto+="O Proprietário autoriza o Corretor a intermediar a venda do imóvel situado em "+imovelDescTxt(im)+".\n\n";
+
+  texto+="Cláusula 2ª — Do Prazo\n";
+  texto+="O presente Termo vigerá pelo prazo de "+prazo+", contados da data de sua assinatura.\n\n";
+
+  texto+="Cláusula 3ª — Da Exclusividade\n";
+  texto+=exclusividadeTxt+"\n\n";
+
+  texto+="Cláusula 4ª — Da Comissão\n";
+  texto+="Pela intermediação, será devida ao Corretor a comissão de "+comissao+" sobre o valor efetivo da venda, devida no momento da efetivação do negócio (assinatura de contrato/recebimento de sinal).\n\n";
+
+  let numClausula=5;
+  if(d.autorizaAnuncio!==null&&d.autorizaAnuncio!==undefined){
+    texto+="Cláusula "+numClausula+"ª — Da Autorização de Divulgação/Anúncio\n";
+    texto+=(d.autorizaAnuncio
+      ? "O Proprietário autoriza expressamente a divulgação/anúncio do imóvel pelo Corretor, em qualquer meio, para fins de venda."
+      : "O Proprietário NÃO autoriza a divulgação/anúncio público do imóvel, restringindo-se a intermediação a contatos diretos.")+"\n\n";
+    numClausula++;
+  }
+
+  texto+="Cláusula "+numClausula+"ª — Das Obrigações do Corretor\n";
+  texto+="O Corretor obriga-se a agir com diligência, boa-fé e transparência, prestando contas ao Proprietário sobre as tratativas realizadas.\n\n";
+  numClausula++;
+
+  texto+="Cláusula "+numClausula+"ª — Do Foro\n";
+  texto+="Fica eleito o foro da Comarca de "+foro+" para dirimir quaisquer questões oriundas do presente instrumento.\n";
+
+  texto+="\n"+DISCLAIMER_NEG+"\n";
+  texto+=blocoAssinatura(proprietario.nome, "Proprietário");
+  texto+=blocoAssinatura(corretor.nome, "Corretor");
+  return texto;
+}
+
+/* contratoTexto(data): minuta completa do Contrato de Compra e Venda (NEG-03) — clausulas 1a-7a,
+   disclaimer literal, assinaturas (Vendedor / Comprador). Matricula/cartorio/preco ausentes ->
+   CAMPO_VAZIO (nunca inventa numero de matricula). */
+function contratoTexto(data){
+  const d=data||{};
+  const im=d.imovel||{};
+  const vendedor=d.vendedor||{};
+  const comprador=d.comprador||{};
+  const matriculaTxt=d.matricula||CAMPO_VAZIO;
+  const cartorioTxt=d.cartorio||CAMPO_VAZIO;
+  const precoTxt=(d.precoTotal!=null&&!isNaN(d.precoTotal)) ? numeroPorExtenso(d.precoTotal) : CAMPO_VAZIO;
+  const formaPagto=d.formaPagamento||"a combinar entre as partes";
+  const foro=d.foro||"Goiânia/GO";
+
+  let texto="CONTRATO DE COMPRA E VENDA — MINUTA\n\n";
+
+  texto+="Cláusula 1ª — Das Partes\n";
+  texto+="Vendedor: "+nomeOuVazio(vendedor)+docEnderecoTxt(vendedor)+".\n";
+  texto+="Comprador: "+nomeOuVazio(comprador)+docEnderecoTxt(comprador)+".\n\n";
+
+  texto+="Cláusula 2ª — Do Objeto\n";
+  texto+="O Vendedor vende, e o Comprador compra, o imóvel situado em "+imovelDescTxt(im)+", registrado sob a matrícula nº "+matriculaTxt+", no "+cartorioTxt+".\n\n";
+
+  texto+="Cláusula 3ª — Do Preço e da Forma de Pagamento\n";
+  texto+="O preço total ajustado para a presente compra e venda é de "+precoTxt+", a ser pago da seguinte forma: "+formaPagto+".\n\n";
+
+  texto+="Cláusula 4ª — Da Posse e Entrega\n";
+  texto+="A posse do imóvel será transmitida ao Comprador na data da assinatura do presente instrumento, salvo disposição em contrário ajustada expressamente entre as partes.\n\n";
+
+  texto+="Cláusula 5ª — Do Inadimplemento\n";
+  texto+="O descumprimento de qualquer obrigação prevista neste instrumento sujeitará a parte inadimplente ao pagamento de multa a ser convencionada entre as partes, sem prejuízo da rescisão contratual e demais perdas e danos cabíveis.\n\n";
+
+  texto+="Cláusula 6ª — Das Despesas e Tributos\n";
+  texto+="Correrão por conta do Comprador as despesas com ITBI e com o registro da transferência no cartório de registro de imóveis competente; o Vendedor responde pelos débitos de condomínio e IPTU até a data da efetiva transmissão da posse, ficando os valores posteriores rateados proporcionalmente (pro-rata) entre as partes quando aplicável.\n\n";
+
+  texto+="Cláusula 7ª — Do Foro\n";
+  texto+="Fica eleito o foro da Comarca de "+foro+" para dirimir quaisquer questões oriundas do presente instrumento.\n";
+
+  texto+="\n"+DISCLAIMER_NEG+"\n";
+  texto+=blocoAssinatura(vendedor.nome, "Vendedor");
+  texto+=blocoAssinatura(comprador.nome, "Comprador");
+  return texto;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
