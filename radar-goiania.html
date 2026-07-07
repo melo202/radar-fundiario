@@ -2916,15 +2916,15 @@ function abrirComparacao(){
       <thead>
         <tr>
           <th class="cmp-rowlbl"></th>
-          ${unidades.map(u=>`<th>${esc(unitLabel(u))||"Imóvel"}</th>`).join("")}
+          ${unidades.map(u=>`<th scope="col">${esc(unitLabel(u))||"Imóvel"}</th>`).join("")}
         </tr>
       </thead>
       <tbody>
-        <tr><td class="cmp-rowlbl">Área</td>${cells(u=>u.areaedif?Math.round(u.areaedif)+" m²":"—")}</tr>
-        <tr><td class="cmp-rowlbl">Venal</td>${cells(u=>venalTxt(u.vlvenal))}</tr>
-        <tr><td class="cmp-rowlbl">Estimado</td>${cells(u=>{const e=mercadoEstimado(u);return e?"~"+brlC((e.lo+e.hi)/2):"—";})}</tr>
-        <tr><td class="cmp-rowlbl">R$/m²</td>${cells(u=>{const p=m2Edif(u);return p?brl(p):"—";})}</tr>
-        <tr><td class="cmp-rowlbl">Oportunidade</td>${cells(u=>u.__scores&&u.__scores.op?u.__scores.op.rotulo:"—")}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Área</th>${cells(u=>u.areaedif?Math.round(u.areaedif)+" m²":"—")}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Venal</th>${cells(u=>venalTxt(u.vlvenal))}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Estimado</th>${cells(u=>{const e=mercadoEstimado(u);return e?"~"+brlC((e.lo+e.hi)/2):"—";})}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">R$/m²</th>${cells(u=>{const p=m2Edif(u);return p?brl(p):"—";})}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Oportunidade</th>${cells(u=>u.__scores&&u.__scores.op?u.__scores.op.rotulo:"—")}</tr>
       </tbody>
       <tfoot>
         <tr>
