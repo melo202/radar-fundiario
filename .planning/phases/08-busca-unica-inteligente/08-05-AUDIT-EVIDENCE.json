@@ -1,0 +1,147 @@
+[
+  {
+    "check": "bd: DUO SKY unidade 1",
+    "verdict": "PASS",
+    "evidence": {
+      "ci": "3121220251",
+      "nrinscr": "31212202510010",
+      "nrquadra": "183   ",
+      "nrlote": "03/07 ",
+      "areaterr": 1871,
+      "areaedif": 133.43,
+      "uso": 1,
+      "vlvenal": 321808.37,
+      "nmbairro": "PRQ AMAZONIA             ",
+      "cdbairro": 63,
+      "nmedificio": "DUO SKY GARDEN                                    ",
+      "incompl": "AP 301A BL1    ",
+      "x_coord": 683871.37051,
+      "y_coord": 8149578.50541,
+      "nmlogradou": "R  HARPIA                        "
+    }
+  },
+  {
+    "check": "insc10: consistencia ci vs bd (mesmo lote)",
+    "verdict": "PASS",
+    "evidence": {
+      "bd": {
+        "ci": "3121220251",
+        "nrinscr": "31212202510010",
+        "nrquadra": "183   ",
+        "nrlote": "03/07 ",
+        "areaterr": 1871,
+        "areaedif": 133.43,
+        "uso": 1,
+        "vlvenal": 321808.37,
+        "nmbairro": "PRQ AMAZONIA             ",
+        "cdbairro": 63,
+        "nmedificio": "DUO SKY GARDEN                                    ",
+        "incompl": "AP 301A BL1    ",
+        "x_coord": 683871.37051,
+        "y_coord": 8149578.50541,
+        "nmlogradou": "R  HARPIA                        "
+      },
+      "ci": {
+        "ci": "3121220251",
+        "nrinscr": "31212202510010",
+        "nrquadra": "183   ",
+        "nrlote": "03/07 ",
+        "areaterr": 1871,
+        "areaedif": 133.43,
+        "uso": 1,
+        "vlvenal": 321808.37,
+        "nmbairro": "PRQ AMAZONIA             ",
+        "cdbairro": 63,
+        "nmedificio": "DUO SKY GARDEN                                    ",
+        "incompl": "AP 301A BL1    ",
+        "x_coord": 683871.37051,
+        "y_coord": 8149578.50541,
+        "nmlogradou": "R  HARPIA                        "
+      }
+    }
+  },
+  {
+    "check": "insc14: unidade exata via nrinscr",
+    "verdict": "PASS",
+    "evidence": {
+      "ci": "3121220251",
+      "nrinscr": "31212202510010",
+      "nrquadra": "183   ",
+      "nrlote": "03/07 ",
+      "areaterr": 1871,
+      "areaedif": 133.43,
+      "uso": 1,
+      "vlvenal": 321808.37,
+      "nmbairro": "PRQ AMAZONIA             ",
+      "cdbairro": 63,
+      "nmedificio": "DUO SKY GARDEN                                    ",
+      "incompl": "AP 301A BL1    ",
+      "x_coord": 683871.37051,
+      "y_coord": 8149578.50541,
+      "nmlogradou": "R  HARPIA                        "
+    }
+  },
+  {
+    "check": "ql: quadra do imovel de referencia aparece no WHERE do app",
+    "verdict": "PASS",
+    "evidence": {
+      "ci": "3121220173",
+      "nrinscr": "31212201730010",
+      "nrquadra": "183   ",
+      "nrlote": "01E   ",
+      "areaterr": 1056.6,
+      "areaedif": 102,
+      "uso": 1,
+      "vlvenal": 195631.34,
+      "nmbairro": "PRQ AMAZONIA             ",
+      "cdbairro": 63,
+      "nmedificio": "RES PORTAL ARUMA                                  ",
+      "incompl": "APT.101A       ",
+      "x_coord": 683864.89211,
+      "y_coord": 8149627.16375,
+      "nmlogradou": "AV ARUMA                         "
+    }
+  },
+  {
+    "check": "addr: rua do imovel de referencia via WHERE do app",
+    "verdict": "PASS",
+    "evidence": {
+      "ci": "3121220277",
+      "nrinscr": "31212202770008",
+      "nrquadra": "183   ",
+      "nrlote": "09    ",
+      "areaterr": 374.2,
+      "areaedif": 288.57,
+      "uso": 2,
+      "vlvenal": 676833.35,
+      "nmbairro": "PRQ AMAZONIA             ",
+      "cdbairro": 63,
+      "nmedificio": "                                                  ",
+      "incompl": "               ",
+      "x_coord": 683854.26915,
+      "y_coord": 8149532.45314,
+      "nmlogradou": "R  HARPIA                        "
+    }
+  },
+  {
+    "check": "map-click: ponto do imovel devolve o mesmo lote (ci)",
+    "verdict": "PASS",
+    "evidence": {
+      "ci": "3121220251",
+      "nrinscr": "31212202510010",
+      "nrquadra": "183   ",
+      "nrlote": "03/07 ",
+      "areaterr": 1871,
+      "areaedif": 133.43,
+      "uso": 1,
+      "vlvenal": 321808.37,
+      "nmbairro": "PRQ AMAZONIA             ",
+      "cdbairro": 63,
+      "nmedificio": "DUO SKY GARDEN                                    ",
+      "incompl": "AP 301A BL1    ",
+      "x_coord": 683871.37051,
+      "y_coord": 8149578.50541,
+      "nmlogradou": "R  HARPIA                        "
+    }
+  }
+]
