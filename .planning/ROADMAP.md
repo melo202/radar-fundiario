@@ -39,7 +39,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF (completed 2026-07-07)
 - [x] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11 (completed 2026-07-07)
 - [x] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar (completed 2026-07-07)
-- [ ] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
+- [x] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela (completed 2026-07-07)
 - [ ] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
 - [ ] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor
 - [ ] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
@@ -164,7 +164,7 @@ Plans:
 Plans:
 - [x] 13-01-PLAN.md — Sistema --status-* (aliases) + refino de respiro (10 seletores) + statusDeUnidade() no RADAR_PURE (TDD)
 - [x] 13-02-PLAN.md — Pinos semânticos em plot()/pick() + legenda sempre-visível + tooltip a11y + motion de busca em etapas + skeleton shimmer
-- [ ] 13-03-PLAN.md — Onboarding 3 cartões (radar_onboard) + "O que o Radar faz" + auditoria do .chooser (lei da tela)
+- [x] 13-03-PLAN.md — Onboarding 3 cartões (radar_onboard) + "O que o Radar faz" + auditoria do .chooser (lei da tela)
 **Phase flags**: legibilidade dos pinos/cores sobre satélite em luz externa é pendência de UAT (não bloqueante), igual ao herdado do v2.0.
 
 ### Phase 14: Linguagem Impecável (pt-BR) — gate de release
@@ -242,7 +242,7 @@ Plans:
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 12. Prédio Comercial | v2.1 | 2/2 | Complete    | 2026-07-07 |
-| 13. Visual + Pinos + Motion + Descoberta | v2.1 | 2/3 | In Progress|  |
+| 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
