@@ -132,7 +132,7 @@ Plans:
   5. Toda a microcopy e os textos das minutas passam no gate de linguagem (Fase 14); zero campo pessoal de terceiros persistido além do necessário à minuta
 **Plans**: 3 plans
 Plans:
-- [ ] 11.1-01-PLAN.md — RADAR_PURE (TDD): propostaTexto/termoExclusividadeTexto/contratoTexto + parseMatricula + numeroPorExtenso
+- [x] 11.1-01-PLAN.md — RADAR_PURE (TDD): propostaTexto/termoExclusividadeTexto/contratoTexto + parseMatricula + numeroPorExtenso
 - [ ] 11.1-02-PLAN.md — Wizard NEG próprio (#negSheet, estado em memória, nunca persistido) + extração de matrícula + entradas em #dActsMore e #captSheet
 - [ ] 11.1-03-PLAN.md — Template A4 impresso (cláusulas/disclaimer/assinaturas) via pipeline #laudo→#laudoView + verificação end-to-end/privacidade
 **UI hint**: yes
@@ -233,7 +233,7 @@ Plans:
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/3 | Planned | - |
+| 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 1/3 | In Progress|  |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
