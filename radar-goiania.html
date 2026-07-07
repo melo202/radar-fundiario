@@ -432,10 +432,10 @@
     #laudoView .preco .hero{font-size:28px}
   }
   .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
-  .detail .acts a{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
-    border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s,transform .1s ease}
-  .detail .acts a:hover{background:var(--ink);color:var(--paper-2)}
-  .detail .acts a:active{transform:scale(.98)}
+  .detail .acts a,.detail .acts button{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
+    border-radius:2px;padding:10px;font:600 12px/1 "IBM Plex Sans";color:var(--ink);background:var(--paper);transition:background .12s,transform .1s ease;cursor:pointer}
+  .detail .acts a:hover,.detail .acts button:hover{background:var(--ink);color:var(--paper-2)}
+  .detail .acts a:active,.detail .acts button:active{transform:scale(.98)}
   .detail .acts a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .detail .acts a.primary:hover{background:var(--accent-ink)}
 
@@ -490,7 +490,7 @@
     .detail .grab::before{content:"";display:block;position:relative;top:-13px;height:28px;margin:0 -80px}
     .detail .x{width:44px;height:44px;top:0;right:4px;font-size:26px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
-    .detail .acts a{min-height:44px;display:flex;align-items:center;justify-content:center}
+    .detail .acts a,.detail .acts button{min-height:44px;display:flex;align-items:center;justify-content:center}
     /* Leaflet ancora a barra bottomright (satélite + atribuição) em z-1000 no seu
        próprio container — acima do bottom-sheet (.detail z-500), então o botão de
        satélite e a atribuição flutuavam POR CIMA do card (cortavam o preço). Enquanto
@@ -1211,12 +1211,14 @@ async function loadCi(ci){
   finally{if(tk===SEARCHTOKEN)loading(false);}
 }
 
-/* clicar no mapa -> identifica o lote naquele ponto (consulta espacial) */
-async function onMapClick(e){
+/* consulta espacial por ponto (lat/lng WGS84) — extraida para ser reusada por onMapClick
+   (clique real no mapa) E pelo colar de link do Maps/coordenada na caixa unica (parseGeoPaste,
+   BUSCA-13): MESMO caminho de identificacao de lote, mesma disciplina de SEARCHTOKEN. */
+async function identifyPoint(lat,lng){
   const tk=++SEARCHTOKEN;
   loading(true,"identificando lote…");
   try{
-    const [x,y]=proj4("EPSG:4326","EPSG:31982",[e.latlng.lng,e.latlng.lat]);
+    const [x,y]=proj4("EPSG:4326","EPSG:31982",[lng,lat]);
     const d=await jsonp({geometry:`${x.toFixed(2)},${y.toFixed(2)}`,geometryType:"esriGeometryPoint",
       inSR:"31982",spatialRel:"esriSpatialRelIntersects",outFields:"*",returnGeometry:"false",
       resultRecordCount:2000,f:"json"});
@@ -1226,6 +1228,10 @@ async function onMapClick(e){
     finish(items,true); /* veio do mapa: prédio abre o seletor de imóvel */
   }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao identificar o ponto. Tente de novo.");}
   finally{if(tk===SEARCHTOKEN)loading(false);}
+}
+/* clicar no mapa -> identifica o lote naquele ponto (consulta espacial) */
+async function onMapClick(e){
+  identifyPoint(e.latlng.lat,e.latlng.lng);
 }
 
 /* ---------------- setores: expansão de prefixo + busca ---------------- */
@@ -1871,7 +1877,8 @@ function showDetail(a,ll){
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
   document.getElementById("dActs").innerHTML=mapLinks+`
-    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>`;
+    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
+    <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>`;
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
   d.classList.add("show");
@@ -1887,6 +1894,13 @@ function showDetail(a,ll){
 function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
     .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
+}
+/* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
+function copyLink(insc){
+  if(!insc||!navigator.clipboard)return;
+  const url=location.origin+location.pathname+"?insc="+encodeURIComponent(insc);
+  navigator.clipboard.writeText(url)
+    .then(()=>toast("Link copiado."),()=>toast("Não foi possível copiar o link."));
 }
 
 /* ---------------- comparáveis da vizinhança (metodologia: mediana + Q1-Q3, Tukey, n>=5) ---------------- */
@@ -2433,7 +2447,20 @@ document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
-}else{initMap();setView("mapa");initCoach();loadBairros();loadBairroPolys();initCaixa();}
+}else{
+  initMap();setView("mapa");initCoach();loadBairros();loadBairroPolys();initCaixa();
+  /* deep-link ?insc= (BUSCA-09): so depende de map (initMap, sincrona) — NAO espera loadBairros
+     (insc nao usa COMBO/setor). Erro (inscricao nao encontrada) reusa o toast/estado vazio de finish(). */
+  const inscParam=new URLSearchParams(location.search).get("insc");
+  if(inscParam){
+    const digits=inscParam.replace(/\D/g,"");
+    if(digits){
+      document.getElementById("insc").value=digits;
+      setMode("insc");
+      buscar();
+    }
+  }
+}
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"))
   navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW:",e));
 /* offline -> online: recarrega a lista de setores se ela não tiver vindo */
@@ -2549,6 +2576,21 @@ function applyDetectAndSearch(mode,fields){
   if(fields.bairroCode)pickBairro(fields.bairroCode);
   buscar();
 }
+/* BUSCA-13: extrai lat/lng de um link do Google Maps ou coordenada decimal colada na caixa unica.
+   Funcao pura (sem side-effects) — testavel isoladamente. Formatos aceitos:
+   "@lat,lng" (link com zoom, ex.: .../maps/@-16.6799,-49.2550,15z), "?q=lat,lng" ou "&q=lat,lng"
+   (link de compartilhamento), e "lat, lng" decimal cru. Sem geocoding externo — so extracao literal.
+   Valida range (lat -90..90, lng -180..180); bbox de Goiania NAO filtra aqui (T-08-13: aceita e deixa
+   a consulta espacial real responder "nenhum lote nesse ponto" fora da malha, mesma UX do clique real). */
+function parseGeoPaste(text){
+  const s=String(text||"").trim();
+  const m=s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||s.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/)||s.match(/^(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)$/);
+  if(!m)return null;
+  const lat=parseFloat(m[1]),lng=parseFloat(m[2]);
+  if(Number.isNaN(lat)||Number.isNaN(lng))return null;
+  if(Math.abs(lat)>90||Math.abs(lng)>180)return null;
+  return {lat,lng};
+}
 /* CNEFE (BUSCA-10): lazy-load no 1o focus do #caixaInput (nao no boot — precache do sw.js radar-v6
    ja cobre offline). Flag de modulo evita fetch duplicado; token proprio evita que uma resposta fora
    de ordem (digitacao rapida) sobrescreva um estado mais novo (mesma disciplina de SEARCHTOKEN). */
@@ -2567,7 +2609,30 @@ function loadCnefe(){
   const chip=document.getElementById("detectChip");
   const ambig=document.getElementById("ambigChips");
   const clearBtn=document.getElementById("caixaClear");
+  const vozBtn=document.getElementById("caixaVoz");
   let deb=null;
+
+  /* BUSCA-14: voz best-effort (Web Speech API) — o botao so aparece se a API existir no
+     navegador (feature-detected, degrada em silencio). Resultado cai na caixa e roda o MESMO
+     fluxo do listener de input (chama runDetect direto, sem esperar o debounce). */
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){
+    vozBtn.style.display="flex";
+    let rec=null,ouvindo=false;
+    vozBtn.addEventListener("click",()=>{
+      if(ouvindo){if(rec)rec.stop();return;}
+      rec=new SR();
+      rec.lang="pt-BR";rec.interimResults=false;rec.maxAlternatives=1;
+      rec.onstart=()=>{ouvindo=true;vozBtn.classList.add("on");vozBtn.setAttribute("aria-pressed","true");};
+      rec.onresult=(ev)=>{
+        const texto=ev.results&&ev.results[0]&&ev.results[0][0]&&ev.results[0][0].transcript;
+        if(texto){inp.value=texto;runDetect();}
+      };
+      rec.onerror=()=>{toast("Não foi possível usar o microfone. Digite sua busca.");};
+      rec.onend=()=>{ouvindo=false;vozBtn.classList.remove("on");vozBtn.setAttribute("aria-pressed","false");};
+      try{rec.start();}catch(e){toast("Não foi possível usar o microfone. Digite sua busca.");}
+    });
+  }
 
   function renderChip(r){
     LASTDETECT=r;
@@ -2612,6 +2677,16 @@ function loadCnefe(){
     if(!val){chip.classList.remove("show","media");chip.hidden=true;ambig.hidden=true;LASTDETECT=null;
       if(typeof updateCaixaList==="function")updateCaixaList("");
       return;}
+    /* BUSCA-13: link do Maps/coordenada colado -> NAO roda detectMode normal, cai direto no caminho
+       de identificacao por ponto (mesmo de onMapClick), com SEARCHTOKEN. Chip mostra o que foi entendido. */
+    const geo=parseGeoPaste(val);
+    if(geo){
+      chip.classList.remove("media");chip.textContent=`Localização · ${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)}`;
+      chip.hidden=false;chip.classList.add("show");
+      ambig.hidden=true;LASTDETECT=null;closeCaixaList();
+      identifyPoint(geo.lat,geo.lng);
+      return;
+    }
     let r=detectMode(val,COMBO);
     r=applyLastBairroIfNeeded(r);
     if(r.confidence==="baixa")renderAmbig(r);else renderChip(r);
