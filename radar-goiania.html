@@ -1733,6 +1733,80 @@ function contratoTexto(data){
   texto+=blocoAssinatura(comprador.nome, "Comprador");
   return texto;
 }
+
+/* PRED-01/02 (Fase 12, 12-01): resumo do prédio + ordenação/filtro de unidades + análise
+   copiável — puro, zero requisição de rede. "Maior oportunidade" compara SEMPRE contra a
+   média do PRÓPRIO prédio, nunca contra scoreOportunidade/compare/compsStats (async, exigem
+   stats de vizinhança via rede — caro demais para ordenar uma lista local). */
+const __pm2=u=>{const v=u.vlvenal||0,ae=u.areaedif||0;return (v>0&&ae>0)?v/ae:null;};
+
+/* resumoPredio(units): agrega métricas do edifício sobre unidades já carregadas em memória.
+   Honesto — nunca NaN: amostra vazia/sem dado válido produz null, jamais NaN/undefined.
+   __est (contrato): {lo:number,hi:number}|null|undefined, calculado pela Wave 2 fora deste
+   bloco via mercadoEstimado(u) ANTES de chamar esta função — guarda contra entrada suja: só
+   conta __est com AMBOS lo>0 e hi>0 (mantém o invariante "estimadoMedio/faixaLo/faixaHi
+   existem juntos ou nenhum" mesmo com {lo:undefined,hi:100} etc.). */
+function resumoPredio(units){
+  const list=units||[];
+  const n=list.length;
+  const comArea=list.filter(u=>u.areaedif>0);
+  const areaMedia=comArea.length?comArea.reduce((s,u)=>s+u.areaedif,0)/comArea.length:null;
+  const comVenal=list.filter(u=>u.vlvenal>0);
+  const venalMedio=comVenal.length?comVenal.reduce((s,u)=>s+u.vlvenal,0)/comVenal.length:null;
+  const comEst=list.filter(u=>u.__est&&u.__est.lo>0&&u.__est.hi>0);
+  let estimadoMedio=null,faixaLo=null,faixaHi=null;
+  if(comEst.length){
+    estimadoMedio=comEst.reduce((s,u)=>s+(u.__est.lo+u.__est.hi)/2,0)/comEst.length;
+    faixaLo=Math.min(...comEst.map(u=>u.__est.lo));
+    faixaHi=Math.max(...comEst.map(u=>u.__est.hi));
+  }
+  return {n,areaMedia,venalMedio,estimadoMedio,faixaLo,faixaHi};
+}
+
+/* ordenaUnidades(units, criterio): retorna uma NOVA referência (nunca === units), nunca muta
+   o array recebido nem os objetos dentro dele. Empacota índice original como tie-breaker
+   explícito (ordenação estável, não depende de detalhe de engine). Unidades sem base de
+   comparação para o critério ativo vão para o FIM (nunca escondidas). Critério desconhecido/
+   ausente cai em "padrao" (fallback seguro, nunca lança exceção). */
+function ordenaUnidades(units,criterio){
+  const arr=(units||[]).map((u,i)=>({u,i}));
+  let key;
+  if(criterio==="oportunidade"){
+    key=x=>{const p=__pm2(x.u);return p==null?Infinity:p;};
+  }else if(criterio==="estimado-asc"){
+    key=x=>{const e=x.u.__est;return (e&&e.lo>0&&e.hi>0)?(e.lo+e.hi)/2:Infinity;};
+  }else if(criterio==="area-desc"){
+    key=x=>(x.u.areaedif>0)?-x.u.areaedif:Infinity;
+  }else{
+    key=x=>x.i; // "padrao"/desconhecido: no-op, ordena pelo indice original
+  }
+  arr.sort((a,b)=>{const ka=key(a),kb=key(b);return ka!==kb?ka-kb:a.i-b.i;});
+  return arr.map(x=>x.u);
+}
+
+/* ehAptoProvavel(a): heurística determinística (NÃO é certeza absoluta) para o filtro "só
+   aptos prováveis" — uso residencial(1) ou misto(5) E não-garagem (reusa isGarage já
+   existente no mesmo bloco, não duplica a regex). Uso comercial/outros (salas/lojas) -> false. */
+function ehAptoProvavel(a){return (a.uso===1||a.uso===5)&&!isGarage(a);}
+
+/* analisePredicoTexto(resumo, meta): texto copiável WhatsApp-style a partir do retorno de
+   resumoPredio + metadados do prédio. Omite cada cláusula de métrica independentemente
+   quando seu campo é null (nunca "estimado médio: —"/"área média: —" num texto copiável).
+   Nunca chama esc() (texto puro de clipboard, não innerHTML — Wave 2 decide sanitização). */
+function analisePredicoTexto(resumo,meta){
+  const r=resumo||{};
+  const m=meta||{};
+  const rs=n=>n==null?null:"R$ "+Math.round(n).toLocaleString("pt-BR");
+  const partes=[String(r.n==null?0:r.n)+" unidades"];
+  if(r.areaMedia!=null)partes.push("área média "+Math.round(r.areaMedia)+" m²");
+  if(r.venalMedio!=null)partes.push("venal médio "+rs(r.venalMedio));
+  if(r.estimadoMedio!=null)partes.push("estimado médio "+rs(r.estimadoMedio)+" · faixa "+rs(r.faixaLo)+"–"+rs(r.faixaHi));
+  let texto="🏢 "+(m.nome||"Edifício")+" — Q "+(m.quadra||"—")+" · L "+(m.lote||"—")+"\n";
+  texto+=partes.join(" · ");
+  if(m.endereco)texto+="\n\n📍 "+m.endereco;
+  texto+="\nAnálise gerada pelo Radar Fundiário.";
+  return texto;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
