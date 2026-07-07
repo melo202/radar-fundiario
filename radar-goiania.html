@@ -392,6 +392,13 @@
   .wsub{font:500 14px/1.5 "IBM Plex Sans";color:var(--muted);margin:0 0 18px}
   .wcard{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;font:500 14px/1.6 "IBM Plex Sans"}
   .wcard b{font-weight:700}
+  /* Fase 10 CAPT-01 (10-03): blocos do Modo Captação (#captSheet) — reusa .wiz/.wtop/.wbody/.wclose/
+     .wh1/.wsub do wizard, zero classes de layout novas alem destas 5 (conteudo do bloco). */
+  .captblock{background:var(--paper);border:1.5px solid var(--line);border-radius:2px;padding:12px 14px;margin-bottom:14px}
+  .captblock-lbl{font:700 12px/1.2 "IBM Plex Sans";color:var(--ink);margin-bottom:6px;display:block}
+  .captblock-txt{font:500 13.5px/1.55 "IBM Plex Sans";color:var(--ink);white-space:pre-wrap;margin-bottom:10px}
+  .captcopy{min-height:44px;width:100%;border:1.5px solid var(--ink);background:var(--paper-2);color:var(--ink);font:600 13px/1 "IBM Plex Sans";border-radius:2px;cursor:pointer}
+  .captdisclaimer{font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted);margin-top:4px;padding-top:10px;border-top:1px dashed var(--line)}
   .wlabel{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:block}
   .seg{display:flex;gap:8px;flex-wrap:wrap}
   .seg button{padding:12px 18px;border-radius:22px;border:1.5px solid var(--line);background:var(--paper);
@@ -781,6 +788,39 @@
   </div>
   <div class="wbody" id="wBody"></div>
   <div class="wfoot"><button class="wnext" id="wNext" onclick="wizNext()">Continuar</button></div>
+</div>
+
+<!-- MODO CAPTAÇÃO (Fase 10 CAPT-01): sheet .wiz sem steps/dots — 4 textos prontos + copiar individual -->
+<div class="wiz" id="captSheet" hidden role="dialog" aria-modal="true" aria-label="Modo captação">
+  <div class="wtop">
+    <span style="width:44px"></span>
+    <div class="wh1" style="margin:0;font-size:20px">Modo captação</div>
+    <button class="wclose" onclick="fecharCaptacao()" aria-label="Fechar">×</button>
+  </div>
+  <div class="wbody" id="captBody">
+    <p class="wsub">Textos prontos para captar este imóvel — copie e ajuste o que precisar.</p>
+    <div class="captblock">
+      <div class="captblock-lbl">💬 Abordagem por WhatsApp</div>
+      <div class="captblock-txt" id="captZap"></div>
+      <button type="button" class="captcopy" onclick="copyCapt('zap')">Copiar ⧉</button>
+    </div>
+    <div class="captblock">
+      <div class="captblock-lbl">📞 Script de ligação</div>
+      <div class="captblock-txt" id="captLig"></div>
+      <button type="button" class="captcopy" onclick="copyCapt('ligacao')">Copiar ⧉</button>
+    </div>
+    <div class="captblock">
+      <div class="captblock-lbl">📋 Checklist documental</div>
+      <div class="captblock-txt" id="captDoc"></div>
+      <button type="button" class="captcopy" onclick="copyCapt('checklist')">Copiar ⧉</button>
+    </div>
+    <div class="captblock">
+      <div class="captblock-lbl">✅ Tarefa de follow-up</div>
+      <div class="captblock-txt" id="captFollow"></div>
+      <button type="button" class="captcopy" onclick="copyCapt('followup')">Copiar ⧉</button>
+    </div>
+    <div class="captdisclaimer" id="captDisclaimer">Textos gerados automaticamente a partir dos dados do imóvel — revise antes de enviar. Não substituem orientação jurídica.</div>
+  </div>
 </div>
 
 <!-- LAUDO (só aparece na impressão/PDF) -->
@@ -2819,6 +2859,42 @@ function abrirLaudo(){
 let WIZRET=null;
 function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;
   if(WIZRET&&WIZRET.focus){try{WIZRET.focus();}catch(e){}}WIZRET=null;}
+/* Fase 10 CAPT-01 (10-03): Modo Captação — sheet .wiz sem steps, populado pelos 4 templates puros
+   (captAbordagem/captScript/captChecklist/captFollowup, RADAR_PURE 10-01) via dadosFicha(). */
+let CAPTRET=null; /* variável própria (não compartilha WIZRET — os dois sheets podem coexistir) */
+function abrirCaptacao(){
+  if(!DCUR)return;
+  const d=dadosFicha();if(!d)return;
+  document.getElementById("captZap").innerHTML=esc(captAbordagem(d));
+  document.getElementById("captLig").innerHTML=esc(captScript(d));
+  document.getElementById("captDoc").innerHTML=esc(captChecklist(d));
+  document.getElementById("captFollow").innerHTML=esc(captFollowup(d));
+  const disc=document.getElementById("captDisclaimer");
+  disc.textContent="Textos gerados automaticamente a partir dos dados do imóvel — revise antes de enviar. Não substituem orientação jurídica."+
+    (d.perfil===null?" Textos sem assinatura — complete seu perfil no wizard de documento para assinar automaticamente.":"");
+  CAPTRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
+  const sheet=document.getElementById("captSheet");
+  sheet.hidden=false;
+  if(!REDUCE)mAnimate(sheet,{opacity:[0,1]},{duration:0.18});
+  const closeBtn=sheet.querySelector(".wclose");if(closeBtn)closeBtn.focus();
+}
+function fecharCaptacao(){
+  document.getElementById("captSheet").hidden=true;
+  if(CAPTRET&&CAPTRET.focus){try{CAPTRET.focus();}catch(e){}}CAPTRET=null;
+}
+/* copyCapt(tipo): recalcula dadosFicha() (barato, garante consistência se os scores atualizaram
+   com o sheet aberto) e copia o template correspondente com toast especifico. */
+function copyCapt(tipo){
+  const d=dadosFicha();if(!d)return;
+  const MAPA={
+    zap:[captAbordagem,"Abordagem copiada — cole no WhatsApp."],
+    ligacao:[captScript,"Script de ligação copiado."],
+    checklist:[captChecklist,"Checklist copiado."],
+    followup:[captFollowup,"Tarefa de follow-up copiada."]
+  };
+  const par=MAPA[tipo];if(!par)return;
+  copyTexto(par[0](d),par[1]);
+}
 function wizBack(){if(LZ&&LZ.step>0){LZ.step--;wizRender();}}
 function wizSet(k,v){if(!LZ)return;LZ[k]=v;wizRender();}
 function wizDif(d){if(!LZ)return;const i=LZ.difs.indexOf(d);i<0?LZ.difs.push(d):LZ.difs.splice(i,1);wizRender();}
@@ -3253,6 +3329,10 @@ document.addEventListener("focusin",e=>{
     setTimeout(()=>e.target.scrollIntoView({block:"center",behavior:"smooth"}),250);
 });
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  /* Fase 10 CAPT-01 (10-03): #captSheet NO TOPO da cadeia — sheet modal mais recente tem
+     prioridade (mesma posição estrutural do #wiz, adicionado ANTES dele). */
+  const cs=document.getElementById("captSheet");
+  if(cs&&!cs.hidden){fecharCaptacao();return;}
   /* 08-04: dropdown (#caixaList) -> #correctMenu -> #ambigChips, ANTES da ordem existente por baixo
      (que permanece inalterada). #caixaInput/combo de setor dao stopPropagation no seu proprio Esc. */
   const caixaList=document.getElementById("caixaList");
