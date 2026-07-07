@@ -763,6 +763,77 @@ function extractSetor(raw,combo){
 function getLastBairroCode(){
   try{return localStorage.getItem("radar_lastbairro")||null;}catch(e){return null;}
 }
+/* detectMode(textoBruto, combo) — motor de deteccao de intencao da caixa unica (BUSCA-02), SEARCH.md
+   secao 2. Funcao PURA: nao toca DOM, nao chama pickBairro() (so retorna o code/disp do setor
+   detectado no objeto de resultado — quem aplica via pickBairro() e o CALLER, 08-04). Recebe combo
+   como parametro explicito (mesma razao de extractSetor: testabilidade sem depender do boot do app).
+   detectMode e SINCRONA (so consulta o array combo, ja em memoria) — nao precisa de SEARCHTOKEN
+   proprio; se no futuro precisar aguardar combo ainda carregando no boot, quem decide esperar ou
+   degradar e o CALLER (08-04), a funcao pura permanece sincrona.
+
+   Ordem de regras (mutuamente exclusivas, a 1a que casar decide) — CONTRATUAL, ver SEARCH.md secao 2:
+   0. extractSetor roda ANTES de tudo sobre a frase inteira; se achar setor, as regras 1-6 abaixo
+      rodam sobre o "rest" (frase sem o trecho de setor), e o resultado final ganha {bairroCode,bairroDisp}.
+   1. Inscricao — so digitos, comprimento decide o campo (mesmo limiar de buscar(): >10 = nrinscr, senao ci).
+      Confianca ALTA (digitos puros 10/14).
+   2. Quadra+Lote — regex tolerante a "q128 lote 5"/"quadra 128 lt 5"/"128/5". Confianca ALTA.
+   3. Endereco — tipo de via presente em qualquer posicao (TIPOVIA_DETECT, nao ancorada). Confianca ALTA.
+   4. Predio — prefixo textual tipico (ED/EDF/EDIFICIO/RES/RESIDENCIAL/COND/CONDOMINIO). Confianca ALTA.
+   5. Numero curto isolado (1-4 digitos, sem contexto) — AMBIGUO, confianca BAIXA, NAO decide modo
+      (mode:null) — e o gancho da desambiguacao por chips (SEARCH.md secao 3.4), nunca dispara busca so.
+   6. Texto sem numero nem tipo de via — ja tentou setor no passo 0; aqui so resta assumir PREDIO
+      com confianca MEDIA (nome proprio, sem sinal de contexto).
+   Calibrada com amostra SINTETICA nesta plan (08-03) — validar contra amostra real (COMBO+CNEFE)
+   durante 08-04/verificacao final da fase (ROADMAP: confidence MEDIA nesta calibracao). */
+function detectMode(textoBruto,combo){
+  const setor=extractSetor(clean(textoBruto),combo);
+  const raw=clean(setor.code?setor.rest:textoBruto);
+  const digitsOnly=raw.replace(/\D/g,"");
+  const n=norm(raw);
+  const attachSetor=res=>setor.code?Object.assign({},res,{bairroCode:setor.code,bairroDisp:setor.disp}):res;
+
+  // 0b. Setor extraido e NADA sobra depois (frase era so o nome do bairro) — setor isolado,
+  // equivalente ao ramo 6 do heuristico de referencia (SEARCH.md secao 2): mode "ql" sem quadra/lote.
+  if(setor.code && !raw){
+    return attachSetor({mode:"ql",bairroOnly:true,confidence:"media",label:`Setor · ${setor.disp}`});
+  }
+
+  // 1. Inscricao — so digitos, comprimento decide o campo (mesma regra de buscar() MODE=insc)
+  if(digitsOnly.length===raw.replace(/\s/g,"").length && digitsOnly.length>=10){
+    return attachSetor(digitsOnly.length>10
+      ? {mode:"insc",field:"nrinscr",value:digitsOnly,confidence:"alta",label:`Inscrição (unidade) · ${digitsOnly.length} díg.`}
+      : {mode:"insc",field:"ci",value:digitsOnly,confidence:"alta",label:`Inscrição (lote) · ${digitsOnly.length} díg.`});
+  }
+
+  // 2. Quadra+Lote — regex tolerante a "q128 lote 5", "quadra 128 lt 5", "q.128/5", "128/5"
+  const mQL=n.match(/\bQ(?:D|UADRA)?\.?\s*(\d+[A-Z]?)\b.*?\b(?:L(?:T|OTE)?)\.?\s*(\d+(?:\/\d+)?[A-Z]?)\b/)
+         || n.match(/\bQ(?:D|UADRA)?\.?\s*(\d+[A-Z]?)\b/);
+  if(mQL){
+    return attachSetor({mode:"ql",quadra:mQL[1],lote:mQL[2]||"",confidence:"alta",
+      label:mQL[2]?`Quadra ${mQL[1]} · Lote ${mQL[2]}`:`Quadra ${mQL[1]}`});
+  }
+
+  // 3. Endereco — tipo de via explicito, NAO ancorado (TIPOVIA_DETECT, derivado de TIPOVIA)
+  const mVia=raw.match(TIPOVIA_DETECT);
+  if(mVia){
+    const numMatch=raw.match(/\b(\d{1,5})\b\s*$/);
+    return attachSetor({mode:"addr",rua:raw,numero:numMatch?numMatch[1]:"",confidence:"alta",label:`Endereço · ${raw}`});
+  }
+
+  // 4. Predio — prefixo textual tipico
+  const mPredio=n.match(/\b(ED|EDF|EDIFICIO|RES|RESIDENCIAL|COND|CONDOMINIO)\.?\s+(.+)/);
+  if(mPredio){
+    return attachSetor({mode:"bd",predio:mPredio[2],confidence:"alta",label:`Prédio · ${mPredio[2]}`});
+  }
+
+  // 5. Numero curto isolado, sem contexto — AMBIGUO (nunca decide modo, gancho da desambiguacao)
+  if(/^\d{1,4}$/.test(digitsOnly) && digitsOnly===raw.replace(/\s/g,"")){
+    return attachSetor({mode:null,confidence:"baixa",raw,label:"Ambíguo",digits:digitsOnly});
+  }
+
+  // 6. Texto sem numero nem tipo de via — setor ja tentado no passo 0; resta assumir predio (media)
+  return attachSetor({mode:"bd",predio:raw,confidence:"media",label:`Prédio (?) · ${raw}`});
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;

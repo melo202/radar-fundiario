@@ -19,7 +19,7 @@ function loadPureBlock() {
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {clean,norm,ruaCore,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode};",
+    src + "\n;globalThis.__exports = {clean,norm,ruaCore,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode,detectMode};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -94,6 +94,73 @@ test("extractSetor — nao acha setor quando a frase e so texto de predio", () =
 test("getLastBairroCode — nunca lanca excecao (localStorage indisponivel no sandbox vm)", () => {
   assert.doesNotThrow(() => P.getLastBairroCode());
   assert.equal(P.getLastBairroCode(), null);
+});
+
+// detectMode — os 9 casos de <behavior> da Task 2 (7 obrigatorios do roadmap + 2 adicionais de
+// regressao da propria heuristica). Todos rodam com COMBO_FIXTURE injetado como parametro —
+// detectMode nunca le uma global implicita, e testavel isolada do boot do app.
+
+test("detectMode — inscricao 14 digitos -> nrinscr, confianca alta", () => {
+  const r = P.detectMode("30201503461234", COMBO_FIXTURE);
+  assert.equal(r.mode, "insc");
+  assert.equal(r.field, "nrinscr");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — inscricao 10 digitos -> ci, confianca alta", () => {
+  const r = P.detectMode("3020150346", COMBO_FIXTURE);
+  assert.equal(r.mode, "insc");
+  assert.equal(r.field, "ci");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — '135' isolado e AMBIGUO, nao decide modo (confianca baixa)", () => {
+  const r = P.detectMode("135", COMBO_FIXTURE);
+  assert.equal(r.mode, null);
+  assert.equal(r.confidence, "baixa");
+});
+
+test("detectMode — 'Rua 135' decide addr com confianca alta (tipo de via presente)", () => {
+  const r = P.detectMode("Rua 135", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — 'Q135' decide ql com confianca alta (token de quadra)", () => {
+  const r = P.detectMode("Q135", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "135");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — 'quadra 128 lote 5' decide ql com quadra e lote", () => {
+  const r = P.detectMode("quadra 128 lote 5", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "128");
+  assert.equal(r.lote, "5");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — setor-na-frase: 'marista quadra 128 lote 5' extrai o setor ANTES das regras de modo", () => {
+  const r = P.detectMode("marista quadra 128 lote 5", COMBO_FIXTURE);
+  assert.equal(r.bairroCode, "101"); // code do Marista na fixture
+  assert.equal(r.bairroDisp, "Marista");
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "128");
+  assert.equal(r.lote, "5");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode — 'sumer park' sem tipo de via nem setor -> predio, confianca media", () => {
+  const r = P.detectMode("sumer park", COMBO_FIXTURE);
+  assert.equal(r.mode, "bd");
+  assert.equal(r.confidence, "media");
+});
+
+test("detectMode — 'ed. central park' prefixo textual de predio -> confianca alta", () => {
+  const r = P.detectMode("ed. central park", COMBO_FIXTURE);
+  assert.equal(r.mode, "bd");
+  assert.equal(r.confidence, "alta");
 });
 
 export { loadPureBlock, COMBO_FIXTURE };

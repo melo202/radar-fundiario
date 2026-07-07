@@ -23,7 +23,7 @@ function loadPureBlock() {
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,matchScoreQ,matchScoreL,matchScoreRua,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode};",
+    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,matchScoreQ,matchScoreL,matchScoreRua,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode,detectMode};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
