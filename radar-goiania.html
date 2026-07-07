@@ -485,6 +485,10 @@
   .detail .acts a:active,.detail .acts button:active{transform:scale(.98)}
   .detail .acts a.primary,.detail .acts button.primary{background:var(--accent);border-color:var(--accent);color:#fff} /* WR-01: a CTA primária nova é <button> */
   .detail .acts a.primary:hover,.detail .acts button.primary:hover{background:var(--accent-ink)}
+  /* Fase 10 SALV-01: seletor com especificidade >= .detail .acts button (0,2,1) — .acts-save.is-saved
+     (0,2,0) sozinho perde o tie-break pro type selector .detail .acts button e o accent nunca renderiza. */
+  .detail .acts button.acts-save.is-saved{background:var(--accent);border-color:var(--accent);color:#fff}
+  .detail .acts button.acts-save.is-saved:hover{background:var(--accent-ink)}
 
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
@@ -2270,6 +2274,7 @@ function atualizarScores(a, statsR){
   const stats=statsR?{med:statsR.med,q1:statsR.q1,q3:statsR.q3,n:statsR.n,min:statsR.min,max:statsR.max}:null;
   const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk});
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
+  a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
   renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
   document.getElementById("dLeitura").innerHTML=`<p>${esc(leituraPratica({
     tipoImovel: unitLabel(a)||USO[a.uso]||"Imóvel",
@@ -2310,6 +2315,7 @@ function showDetail(a,ll){
   const atipico=isGarage(a);
   const conf=scoreConfianca({areaOk,nComps:0,atipico,venalOk});
   const op=scoreOportunidade(myPm2,null,{});
+  a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
   renderScoresInto(op,conf);
 
   /* 4. #dLeitura — leitura prática por template (zero jargão); op é null pré-compare(), então
@@ -2346,12 +2352,15 @@ function showDetail(a,ll){
      abre JÁ PREENCHIDA; o usuário só resolve o CAPTCHA e a certidão sai com o titular. */
   const inscUse=esc(insc||ci);
   const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(clean(insc||ci).replace(/\D/g,""));
-  /* 5. #dActsPrim — Lei da Tela: 1 primária (Gerar documento) + 2 secundárias (Ver comparáveis, Copiar inscrição) */
+  /* 5. #dActsPrim — Lei da Tela: 1 primária (Gerar documento) + 2 secundárias (Ver comparáveis,
+     ⭐ Salvar oportunidade). O botão de copiar a inscrição foi movido para o bloco de Mais opções
+     abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirLaudo()">📄 Gerar documento</button>
     <button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>
-    <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>`;
-  /* 6. #dActsMore — resto (custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
+    <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar oportunidade</button>`;
+  renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
+  /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
   let mapLinks="";
   if(ll){ /* imóvel sem coordenada abre a ficha mesmo assim — só perde os links de mapa */
     const [lat,lon]=ll;
@@ -2360,6 +2369,7 @@ function showDetail(a,ll){
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
   document.getElementById("dActsMore").innerHTML=`
+    <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
@@ -2381,6 +2391,73 @@ function showDetail(a,ll){
     if(isMobile())mAnimate(d,{transform:["translateY(100%)","translateY(0)"]},{type:"spring",stiffness:420,damping:38,mass:1});
     else mAnimate(d,{opacity:[0,1],transform:["translateY(8px)","translateY(0)"]},{duration:0.18,easing:[0.22,1,0.36,1]});
   }
+}
+/* ---- Fase 10 SALV-01: oportunidades + historico (localStorage, allowlist via oportunidadeItem — 10-01) ---- */
+/* Leitura: try/catch silencioso (mesmo padrão de radar_prof, linha ~2515) — [] em falha/ausência.
+   Escrita: try/catch + toast de falha SEMPRE visível (T-10-06, nunca finge sucesso) + return false. */
+function oppLoad(){
+  try{return JSON.parse(localStorage.getItem("radar_oportunidades")||"[]");}catch(e){return [];}
+}
+function oppSave(arr){
+  try{localStorage.setItem("radar_oportunidades",JSON.stringify(arr));return true;}
+  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio.");return false;}
+}
+function histLoad(){
+  try{return JSON.parse(localStorage.getItem("radar_historico")||"[]");}catch(e){return [];}
+}
+function histSave(arr){
+  try{localStorage.setItem("radar_historico",JSON.stringify(arr));return true;}
+  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio.");return false;}
+}
+function oppTem(insc){
+  return oppLoad().some(it=>it.insc===insc);
+}
+/* extras compartilhados por toggleOportunidade (Oportunidades) e histPush (Histórico) — mesmo
+   cálculo, um único lugar (evita duplicar mercadoEstimado/__scores). */
+function oppExtras(a){
+  const em=mercadoEstimado(a);
+  const sc=a.__scores||{};
+  return {
+    faixaLo: em?Math.round(em.lo):null,
+    faixaHi: em?Math.round(em.hi):null,
+    scoreOportunidade: sc.op?sc.op.rotulo:null,
+    scoreConfianca: sc.conf?sc.conf.nivel:null
+  };
+}
+/* toggleOportunidade(): salva/remove o DCUR em radar_oportunidades. Falha de escrita NÃO muda o
+   estado do botão (o toast de falha já saiu de dentro de oppSave) — nunca finge sucesso (T-10-06). */
+function toggleOportunidade(){
+  if(!DCUR)return;
+  const insc=clean(DCUR.nrinscr||DCUR.ci);
+  const atual=oppLoad();
+  if(oppTem(insc)){
+    const next=atual.filter(it=>it.insc!==insc);
+    if(oppSave(next)){
+      toast("Oportunidade removida.");
+      renderSaveBtn();
+      renderSavedBlocks();
+    }
+  }else{
+    const item=Object.assign(oportunidadeItem(DCUR,oppExtras(DCUR)),{savedAt:new Date().toISOString()});
+    const next=[...atual,item];
+    if(oppSave(next)){
+      toast("Oportunidade salva.");
+      renderSaveBtn();
+      renderSavedBlocks();
+    }
+  }
+}
+/* renderSaveBtn(): sincroniza o botão ⭐ da ficha aberta com oppTem(DCUR) — chamado a CADA abertura
+   de ficha (showDetail) e após toggle/remoção (estado nunca fica desatualizado). */
+function renderSaveBtn(){
+  if(!DCUR)return;
+  const btn=document.querySelector(".detail .acts button.acts-save");
+  if(!btn)return;
+  const insc=clean(DCUR.nrinscr||DCUR.ci);
+  const salvo=oppTem(insc);
+  btn.classList.toggle("is-saved",salvo);
+  btn.setAttribute("aria-pressed",salvo?"true":"false");
+  btn.textContent=salvo?"✓ Salva — remover?":"⭐ Salvar oportunidade";
 }
 function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
