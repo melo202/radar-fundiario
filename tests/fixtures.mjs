@@ -80,4 +80,82 @@ export const FIXTURES = {
     { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:{score:78,rotulo:"Boa oportunidade",porque:[]},confianca:{nivel:"media",porque:[]}}, expectContains:"Setor Bueno", expectNotContains:["mediana","percentil","quartil"] },
     { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:null,confianca:null}, expectExact:"Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo." },
   ],
+
+  // Fase 10 (10-01): fixtures de templates de WhatsApp/Captacao + helpers de persistencia pura
+  // (oportunidadeItem/histAdd) — funcoes novas no bloco RADAR_PURE. Contrato de HONESTIDADE:
+  // faixa=null NUNCA gera valor inventado; ASSINATURA so aparece com perfil.nome (nunca placeholder);
+  // ALLOWLIST de oportunidadeItem nunca deixa PII de terceiro passar.
+
+  // objeto `data` completo (ver <facts> do 10-01-PLAN.md) — COM perfil e faixa, usado nos testes
+  // "com assinatura"/"com faixa" das 5 funcoes zap* + 4 funcoes capt*.
+  zapComData: {
+    endereco: "Rua Portugal, 582",
+    bairro: "Setor Bueno",
+    quadra: "45",
+    lote: "12",
+    tipoImovel: "Apartamento",
+    faixa: { lo: 690000, hi: 780000 },
+    scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
+    scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
+    leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+    perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
+  },
+
+  // mesmo data, SEM perfil — espera-se AUSENCIA total de linha de assinatura (nunca placeholder).
+  zapSemPerfil: {
+    endereco: "Rua Portugal, 582",
+    bairro: "Setor Bueno",
+    quadra: "45",
+    lote: "12",
+    tipoImovel: "Apartamento",
+    faixa: { lo: 690000, hi: 780000 },
+    scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
+    scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
+    leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+    perfil: null,
+  },
+
+  // mesmo data, SEM faixa (faixa=null) — espera-se texto adaptado, NUNCA "R$ undefined"/NaN/inventado.
+  zapSemFaixa: {
+    endereco: "Rua Portugal, 582",
+    bairro: "Setor Bueno",
+    quadra: "45",
+    lote: "12",
+    tipoImovel: "Apartamento",
+    faixa: null,
+    scoreOp: null,
+    scoreConf: null,
+    leitura: "Apartamento no Setor Bueno. Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.",
+    perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
+  },
+
+  // objeto cadastral bruto `a` (mesmo shape de showDetail(a,ll)) simulando o retorno do ArcGIS —
+  // inclui campos de terceiro (dtnascimen/nmtitular) que NUNCA podem chegar ao objeto persistido.
+  oportunidadeItemInput: {
+    a: {
+      nrinscr: "30201503461234",
+      ci: "3020150346",
+      nmbairro: "Setor Bueno",
+      nrquadra: "45",
+      nrlote: "12",
+      tplogradou: "R",
+      nmlogradou: "R PORTUGAL",
+      nrimovel: "582",
+      areaterr: 450,
+      areaedif: 220,
+      vlvenal: 850000,
+      dtnascimen: "19800101",
+      nmtitular: "Fulano de Tal",
+    },
+    extras: { faixaLo: 690000, faixaHi: 780000, scoreOportunidade: 78, scoreConfianca: "media" },
+  },
+
+  // arrays para o teste FIFO puro de histAdd — 29 (nao excede cap 30, nenhuma remocao) e 30
+  // (excede ao entrar o 31o item, remove o mais antigo = evicao real).
+  histAddCases: {
+    list29: Array.from({ length: 29 }, (_, i) => ({ insc: "item" + i })),
+    list30: Array.from({ length: 30 }, (_, i) => ({ insc: "item" + i })),
+    novoItem: { insc: "novo" },
+    cap: 30,
+  },
 };
