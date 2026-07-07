@@ -292,6 +292,21 @@
     font:700 12px/1 "IBM Plex Sans";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
   .cmpbtn:hover{background:var(--lot);color:var(--paper-2)}
   .cmp{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:11px 12px}
+  /* Fase 9 CMP-01: conclusão-primeiro — frase antes da estatística, que recolhe em <details> */
+  .cmp-conclusao{font:600 13.5px/1.5 "IBM Plex Sans";color:var(--ink);margin-bottom:8px}
+  .cmp-conclusao b{color:var(--ink)}
+  .cmp-conclusao b.abaixo{color:var(--accent)}
+  .cmp-conclusao b.acima{color:var(--lot)}
+  .cmp-acts{margin-bottom:2px}
+  .cmpbtn-sm{min-height:44px;font:600 11px/1;padding:8px 10px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink);border-radius:2px;cursor:pointer}
+  .cmp-detalhe{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+  .cmp-detalhe>summary{cursor:pointer;font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted);list-style:none}
+  .cmp-detalhe>summary::-webkit-details-marker{display:none}
+  .cmp-detalhe>summary::before{content:"▸ "}
+  .cmp-detalhe[open]>summary::before{content:"▾ "}
+  .cmp-detalhe .footbody{padding-top:8px}
   .cmp .h{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
   .cmp .h .badge{float:right;font:700 9px/1 "IBM Plex Mono";padding:3px 6px;border-radius:2px;letter-spacing:.06em}
   .badge.alta{background:var(--lot);color:#fff}.badge.media{background:var(--gold);color:#fff}.badge.baixa{background:var(--accent);color:#fff}
@@ -2075,11 +2090,27 @@ function toggleScoreWhy(btn){
   why.hidden=open;
   const chev=btn.querySelector(".score-chev");if(chev)chev.textContent=open?"▸":"▾";
 }
-/* Wave 3 (09-03) implementa: re-renderiza #dScores/#dLeitura com stats de compare() —
-   chamada por compare()/renderComps() ao concluir a análise de vizinhança, sem re-abrir a ficha
-   nem re-fetch. Esta plan (09-02) só declara a assinatura para não quebrar nenhuma referência futura. */
-function atualizarScores(a){
-  /* Wave 3 (09-03) implementa: re-renderiza #dScores/#dLeitura com stats de compare() */
+/* Fase 9 CMP-01 (Wave 3, 09-03): re-renderiza #dScores/#dLeitura com as stats REAIS de
+   compare()/renderComps() — chamada ao final de renderComps(), sem re-abrir a ficha nem re-fetch.
+   statsR = mesmo objeto 'r' de compsStats()/getComps() ({n,min,max,q1,med,q3,...}); null antes de
+   compare() concluir (showDetail() já chama com stats implicitamente nulas via op=null). */
+function atualizarScores(a, statsR){
+  if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio (mesmo guard de renderComps) */
+  const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
+  const myPm2=isU?m2Edif(a):m2Terr(a);
+  const areaOk=!!(isU?a.areaedif:a.areaterr);
+  const venalOk=(a.vlvenal||0)>0;
+  const atipico=isGarage(a);
+  const stats=statsR?{med:statsR.med,q1:statsR.q1,q3:statsR.q3,n:statsR.n,min:statsR.min,max:statsR.max}:null;
+  const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk});
+  const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
+  renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
+  document.getElementById("dLeitura").innerHTML=`<p>${esc(leituraPratica({
+    tipoImovel: unitLabel(a)||USO[a.uso]||"Imóvel",
+    bairro: clean(a.nmbairro),
+    oportunidade: op,
+    confianca: conf
+  }))}</p>`;
 }
 function showDetail(a,ll){
   const d=document.getElementById("detail");
@@ -2279,42 +2310,31 @@ async function compsStats(a,areaField,myArea,radius,isU){
   return {n,exact:false,q1,med,q3,min:Math.max(20,q1-1.5*(q3-q1)),max:q3+1.5*(q3-q1)};
 }
 async function renderComps(box,r,myPm2,radius,isU,a){
-  /* percentil memoizado POR VALOR (mapa), não no objeto compartilhado do cache */
-  const bkey=myPm2.toFixed(2);
-  r._below=r._below||{};
-  let below=r._below[bkey];
+  const bkey=myPm2.toFixed(2);r._below=r._below||{};let below=r._below[bkey];
   if(below===undefined){
     if(r.exact){below=r.vals.filter(v=>v<myPm2).length/r.vals.length;}
-    else{try{const areaField=isU?"areaedif":"areaterr";
-      const base=compsBase(a,areaField,a[areaField],radius,isU);
-      const c=await jsonp(Object.assign({},base,
-        {where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
+    else{try{const areaField=isU?"areaedif":"areaterr";const base=compsBase(a,areaField,a[areaField],radius,isU);
+      const c=await jsonp(Object.assign({},base,{where:base.where+` AND vlvenal/${areaField}<${myPm2.toFixed(2)}`,returnCountOnly:"true"}));
       below=(c.count||0)/r.n;}catch(e){below=null;}}
     r._below[bkey]=below;
   }
-  if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio */
+  if(DCUR!==a)return;
   const amp=(r.q3-r.q1)/r.med;
   const conf=r.n<5?["baixa","poucos vizinhos"]:amp<=.3?["alta","faixa confiável"]:amp<=.4?["media","faixa aproximada"]:["baixa","imóveis muito variados"];
-  const span=Math.max(r.max-r.min,1);
-  const px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100));
-  const pctl=below==null?null:Math.round(below*100);
-  const fx=v=>brl(v);
+  const span=Math.max(r.max-r.min,1), px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100));
+  const pctl=below==null?null:Math.round(below*100), fx=v=>brl(v);
   const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
-  /* fator: ancora na tabela de mercado do bairro (se houver), senão laudos Caixa, senão o manual */
   const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
   const cEff=(isU&&m2b&&r.med>0)?m2b*FATOR_OFERTA*FATOR_PRIV/r.med:(fxCx?fxCx.fator:AUTO_COEF);
-  box.innerHTML=`<div class="cmp">
-    <div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m
-      <span class="badge ${conf[0]}">${conf[1]}</span></div>
-    <div class="bar">
-      ${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div>
-      <div class="med" style="left:${px(r.med)}%"></div>`:""}
-      <div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div>
-    </div>
-    <div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div>
-    <div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — mais caro que <b>${pctl}%</b> dos vizinhos`:""}${pctl!=null&&pctl<=25?" · 💰 entre os mais baratos":pctl!=null&&pctl>=75?" · entre os mais caros":""}</div>
-    <div class="mkt">Preço de mercado estimado na vizinhança: <b>${fx(r.q1*cEff)}–${fx(r.q3*cEff)}/m²</b>. Base: cadastro da prefeitura — estimativa, não avaliação.</div>
-  </div>`;
+  const temBase=r&&r.med>0&&myPm2>0, abaixo=temBase&&myPm2<=r.med;
+  const diffPct=temBase?Math.round(Math.abs(myPm2-r.med)/r.med*100):null;
+  const conclusaoTxt=!temBase?"Posição na vizinhança não pôde ser calculada — confira a estatística completa.":diffPct===0?`<b>Na mediana</b> da vizinhança — alinhado à região.`:abaixo?`<b class="abaixo">${diffPct}% abaixo da mediana</b> da vizinhança — posição favorável para negociar.`:`<b class="acima">${diffPct}% acima da mediana</b> da vizinhança — acima do preço típico da região.`;
+  atualizarScores(a, r); /* fecha o wiring com a Wave 2 (09-02) -- nao depende do innerHTML abaixo */
+  box.innerHTML=`<div class="cmp"><div class="cmp-conclusao">${conclusaoTxt}</div><div class="cmp-acts"><button type="button" class="cmpbtn-sm" onclick="abrirMetodologiaCmp(this)">Ver metodologia</button></div><details class="cmp-detalhe"><summary>Estatística completa</summary><div class="footbody"><div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m <span class="badge ${conf[0]}">${conf[1]}</span></div><div class="bar">${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div><div class="med" style="left:${px(r.med)}%"></div>`:""}<div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div></div><div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div><div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — mais caro que <b>${pctl}%</b> dos vizinhos`:""}${pctl!=null&&pctl<=25?" · 💰 entre os mais baratos":pctl!=null&&pctl>=75?" · entre os mais caros":""}</div><div class="mkt">Preço de mercado estimado na vizinhança: <b>${fx(r.q1*cEff)}–${fx(r.q3*cEff)}/m²</b>. Base: cadastro da prefeitura — estimativa, não avaliação.</div></div></details></div>`;
+}
+function abrirMetodologiaCmp(btn){
+  const d=btn.closest(".cmp").querySelector(".cmp-detalhe");
+  d.open=true;d.scrollIntoView({block:"nearest"});
 }
 
 /* ---------------- laudo de avaliação: wizard iOS-style + PDF via impressão ---------------- */
