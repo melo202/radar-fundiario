@@ -714,6 +714,8 @@ const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"
 /* venal 0/ausente é dado NÃO LANÇADO no cadastro (comum em garagem/box/imóvel não avaliado),
    não "R$ 0" de verdade — mostrar "não informado" em vez de um zero enganoso. */
 const venalTxt=v=>(v>0)?brl(v):"não informado";
+/* IN-01 (08-REVIEW.md): esc() e attribute-safe (HTML markup/atributo, lido de volta como texto/via
+   .dataset) — NUNCA para dentro de string JS inline (onclick="...'${esc(x)}'..."); ver CR-01. */
 const esc=v=>clean(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 /* remove campos pessoais do titular já na entrada (defesa em profundidade — LGPD) */
 const SENS=["dtnascimen","cpf","cnpj","nmcontrib","nmproprie","nome"];
@@ -1739,7 +1741,11 @@ function render(list,opts){
       lastCi=ci;
       if(cnt[ci]>1){
         const ed=esc(nomeEd[ci])||"Imóveis no mesmo lote"; /* galerias/salas costumam não ter nome no cadastro */
-        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa('${esc(ci)}')" title="Centralizar este prédio no mapa">no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div></div>`;
+        /* IN-01 (08-REVIEW.md): mesmo padrao estrutural do CR-01 (onclick="fn('${esc(x)}')" dentro
+           de string JS single-quoted) — corrigido aqui tambem reaproveitando o data-ci JA presente
+           no .bldg-head pai (nenhum atributo novo): verNoMapa(this) le this.closest(...).dataset.ci
+           por referencia de elemento, nunca reconstruindo string JS com texto interpolado. */
+        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa(this)" title="Centralizar este prédio no mapa">no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div></div>`;
       }
     }
     html+=cardHTML(a,i,cnt[ci]>1);
@@ -1833,6 +1839,10 @@ function revealList(ci){if(isMobile())setView("busca");flashList(ci);}
 /* botão "no mapa ↗" do cabeçalho do prédio: leva ao mapa e centraliza/pisca o pino do lote.
    É a contrapartida do revealList — decisão contextual, no momento em que o corretor tem o prédio à frente. */
 function verNoMapa(ci){
+  /* IN-01 (08-REVIEW.md): aceita o ELEMENTO do botão (onclick="verNoMapa(this)") e lê o ci do
+     data-ci do .bldg-head pai — nada de texto interpolado em string JS inline. String continua
+     aceita p/ compatibilidade com chamadas programáticas. */
+  if(ci&&ci.nodeType===1){const h=ci.closest(".bldg-head");ci=h?h.dataset.ci:"";}
   const a=(LAST||[]).find(x=>clean(x.ci)===clean(ci)&&x.x_coord&&x.y_coord);
   if(!a){toast("Este prédio não tem coordenada no cadastro.");return;}
   const ll=toWGS(a.x_coord,a.y_coord);
