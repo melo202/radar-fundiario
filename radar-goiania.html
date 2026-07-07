@@ -2708,7 +2708,13 @@ function loadCnefe(){
     ambig.hidden=false;
   }
   /* setor-ultimo (BUSCA-05): NUNCA silencioso — so aplica quando a frase nao trouxe setor E o modo
-     exige setor; mostra sempre "Setor · Nome (ultimo)" no chip, tocavel p/ trocar (abre o combo). */
+     exige setor; mostra sempre "Setor · Nome (ultimo)" no chip, tocavel p/ trocar (abre o combo).
+     WR-02 (08-REVIEW.md): esta funcao roda a CADA tick do debounce (150ms, enquanto o usuario ainda
+     esta digitando) — por isso e PURA quanto a DOM/localStorage: so CALCULA o {bairroCode,bairroDisp,
+     label} mesclado para a preview do chip, nunca chama pickBairro()/toca #bairroInput/localStorage
+     aqui. A aplicacao real (pickBairro) so acontece no COMMIT da busca — Enter/chip de desambiguacao
+     (applyDetectAndSearch) ou menu de correcao (forceMode) — que ja fazem `if(r.bairroCode)
+     pickBairro(r.bairroCode)` usando o bairroCode calculado aqui via LASTDETECT/fields. */
   function applyLastBairroIfNeeded(r){
     if(!r||r.bairroCode)return r;
     if(r.mode!=="ql"&&r.mode!=="addr"&&r.mode!=="bd")return r;
@@ -2716,7 +2722,6 @@ function loadCnefe(){
     if(!last)return r;
     const b=COMBO.find(x=>String(x.code)===String(last));
     if(!b)return r;
-    pickBairro(b.code);
     const merged=Object.assign({},r,{bairroCode:b.code,bairroDisp:b.disp,
       label:`${r.label} · Setor · ${b.disp} (último)`});
     return merged;
