@@ -1331,8 +1331,10 @@ function resolveBairro(){
 /* ---------------- busca ---------------- */
 function setMode(m){
   MODE=m;
-  [["mQL","ql"],["mAD","addr"],["mBD","bd"],["mIN","insc"]].forEach(([id,v])=>{
-    const b=document.getElementById(id);b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",m===v);});
+  /* botoes do menu de correcao (#correctMenu, reaproveito de .moderow) — a moderow antiga
+     (mQL/mAD/mBD/mIN) foi substituida pela caixa unica (08-04); estes ids sao os NOVOS. */
+  [["cQL","ql"],["cAD","addr"],["cBD","bd"],["cIN","insc"]].forEach(([id,v])=>{
+    const b=document.getElementById(id);if(!b)return;b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",m===v);});
   document.getElementById("needBairro").style.display=(m==="ql"||m==="addr"||m==="bd")?"block":"none";
   document.getElementById("paneQL").style.display=m==="ql"?"block":"none";
   document.getElementById("paneAddr").style.display=m==="addr"?"block":"none";
@@ -2386,6 +2388,13 @@ document.addEventListener("focusin",e=>{
     setTimeout(()=>e.target.scrollIntoView({block:"center",behavior:"smooth"}),250);
 });
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  /* 08-04: dropdown (#caixaList) -> #correctMenu -> #ambigChips, ANTES da ordem existente por baixo
+     (que permanece inalterada). #caixaInput/combo de setor dao stopPropagation no seu proprio Esc. */
+  const caixaList=document.getElementById("caixaList");
+  if(caixaList&&caixaList.classList.contains("show")){closeCaixaList();return;}
+  if(!document.getElementById("correctMenu").hidden){closeCorrectMenu();return;}
+  const ambig=document.getElementById("ambigChips");
+  if(ambig&&!ambig.hidden){ambig.hidden=true;return;}
   if(!document.getElementById("calc").hidden)fecharCustos();
   else if(!document.getElementById("wiz").hidden)fecharLaudo();
   else if(!document.getElementById("laudoView").hidden)fecharLaudoView();
@@ -2422,6 +2431,168 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
 })();
 document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero,#predio").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")buscar();}));
 
+/* ---------------- caixa unica (08-04, Fase 8): substitui a moderow como busca PADRAO ----------------
+   detectMode()/extractSetor()/getLastBairroCode() (08-03, RADAR_PURE) sao consumidos aqui; buscar()/
+   setMode() permanecem intocados (API interna). */
+let LASTDETECT=null; /* ultimo resultado de detectMode() — forceMode()/chips de desambiguacao reusam os campos ja parseados */
+function closeCorrectMenu(){
+  document.getElementById("correctMenu").hidden=true;
+  document.getElementById("cIN").hidden=true;
+}
+function toggleCorrectMenu(){
+  const cm=document.getElementById("correctMenu");
+  if(!cm.hidden){closeCorrectMenu();return;}
+  cm.hidden=false;
+  document.getElementById("cIN").hidden=false;
+  /* sincroniza aria-pressed dos 3 botoes conforme o modo detectado no ultimo resultado */
+  const m=LASTDETECT&&LASTDETECT.mode;
+  [["cQL","ql"],["cAD","addr"],["cBD","bd"]].forEach(([id,v])=>{
+    const b=document.getElementById(id);b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",m===v);});
+}
+/* forceMode(m): abre o modo manualmente a partir do menu de correcao — setMode(m) (preservado) +
+   preenche os campos JA PARSEADOS pelo ultimo detectMode() + fecha o menu + focusFirstField() (preservado). */
+function forceMode(m){
+  setMode(m);
+  const r=LASTDETECT||{};
+  if(m==="ql"){
+    document.getElementById("quadra").value=r.quadra||"";
+    document.getElementById("lote").value=r.lote||"";
+  }else if(m==="addr"){
+    document.getElementById("rua").value=r.rua||document.getElementById("caixaInput").value||"";
+    document.getElementById("numero").value=r.numero||"";
+  }else if(m==="bd"){
+    document.getElementById("predio").value=r.predio||document.getElementById("caixaInput").value||"";
+  }else if(m==="insc"){
+    document.getElementById("insc").value=(r.value)||document.getElementById("caixaInput").value.replace(/\D/g,"")||"";
+  }
+  if(r.bairroCode)pickBairro(r.bairroCode);
+  closeCorrectMenu();
+  focusFirstField();
+}
+function closeCaixaList(){
+  const list=document.getElementById("caixaList");
+  list.classList.remove("show");
+  document.getElementById("caixaInput").setAttribute("aria-expanded","false");
+  document.getElementById("caixaInput").removeAttribute("aria-activedescendant");
+  caixaActive=-1;
+}
+/* aplica o campo/modo detectado (mesmo padrao de forceMode) e dispara buscar() direto — usado pelos
+   chips de desambiguacao (baixa confianca) e pelos exemplos tocaveis (preenchem+buscam no mesmo toque). */
+function applyDetectAndSearch(mode,fields){
+  setMode(mode);
+  fields=fields||{};
+  if(mode==="ql"){document.getElementById("quadra").value=fields.quadra||"";document.getElementById("lote").value=fields.lote||"";}
+  else if(mode==="addr"){document.getElementById("rua").value=fields.rua||"";document.getElementById("numero").value=fields.numero||"";}
+  else if(mode==="insc"){document.getElementById("insc").value=fields.value||"";}
+  if(fields.bairroCode)pickBairro(fields.bairroCode);
+  buscar();
+}
+/* CNEFE (BUSCA-10): lazy-load no 1o focus do #caixaInput (nao no boot — precache do sw.js radar-v6
+   ja cobre offline). Flag de modulo evita fetch duplicado; token proprio evita que uma resposta fora
+   de ordem (digitacao rapida) sobrescreva um estado mais novo (mesma disciplina de SEARCHTOKEN). */
+let CNEFE=null,cnefeLoading=false,CNEFETOKEN=0;
+function loadCnefe(){
+  if(CNEFE||cnefeLoading)return;
+  cnefeLoading=true;
+  const tk=++CNEFETOKEN;
+  fetch("logradouros-goiania.json").then(r=>r.json()).then(d=>{
+    if(tk!==CNEFETOKEN)return; /* focus->fetch->outro focus mais novo: descarta a resposta velha */
+    CNEFE=Array.isArray(d)?d.map(x=>({nome:clean(x.nome),tipo:clean(x.tipo),search:norm(clean(x.nome))})):[];
+  }).catch(e=>{CNEFE=[];console.warn("logradouros-goiania.json:",e);}).finally(()=>{cnefeLoading=false;});
+}
+(function(){
+  const inp=document.getElementById("caixaInput");
+  const chip=document.getElementById("detectChip");
+  const ambig=document.getElementById("ambigChips");
+  const clearBtn=document.getElementById("caixaClear");
+  let deb=null;
+
+  function renderChip(r){
+    LASTDETECT=r;
+    if(!r||r.confidence==="baixa"){
+      chip.classList.remove("show","media");chip.hidden=true;
+      return;
+    }
+    ambig.hidden=true;
+    let label=r.label||"";
+    if(r.bairroCode&&!/^Setor ·/.test(label))label=`${label} · Setor: ${r.bairroDisp}`;
+    if(r.confidence==="media")chip.classList.add("media");else chip.classList.remove("media");
+    chip.textContent=label;
+    chip.hidden=false;chip.classList.add("show");
+  }
+  function renderAmbig(r){
+    LASTDETECT=r;
+    chip.classList.remove("show","media");chip.hidden=true;
+    const n=r.digits||"";
+    const btns=[`<button data-mode="addr" data-rua="Rua ${esc(n)}" data-numero="${esc(n)}">Rua ${esc(n)}</button>`,
+      `<button data-mode="ql" data-quadra="${esc(n)}">Quadra ${esc(n)}</button>`];
+    if(n.length>=5)btns.push(`<button data-mode="insc" data-value="${esc(n)}">Inscrição ${esc(n)}…</button>`);
+    ambig.innerHTML=btns.join("");
+    ambig.hidden=false;
+  }
+  /* setor-ultimo (BUSCA-05): NUNCA silencioso — so aplica quando a frase nao trouxe setor E o modo
+     exige setor; mostra sempre "Setor · Nome (ultimo)" no chip, tocavel p/ trocar (abre o combo). */
+  function applyLastBairroIfNeeded(r){
+    if(!r||r.bairroCode)return r;
+    if(r.mode!=="ql"&&r.mode!=="addr"&&r.mode!=="bd")return r;
+    const last=getLastBairroCode();
+    if(!last)return r;
+    const b=COMBO.find(x=>String(x.code)===String(last));
+    if(!b)return r;
+    pickBairro(b.code);
+    const merged=Object.assign({},r,{bairroCode:b.code,bairroDisp:b.disp,
+      label:`${r.label} · Setor · ${b.disp} (último)`});
+    return merged;
+  }
+  function runDetect(){
+    const val=inp.value;
+    clearBtn.style.display=val?"flex":"none";
+    if(!val){chip.classList.remove("show","media");chip.hidden=true;ambig.hidden=true;LASTDETECT=null;
+      if(typeof updateCaixaList==="function")updateCaixaList("");
+      return;}
+    let r=detectMode(val,COMBO);
+    r=applyLastBairroIfNeeded(r);
+    if(r.confidence==="baixa")renderAmbig(r);else renderChip(r);
+    if(typeof updateCaixaList==="function")updateCaixaList(val);
+  }
+  inp.addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(runDetect,150);});
+  inp.addEventListener("focus",()=>{loadCnefe();if(inp.value&&typeof updateCaixaList==="function")updateCaixaList(inp.value);});
+  inp.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      if(document.getElementById("caixaList").classList.contains("show")&&typeof caixaEnterSelect==="function"&&caixaEnterSelect())return;
+      e.preventDefault();
+      if(!LASTDETECT||LASTDETECT.confidence==="baixa")return; /* baixa confianca NUNCA dispara busca no Enter */
+      applyDetectAndSearch(LASTDETECT.mode,LASTDETECT);
+    }
+  });
+  chip.addEventListener("click",toggleCorrectMenu);
+  clearBtn.addEventListener("click",()=>{
+    inp.value="";clearBtn.style.display="none";chip.hidden=true;chip.classList.remove("show","media");
+    ambig.hidden=true;LASTDETECT=null;closeCaixaList();inp.focus();
+  });
+  ambig.addEventListener("click",e=>{
+    const b=e.target.closest("button[data-mode]");if(!b)return;
+    applyDetectAndSearch(b.dataset.mode,{rua:b.dataset.rua,numero:b.dataset.numero,quadra:b.dataset.quadra,value:b.dataset.value});
+  });
+  document.getElementById("exampleChips").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-example]");if(!b)return;
+    const txt=b.dataset.example;
+    inp.value=txt;
+    let r=detectMode(txt,COMBO);
+    r=applyLastBairroIfNeeded(r);
+    LASTDETECT=r;
+    setMode(r.mode||"addr");
+    if(r.mode==="ql"){document.getElementById("quadra").value=r.quadra||"";document.getElementById("lote").value=r.lote||"";}
+    else if(r.mode==="addr"){document.getElementById("rua").value=r.rua||txt;document.getElementById("numero").value=r.numero||"";}
+    else if(r.mode==="bd"){document.getElementById("predio").value=r.predio||txt;}
+    else if(r.mode==="insc"){document.getElementById("insc").value=r.value||"";}
+    else{ /* confianca baixa mesmo num exemplo tocavel: aplica como quadra (melhor palpite) — nao deveria ocorrer com os 4 exemplos fixos */
+      setMode("ql");document.getElementById("quadra").value=r.digits||"";
+    }
+    buscar();
+  });
+})();
+
 /* combobox de setor: digitar, navegar, fechar */
 (function(){
   const inp=document.getElementById("bairroInput"), list=document.getElementById("bairroList");
@@ -2444,9 +2615,15 @@ document.querySelectorAll("#quadra,#lote,#apto,#insc,#rua,#numero,#predio").forE
       inp.setAttribute("aria-activedescendant",items[comboActive].id);}
     else inp.removeAttribute("aria-activedescendant");
   });
-  /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção */
+  /* pointerdown (não click): no iOS o click global engolia o toque e fechava a lista antes da seleção.
+     Estendido (08-04, nao duplicado): o MESMO listener tambem fecha #caixaList/#ambigChips/#correctMenu
+     quando o toque for fora deles (mesma disciplina, um so listener DOWNEV). */
   const DOWNEV=window.PointerEvent?"pointerdown":"touchstart";
-  document.addEventListener(DOWNEV,e=>{if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}});
+  document.addEventListener(DOWNEV,e=>{
+    if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}
+    if(!e.target.closest(".caixa")&&!e.target.closest("#caixaList"))closeCaixaList();
+    if(!e.target.closest("#correctMenu")&&!e.target.closest("#detectChip")&&!e.target.closest("#cIN"))closeCorrectMenu();
+  });
 })();
 </script>
 
