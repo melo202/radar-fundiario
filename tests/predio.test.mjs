@@ -43,7 +43,9 @@ const P = loadPureBlock();
 
 test("resumoPredio([]) retorna amostra vazia honesta: n:0 e todos os demais campos null (nunca NaN)", () => {
   const r = P.resumoPredio(FIXTURES.resumoPredioCasos.vazio.units);
-  assert.deepEqual(r, FIXTURES.resumoPredioCasos.vazio.expect);
+  // Object cross-realm (node:vm) - comparar campo a campo em vez de assert.deepEqual (que checa
+  // prototype de objeto entre realms diferentes e falha mesmo com valores idênticos).
+  assert.deepEqual({ ...r }, FIXTURES.resumoPredioCasos.vazio.expect);
 });
 
 test("resumoPredio(3 unidades sem areaedif>0) retorna areaMedia:null; venalMedio calculado so sobre vlvenal>0", () => {
