@@ -694,11 +694,40 @@ function matchApto(a,q){
   return inc.includes("APT"+digits)||inc.includes("AP"+digits)||inc.includes("APTO"+digits)||
          (inc.match(/\d+/g)||[]).includes(digits);
 }
-/* modo Quadra/Lote: match exato, dígitos-iguais ou substring (fallback SEM prioridade — 08-02 corrige isto) */
-function okQ(nq,qU){ return !qU||nq===qU||nq.replace(/\D/g,"")===qU.replace(/\D/g,"")||nq.includes(qU); }
-function okL(nl,lU){ return !lU||nl===lU||nl.replace(/[^0-9\/]/g,"").split("/").includes(lU)||nl.includes(lU); }
-/* modo Endereço: rua bate por substring do núcleo OU por igualdade de token numérico */
-function casaRuaCore(log,rCore,rD){ return log.includes(rCore)||(rD&&(log.match(/\d+/g)||[]).includes(rD)); }
+/* modo Quadra/Lote: score de qualidade do match — 0=exato, 1=normalizado/dígitos-iguais, 2=substring
+   (fallback marcado "aproximado"), null=não casa. Dígitos por igualdade SEMPRE antes de substring cru. */
+function matchScoreQ(nq,qU){
+  if(!qU)return 0; // sem filtro = todo mundo "exato" (nao ha selo)
+  if(nq===qU)return 0;
+  if(nq.replace(/\D/g,"")===qU.replace(/\D/g,"")&&qU.replace(/\D/g,""))return 1;
+  // substring cru SO para consulta com LETRA (ex. "10E" dentro de "Q10E2"). Consulta puramente
+  // numerica NUNCA casa por substring: "135" NAO pode casar "2135"/"1350" (falso-positivo do roadmap).
+  if(/\D/.test(qU)&&nq.includes(qU))return 2;
+  return null;
+}
+function matchScoreL(nl,lU){
+  if(!lU)return 0;
+  if(nl===lU)return 0;
+  if(nl.replace(/[^0-9\/]/g,"").split("/").includes(lU))return 1; // "20/21" bate "20" ou "21" por token exato
+  if(nl.includes(lU))return 2;
+  return null;
+}
+/* modo Endereço: rua por fronteira de palavra (token completo via padding de espaço, sem regex
+   dinâmica) ANTES de aceitar substring cru como fallback; ruas numeradas casam por token de dígito.
+   O fallback substring (score 2) exige boundary (espaço/hífen/borda da string) nos DOIS lados —
+   sem isso "BELA" casaria "BELANTINA" no meio da palavra, o falso-positivo que este fix elimina;
+   "-" conta como boundary p/ cobrir ruas hifenadas sem exigir espaço ("BELA-VISTA"). */
+function matchScoreRua(log,rCore,rD){
+  if((" "+log+" ").includes(" "+rCore+" "))return 0; // fronteira de palavra exata (os 2 lados, so espaco)
+  if(rD&&(log.match(/\d+/g)||[]).includes(rD))return 1; // rua numerada, token de dígito igual
+  const i=log.indexOf(rCore);
+  if(i>-1){
+    const before=i===0||log[i-1]===" "||log[i-1]==="-";
+    const after=(i+rCore.length===log.length)||log[i+rCore.length]===" "||log[i+rCore.length]==="-";
+    if(before&&after)return 2; // fallback com boundary nos 2 lados
+  }
+  return null;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -1236,10 +1265,13 @@ async function buscar(){
       let all=await fetchWhere(whereA);
       /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
       if(!all.length&&!nN&&!rD)all=await fetchWhere(`cdbairro=${b} AND vlvenal>0`,8);
-      const casaRua=a=>casaRuaCore(ruaCore(a.nmlogradou),rCore,rD);
+      const ruaScore=a=>matchScoreRua(ruaCore(a.nmlogradou),rCore,rD);
       items=all.filter(a=>{
         const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
-        return casaRua(a)&&okN;
+        const s=ruaScore(a);
+        if(s==null||!okN)return false;
+        a.__matchScore=s;
+        return true;
       });
       /* prédios costumam estar SEM número no cadastro (nrimovel vazio/"S/N"):
          se o número não casar, mostra a rua inteira em vez de "nada encontrado" */
@@ -1248,7 +1280,12 @@ async function buscar(){
         let all2;
         if(rD)all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND nmlogradou LIKE '%${rD}%'`);
         else all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND UPPER(nmlogradou) LIKE '%${rCore}%'`,8);
-        items=all2.filter(casaRua);
+        items=all2.filter(a=>{
+          const s=ruaScore(a);
+          if(s==null)return false;
+          a.__matchScore=s;
+          return true;
+        });
         if(items.length)aviso="Número "+num+" não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira; ache o prédio pelo nome na lista.";
       }
     }else if(MODE==="bd"){
@@ -1286,7 +1323,13 @@ async function buscar(){
       items=all.filter(a=>{
         const nq=clean(a.nrquadra).toUpperCase();
         const nl=clean(a.nrlote).toUpperCase();
-        return okQ(nq,qU)&&okL(nl,lU);
+        const scoreQ=matchScoreQ(nq,qU), scoreL=matchScoreL(nl,lU);
+        if(scoreQ==null||scoreL==null)return false;
+        // scoreQ/scoreL SO valem 0 (nao null) quando o filtro esta VAZIO, e este filtro
+        // (scoreQ==null||scoreL==null) roda ANTES do Math.max — nao trocar o retorno do
+        // caso "sem filtro" (0) sem revisar esta ordem, ou o pior componente deixa de decidir.
+        a.__matchScore=Math.max(scoreQ,scoreL);
+        return true;
       });
     }
     if(tk!==SEARCHTOKEN)return;

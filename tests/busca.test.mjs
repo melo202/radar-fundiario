@@ -23,7 +23,7 @@ function loadPureBlock() {
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,okQ,okL,casaRuaCore};",
+    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,matchScoreQ,matchScoreL,matchScoreRua};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -49,15 +49,21 @@ test("matchApto", () => {
   }
 });
 
-test("okQ", () => {
-  for (const { nq, qU, out } of FIXTURES.okQ) {
-    assert.equal(P.okQ(nq, qU), out, `okQ(nq=${JSON.stringify(nq)}, qU=${JSON.stringify(qU)})`);
+test("matchScoreQ", () => {
+  for (const { nq, qU, out } of FIXTURES.matchScoreQ) {
+    assert.equal(P.matchScoreQ(nq, qU), out, `matchScoreQ(nq=${JSON.stringify(nq)}, qU=${JSON.stringify(qU)})`);
   }
 });
 
-test("okL", () => {
-  for (const { nl, lU, out } of FIXTURES.okL) {
-    assert.equal(P.okL(nl, lU), out, `okL(nl=${JSON.stringify(nl)}, lU=${JSON.stringify(lU)})`);
+test("matchScoreL", () => {
+  for (const { nl, lU, out } of FIXTURES.matchScoreL) {
+    assert.equal(P.matchScoreL(nl, lU), out, `matchScoreL(nl=${JSON.stringify(nl)}, lU=${JSON.stringify(lU)})`);
+  }
+});
+
+test("matchScoreRua", () => {
+  for (const { log, rCore, rD, out } of FIXTURES.matchScoreRua) {
+    assert.equal(P.matchScoreRua(log, rCore, rD), out, `matchScoreRua(log=${JSON.stringify(log)}, rCore=${JSON.stringify(rCore)}, rD=${JSON.stringify(rD)})`);
   }
 });
 

@@ -1,6 +1,6 @@
 // Fixtures para tests/busca.test.mjs — casos de entrada/saída nomeados, reusados pelo harness.
-// Documentam o CONTRATO ATUAL das funções puras de radar-goiania.html (bloco RADAR_PURE),
-// incluindo os falsos-positivos conhecidos que 08-02 vai corrigir (não são bugs desta plan).
+// Documentam o CONTRATO de SCORE (0=exato, 1=normalizado/dígitos-iguais, 2=substring-fallback,
+// null=não casa) das funções puras de radar-goiania.html (bloco RADAR_PURE), pós 08-02 (BUSCA-07).
 
 export const FIXTURES = {
   norm: [
@@ -20,18 +20,30 @@ export const FIXTURES = {
     { incompl: "APT 19", q: "19", out: true },
   ],
 
-  okQ: [
-    { nq: "10E", qU: "10E", out: true }, // caso obrigatório do roadmap: quadra "10E"
-    { nq: "", qU: "", out: true },
-    // substring fallback AINDA vale nesta plan — 08-02 fixa isto; aqui só documenta o estado ATUAL.
-    // caso obrigatório do roadmap: "135" isolado bate "2135" (falso-positivo conhecido, preservado)
-    { nq: "2135", qU: "135", out: true },
+  matchScoreQ: [
+    { nq: "10E", qU: "10E", out: 0 }, // caso obrigatório do roadmap: quadra "10E" — exato
+    { nq: "", qU: "", out: 0 }, // sem filtro = "exato" (nenhum selo)
+    // FIX do falso-positivo do roadmap: "135" isolado (consulta puramente numérica) NÃO
+    // casa mais "2135" por substring cru — retorna null, o item sai do resultado.
+    { nq: "2135", qU: "135", out: null },
+    { nq: "1350", qU: "135", out: null },
+    { nq: "135A", qU: "135", out: 1 }, // dígitos iguais ignorando letra/formatação
+    { nq: "Q10E2", qU: "10E", out: 2 }, // consulta COM letra ainda aceita substring cru (fallback marcado)
   ],
 
-  okL: [
-    { nl: "20/21", lU: "20", out: true }, // caso obrigatório do roadmap: lote "20/21" bate "20"
-    { nl: "20/21", lU: "21", out: true }, // caso obrigatório do roadmap: lote "20/21" bate "21"
-    { nl: "20/21", lU: "22", out: false },
+  matchScoreL: [
+    { nl: "20/21", lU: "20", out: 1 }, // caso obrigatório do roadmap: lote "20/21" bate "20" (token exato)
+    { nl: "20/21", lU: "21", out: 1 }, // caso obrigatório do roadmap: lote "20/21" bate "21" (token exato)
+    { nl: "20/21", lU: "22", out: null },
+    { nl: "20", lU: "20", out: 0 }, // exato
+  ],
+
+  matchScoreRua: [
+    { log: "135", rCore: "135", rD: "135", out: 0 }, // fronteira exata, termo único
+    { log: "BELA VISTA", rCore: "BELA", rD: "", out: 0 }, // fronteira de palavra — token completo no início
+    // FIX: rua "Bela" NÃO casa mais "Belantina" por substring de meio de palavra
+    { log: "BELANTINA", rCore: "BELA", rD: "", out: null },
+    { log: "T4 QD5", rCore: "T-4", rD: "4", out: 1 }, // rua numerada: fronteira de palavra não cobre "T-4"!="T4 QD5", cai no token de dígito "4"
   ],
 
   // "insc": casos de deteccao de campo por tamanho de dígitos — decisão de MODO fica para 08-03;
