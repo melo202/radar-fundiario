@@ -101,7 +101,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
   4. **Modo captação**: a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up — tudo copiável
 **Plans**: 3 plans
 Plans:
-- [ ] 10-01-PLAN.md — Templates puros WhatsApp/Captação + oportunidadeItem/histAdd no RADAR_PURE (TDD, allowlist anti-PII)
+- [x] 10-01-PLAN.md — Templates puros WhatsApp/Captação + oportunidadeItem/histAdd no RADAR_PURE (TDD, allowlist anti-PII)
 - [ ] 10-02-PLAN.md — Persistência localStorage (radar_oportunidades/radar_historico) + ⭐ Salvar na ficha + blocos Oportunidades/Histórico no painel Consulta
 - [ ] 10-03-PLAN.md — Grupo "Copiar para WhatsApp" (5 botões) + Modo Captação (sheet .wiz) + sweep ACAO-01
 **Phase flags**: nomenclatura consistente (não alternar "Oportunidades/Favoritos/Salvos" — decidir os nomes e travar; entra no gate LING-01). Nomes travados no 10-CONTEXT.md: "Oportunidades" (explícito) e "Histórico" (automático).
@@ -222,7 +222,7 @@ Plans:
 | 7. Fundação de Dados (Nomes/CNEFE/Malha) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 8. Busca Única Inteligente | v2.1 | 5/5 | Complete    | 2026-07-07 |
 | 9. Ficha Comercial + Scores | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 0/3 | Planned | - |
+| 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 1/3 | In Progress|  |
 | 11. Documentos em 3 Níveis | v2.1 | 0/TBD | Not started | - |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 0/TBD | Not started | - |
 | 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
