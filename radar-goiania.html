@@ -684,7 +684,13 @@ const addrDe=a=>logradouroDe(a)+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?",
 const clean=v=>String(v==null?"":v).trim();
 const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/\s+/g," ").trim();
 /* núcleo do nome da rua: sem acento, sem "RUA/AV/R." na frente — o cadastro embute o tipo no nome ("R  MARAJO") */
-const TIPOVIA=/^(RUA|R|AVENIDA|AVN?|ALAMEDA|AL|TRAVESSA|TV|PRACA|PC|ESTRADA|EST|RODOVIA|ROD|VIELA|VIA)\.?\s+/;
+/* fonte única da lista de palavras de tipo de via — TIPOVIA (ancorada, ^...) e TIPOVIA_DETECT (livre,
+   casa em qualquer posição da frase) derivam da MESMA lista, para não duplicar/dessincronizar (08-03). */
+const TIPOVIA_WORDS="RUA|R|AVENIDA|AVN?|ALAMEDA|AL|TRAVESSA|TV|PRACA|PC|ESTRADA|EST|RODOVIA|ROD|VIELA|VIA";
+const TIPOVIA=new RegExp("^(?:"+TIPOVIA_WORDS+")\\.?\\s+");
+/* TIPOVIA_DETECT roda sobre texto NAO normalizado (raw, vindo direto do input do usuario em
+   detectMode) — precisa da flag "i" para casar "Rua"/"rua"/"RUA" sem depender de norm() previo. */
+const TIPOVIA_DETECT=new RegExp("\\b(?:"+TIPOVIA_WORDS+")\\.?\\s+","i");
 const ruaCore=s=>norm(s).replace(/'/g,"").replace(TIPOVIA,"");
 /* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
 const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
@@ -728,6 +734,34 @@ function matchScoreRua(log,rCore,rD){
     if(before&&after)return 2; // fallback com boundary nos 2 lados
   }
   return null;
+}
+/* setor embutido na frase (BUSCA-04, SEARCH.md secao 3.2) — funcao pura: recebe o array de setores
+   como PARAMETRO (combo), nunca le uma global implicita, para ser testavel sem depender do boot do
+   app. Testa prefixos de 1 a 4 palavras do INICIO da frase (nomes de bairro em Goiania tem 1-4
+   palavras, ex. "Jardim Goias", "Parque Amazonia") contra combo[].search. Match ANCORADO NO INICIO
+   da frase — mais estrito que resolveBairro() generico (que casa em qualquer posicao), reduzindo
+   falso-positivo quando a origem e texto livre da caixa unica (risco documentado: prefixo acidental
+   de uma palavra do inicio da frase casando um setor por coincidencia). Em caso de multiplos hits no
+   mesmo prefixo, prefere o de search mais LONGO (nome mais especifico). */
+function extractSetor(raw,combo){
+  const words=String(raw||"").trim().split(/\s+/).filter(Boolean);
+  for(let take=Math.min(4,words.length);take>=1;take--){
+    const prefix=norm(words.slice(0,take).join(" "));
+    if(!prefix)continue;
+    const hits=(combo||[]).filter(b=>b.search.indexOf(prefix)===0);
+    if(hits.length){
+      hits.sort((a,b)=>b.search.length-a.search.length); // nome mais especifico (search mais longo) primeiro
+      const rest=words.slice(take).join(" ");
+      return {code:hits[0].code,disp:hits[0].disp,rest};
+    }
+  }
+  return {code:null,disp:null,rest:raw};
+}
+/* ultimo setor lembrado (BUSCA-05, SEARCH.md secao 3.3) — le localStorage com try/catch silencioso,
+   mesma convencao de radar_prof/radar_coach (chave prefixada "radar_"); nunca lanca excecao mesmo
+   sem localStorage disponivel (modo privado, SSR de teste, etc.). A escrita ocorre em pickBairro(). */
+function getLastBairroCode(){
+  try{return localStorage.getItem("radar_lastbairro")||null;}catch(e){return null;}
 }
 // RADAR_PURE_END
 
@@ -1116,6 +1150,7 @@ function filterCombo(qtext){
 function pickBairro(code){
   const b=COMBO.find(x=>x.code===code);if(!b)return;
   document.getElementById("bairro").value=code;
+  try{localStorage.setItem("radar_lastbairro",code);}catch(e){} // BUSCA-05: lembra o ultimo setor (so o code, sem PII)
   document.getElementById("bairroInput").value=b.disp;
   document.getElementById("bairroList").classList.remove("show");
   comboExpanded(false);
