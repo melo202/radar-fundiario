@@ -1532,7 +1532,10 @@ function extensoInteiro(n){
    "um milhão e cem mil reais" sem "de"). */
 function numeroPorExtenso(valor){
   if(valor==null||isNaN(valor)) return "";
-  const n=Math.abs(Number(valor));
+  /* WR-01 (11.1-REVIEW): valor negativo NAO e preco valido — retorna "" (mesmo caminho honesto
+     do null) em vez do Math.abs silencioso que renderizava o valor positivo sem sinal. */
+  if(Number(valor)<0) return "";
+  const n=Number(valor);
   const inteiro=Math.floor(n);
   const valorFmt="R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const ext=extensoInteiro(inteiro);
@@ -3552,13 +3555,18 @@ function montarNeg(){
   const hoje=new Date().toLocaleDateString("pt-BR");
   const blocosBrutos=String(texto||"").split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);
   const clausulasHtml=blocosBrutos
-    .filter(b=>b.indexOf("Minuta para conferência das partes")<0)  // disclaimer sai do fluxo — vai pra caixa
+    /* WR-02 (11.1-REVIEW): dropar SÓ quando o bloco É o disclaimer (começa com ele) — o filtro por
+       substring em qualquer posição apagava uma cláusula legítima que o usuário editou citando a
+       frase. O disclaimer canônico segue SEMPRE na caixa .negdisclaimer-print abaixo. */
+    .filter(b=>b.indexOf("Minuta para conferência das partes")!==0)
     .filter(b=>!/^_{5,}/.test(b))                                   // linhas de assinatura ("____...") não duplicam os .lass abaixo
     .map(b=>{
       const linhas=b.split("\n");
       const primeira=linhas[0];
       const resto=linhas.slice(1).join("\n");
-      const ehTitulo=/^Cláusula\s+\d+ª?\s*—?/.test(primeira)||primeira===primeira.toUpperCase();
+      /* WR-03 (11.1-REVIEW): "linha toda maiúscula" só é título se tiver LETRA — string numérica
+         ("45.678") passa em x===x.toUpperCase() e virava heading órfão em negrito. */
+      const ehTitulo=/^Cláusula\s+\d+ª?\s*—?/.test(primeira)||(primeira===primeira.toUpperCase()&&/[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ]/.test(primeira));
       return `<div class="negclausula-item">${ehTitulo?`<b>${esc(primeira)}</b>`:""}${resto||!ehTitulo?`<p>${esc(ehTitulo?resto:b)}</p>`:""}</div>`;
     }).join("");
   const corretorLinha=(NEG.corretor&&NEG.corretor.nome)?`Corretor(a): ${esc(NEG.corretor.nome)}${NEG.corretor.creci?" · CRECI "+esc(NEG.corretor.creci):""} · Goiânia/GO · ${hoje}`:`Goiânia/GO · ${hoje}`;

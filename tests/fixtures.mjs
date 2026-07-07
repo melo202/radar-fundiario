@@ -456,5 +456,6 @@ export const FIXTURES = {
     centoCinquenta: { valor: 150, expectContains: ["cento e cinquenta reais"] },
     mil: { valor: 1000, expectContains: ["mil reais"], expectNotContains: ["um mil"] },
     nulo: { valor: null, expectEmpty: true },
+    negativo: { valor: -500, expectEmpty: true }, // WR-01 (11.1-REVIEW): preço negativo não é válido — "" honesto, nunca Math.abs silencioso
   },
 };
