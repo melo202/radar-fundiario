@@ -489,6 +489,25 @@
      (0,2,0) sozinho perde o tie-break pro type selector .detail .acts button e o accent nunca renderiza. */
   .detail .acts button.acts-save.is-saved{background:var(--accent);border-color:var(--accent);color:#fff}
   .detail .acts button.acts-save.is-saved:hover{background:var(--accent-ink)}
+  /* Fase 10 SALV-01: #savedBlocks e' IRMAO estatico de #results — visibilidade 100% por CSS, sem
+     ancorar em #emptyState (que morre na 1a busca). As 4 rotas vazias de #results (inicial, erro,
+     sem-resultado, falha de init) renderizam um .empty; com lista de resultados nao ha .empty. */
+  #savedBlocks{display:none}
+  .panel:has(#results .empty) #savedBlocks{display:block}
+  .savedblock{background:var(--paper);border:1.5px solid var(--line);border-radius:2px;padding:12px 14px;margin:0 16px 14px}
+  .savedblock-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .savedblock-tt{font:700 13px/1.2 "IBM Plex Sans";color:var(--ink)}
+  .savedblock-count{font:700 11px/1 "IBM Plex Mono",monospace;color:var(--muted);background:var(--paper-2);border:1px solid var(--line);border-radius:2px;padding:3px 7px;min-width:20px;text-align:center}
+  .savedblock-clear{font:600 11px/1 "IBM Plex Sans";color:var(--muted);background:transparent;border:0;text-decoration:underline;min-height:32px;cursor:pointer}
+  .saveditem-row{display:flex;align-items:stretch;gap:4px;border-top:1px solid var(--line)}
+  .saveditem-row:first-child{border-top:0}
+  .saveditem{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:44px;padding:8px 4px;background:transparent;border:0;cursor:pointer;text-align:left;font-family:inherit}
+  .saveditem-addr{font:700 13.5px/1.25 "IBM Plex Sans";color:var(--ink)}
+  .saveditem-hist .saveditem-addr{font-weight:600}
+  .saveditem-meta{font:500 11.5px/1.3 "IBM Plex Sans";color:var(--muted)}
+  .saveditem-rm{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}
+  .saveditem-rm:hover,.saveditem-rm:focus-visible{color:var(--accent)}
+  .savedempty{font:500 12.5px/1.5 "IBM Plex Sans";color:var(--muted);padding:6px 2px}
 
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
@@ -646,6 +665,9 @@
       <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Oportunidades Caixa (<span id="caixaN">0</span>)</button>
     </div>
 
+    <!-- Fase 10 SALV-01: container ESTATICO, irmao de #results — nenhuma rota de busca o toca.
+         renderSavedBlocks() so preenche o innerHTML; visibilidade 100% via CSS :has (ver <style>). -->
+    <div id="savedBlocks"></div>
     <div class="results" id="results">
       <div class="empty" id="emptyState">
         <div class="big">Encontre qualquer imóvel de Goiânia</div>
@@ -2341,6 +2363,7 @@ function showDetail(a,ll){
   const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
   if(DCUR!==a)d.scrollTop=0; /* imóvel novo: sheet abre no topo (senão o × fica fora da tela) */
   DCUR=a;
+  histPush(a); /* Fase 10 SALV-01: auto-add ao radar_historico a cada abertura de ficha (dedupe+FIFO 30) */
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
   else compsBox.innerHTML=
     (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
@@ -2458,6 +2481,125 @@ function renderSaveBtn(){
   btn.classList.toggle("is-saved",salvo);
   btn.setAttribute("aria-pressed",salvo?"true":"false");
   btn.textContent=salvo?"✓ Salva — remover?":"⭐ Salvar oportunidade";
+}
+/* helper local de data (sem lib): "consultado hoje às HH:MM" (mesmo dia) ou "consultado em DD/MM" —
+   usa o mesmo estilo pt-BR do resto do app (fmtDt e' p/ datas do cadastro AAAAMMDD, nao serve aqui). */
+function fmtVisita(iso){
+  const dt=new Date(iso);
+  if(isNaN(dt))return "";
+  const hoje=new Date();
+  const mesmoDia=dt.getFullYear()===hoje.getFullYear()&&dt.getMonth()===hoje.getMonth()&&dt.getDate()===hoje.getDate();
+  if(mesmoDia){
+    const hh=String(dt.getHours()).padStart(2,"0"),mm=String(dt.getMinutes()).padStart(2,"0");
+    return "consultado hoje às "+hh+":"+mm;
+  }
+  const dd=String(dt.getDate()).padStart(2,"0"),mo=String(dt.getMonth()+1).padStart(2,"0");
+  return "consultado em "+dd+"/"+mo;
+}
+function fmtSalva(iso){
+  const dt=new Date(iso);
+  if(isNaN(dt))return "";
+  const dd=String(dt.getDate()).padStart(2,"0"),mo=String(dt.getMonth()+1).padStart(2,"0");
+  return "salva em "+dd+"/"+mo;
+}
+/* renderSavedBlocks(): (re)preenche #savedBlocks.innerHTML — container ESTATICO, irmao de #results
+   (fix plan-check). Idempotente por natureza: nunca consulta o estado da busca, so os arrays de
+   localStorage. Oportunidades SEMPRE presente (com .savedempty quando vazio); Historico so com
+   >=1 item. TODO texto de cadastro passa por esc() (IN-01); onclick sempre por referencia de
+   elemento (abrirOportunidade(this)/removerOportunidade(this)), nunca string interpolada. */
+function renderSavedBlocks(){
+  const box=document.getElementById("savedBlocks");
+  if(!box)return;
+  const opps=oppLoad();
+  const rowsOpp=opps.map(it=>{
+    const meta=["Q "+esc(it.quadra||"—")+" · L "+esc(it.lote||"—")+" · "+esc(it.bairro||"—")]
+      .concat(it.faixaLo!=null&&it.faixaHi!=null?["faixa "+brlC(it.faixaLo)+"–"+brlC(it.faixaHi)]:[])
+      .concat(it.scoreOportunidade?["oportunidade: "+esc(it.scoreOportunidade)]:[])
+      .concat(it.savedAt?[fmtSalva(it.savedAt)]:[])
+      .join(" · ");
+    return `<div class="saveditem-row" data-insc="${esc(it.insc)}">
+      <button type="button" class="saveditem" onclick="abrirOportunidade(this)">
+        <span class="saveditem-addr">${esc(it.endereco||"Endereço não cadastrado")}</span>
+        <span class="saveditem-meta">${meta}</span>
+      </button>
+      <button type="button" class="saveditem-rm" onclick="removerOportunidade(this)" aria-label="Remover esta oportunidade">×</button>
+    </div>`;
+  }).join("");
+  const oppBlock=`<div class="savedblock" id="oportunidadesBlock">
+    <div class="savedblock-head">
+      <span class="savedblock-tt">⭐ Minhas oportunidades</span>
+      <span class="savedblock-count" id="oportunidadesCount">${opps.length}</span>
+    </div>
+    ${opps.length?`<div class="savedlist" id="oportunidadesList">${rowsOpp}</div>`
+      :`<div class="savedempty">Nenhuma oportunidade salva ainda — toque ⭐ numa ficha.</div>`}
+  </div>`;
+  const hist=histLoad();
+  let histBlock="";
+  if(hist.length){
+    const rowsHist=hist.slice().reverse().map(it=>{
+      return `<div class="saveditem-row" data-insc="${esc(it.insc)}">
+        <button type="button" class="saveditem saveditem-hist" onclick="abrirOportunidade(this)">
+          <span class="saveditem-addr">${esc(it.endereco||"Endereço não cadastrado")}</span>
+          <span class="saveditem-meta">${esc(fmtVisita(it.visitedAt))}</span>
+        </button>
+      </div>`;
+    }).join("");
+    histBlock=`<div class="savedblock savedblock-hist" id="historicoBlock">
+      <div class="savedblock-head">
+        <span class="savedblock-tt">🕘 Histórico</span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="savedblock-clear" onclick="limparHistorico()">Limpar</button>
+          <span class="savedblock-count" id="historicoCount">${hist.length}</span>
+        </span>
+      </div>
+      <div class="savedlist savedlist-hist" id="historicoList">${rowsHist}</div>
+    </div>`;
+  }
+  box.innerHTML=oppBlock+histBlock;
+}
+/* abrirOportunidade(el): aceita elemento (le data-insc do .saveditem-row mais proximo) OU string
+   (compat programatica, mesmo padrao dual de verNoMapa). Reusa LITERALMENTE o caminho do deep-link
+   ?insc= do init — zero logica de busca nova; buscar() cuida de SEARCHTOKEN/loading/erro. */
+function abrirOportunidade(el){
+  const insc=(typeof el==="string")?el:(el&&el.closest("[data-insc]")?el.closest("[data-insc]").dataset.insc:"");
+  const digits=String(insc||"").replace(/\D/g,"");
+  if(!digits)return;
+  document.getElementById("insc").value=digits;
+  setMode("insc");
+  buscar();
+}
+/* removerOportunidade(el): le data-insc do elemento (IN-01 — nunca string interpolada). */
+function removerOportunidade(el){
+  const row=el&&el.closest?el.closest("[data-insc]"):null;
+  const insc=row?row.dataset.insc:"";
+  if(!insc)return;
+  const next=oppLoad().filter(it=>it.insc!==insc);
+  if(oppSave(next)){
+    toast("Oportunidade removida.");
+    renderSavedBlocks();
+    renderSaveBtn(); /* se a ficha aberta e' o mesmo imovel, o ⭐ volta ao estado nao-salvo */
+  }
+}
+function limparHistorico(){
+  if(histSave([]))renderSavedBlocks();
+}
+/* histPush(a): auto-add ao radar_historico — chamado de dentro de showDetail() apos DCUR=a.
+   Dedupe: se o ULTIMO item do historico tem a mesma insc, atualiza visitedAt em vez de duplicar
+   (evita 30 copias do mesmo imovel ao reabrir repetidamente). Falha de escrita mostra o toast
+   (histSave), mas NAO bloqueia a abertura da ficha — historico e' acessorio. */
+function histPush(a){
+  const insc=clean(a.nrinscr||a.ci);
+  const lista=histLoad();
+  const ultimo=lista.length?lista[lista.length-1]:null;
+  const item=Object.assign(oportunidadeItem(a,oppExtras(a)),{visitedAt:new Date().toISOString()});
+  let next;
+  if(ultimo&&ultimo.insc===insc){
+    next=lista.slice(0,-1).concat([item]);
+  }else{
+    next=histAdd(lista,item,30);
+  }
+  histSave(next);
+  renderSavedBlocks();
 }
 function copyInsc(v){
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
@@ -3003,6 +3145,7 @@ function initCoach(){
 /* ---------------- init ---------------- */
 document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
+renderSavedBlocks(); /* Fase 10 SALV-01: estado persistido (oportunidades/historico) aparece ao abrir o app */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{
