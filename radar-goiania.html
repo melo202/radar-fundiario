@@ -906,6 +906,103 @@ function detectMode(textoBruto,combo){
   // 6. Texto sem numero nem tipo de via — setor ja tentado no passo 0; resta assumir predio (media)
   return attachSetor({mode:"bd",predio:raw,confidence:"media",label:`Prédio (?) · ${raw}`});
 }
+
+/* SCORE-01 (Fase 9): score de oportunidade 0-100 pela posicao do R$/m² do imovel (myPm2) vs
+   mediana/quartis da vizinhanca (stats: {med,q1,q3,n}, mesmo shape de compsStats()/getComps()).
+   Formula: percentil aproximado de myPm2 dentro da distribuicao (usa q1/med/q3 como ancoras --
+   interpolacao linear em 4 segmentos: [min~q1-1.5iqr, q1], [q1,med], [med,q3], [q3,max~q3+1.5iqr]).
+   score = 100 - percentil (abaixo da mediana = mais oportunidade pro comprador, score alto).
+   SEM BASE (retorna null, nunca inventa): stats ausente, stats.n<3, ou myPm2 nao finito/<=0.
+   flags.atipico (imovel garagem/box/etc, via isGarage) NAO bloqueia o score mas rebaixa o rotulo
+   de confianca em scoreConfianca (nao aqui) -- score de oportunidade eh so posicao de preco. */
+function scoreOportunidade(myPm2, stats, flags){
+  if(!stats || !(stats.n>=3) || !(myPm2>0) || !isFinite(myPm2)) return null;
+  const {q1,med,q3} = stats;
+  if(!(q1>0 && med>0 && q3>0) || !(q3>=q1)) return null;
+  const iqr = q3-q1;
+  const min = stats.min!=null ? stats.min : Math.max(1, q1-1.5*iqr);
+  const max = stats.max!=null ? stats.max : q3+1.5*iqr;
+  const lerp=(v,a,b,pa,pb)=> b===a ? pa : pa+(v-a)/(b-a)*(pb-pa);
+  let pct;
+  if(myPm2<=min) pct=0;
+  else if(myPm2>=max) pct=100;
+  else if(myPm2<=q1) pct=lerp(myPm2,min,q1,0,25);
+  else if(myPm2<=med) pct=lerp(myPm2,q1,med,25,50);
+  else if(myPm2<=q3) pct=lerp(myPm2,med,q3,50,75);
+  else pct=lerp(myPm2,q3,max,75,100);
+  const score=Math.round(100-pct);
+  const diffPct=Math.round(Math.abs(myPm2-med)/med*100);
+  const abaixo=myPm2<med;
+  let rotulo, porque;
+  if(score>=66){
+    rotulo="Boa oportunidade";
+    porque=[`Está ${diffPct}% abaixo da mediana da vizinhança (comparáveis em até ${(flags&&flags.radius)||400} m).`];
+  } else if(score>=33){
+    rotulo="Oportunidade média";
+    porque=[abaixo
+      ? `Está ${diffPct}% abaixo da mediana da vizinhança.`
+      : `Está ${diffPct}% acima da mediana da vizinhança.`];
+  } else {
+    rotulo="Abaixo da mediana";
+    porque=[`Está ${diffPct}% acima da mediana da vizinhança — entre os mais caros da região.`];
+  }
+  return {score, rotulo, porque};
+}
+
+/* SCORE-02 (Fase 9): confianca alta/media/baixa por COMPLETUDE de dados (nunca por qualidade de preco).
+   Criterios (cada ausencia = 1 pendencia citada em porque[]):
+   - areaOk: area (privativa ou total, conforme o tipo) confirmada/presente (>0)
+   - nComps: numero de comparaveis validos na vizinhanca (0 se sem consulta ainda)
+   - atipico: imovel atipico na amostra (garagem/box/etc via isGarage)
+   - venalOk: venal informado (>0) -- sem venal, a base fiscal do calculo fica mais fraca
+   nivel: alta (0 pendencias E nComps>=8), media (<=1 pendencia E nComps>=3), baixa (demais casos) */
+function scoreConfianca(inputs){
+  const {areaOk,nComps,atipico,venalOk} = inputs||{};
+  const n = nComps||0;
+  /* (fix plan-check) PENDENCIAS (defeitos contaveis) separadas de NOTAS (informativas):
+     n entre 3 e 7 e uma NOTA no porque[], nao um defeito — senao qualquer 1 defeito real
+     + 3..7 comparaveis viraria sempre 2 "pendencias" => "baixa", contradizendo a spec
+     (fixture obrigatoria: areaOk=false + nComps=6 => "media"). So n<3 conta como defeito. */
+  const pendencias=[];
+  const notas=[];
+  if(!areaOk) pendencias.push("faltou a área confirmada");
+  if(!venalOk) pendencias.push("valor venal não informado");
+  if(atipico) pendencias.push("imóvel atípico na amostra (uso pouco comum na vizinhança)");
+  if(n<3) pendencias.push(`poucos comparáveis na vizinhança (${n})`);
+  else if(n<8) notas.push(`${n} comparáveis na vizinhança`);
+  let nivel;
+  if(pendencias.length===0 && n>=8) nivel="alta";
+  else if(pendencias.length<=1 && n>=3) nivel="media";
+  else nivel="baixa";
+  const partes = pendencias.concat(notas);
+  const porque = partes.length
+    ? [partes.join("; ")+"."]
+    : [`${n} comparáveis na vizinhança, dados completos.`];
+  return {nivel, porque};
+}
+
+/* LEIT-01 (Fase 9): leitura pratica em pt-BR por TEMPLATE determinístico (zero LLM, zero jargao --
+   mediana/percentil/quartil NUNCA aparecem aqui, so em "ver metodologia"). Combina rotulo de uso
+   (residencial/comercial/etc, ja mapeado por USO[]) + bairro + resultado de scoreOportunidade/
+   scoreConfianca (podem ser null). Templates enumerados, sem geracao livre de texto. */
+function leituraPratica(inputs){
+  const {tipoImovel,bairro,oportunidade,confianca} = inputs||{};
+  const local = bairro ? `no ${bairro}` : "nesta região";
+  const sujeito = tipoImovel || "Imóvel";
+  if(!oportunidade){
+    return "Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.";
+  }
+  const liquidezBaixa = confianca && confianca.nivel==="baixa";
+  if(oportunidade.score>=66){
+    return `${sujeito} ${local}. Boa liquidez esperada` +
+      (liquidezBaixa ? ", se área e conservação forem confirmadas." : " — preço competitivo para a região.");
+  }
+  if(oportunidade.score>=33){
+    return `${sujeito} ${local}. Imóvel alinhado à região` +
+      (liquidezBaixa ? ", com boa liquidez se área privativa e conservação forem confirmadas." : ".");
+  }
+  return `${sujeito} ${local}. Preço acima da média da vizinhança — negociação pode ser necessária para boa liquidez.`;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
