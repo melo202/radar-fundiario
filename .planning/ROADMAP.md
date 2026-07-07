@@ -146,7 +146,10 @@ Plans:
   1. **Resumo do prédio** antes da lista: nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio, achar aptos mais interessantes)
   2. Ordenação (maior oportunidade / menor valor estimado / maior área) e filtros (ocultar garagem/box, aptos prováveis, buscar unidade); marcar unidades p/ comparação
   3. Guarda da correção do mobile já feita (lista não some atrás do form; garagem = "não informado") não regride
-**Plans**: TBD · **UI hint**: yes
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — RADAR_PURE (TDD): resumoPredio/ordenaUnidades/ehAptoProvavel/analisePredicoTexto
+- [ ] 12-02-PLAN.md — UI: resumo do predio (.bldg-head expandido) + ordenacao/filtro + marcacao para comparar + sheet de comparacao
 
 ### Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva
 **Goal**: A cara "cockpit premium" — limpa, com cor só onde significa status, movimento que orienta e revelação progressiva do poder do app.
@@ -234,7 +237,7 @@ Plans:
 | 10. Ação + WhatsApp + Captação + Salvos | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11. Documentos em 3 Níveis | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete    | 2026-07-07 |
-| 12. Prédio Comercial | v2.1 | 0/TBD | Not started | - |
+| 12. Prédio Comercial | v2.1 | 0/2 | Not started | - |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 0/TBD | Not started | - |
 | 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
