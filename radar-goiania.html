@@ -46,6 +46,19 @@
     --l-border:#e6e4df;   /* borda dos cards */
     --l-hair:#efece6;     /* separadores de linha (chave/valor) */
     --l-bg:#faf9f7;       /* fundo da página do laudo */
+    /* Fase 13 VIS-01/PIN-01: sistema de STATUS — cada var abaixo e um ALIAS de um hex JA
+       EXISTENTE acima (documentado a direita). Nenhum hex novo introduzido, exceto
+       --status-atencao-ink que reusa o hex LITERAL ja usado em .score-op.media .score-num
+       (linha ~321) — nomeado aqui, mesmo valor. Cor de status SEMPRE acompanha texto/icone —
+       nunca e o unico veiculo de significado (ver 13-UI-SPEC.md). */
+    --status-bom:var(--lot);             /* = #2c5545, mesmo verde de .score-op.alta/.conf-alta */
+    --status-bom-ink:var(--lot-bright);  /* = #3f7a63, ja existente — hover/estado ativo */
+    --status-atencao:var(--gold);        /* = #a8842c, mesmo dourado de .score-op.media */
+    --status-atencao-ink:#7d621f;        /* mesmo hex literal ja usado em .score-op.media .score-num */
+    --status-risco:var(--accent);        /* = #b5451f, mesmo oxido de .score-op.baixa/erro */
+    --status-risco-ink:var(--accent-ink);/* = #8f3116, ja existente */
+    --status-caixa:var(--gold);          /* = #a8842c, MESMO hex do pino dourado CAIXA (toggleCaixa) */
+    --status-semdado:var(--muted);       /* = #57503f, cinza neutro ja usado em texto secundario */
   }
   /* Fase 6 (Motion): kill-switch global de acessibilidade — zera/encurta animation/transition
      quando o usuário/SO pede menos movimento. Presente desde o 1º commit de motion (não retrofit). */
@@ -138,7 +151,7 @@
   .chk{display:flex;align-items:center;gap:8px;font:500 12px/1 "IBM Plex Sans"!important;letter-spacing:0!important;
     text-transform:none!important;color:var(--muted)!important;cursor:pointer;margin:4px 0 0!important}
   .chk input{width:auto;margin:0;accent-color:var(--accent)}
-  .bldg-head{margin:8px 16px 2px;padding:10px 12px;background:var(--ink);color:var(--paper-2);border-radius:2px}
+  .bldg-head{margin:8px 16px 2px;padding:12px 14px;background:var(--ink);color:var(--paper-2);border-radius:2px}
   .bldg-head .nm{font:700 13px/1.2 "IBM Plex Sans";display:flex;justify-content:space-between;align-items:center;gap:10px}
   .bldg-head .tomap{flex:none;border:1px solid var(--paper-2);background:transparent;color:var(--paper-2);
     font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.03em;padding:7px 9px;border-radius:2px;cursor:pointer;white-space:nowrap}
@@ -147,7 +160,7 @@
   .bldg-head.flash{animation:bldgflash 1.1s ease}
   @keyframes bldgflash{0%,100%{background:var(--ink)}25%{background:var(--accent);box-shadow:0 0 0 3px var(--accent)}}
   /* Fase 12 (12-02) Componente 1: resumo do predio, EXPANDE .bldg-head (mesmo fundo --ink) */
-  .bldg-sumario{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .bldg-sumario{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
   .bldg-metricas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
   @media(min-width:481px){.bldg-metricas{grid-template-columns:repeat(4,1fr)}}
   .bm{display:flex;flex-direction:column;gap:2px}
@@ -185,7 +198,7 @@
     color:var(--muted);font:600 12px/1.4 "IBM Plex Sans";padding:12px;border-radius:2px;cursor:pointer;min-height:44px}
   .mais:hover{border-color:var(--accent);color:var(--accent)}
   .card{position:relative;margin:8px 16px;background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--lot);
-    border-radius:2px;padding:13px 14px;cursor:pointer;transition:border-color .12s,transform .1s ease,filter .1s ease}
+    border-radius:2px;padding:14px 16px;cursor:pointer;transition:border-color .12s,transform .1s ease,filter .1s ease}
   .card:hover{border-left-color:var(--accent);border-color:var(--muted)}
   .card.sel{border-left-color:var(--accent);border-color:var(--ink);background:var(--paper-2)}
   .card:active{transform:scale(.98);filter:brightness(.97)}
@@ -194,7 +207,7 @@
   .card .matchapprox{color:var(--accent);font-weight:600} /* selo "match aproximado" — reusa fonte/cor do ql-tag, sem hex/transition novo (08-UI-SPEC) */
   .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--muted)}
   .card .grid2 b{color:var(--ink);font-weight:600}
-  .card .vals{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .card .vals{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
   /* mercado estimado = número-âncora da decisão (grande, accent); venal = legenda secundária */
   .card .vals .ref .lbl{display:block;font:700 10px/1 "IBM Plex Sans";letter-spacing:.02em;color:var(--accent)}
   .card .vals .ref b{display:block;font:800 17px/1.1 "IBM Plex Sans";color:var(--accent);margin-top:3px;white-space:nowrap}
@@ -235,7 +248,7 @@
   .empty{padding:40px 22px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
   .empty .big{font-size:15px;color:var(--ink);font-weight:600;margin-bottom:6px}
 
-  .foot{padding:9px 22px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);line-height:1.5}
+  .foot{padding:10px 22px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);line-height:1.5}
   .foot>summary{cursor:pointer;font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.07em;text-transform:uppercase;
     list-style:none;user-select:none;color:var(--muted)}
   .foot>summary::-webkit-details-marker{display:none}
@@ -270,7 +283,7 @@
   #breadcrumb .crumb.sep{color:var(--line);font-weight:400;padding:0 2px;min-height:0}
   #breadcrumb .crumb.bairro{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
-    border:2px solid var(--ink);border-radius:3px;padding:16px 18px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none;
+    border:2px solid var(--ink);border-radius:3px;padding:20px 22px;box-shadow:0 6px 20px rgba(20,26,31,.22);display:none;
     max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto} /* iPhone paisagem cai no desktop: precisa rolar */
   .detail.show{display:block}
   .detail .x{position:absolute;top:10px;right:12px;border:0;background:transparent;font-size:20px;color:var(--muted);cursor:pointer;line-height:1}
@@ -300,15 +313,15 @@
   .detail .dgrid .cell.hl .v{color:var(--accent)}
   .detail .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
   /* Fase 9 FICHA-01: conclusão comercial primeiro — faixa de valor, scores, leitura prática */
-  .dvalor{background:var(--paper);border:2px solid var(--ink);border-radius:2px;padding:16px 18px;margin-bottom:12px}
+  .dvalor{background:var(--paper);border:1.5px solid var(--ink);border-radius:2px;padding:18px 20px;margin-bottom:16px}
   .dvalor-k{font:600 11px/1.2 "IBM Plex Sans";color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
   .dvalor-v{font:800 22px/1.15 "IBM Plex Sans";color:var(--ink);margin:4px 0 2px}
   .dvalor-v.muted{color:var(--muted)}
   .dvalor-m{font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
 
-  .dscores{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .dscores{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .score{flex:1;min-width:150px;min-height:44px;display:block;text-align:left;background:var(--paper);
-    border:1.5px solid var(--line);border-radius:2px;padding:8px 12px;cursor:pointer;font-family:inherit}
+    border:1.5px solid var(--line);border-radius:2px;padding:10px 14px;cursor:pointer;font-family:inherit}
   .score-op{border-left:4px solid var(--line)}
   .score-op.alta{border-left-color:var(--lot)}
   .score-op.media{border-left-color:var(--gold)}
@@ -325,7 +338,7 @@
   .score-chev{float:right;color:var(--muted)}
   .score-why{font:500 12px/1.5 "IBM Plex Sans";color:var(--muted);padding:8px 12px 2px}
 
-  .dleitura{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:12px 14px;margin-bottom:12px}
+  .dleitura{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:14px 16px;margin-bottom:16px}
   .dleitura p{font:500 13.5px/1.55 "IBM Plex Sans";color:var(--ink);margin:0}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
@@ -334,7 +347,7 @@
   .maisopcoes>summary::-webkit-details-marker{display:none}
   .maisopcoes>summary::before{content:"▸ "}
   .maisopcoes[open]>summary::before{content:"▾ "}
-  .maisopcoes .footbody.acts{padding-top:8px}
+  .maisopcoes .footbody.acts{padding-top:10px}
   /* Fase 10 ZAP-01/CAPT-01 (10-03): grupo "Copiar para WhatsApp" + "Captar este imóvel" dentro de
      #dActsMore — separador tracejado, botões full-width empilhados (nao a grade flex do .acts). */
   .zapgroup{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);width:100%}
@@ -1884,6 +1897,21 @@ function analisePredicoTexto(resumo,meta){
   if(m.endereco)texto+="\n\n📍 "+m.endereco;
   texto+="\nAnálise gerada pelo Radar Fundiário.";
   return texto;
+}
+// Fase 13 VIS-01/PIN-01: mapeia status de EXIBICAO — nunca recalcula score, so aplica as MESMAS
+// bandas 66/33 de scoreOportunidade sobre um score ja disponivel. Nunca retorna 'caixa' (essa
+// distincao e decidida pelo CALLER, fora desta funcao — ver 13-UI-SPEC.md Componente 1).
+function statusDeUnidade(input){
+  let score;
+  if(input && typeof input==="object"){
+    score = input.op ? input.op.score : undefined;
+  } else {
+    score = input;
+  }
+  if(typeof score!=="number" || !isFinite(score)) return "semdado";
+  if(score>=66) return "bom";
+  if(score>=33) return "atencao";
+  return "risco";
 }
 // RADAR_PURE_END
 
