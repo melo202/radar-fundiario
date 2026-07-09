@@ -174,7 +174,13 @@ Plans:
 **Success Criteria**:
   1. Toda a microcopy (botões, placeholders, mensagens de erro, tooltips, títulos, descrições, PDFs, mensagens de WhatsApp) passou pelo checklist §26: acentuação correta; **verbo de ação** nos botões (gerar/copiar/salvar/comparar/enviar/criar); erro que explica e oferece saída; sem jargão na 1ª camada; sem caixa alta em bloco longo; sem ironia/gíria; consistência de nomenclatura
   2. As mensagens copiadas p/ WhatsApp parecem escritas por um corretor profissional; os documentos usam linguagem formal e juridicamente cuidadosa
-**Plans**: TBD
+**Plans**: 5 plans (ondas sequenciais — todas editam radar-goiania.html)
+Plans:
+- [ ] 14-01-PLAN.md — Glossário canônico + tabela de auditoria + correções A1 (jargão no rótulo de score) e A2 (capitalização do loading)
+- [ ] 14-02-PLAN.md — Varredura de UI de entrada: botões (verbo de ação), placeholders, títulos/PWA, onboarding, "O que o Radar faz", legenda
+- [ ] 14-03-PLAN.md — Varredura de feedback: toasts/erros (§26.3), estados vazios, tooltips e aria-label
+- [ ] 14-04-PLAN.md — RADAR_PURE: templates de WhatsApp + Captação (com atualização dos testes acoplados em lockstep)
+- [ ] 14-05-PLAN.md — RADAR_PURE: documentos + negociação (disclaimers preservados) + prédio + consolidação do gate §26
 
 ### Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território
 **Goal**: O corretor vê o "calor" de valor do território e as métricas do setor, sem avalanche de requisições.
@@ -243,7 +249,7 @@ Plans:
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 12. Prédio Comercial | v2.1 | 2/2 | Complete    | 2026-07-07 |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
-| 14. Linguagem Impecável (gate) | v2.1 | 0/TBD | Not started | - |
+| 14. Linguagem Impecável (gate) | v2.1 | 0/5 | Not started | - |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
