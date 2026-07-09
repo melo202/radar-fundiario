@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: verifying
-stopped_at: Completed 14-05-PLAN.md
-last_updated: "2026-07-09T21:54:28.582Z"
+status: executing
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-07-09T22:55:19.272Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 13
   completed_phases: 9
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_plans: 33
+  completed_plans: 31
+  percent: 94
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 14 — Linguagem Impecável (pt-BR) — gate de release
+**Current focus:** Phase 15 — Setor-Scan Compartilhado, Choropleth & Painel do Território
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 15 (Setor-Scan Compartilhado, Choropleth & Painel do Território) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-07-09
 
 Progress: [░░░░░░░░░░] 0%
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14 P03 | 8min | 2 tasks | 2 files |
 | Phase 14 P04 | 6min | 2 tasks | 2 files |
 | Phase 14 P05 | 10min | 2 tasks | 2 files |
+| Phase 15 P01 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 14]: [14-04]: captFollowup ('Follow-up') mantido sem mudanca — anglicismo ja estabelecido em outras 2 ancoras do app (label + toast), troca isolada quebraria consistencia de nomenclatura
 - [Phase 14]: [14-05]: achado transversal de concordancia de genero 'no regiao'->'na regiao' corrigido via helper localTxt em 6 funcoes RADAR_PURE (zapResumo/zapProprietario/zapComprador/captAbordagem/captScript/fichaRapidaTexto); auditoria dos Planos 01/04 atualizada retroativamente
 - [Phase 14]: [14-05]: gate LING-01 fechado - 14-AUDITORIA.md com 11 secoes completas, contagem (~287 revisadas/30 alteradas) e sign-off dos 8 criterios SS26, todos PASS; npm test 107/107 verde
+- [Phase 15]: [15-01]: outFields restrito adotado como padrao de territorioScan (divergencia intencional do quirk antigo, verificado ao vivo ~80% menos payload), com fallback automatico para outFields=* nunca travando o scan
+- [Phase 15]: [15-01]: USO relocado (nao duplicado) para dentro do bloco RADAR_PURE para que mixUso seja visivel ao harness de teste node:vm
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:42:56.587Z
-Stopped at: Completed 14-05-PLAN.md
+Last session: 2026-07-09T22:55:19.269Z
+Stopped at: Completed 15-01-PLAN.md
 Resume file: None
