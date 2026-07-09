@@ -110,15 +110,41 @@ Varredura completa dos 106 elementos retornados por `grep -n "<button" radar-goi
 
 ## Placeholders
 
+Varredura das 19 ocorrências de `placeholder="` (inclui 2 atribuições via JS, `inp.placeholder=`). Nenhuma alteração — todos seguem o padrão deliberado de "exemplo tocável" (prefixo `ex.:`/`digite:` minúsculo) já estabelecido, ou já atendem §26 quando são instrução (verbo, capitalizado).
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 02)* | | | | |
+| `quadra 128 lote 5 · rua portugal 582 · sumer park · 3020150346` (caixaInput) | 809 | avaliado-mantido | (sem mudança) | exemplo tocável minúsculo deliberado — mesmo texto dos exampleChips |
+| `digite: faiçalville, oeste, marista…` (bairroInput, estático) | 834 | avaliado-mantido | (sem mudança) | exemplo minúsculo deliberado; acentuação correta |
+| `ex.: 246` (quadra) | 843 | avaliado-mantido | (sem mudança) | exemplo tocável minúsculo deliberado |
+| `ex.: 21` (lote) | 844 | avaliado-mantido | (sem mudança) | idem |
+| `ex.: 135, 85, portugal` (rua) | 850 | avaliado-mantido | (sem mudança) | idem |
+| `ex.: 582` (numero) | 852 | avaliado-mantido | (sem mudança) | idem |
+| `ex.: 1901 (vazio = prédio todo)` (apto) | 857 | avaliado-mantido | (sem mudança) | idem; acentuação correta |
+| `ex.: sumer park, riviera, absolut…` (predio) | 863 | avaliado-mantido | (sem mudança) | idem |
+| `ex.: 3020150346` (insc) | 868 | avaliado-mantido | (sem mudança) | idem |
+| `digite: faiçalville, oeste, marista…` (`inp.placeholder=`, reset após troca de modo) | 2382 | avaliado-mantido | (sem mudança) | mesma string de 834, mantém consistência |
+| `erro ao carregar — recarregue a página` (placeholder de erro do combo de bairro) | 2383 | avaliado-mantido | (sem mudança) | §26.3 (o que houve + o que fazer) já atendido — "erro ao carregar" explica, "recarregue a página" é a saída; acentuação de "página" confirmada correta |
+| `Buscar unidade (ex.: apto 302)` (busca de unidade no prédio) | 2971 | OK | (sem mudança) | verbo de ação + exemplo, já correto |
+| `Cole aqui o texto da matrícula/certidão — vamos tentar identificar o número e o cartório.` (negmat) | 3982 | OK | (sem mudança) | instrução clara com verbo ("Cole"), acentuação correta, explica o que a ferramenta faz |
+| `ex.: 84 — o cadastro traz a área TOTAL (…), com comum e vaga` (área privativa) | 4309 | avaliado-mantido | (sem mudança) | exemplo minúsculo deliberado; "TOTAL" é ênfase de uma palavra isolada, não bloco longo em caixa alta (§26.5 não se aplica) |
+| `ex.: reformado em 2024, vista livre, aceita permuta…` (observações) | 4316 | avaliado-mantido | (sem mudança) | exemplo tocável minúsculo deliberado |
+| `quem pediu o parecer` (solicitante) | 4326 | avaliado-mantido | (sem mudança) | placeholder descritivo minúsculo (padrão de campo, não frase completa) |
+| `ex.: 12345` (CRECI) | 4332 | avaliado-mantido | (sem mudança) | exemplo tocável minúsculo deliberado |
+| `ex.: 6789` (CNAI) | 4334 | avaliado-mantido | (sem mudança) | idem |
+| `ex.: 84 m²` (área privativa, checklist) | 4355 | avaliado-mantido | (sem mudança) | idem |
 
 ## Títulos/Descrições/PWA
 
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 02)* | | | | |
+| `manifest.json` → `name`: "Radar Fundiário · Goiânia" | manifest.json:2 | OK | (sem mudança) | acentuação correta, profissional, sem jargão |
+| `manifest.json` → `short_name`: "Radar" | manifest.json:3 | OK | (sem mudança) | curto e claro, adequado para ícone de app |
+| `manifest.json` → `description`: "Busca de imóveis de Goiânia por quadra e lote sobre o cadastro imobiliário público" | manifest.json:4 | avaliado-mantido | (sem mudança) | sem jargão amador, acentuação correta, tom profissional (§26 satisfeito); tecnicamente incompleta (só cita quadra/lote, app já cobre endereço/inscrição/CI unificados) — fora do escopo de linguagem deste gate, registrada como possível ajuste de conteúdo futuro, não bloqueante |
+| `index.html` → `<title>`: "Radar Fundiário · Goiânia" | index.html:6 | OK | (sem mudança) | consistente com o título do app principal |
+| `index.html` → link de redirect: "Abrir o Radar Fundiário" | index.html:9 | OK | (sem mudança) | já começa com verbo de ação ("Abrir") |
+| `radar-goiania.html` → `<title>`: "Radar Fundiário · Goiânia" | radar-goiania.html:14 | OK | (sem mudança) | consistente com index.html e manifest.json |
+| `radar-goiania.html` → `<meta name="description">` | — | avaliado | não existe no `<head>` | ausência não é um critério §26 (metadado de SEO/compartilhamento, não texto visível ao usuário na UI); não adicionado nesta fase de gate de linguagem — fora do escopo de LING-01 (texto-apenas em elementos já existentes) |
 
 ## Onboarding + O que o Radar faz + Legenda
 
