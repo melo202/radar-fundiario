@@ -83,7 +83,7 @@
 ### Território / captação de área (rebaixado — após o cockpit)
 
 - [x] **TERR-01**: Função compartilhada de varredura de setor com cache de sessão e **orçamento de requisições** (respeita o endpoint frágil; base de todas as ferramentas de território)
-- [ ] **TERR-02**: Choropleth de R$/m² venal por quadra/lote (quantis relativos ao setor) — camada de "calor de valor" legível também sobre o satélite
+- [x] **TERR-02**: Choropleth de R$/m² venal por quadra/lote (quantis relativos ao setor) — camada de "calor de valor" legível também sobre o satélite
 - [x] **TERR-03**: Painel do Meu Território (mediana + Q1–Q3 de R$/m², IPTU mediano, idade do cadastro, mix de uso por setor)
 - [ ] **TERR-04**: Detector de lote subutilizado (razão construído/terreno baixa em quadra de venal alto) sobre o scan compartilhado
 - [ ] **TERR-05**: Farming/Caderno de território em **IndexedDB** — salvar setor/lotes, tags, notas, status (allowlist anti-PII, nunca `dtnascimen`)
