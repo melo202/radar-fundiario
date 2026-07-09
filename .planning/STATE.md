@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: executing
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-07-09T23:06:34.292Z"
+status: verifying
+stopped_at: Completed 15-03-PLAN.md
+last_updated: "2026-07-09T23:23:21.033Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 13
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 33
-  completed_plans: 32
-  percent: 97
+  completed_plans: 33
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 15 (Setor-Scan Compartilhado, Choropleth & Painel do Território) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-09
 
 Progress: [░░░░░░░░░░] 0%
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14 P05 | 10min | 2 tasks | 2 files |
 | Phase 15 P01 | 15min | 2 tasks | 3 files |
 | Phase 15 P02 | 25min | 3 tasks | 3 files |
+| Phase 15 P03 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 15]: [15-02]: mo (motivo do join heuristico) mantido no snapshot bairro-cdbairro.json mesmo sem consumidor nesta plan - reservado p/ sinal de honestidade futuro (Plano 03)
 - [Phase 15]: [15-02]: wash do setor ativo em baiStyle() usa sempre a faixa 3 (cor-media) - variacao real por R$/m2 vive no nivel de LOTE, nao de bairro
 - [Phase 15]: [15-02]: fix Rule 1 - highlightBairro/clearBaiHi chamavam baiStyle() sem feature, perdendo o wash do setor ao limpar hover; corrigido para baiStyle(baiHi.feature)
+- [Phase 15]: [15-03]: nome do setor no painel usa esc()+textContent (padrao ja usado em showBreadcrumb), replicado por consistencia de convencao do projeto
+- [Phase 15]: [15-03]: buscarNoSetor() reusa setMode/pickBairro (mesmo par usado por pickCaixaItem para itens setor) - nenhum caminho de busca novo
+- [Phase 15]: [15-03]: fix Rule 1 - clearBaiHi() agora esconde btnVerTerr ao limpar o hover, evitando abrir territorio de um layer que ja saiu de foco
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-09T23:06:34.288Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-07-09T23:23:21.030Z
+Stopped at: Completed 15-03-PLAN.md
 Resume file: None
