@@ -3052,7 +3052,11 @@ async function mostrarVerTerr(layer){
    só então monta o painel — nunca recalcula 2x a mesma varredura. */
 async function abrirTerritorio(layer){
   await carregarLookupCdbairro();
-  const cd=resolveCdbairroDeLayer(layer||baiHi);
+  /* layerAtual (WR-04 15-REVIEW.md): capturado UMA vez no início — usado em todo o resto da
+     função (inclusive no fechamento do "tentar de novo" de checarVarreduraParcial) em vez de
+     reler `baiHi` global, que pode já ter mudado (highlightBairro) até o retry ser clicado. */
+  const layerAtual=layer||baiHi;
+  const cd=resolveCdbairroDeLayer(layerAtual);
   if(cd==null){toast("Este setor não tem dado fiscal para o território.");return;}
   closeDetail();
   loading(true,MOTION_MSG.varrendo);
@@ -3061,8 +3065,8 @@ async function abrirTerritorio(layer){
     loading(true,MOTION_MSG.faixas);
     const st=aplicarChoropleth(scan);
     montarLegenda(st); /* WR-01 15-REVIEW.md: popula #terrLbl1..5 + #terrAmostra (faltava) */
-    montarPainel(scan,st,layer||baiHi);
-    checarVarreduraParcial(scan); /* 15-03 Task 2: varredura best-effort — avisa sem bloquear */
+    montarPainel(scan,st,layerAtual);
+    checarVarreduraParcial(scan,layerAtual); /* 15-03 Task 2: varredura best-effort — avisa sem bloquear */
     loading(false);
   }catch(e){
     loading(false);
@@ -3182,19 +3186,21 @@ function buscarNoSetor(){
   focusFirstField();
 }
 
-/* checarVarreduraParcial(scan): varredura best-effort (15-RESEARCH.md) — se o orçamento de
+/* checarVarreduraParcial(scan,layer): varredura best-effort (15-RESEARCH.md) — se o orçamento de
    páginas não foi esgotado (paginas<3) mas a amostra ficou menor que o total real, algo
    interrompeu a varredura antes do esperado; avisa sem bloquear (os números já calculados
    continuam exibidos, T-15-08). Toque tenta de novo, limpando o cache do cdbairro p/ não repetir
-   o mesmo resultado parcial. */
-function checarVarreduraParcial(scan){
+   o mesmo resultado parcial. `layer` (WR-04 15-REVIEW.md): capturado no fechamento — NUNCA lê
+   `baiHi` no momento do clique, que pode já apontar para outro bairro (hover mudou enquanto o
+   aviso estava visível) e reabriria o território do setor ERRADO. */
+function checarVarreduraParcial(scan,layer){
   const av=document.getElementById("terrAviso");
   if(!av)return;
   if(scan&&scan.paginas<3&&scan.amostrado<scan.total){
     av.textContent="Não foi possível concluir a varredura — os números abaixo usam só as páginas que chegaram. Toque para tentar de novo.";
     av.hidden=false;
     av.style.cursor="pointer";
-    av.onclick=()=>{delete TERRCACHE[String(scan.cdbairro)];abrirTerritorio(baiHi);};
+    av.onclick=()=>{delete TERRCACHE[String(scan.cdbairro)];abrirTerritorio(layer);};
   }else{
     av.hidden=true;
     av.onclick=null;
