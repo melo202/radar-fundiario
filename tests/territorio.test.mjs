@@ -217,6 +217,34 @@ test("territorioScan: fallback automático outFields restrito -> * quando a 1ª 
   assert.equal(r.lotes.length, 1);
 });
 
+test("territorioScan: falha na 2ª página restrita não dobra o orçamento — total paginado (restrito+fallback) nunca excede 3 (WR-02 15-REVIEW.md)", async () => {
+  let restritoCalls = 0,
+    fallbackCalls = 0,
+    totalPageCalls = 0;
+  const pagCheia = () => ({ features: Array.from({ length: 2000 }, () => ({ attributes: { vlvenal: 100000, areaedif: 50 } })) });
+  const jsonpStub = async (params) => {
+    if (params.returnCountOnly === "true") return { count: 999999 };
+    totalPageCalls++;
+    if (params.outFields !== "*") {
+      restritoCalls++;
+      // 1ª página restrita: sucesso, página CHEIA (força o loop a seguir para a 2ª página);
+      // 2ª página restrita: falha (d.error) — cenário NÃO coberto pelo teste de falha imediata acima.
+      return restritoCalls === 1 ? pagCheia() : { error: { code: 400, message: "outFields rejeitado" } };
+    }
+    fallbackCalls++;
+    // fallback também devolveria páginas CHEIAS até o próprio orçamento (3) se não fosse
+    // compartilhado com o que a tentativa restrita já gastou — sem o guard compartilhado, o
+    // total (restrito+fallback) chegaria a 5 páginas, dobrando o orçamento HARD documentado.
+    return pagCheia();
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const r = await NET.territorioScan(55);
+  assert.ok(totalPageCalls <= 3, `total de páginas entre restrito+fallback nunca deve exceder 3 (orçamento HARD), obteve ${totalPageCalls}`);
+  assert.equal(restritoCalls, 2, "1ª página restrita ok, 2ª falha e dispara o fallback");
+  assert.ok(fallbackCalls >= 1, "fallback disparado após a falha na 2ª página");
+  assert.equal(r.paginas, totalPageCalls, "contador de páginas expõe o orçamento TOTAL gasto (restrito+fallback), não só o do fallback");
+});
+
 test("territorioScan: coerção numérica de cdbairro — nunca injeta string crua no WHERE", async () => {
   let capturedWhere = null;
   const jsonpStub = async (params) => {

@@ -2970,17 +2970,23 @@ const TERRCACHE={}; /* cache de sessão por cdbairro — mesmo padrão de CMPCAC
    jsonp/servidor), reinicia automaticamente UMA vez com outFields:"*" (nunca trava o scan, Pitfall 1).
    SEMPRE retorna sanitiza(...) nos DOIS caminhos — defesa em profundidade LGPD contra allowlist mal editada. */
 async function fetchWhereRestrito(where,fields,maxPages){
+  /* guardTotal (WR-02 15-REVIEW.md): orçamento COMPARTILHADO entre a tentativa restrita e o
+     fallback outFields="*" — sem isto, cada tentativa reiniciava um `guard` próprio e um erro
+     na 2ª/3ª página descartava as páginas já obtidas e recomeçava do zero, podendo gastar até
+     2*maxPages requisições paginadas numa única territorioScan (o dobro do orçamento HARD
+     documentado no bloco TERR_NET_START). Agora as duas tentativas juntas nunca excedem maxPages. */
+  let guardTotal=0;
   async function varrePaginas(useFields){
-    let all=[],offset=0,page=2000,guard=0;
+    let all=[],offset=0,page=2000;
     while(true){
+      if(guardTotal>=maxPages)break;
       const d=await jsonp({where,outFields:useFields,returnGeometry:"false",
         resultOffset:offset,resultRecordCount:page,orderByFields:"OBJECTID",f:"json"});
-      __terrReq++;
+      __terrReq++;guardTotal++;
       if(d&&d.error)throw new Error((d.error&&d.error.message)||"outFields rejeitado pelo servidor");
       const fs=d.features||[];all=all.concat(fs);
       if(fs.length<page)break;
       offset+=page;
-      if(++guard>=maxPages)break;
     }
     return all;
   }
