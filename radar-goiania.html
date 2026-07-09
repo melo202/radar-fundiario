@@ -322,6 +322,27 @@
   .pl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--ink);
     margin-right:4px;vertical-align:middle}
 
+  /* Fase 15 TERR-02: legenda do choropleth — canto superior-direito, único canto livre
+     (searchpill/breadcrumb ocupam z-400 superior-esquerdo; .sattoggle z-490 inferior-direito;
+     .pino-legenda z-390 inferior-central). z-395: abaixo dos controles, acima da malha. */
+  .terr-legenda{position:absolute;top:calc(16px + env(safe-area-inset-top));right:12px;z-index:395;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:2px;box-shadow:var(--shadow);
+    max-width:calc(100vw - 24px);color:var(--muted)}
+  .terr-legenda[hidden]{display:none}
+  .terr-legend-head{display:flex;align-items:center;gap:4px;padding:0 4px}
+  .terr-toggle{min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--ink);
+    font:600 12.5px/1 "IBM Plex Sans";cursor:pointer}
+  .terr-toggle[aria-pressed="true"]{color:var(--terr-q5)}
+  .terr-chevron{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--muted);
+    font:700 14px/1 "IBM Plex Mono";cursor:pointer}
+  .terr-legend-body{padding:0 10px 10px}
+  .terr-legend-body[hidden]{display:none}
+  .terr-swatches{display:flex;gap:4px}
+  .terr-swatch-col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .terr-swatch{display:block;width:24px;height:14px;border:1px solid var(--line);border-radius:1px}
+  .terr-swlbl{font:700 10.5px/1.3 "IBM Plex Mono";color:var(--muted);white-space:nowrap}
+  .terr-amostra{margin-top:8px;font:500 13px/1.4 "IBM Plex Sans";color:var(--muted)}
+
   /* Fase 13 DESC-01: onboarding 3 cartões — overlay modal, z-index abaixo dos sheets de documento
      (.wiz/#calc=2000+), acima do .detail(500). REDUCE-safe via mAnimate; classList "show" SEMPRE
      em par com o atributo hidden (só hidden nunca revela — a regra de classe display:none vence). */
@@ -943,6 +964,25 @@
       <span><i class="pl-dot" style="background:#b5451f"></i>Oportunidade baixa</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
       <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
+    </div>
+    <!-- Fase 15 TERR-02: legenda do choropleth de R$/m² — hidden até o 1º setor ser escaneado
+         (mesma regra de #pinoLegenda: não é decorativo por padrão, só aparece com dado real).
+         Ancorada no canto superior-direito (único canto livre — 15-UI-SPEC.md Componente 1). -->
+    <div id="terrLegenda" class="terr-legenda" hidden aria-label="Legenda de valor por m² no mapa">
+      <div class="terr-legend-head">
+        <button type="button" id="terrToggle" class="terr-toggle" aria-pressed="false" onclick="toggleChoropleth()">Cor por valor</button>
+        <button type="button" id="terrChevron" class="terr-chevron" aria-expanded="true" aria-label="Recolher legenda" onclick="recolherLegenda()">⌄</button>
+      </div>
+      <div id="terrBody" class="terr-legend-body">
+        <div class="terr-swatches">
+          <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw1" style="background:var(--terr-q1);border-color:var(--terr-q1-ink)"></span><span class="terr-swlbl" id="terrLbl1"></span></div>
+          <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw2" style="background:var(--terr-q2);border-color:var(--terr-q2-ink)"></span><span class="terr-swlbl" id="terrLbl2"></span></div>
+          <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw3" style="background:var(--terr-q3);border-color:var(--terr-q3-ink)"></span><span class="terr-swlbl" id="terrLbl3"></span></div>
+          <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw4" style="background:var(--terr-q4);border-color:var(--terr-q4-ink)"></span><span class="terr-swlbl" id="terrLbl4"></span></div>
+          <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw5" style="background:var(--terr-q5);border-color:var(--terr-q5-ink)"></span><span class="terr-swlbl" id="terrLbl5"></span></div>
+        </div>
+        <div class="terr-amostra" id="terrAmostra"></div>
+      </div>
     </div>
     <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
       <div class="shead">
@@ -2376,6 +2416,53 @@ function aplicarChoropleth(scan){
 function desenharChoropleth(){
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
   if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+}
+/* montarLegenda(st): preenche #terrLegenda com os 5 rótulos de faixa (R$/m², brlSimples) + o
+   rótulo de honestidade da amostra — SEMPRE via textContent/esc (nunca innerHTML com dado do
+   endpoint, T-15-05). Torna a legenda visível (hidden até o 1º setor escaneado). */
+function montarLegenda(st){
+  const b=st&&st.breaks;
+  const lbls=b
+    ? ["≤ "+brlSimples(b[0]), brlSimples(b[0])+"–"+brlSimples(b[1]), brlSimples(b[1])+"–"+brlSimples(b[2]), brlSimples(b[2])+"–"+brlSimples(b[3]), "≥ "+brlSimples(b[3])]
+    : ["—","—","—","—","—"];
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById("terrLbl"+i);
+    if(el)el.textContent=lbls[i-1];
+  }
+  const am=document.getElementById("terrAmostra");
+  if(am)am.textContent=rotuloAmostra(st.n,st.total);
+  const leg=document.getElementById("terrLegenda");
+  if(leg)leg.hidden=false;
+}
+/* recolherLegenda(): collapse/expand do corpo via mAnimate (REDUCE-safe — null quando
+   prefers-reduced-motion ou Motion indisponível: toggle instantâneo, sem tween). */
+function recolherLegenda(){
+  const body=document.getElementById("terrBody"), ch=document.getElementById("terrChevron");
+  if(!body||!ch)return;
+  const open=ch.getAttribute("aria-expanded")==="true";
+  ch.setAttribute("aria-expanded",String(!open));
+  ch.setAttribute("aria-label",open?"Expandir legenda":"Recolher legenda");
+  if(!open){
+    body.hidden=false;
+    mAnimate(body,{opacity:[0,1],height:[0,body.scrollHeight+"px"]},{duration:.18,easing:[0.22,1,0.36,1]});
+  }else{
+    const c=mAnimate(body,{opacity:[1,0]},{duration:.18,easing:[0.22,1,0.36,1]});
+    if(c&&c.finished)c.finished.then(()=>body.hidden=true).catch(()=>body.hidden=true);
+    else body.hidden=true;
+  }
+}
+/* toggleChoropleth(): fonte única de verdade do estado ligado/desligado do choropleth —
+   sincroniza aria-pressed da legenda E do botão do painel (Plano 03, terrPanelToggle). */
+function toggleChoropleth(){
+  CHOROPLETH_ON=!CHOROPLETH_ON;
+  const p=String(CHOROPLETH_ON);
+  const t=document.getElementById("terrToggle");
+  if(t)t.setAttribute("aria-pressed",p);
+  const pb=document.getElementById("terrPanelToggle");
+  if(pb)pb.setAttribute("aria-pressed",p);
+  desenharChoropleth();
+  const leg=document.getElementById("terrLegenda");
+  if(leg)leg.hidden=!CHOROPLETH_ON;
 }
 let bairroLayer=null,baiHi=null;
 /* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
