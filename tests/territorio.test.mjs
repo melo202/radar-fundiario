@@ -120,3 +120,117 @@ test("rotuloAmostra: 'Amostra de {N} de {M} lotes' — nunca omitido, mesmo com 
     assert.equal(P.rotuloAmostra(fx.n, fx.total), fx.out);
   }
 });
+
+// --- territorioScan / territorioScanRun / fetchWhereRestrito (bloco TERR_NET, 15-02) -----------
+// jsonp/sanitiza/capCache/toast são STUBADOS no sandbox — nenhuma requisição real de rede entra
+// em `node --test`. O contrato testado aqui é o de dedupe/orçamento/fallback (rede real é
+// verificação AO VIVO manual, fora deste harness — ver 15-RESEARCH.md Sampling Rate).
+
+function loadNetBlock(stubs) {
+  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  const iStart = html.indexOf("TERR_NET_START");
+  const iEnd = html.indexOf("TERR_NET_END");
+  assert.ok(iStart > -1 && iEnd > iStart, "marcadores TERR_NET ausentes ou fora de ordem em radar-goiania.html (dependencia da Task 2 nao cumprida)");
+  const start = html.indexOf("\n", iStart) + 1;
+  const end = html.lastIndexOf("\n", iEnd);
+  const src = html.slice(start, end);
+  assert.ok(src.includes("function territorioScan("), "territorioScan ausente do bloco TERR_NET");
+  assert.ok(src.includes("TERRCACHE"), "TERRCACHE ausente do bloco TERR_NET");
+  assert.ok(src.includes("fetchWhereRestrito"), "fetchWhereRestrito ausente do bloco TERR_NET");
+  const sandbox = {
+    jsonp: stubs.jsonp,
+    sanitiza: stubs.sanitiza || ((arr) => arr),
+    capCache:
+      stubs.capCache ||
+      ((o, max) => {
+        const k = Object.keys(o);
+        if (k.length > max) delete o[k[0]];
+      }),
+    toast: stubs.toast || (() => {}),
+  };
+  vm.createContext(sandbox);
+  new vm.Script(
+    src +
+      "\n;globalThis.__exports = {territorioScan,territorioScanRun,fetchWhereRestrito,TERRCACHE,TERR_FIELDS};",
+    { filename: "terr-net.js" }
+  ).runInContext(sandbox);
+  return sandbox.__exports;
+}
+
+test("territorioScan: dedupe de chamada em voo — 2 chamadas concorrentes disparam UMA varredura", async () => {
+  let jsonpCalls = 0;
+  const jsonpStub = async (params) => {
+    jsonpCalls++;
+    if (params.returnCountOnly === "true") return { count: 5 };
+    return { features: [{ attributes: { vlvenal: 100000, areaedif: 50 } }] };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const [r1, r2] = await Promise.all([NET.territorioScan(16), NET.territorioScan(16)]);
+  assert.equal(r1, r2, "2a chamada concorrente reusa a MESMA promise em voo (mesma referência de resultado)");
+  assert.equal(jsonpCalls, 2, "dedupe: jsonp chamado o mesmo nº de vezes que UMA única varredura (1 página + 1 count)");
+});
+
+test("territorioScan: orçamento HARD — no máximo 3 chamadas paginadas + 1 returnCountOnly por scan", async () => {
+  let pageCalls = 0,
+    countCalls = 0;
+  const jsonpStub = async (params) => {
+    if (params.returnCountOnly === "true") {
+      countCalls++;
+      return { count: 999999 };
+    }
+    pageCalls++;
+    // setor grande: sempre devolve página CHEIA de 2000 -> força o loop a bater no orçamento
+    const fs = Array.from({ length: 2000 }, () => ({ attributes: { vlvenal: 100000, areaedif: 50 } }));
+    return { features: fs };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const r = await NET.territorioScan(77);
+  assert.ok(pageCalls <= 3, `no máximo 3 chamadas paginadas por scan (orçamento HARD), obteve ${pageCalls}`);
+  assert.equal(countCalls, 1, "no máximo 1 chamada returnCountOnly por scan");
+  assert.equal(r.paginas, 3, "contador de páginas expõe exatamente o orçamento gasto");
+});
+
+test("territorioScan: fallback automático outFields restrito -> * quando a 1ª página devolve d.error", async () => {
+  let restritoCalls = 0,
+    fallbackCalls = 0,
+    sanitizaCalls = 0;
+  const jsonpStub = async (params) => {
+    if (params.returnCountOnly === "true") return { count: 1 };
+    if (params.outFields !== "*") {
+      restritoCalls++;
+      return { error: { code: 400, message: "outFields rejeitado" } };
+    }
+    fallbackCalls++;
+    return { features: [{ attributes: { vlvenal: 100000, areaedif: 50 } }] };
+  };
+  const NET = loadNetBlock({
+    jsonp: jsonpStub,
+    sanitiza: (arr) => {
+      sanitizaCalls++;
+      return arr;
+    },
+  });
+  const r = await NET.territorioScan(20);
+  assert.equal(restritoCalls, 1, "1ª página restrita tentada 1x antes do fallback");
+  assert.ok(fallbackCalls >= 1, "reiniciou automaticamente com outFields=* após o erro");
+  assert.ok(sanitizaCalls >= 1, "resultado passou por sanitiza() mesmo no caminho de fallback (defesa em profundidade LGPD)");
+  assert.equal(r.lotes.length, 1);
+});
+
+test("territorioScan: coerção numérica de cdbairro — nunca injeta string crua no WHERE", async () => {
+  let capturedWhere = null;
+  const jsonpStub = async (params) => {
+    if (params.returnCountOnly === "true") return { count: 0 };
+    capturedWhere = params.where;
+    return { features: [] };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  await NET.territorioScan("16");
+  assert.equal(capturedWhere, "cdbairro=16 AND vlvenal>0", "WHERE usa o número coagido, nunca a string crua");
+
+  await assert.rejects(
+    () => NET.territorioScan("16; DROP"),
+    /cdbairro inválido/,
+    "entrada não-numérica (NaN após +cdbairro) deveria abortar, nunca interpolar no WHERE"
+  );
+});
