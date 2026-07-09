@@ -30,7 +30,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 
 **Sequência de dependência:** Fase 7 (fundação de dados — **nomes ✅ entregues**) → Fase 8 (busca única) → Fases 9-12 constroem o cockpit sobre a ficha/lista existentes (9 ficha+scores → 10 ação/WhatsApp/salvos → 11 documentos → 12 prédio) → Fase 13 aplica o refino visual/motion/pinos/descoberta sobre tudo → Fase 14 é o gate de linguagem impecável → Fases 15-17 entregam o Território (choropleth, detector/farming, diff/Caixa) sobre o setor-scan compartilhado.
 
-- [~] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes reconciliados ✅ (07-01) + exibição amigável ✅; falta CNEFE (07-02) e tuning da malha mobile (07-03)
+- [x] **Phase 7: Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha** — nomes reconciliados ✅ (07-01) + CNEFE/logradouros ✅ (07-02) + tuning da malha mobile ✅ (07-03); 2 HUMAN-UAT diferidos (completed 2026-07-05)
 - [x] **Phase 8: Busca Única Inteligente** — caixa única com detecção de intenção, chip de confirmação, setor na frase, colar link do Maps, voz (mobile), deep-link, autocomplete CNEFE — a11y re-auditada, guarda das regressões desktop
  (completed 2026-07-07)
 - [x] **Phase 9: Ficha = Conclusão Comercial + Scores** — ficha reordenada (valor em destaque → oportunidade → confiança → leitura prática → ações → técnico em accordion); scores determinísticos explicáveis; comparáveis conclusão-primeiro
