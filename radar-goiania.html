@@ -2255,6 +2255,32 @@ const LOT_HOVER={weight:2.5,color:"#b5451f",fillOpacity:.14};
 let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
 const LOTINFO={};
 
+/* ---------------- lookup id<->cdbairro (Fase 15, TERR-02): resolve o gap entre a malha visual
+   (bairroLayer, chave `id`) e o cdbairro fiscal usado por territorioScan — via bairro-cdbairro.json
+   (snapshot datado, runtime, precache radar-v7). Fetch LAZY: nunca no boot (zoom-gate), só na 1ª
+   ação de território. Glebas sem cdbairro (motivo "sem-parcela") ficam de fora do arquivo -> nunca
+   coloríveis (honestidade, 15-RESEARCH.md Pitfall 2). */
+let idParaCdbairro=null, cdbairroParaIds=null;
+async function carregarLookupCdbairro(){
+  if(idParaCdbairro)return;
+  try{
+    const r=await fetch('bairro-cdbairro.json');
+    const j=await r.json();
+    idParaCdbairro=new Map();
+    cdbairroParaIds=new Map();
+    for(const[id,v]of Object.entries(j)){
+      idParaCdbairro.set(id,v.cd);
+      if(!cdbairroParaIds.has(v.cd))cdbairroParaIds.set(v.cd,[]);
+      cdbairroParaIds.get(v.cd).push(id);
+    }
+  }catch(e){console.warn('bairro-cdbairro.json:',e);}
+}
+/* resolveCdbairroDeLayer(layer): undefined quando o lookup ainda não carregou OU o polígono é uma
+   gleba sem cdbairro — nos dois casos, quem chama cai no estado neutro (nunca colore por engano). */
+function resolveCdbairroDeLayer(layer){
+  return idParaCdbairro&&layer&&layer.feature&&idParaCdbairro.get(layer.feature.properties.id);
+}
+
 /* ---------------- divisas de bairro (Fase 3, MAPA-02/03): outline estático do bairros-goiania.json (Fase 1) -----
    espelha o padrão de LOT_STYLE/LOT_HOVER; some em zoom>=17 (dá lugar aos lotes). */
 /* Canvas 2D (renderer usado abaixo) NÃO resolve var() do CSS — resolve os tokens p/ hex uma vez,

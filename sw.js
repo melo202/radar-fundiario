@@ -9,13 +9,14 @@
    tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
    nunca cache — dado vivo, e tiles de satélite são pesados demais para
    inchar o storage do PWA. */
-const CACHE = "radar-v6";
+const CACHE = "radar-v7";
 const LOCAL = [
   "./",
   "./radar-goiania.html",
   "./caixa-goiania.js",
   "./bairros-goiania.json",
   "./logradouros-goiania.json",
+  "./bairro-cdbairro.json",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
