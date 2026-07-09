@@ -1433,11 +1433,17 @@ function faixaTxt(faixa){
   return faixa ? (brlSimples(faixa.lo)+" e "+brlSimples(faixa.hi)) : null;
 }
 
+/* localTxt(bairro): concordância de gênero do fallback sem bairro — "no {bairro}" quando
+   presente, "na região" quando ausente ("região" é feminino; "no região" é erro de
+   concordância — Fase 14, achado da auditoria §26.1). Usado por todos os templates
+   RADAR_PURE (WhatsApp/Captação/Ficha rápida) que interpolam bairro com fallback regional. */
+function localTxt(bairro){ return bairro ? `no ${bairro}` : "na região"; }
+
 /* zapResumo(data): "[Tipo] no [bairro]. [leitura]. Faixa estimada: [lo]–[hi]." — sem faixa,
    variante honesta (nunca interpola undefined/NaN). */
 function zapResumo(data){
   const d=data||{};
-  const abertura=`${d.tipoImovel||"Imóvel"} no ${d.bairro||"região"}.`;
+  const abertura=`${d.tipoImovel||"Imóvel"} ${localTxt(d.bairro)}.`;
   const leitura=d.leitura?` ${d.leitura}`:"";
   const ft=faixaTxt(d.faixa);
   const faixaLinha=ft
@@ -1457,7 +1463,7 @@ function zapProprietario(data){
   const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&d.scoreConf.porque&&d.scoreConf.porque.length)
     ? ` Recomendo confirmar ${d.scoreConf.porque.join("; ")} para uma avaliação mais precisa.`
     : "";
-  return `Olá! Encontrei seu imóvel no ${d.bairro||"região"} no Radar e, pela análise cadastral e comparáveis da região, ${faixaFrase}.`+
+  return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Radar e, pela análise cadastral e comparáveis da região, ${faixaFrase}.`+
     pendencias+" Podemos conversar?"+assinatura(d.perfil);
 }
 
@@ -1468,7 +1474,7 @@ function zapComprador(data){
   const faixaFrase=ft
     ? `a faixa estimada fica entre ${ft}`
     : "recomendo uma avaliação para estimar melhor o valor deste imóvel";
-  return `Encontrei esse imóvel no ${d.bairro||"região"}. Pela análise cadastral e pelos comparáveis próximos, ${faixaFrase}.`+
+  return `Encontrei esse imóvel ${localTxt(d.bairro)}. Pela análise cadastral e pelos comparáveis próximos, ${faixaFrase}.`+
     " Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar."+
     assinatura(d.perfil);
 }
@@ -1504,7 +1510,7 @@ function zapRiscos(data){
 function captAbordagem(data){
   const d=data||{};
   const ql=(d.quadra||d.lote)?` (Q ${d.quadra||"—"}, L ${d.lote||"—"})`:"";
-  return `Olá! Sou corretor(a) e trabalho com imóveis no ${d.bairro||"região"}. Notei seu imóvel na ${d.endereco||"região"}${ql} `+
+  return `Olá! Sou corretor(a) e trabalho com imóveis ${localTxt(d.bairro)}. Notei seu imóvel na ${d.endereco||"região"}${ql} `+
     "e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?"+
     assinatura(d.perfil);
 }
@@ -1513,7 +1519,7 @@ function captAbordagem(data){
    ligação, nao mensagem enviada). */
 function captScript(data){
   const d=data||{};
-  return `1. Se apresente e explique o motivo da ligação (imóvel no ${d.bairro||"região"}).\n`+
+  return `1. Se apresente e explique o motivo da ligação (imóvel ${localTxt(d.bairro)}).\n`+
     "2. Pergunte se o proprietário já pensou em vender ou tem interesse em uma avaliação gratuita.\n"+
     "3. Se houver interesse, agende uma visita ou envie a faixa estimada por WhatsApp.\n"+
     "4. Encerre agradecendo o tempo, mesmo se a resposta for negativa.";
@@ -1623,7 +1629,7 @@ function fichaRapidaTexto(data){
   const d=data||{};
   return {
     faixaTxt: faixaTxt(d.faixa),
-    resumo: (d.tipoImovel||"Imóvel")+" no "+(d.bairro||"região")+".",
+    resumo: (d.tipoImovel||"Imóvel")+" "+localTxt(d.bairro)+".",
     leitura: d.leitura||"",
     comparaveis: Array.isArray(d.comparaveis) ? d.comparaveis.slice(0,3) : [],
     ressalva: "Faixa estimada com base em dados públicos do cadastro municipal — recomenda-se confirmar área, estado de conservação e documentação antes de decidir. Não substitui avaliação formal.",
