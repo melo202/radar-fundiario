@@ -78,7 +78,7 @@
 
 ### Linguagem — português impecável (§2, §26) — gate de release
 
-- [ ] **LING-01**: Passar **toda a microcopy** (botões, placeholders, erros, tooltips, títulos, PDFs, mensagens de WhatsApp) pelo checklist §26 — acentuação correta, verbo de ação nos botões, erro que oferece saída, zero jargão na 1ª camada, sem caixa alta em bloco longo, sem ironia/gíria; consistência de nomenclatura (não alternar "Oportunidades/Favoritos/Salvos" sem motivo)
+- [x] **LING-01**: Passar **toda a microcopy** (botões, placeholders, erros, tooltips, títulos, PDFs, mensagens de WhatsApp) pelo checklist §26 — acentuação correta, verbo de ação nos botões, erro que oferece saída, zero jargão na 1ª camada, sem caixa alta em bloco longo, sem ironia/gíria; consistência de nomenclatura (não alternar "Oportunidades/Favoritos/Salvos" sem motivo)
 
 ### Território / captação de área (rebaixado — após o cockpit)
 
@@ -134,7 +134,7 @@
 | NEG-01/02/03/04 | 11.1 | Pending |
 | PRED-01/02 | 12 | Pending |
 | VIS-01, PIN-01, MOT-01, DESC-01 | 13 | Pending |
-| LING-01 | 14 | Pending |
+| LING-01 | 14 | Complete |
 | TERR-01/02/03 | 15 | Pending |
 | TERR-04/05 | 16 | Pending |
 | TERR-06/07 | 17 | Pending |

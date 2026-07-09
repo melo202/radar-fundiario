@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
 status: executing
-stopped_at: ROADMAP.md do v2.1 escrito (Fases 7-11, 22/22 requisitos mapeados); REQUIREMENTS.md traceability a atualizar em seguida
-last_updated: "2026-07-07T21:24:22.144Z"
-last_activity: 2026-07-07
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-07-09T21:06:48.953Z"
+last_activity: 2026-07-09
 progress:
   total_phases: 13
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  completed_phases: 8
+  total_plans: 30
+  completed_plans: 26
+  percent: 87
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 7 — Fundação de Dados — Nomes de Bairro, CNEFE & Tuning da Malha
+**Current focus:** Phase 14 — Linguagem Impecável (pt-BR) — gate de release
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
-Status: Executing Phase 7
-Last activity: 2026-07-07
+Phase: 14 (Linguagem Impecável (pt-BR) — gate de release) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-07-09
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 14 P01 | 2min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - Fix de nomes de bairro é display-data-only (geometria/contagem byte-idênticas); nenhum join automático por string (falha 99,5% medido) — spatial join + revisão humana
 - Território usa orçamento de requisições (1-3 páginas, nunca por-quadra) + zoom-gate; farming/diff usam IndexedDB (nunca localStorage) + allowlist anti-PII (nunca `dtnascimen`)
 - Busca é refactor estrito sobre a base de 3 botões já endurecida (03/07) — não rewrite; gate de aceite = re-passar checklist de a11y/ARIA/SEARCHTOKEN
+- [Phase 14]: A1: 'Abaixo da mediana' substituido por 'Oportunidade baixa' no rotulo de score de 1a camada (4 ancoras + fixture, mesmo commit)
+- [Phase 14]: A2: #loadmsg estatico alinhado a maiuscula de MOTION_MSG.cadastro ('Consultando cadastro...')
+- [Phase 14]: Achado A4 (colisao de 'Oportunidades' entre Caixa e Minhas oportunidades) ratificado como avaliado/mantido, sem mudanca de nome
 
 ### Pending Todos
 
@@ -83,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-05
-Stopped at: ROADMAP.md do v2.1 escrito (Fases 7-11, 22/22 requisitos mapeados); REQUIREMENTS.md traceability a atualizar em seguida
+Last session: 2026-07-09T21:06:48.949Z
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None
