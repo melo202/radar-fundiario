@@ -315,24 +315,24 @@ Nenhum `id`, `role=`, `aria-controls`, `aria-describedby` ou `aria-labelledby` f
 
 ## WhatsApp (RADAR_PURE)
 
-Varredura das 5 funções `zap*` (radar-goiania.html:1438-1501). Nenhum emoji, CAPS em bloco ou gíria encontrado; honestidade (`assinatura`/faixa=null) já garantida pelo contrato original (10-01). 2 correções pontuais de tom/gramática, ambas sem asserção acoplada (mudança segura sem editar `tests/templates.test.mjs`).
+Varredura das 5 funções `zap*` (radar-goiania.html:1438-1501). Nenhum emoji, CAPS em bloco ou gíria encontrado; honestidade (`assinatura`/faixa=null) já garantida pelo contrato original (10-01). 2 correções pontuais de tom/gramática no Plano 04 (`zapArgumento`/`zapRiscos`) + 3 correções retroativas de concordância no Plano 05 (`zapResumo`/`zapProprietario`/`zapComprador`, achado transversal do helper `localTxt` — ver seção "Documentos + Negociação"), todas sem asserção acoplada (mudança segura sem editar `tests/templates.test.mjs`).
 
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| `zapResumo` — abertura `${tipoImovel} no ${bairro}.` + leitura + faixa (ou ressalva honesta) + assinatura | 1438-1447 | OK | (sem mudança) | §26.8 (tom direto, dado concreto, sem hype); honestidade preservada (faixa=null nunca inventa valor) |
-| `zapProprietario` — abertura "Olá! Encontrei seu imóvel no {bairro} no Radar…" + faixa/ressalva + pendências opcionais + "Podemos conversar?" + assinatura | 1451-1462 | OK | (sem mudança) | §26.8 (convite direto, sem pressão/hype, pendências citadas como recomendação, não como cobrança) |
-| `zapComprador` — "Encontrei esse imóvel no {bairro}…" + faixa/recomendação de avaliação + "Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar." + assinatura | 1465-1474 | OK | (sem mudança) | §26.8 (tom consultivo, sem promessa de resultado) |
+| `zapResumo` — abertura `${tipoImovel} no ${bairro}.` + leitura + faixa (ou ressalva honesta) + assinatura | 1438-1447 | **alterada (Plano 05, retroativo)** | usa novo helper `localTxt(bairro)` | §26.1 (correção de concordância de gênero no fallback sem bairro — ver seção "Documentos + Negociação"); tom (§26.8) já estava OK e não mudou — só a concordância do fallback |
+| `zapProprietario` — abertura "Olá! Encontrei seu imóvel no {bairro} no Radar…" + faixa/ressalva + pendências opcionais + "Podemos conversar?" + assinatura | 1451-1462 | **alterada (Plano 05, retroativo)** | usa novo helper `localTxt(bairro)` | §26.1 idem; tom (§26.8: convite direto, sem pressão/hype, pendências como recomendação) inalterado |
+| `zapComprador` — "Encontrei esse imóvel no {bairro}…" + faixa/recomendação de avaliação + "Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar." + assinatura | 1465-1474 | **alterada (Plano 05, retroativo)** | usa novo helper `localTxt(bairro)` | §26.1 idem; tom (§26.8: consultivo, sem promessa de resultado) inalterado |
 | `zapArgumento` — fallback sem `porque[0]`: `` Está na faixa "${rotulo}" (score ${score}) em relação à mediana dos comparáveis. `` | 1478-1489 | **alterada** | `` Está na faixa "${rotulo}" em relação aos comparáveis da região. `` | §26.8 (tom robótico — número de `score` cru e jargão "mediana" expostos ao cliente final num fallback de mensagem de WhatsApp; texto principal via `porque[0]` não foi tocado — é gerado por `scoreOportunidade()`, fora do escopo desta varredura, já ratificado no Plano 01); sem asserção acoplada (branch não coberto por `tests/templates.test.mjs`, confirmado por leitura das fixtures) |
 | `zapRiscos` — pontos a confirmar + `"Esta é uma faixa estimada, não uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."` + assinatura | 1493-1500 | **alterada** | `"Esta é uma faixa estimada, não é uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."` | §26.1 (erro gramatical — faltava o verbo "é"; corrigido para bater com o termo de honestidade documentado em 14-RESEARCH.md/interfaces do plano); teste (`zapRiscos contem termo de honestidade…`) já passava via `"faixa estimada"` (asserção por `.some()`), continua verde e agora também casa com `"não é uma avaliação oficial"` |
 
 ## Captação (RADAR_PURE)
 
-Varredura das 4 funções `capt*` (radar-goiania.html:1504-1537) + `oportunidadeItem`/`histAdd` (1551-1576). Nenhuma alteração de texto necessária — as 4 funções já atendem §26 (verbo de ação/tom direto, sem gíria/CAPS/hype); `oportunidadeItem`/`histAdd` são funções puras de dados (allowlist/FIFO) sem string visível ao usuário, fora do escopo de auditoria de tom.
+Varredura das 4 funções `capt*` (radar-goiania.html:1504-1537) + `oportunidadeItem`/`histAdd` (1551-1576). Nenhuma alteração de TOM necessária no Plano 04 — as 4 funções já atendiam §26 (verbo de ação/tom direto, sem gíria/CAPS/hype); no Plano 05, `captAbordagem`/`captScript` receberam a mesma correção retroativa de concordância (`localTxt`, ver seção "Documentos + Negociação"). `oportunidadeItem`/`histAdd` são funções puras de dados (allowlist/FIFO) sem string visível ao usuário, fora do escopo de auditoria de tom.
 
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| `captAbordagem` — "Olá! Sou corretor(a) e trabalho com imóveis no {bairro}. Notei seu imóvel na {endereco}{Q/L} e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?" + assinatura | 1504-1510 | OK | (sem mudança) | §26.8 (abordagem direta, sem pressão/gíria; "sem compromisso" já sinaliza tom consultivo, não invasivo) |
-| `captScript` — 4 passos numerados ("1." apresentação, "2." pergunta de interesse, "3." agenda visita/envia faixa, "4." agradece mesmo se negativa), SEM assinatura (script de ligação interno) | 1514-1520 | OK | (sem mudança) | §26.8 (roteiro objetivo, verbo de ação em cada passo); numeração "1."–"4." preservada (asserida em `tests/templates.test.mjs`) |
+| `captAbordagem` — "Olá! Sou corretor(a) e trabalho com imóveis no {bairro}. Notei seu imóvel na {endereco}{Q/L} e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?" + assinatura | 1504-1510 | **alterada (Plano 05, retroativo)** | usa novo helper `localTxt(bairro)` | §26.1 (correção de concordância de gênero — ver seção "Documentos + Negociação"); tom (§26.8: direto, sem pressão/gíria) inalterado |
+| `captScript` — 4 passos numerados ("1." apresentação, "2." pergunta de interesse, "3." agenda visita/envia faixa, "4." agradece mesmo se negativa), SEM assinatura (script de ligação interno) | 1514-1520 | **alterada (Plano 05, retroativo)** | usa novo helper `localTxt(bairro)` no passo 1 | §26.1 idem; numeração "1."–"4." preservada intacta (asserida em `tests/templates.test.mjs`) |
 | `captChecklist` — 5 itens estáticos com bullet "•" (Matrícula/RGI, IPTU+CND, Certidões pessoais, Convenção/ata de condomínio, Documento de identidade+CPF), SEM assinatura | 1524-1529 | OK | (sem mudança) | §26 (termos técnicos de documento — jargão aceitável em checklist do próprio corretor, não em mensagem enviada ao cliente); 5 termos ("matrícula"/"iptu"/"certidões pessoais"/"condomínio"/"identidade") e contagem de bullets preservados (asserido em `tests/templates.test.mjs`) |
 | `captFollowup` — "Follow-up: retornar contato com proprietário/interessado do imóvel na {endereco} em até 3 dias úteis para confirmar interesse na captação." (tarefa interna, SEM assinatura) | 1534-1536 | avaliado-mantido | (sem mudança) | "Follow-up" é anglicismo, mas já é termo estabelecido no app (`.captblock-lbl` linha 1053 "Tarefa de follow-up"; toast linha 4197 "Tarefa de follow-up copiada.") — troca isolada quebraria consistência de nomenclatura (§26.7) sem ganho, texto é tarefa interna do corretor, nunca enviado ao cliente |
 | `oportunidadeItem` — retorna objeto de 12 campos (allowlist LGPD), sem string livre exposta ao usuário | 1551-1568 | N/A (sem texto de UI) | (sem mudança) | fora do escopo de tom §26 (dado estruturado, não copy); contrato de allowlist (SALV-01/T-10-01) intocado |
@@ -356,9 +356,16 @@ Varredura de `recomendaDocumento`/`pendenciasDocumento`/`fichaRapidaTexto` (rada
 
 ## Prédio (RADAR_PURE)
 
+Varredura de `resumoPredio`/`ordenaUnidades`/`remapPredio`/`ehAptoProvavel`/`analisePredicoTexto` (radar-goiania.html:1909-1989). Achado A3 (14-RESEARCH.md) ratificado: emojis 🏢/📍 em `analisePredicoTexto` são MANTIDOS — 2 emojis discretos de corretor real, explicitamente testados em `tests/predio.test.mjs`, removê-los quebraria o teste sem ganho de qualidade.
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 04)* | | | | |
+| `resumoPredio(units)` — retorna `{n,areaMedia,venalMedio,estimadoMedio,faixaLo,faixaHi}` (dado estruturado agregado, sem string livre) | 1915-1930 | N/A (sem texto de UI) | (sem mudança) | fora do escopo de tom §26 (função pura de agregação, não gera copy) |
+| `analisePredicoTexto` — cabeçalho `"🏢 "+(nome||"Edifício")+" — Q "+quadra+" · L "+lote` | 1984 | **avaliado-mantido** | (sem mudança) | Achado A3 — emoji 🏢 mantido (2 emojis discretos de corretor real); fallback "Edifício" preservado (asserido em predio.test.mjs) |
+| `analisePredicoTexto` — métricas condicionais ("N unidades"/"área média N m²"/"venal médio R$ N"/"estimado médio R$ N · faixa R$ N–R$ N") | 1980-1983 | OK | (sem mudança) | termos de métrica claros, cada cláusula omitida independentemente quando o campo correspondente é `null` (honestidade, asserido em predio.test.mjs — nunca "estimado médio: —") |
+| `analisePredicoTexto` — bloco de endereço `"\n\n📍 "+endereco` (condicional, só quando `meta.endereco` existe) | 1986 | **avaliado-mantido** | (sem mudança) | Achado A3 — emoji 📍 mantido, mesmo raciocínio do 🏢; ausência condicional quando `endereco` é null (asserido) |
+| `analisePredicoTexto` — assinatura `"\nAnálise gerada pelo Radar Fundiário."` | 1987 | OK | (sem mudança) | claro, formal, profissional — asserido literal em predio.test.mjs |
+| `ordenaUnidades`/`remapPredio`/`ehAptoProvavel` — lógica pura de ordenação/filtro/remapeamento, sem string de UI | 1932-1970 | N/A (sem texto de UI) | (sem mudança) | fora do escopo de tom §26 (nenhuma copy nova) |
 
 ## Scores/Motion/Chip de busca
 
@@ -382,9 +389,50 @@ Varredura de `recomendaDocumento`/`pendenciasDocumento`/`fichaRapidaTexto` (rada
 | `label:` Prédio · ... (detectMode) | radar-goiania.html:1303 | OK | (sem mudança) | acentuação correta |
 | `label:` Ambíguo (detectMode) | radar-goiania.html:1308 | OK | (sem mudança) | acentuação correta, claro |
 | `label:` Prédio (?) · ... (detectMode) | radar-goiania.html:1312 | OK | (sem mudança) | acentuação correta; "(?)" comunica incerteza sem gíria |
+| `leituraPratica(inputs)` — frase de leitura prática de 1ª camada (4 templates: sem oportunidade / score≥66 / score≥33 / score<33), usa `bairro ? "no ${bairro}" : "nesta região"` (concordância já correta, distinto do padrão buggy corrigido nesta plano) | radar-goiania.html:1393-1409 | **avaliado** (Plano 05, confirmação final) | (sem mudança) | §26.4 (zero jargão — "mediana"/"percentil"/"quartil" nunca aparecem, garantido por teste em `tests/scores.test.mjs`); fallback "nesta região" já concorda corretamente em gênero (contraste com o achado de `localTxt`, que corrigiu o MESMO tipo de fallback em 6 outras funções que usavam "no região") |
 
 ---
 
 ## Contagem
 
-N revisadas: (a consolidar no Plano 05) · M alteradas: (a consolidar no Plano 05)
+Consolidação final (Plano 05) — soma dos pontos revisados por categoria, contando 1 linha de tabela = 1 ponto de string/âncora revisado (linhas que agrupam múltiplos elementos visuais idênticos, ex.: "Copiar ⧉ ×4" ou "Ver como → ×3", são contadas como 1 ponto de revisão cada, não 1 por elemento visual — método consistente com o "grep de linha" usado em todo o documento). Onde a categoria tem uma contagem grep independente já registrada no cabeçalho da seção (Botões=106, Placeholders=19), essa contagem grep prevalece como N da categoria.
+
+| Categoria | N revisadas | M alteradas |
+|---|---|---|
+| Botões | 106 | 12 |
+| Placeholders | 19 | 0 |
+| Títulos/Descrições/PWA | 7 | 0 |
+| Onboarding + O que o Radar faz + Legenda | 20 | 0 *(a alteração de "Oportunidade baixa" na legenda é a MESMA âncora de linha 935 já contada em "Scores/Motion" — evitado double-count aqui)* |
+| Toasts/Erros + Estados vazios | 48 | 4 |
+| Tooltips/aria-label + title | 43 | 1 |
+| WhatsApp (RADAR_PURE) | 5 | 5 |
+| Captação (RADAR_PURE) | 6 | 2 |
+| Documentos + Negociação (RADAR_PURE) | 8 | 1 |
+| Prédio (RADAR_PURE) | 6 | 0 |
+| Scores/Motion/Chip de busca (inclui leituraPratica) | 19 | 5 |
+| **Total** | **≈287** | **30** |
+
+**N revisadas: ≈287 · M alteradas: 30** (≈10,5% de strings alteradas — consistente com a hipótese da pesquisa de que a microcopy já era majoritariamente de alta qualidade; a maior concentração de mudança foi em botões sem verbo de ação (§26.2, 12 casos) e no achado transversal de concordância de gênero do fallback "no região"→"na região" (§26.1, 6 casos via helper `localTxt`, Plano 05) que afetou WhatsApp/Captação/Documentos simultaneamente.
+
+---
+
+## Sign-off do gate §26
+
+Verificação final percorrida categoria a categoria (11 seções, ver acima) + `npm test` 100% verde (107/107). Veredito por critério:
+
+| # | Critério §26 | Veredito | Evidência |
+|---|---|---|---|
+| 1 | Acentuação correta (pt-BR) | **PASS** | Varredura de todas as 11 categorias sem erro de acentuação residual; 1 erro de concordância de gênero encontrado e corrigido (`localTxt`, "no região"→"na região" em 6 âncoras, Plano 05) |
+| 2 | Verbo de ação nos botões | **PASS** | 12 botões corrigidos (Plano 02) de um total de 106; demais já corretos ou exceção justificada (seletor/navegação/glifo-ícone) |
+| 3 | Erro que explica **e** oferece saída | **PASS** | 4 toasts corrigidos (Plano 03) com "o que houve + o que fazer"; 40 dos 44 já atendiam o padrão |
+| 4 | Zero jargão na 1ª camada | **PASS** | "Abaixo da mediana" eliminado do rótulo de score de 1ª camada (4 âncoras, Plano 01, A1); `leituraPratica`/`fichaRapidaTexto` confirmados sem "mediana"/"percentil"/"quartil" (garantido por teste); jargão cadastral preservado apenas em accordion/chip técnico (Pitfall 2, respeitado) |
+| 5 | Sem caixa alta em bloco longo | **PASS** | Nenhuma ocorrência de CAPS em bloco longo encontrada; "EXCLUSIVO"/"NÃO EXCLUSIVO" são rótulos jurídicos de 1-2 palavras (já revisados na Fase 11.1), não blocos |
+| 6 | Sem ironia/gíria | **PASS** | Nenhuma ironia/gíria encontrada; emojis 🏢/📍 de `analisePredicoTexto` avaliados como uso profissional de corretor real (Achado A3), não gíria |
+| 7 | Consistência de nomenclatura | **PASS** | Glossário canônico ratificado (Plano 01); 0 ocorrências residuais de "Favoritos"/"Salvos"; Achado A4 ("Oportunidades" ambíguo) avaliado e mantido por distinção de contexto/ícone; `captFollowup`/"Follow-up" mantido por consistência já estabelecida |
+| 8 | WhatsApp: tom de corretor profissional; Documentos: linguagem formal e juridicamente cuidadosa | **PASS** | 5 funções `zap*` e 4 `capt*` auditadas (tom profissional, sem hype); `DISCLAIMER_NEG` e as 3 minutas (Proposta/Termo/Contrato) preservados literalmente, linguagem jurídica formal já revisada na Fase 11.1 intacta |
+
+**Verificação manual (leitura em voz alta, persona corretor / linguagem formal):**
+- WhatsApp: `zapResumo`/`zapProprietario`/`zapComprador`/`zapArgumento`/`zapRiscos` e `captAbordagem` lidos em voz alta com dados de fixture (Setor Bueno) — tom natural de corretor, sem robótico, sem promessa de resultado; fallback "na região" (corrigido nesta plano) lê-se naturalmente.
+- Documentos: `propostaTexto` (Cláusulas 1ª-5ª + disclaimer), `termoExclusividadeTexto` (exclusiva=true, com cláusula de divulgação) e `contratoTexto` (Cláusulas 1ª-7ª) lidos em voz alta com dados de fixture completos — linguagem formal, juridicamente cuidadosa, sem soar robótica; `DISCLAIMER_NEG` lê-se como uma ressalva de advogado real, não como aviso genérico de sistema.
+
+**Gate LING-01: FECHADO.** `npm test` 107/107 verde. Nenhum disclaimer/ressalva jurídica enfraquecido — todos preservados literalmente ou fortalecidos (correção gramatical em `zapRiscos`, Plano 04).
