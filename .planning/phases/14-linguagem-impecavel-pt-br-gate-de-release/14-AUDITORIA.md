@@ -107,6 +107,20 @@ Termos travados em fases anteriores — a Fase 14 **ratifica**, não redecide.
 | `Abaixo da mediana` (legenda de pinos #pinoLegenda) | radar-goiania.html:935 | alterada | `Oportunidade baixa` | §26.4 + §26.7 (consistência com o rótulo) |
 | `risco:"Abaixo da mediana"` (STATUS_LABEL, mapa de comparação de unidades) | radar-goiania.html:3172 | alterada | `Oportunidade baixa` | §26.4 + §26.7 |
 | `expectRotulo:"Abaixo da mediana"` (fixture consumida por tests/scores.test.mjs) | tests/fixtures.mjs:65 | alterada | `Oportunidade baixa` | acoplamento de teste (mesma correção A1, mesmo commit) |
+| `<span id="loadmsg">consultando cadastro…</span>` (loading estático) | radar-goiania.html:1006 | alterada | `Consultando cadastro…` (maiúscula, alinhado ao MOTION_MSG) | §26.7 (consistência de capitalização) |
+| `MOTION_MSG.localizando: "Localizando imóvel…"` | radar-goiania.html:2547 | OK | (sem mudança) | maiúscula + gerúndio + reticências, sem jargão |
+| `MOTION_MSG.cadastro: "Consultando cadastro…"` | radar-goiania.html:2548 | OK | (sem mudança) | padrão de referência para A2 |
+| `MOTION_MSG.estimativa: "Calculando estimativa…"` | radar-goiania.html:2549 | OK | (sem mudança) | maiúscula + gerúndio + reticências, sem jargão |
+| `MOTION_MSG.comparaveis: "Buscando comparáveis…"` | radar-goiania.html:2550 | OK | (sem mudança) | maiúscula + gerúndio + reticências, sem jargão |
+| `MOTION_MSG.mapa: "Preparando mapa…"` | radar-goiania.html:2551 | OK | (sem mudança) | maiúscula + gerúndio + reticências, sem jargão |
+| `label:` Setor · ${setor.disp} (detectMode) | radar-goiania.html:1262 | OK | (sem mudança) | acentuação correta, sem jargão excessivo (chip de confirmação) |
+| `label:` Inscrição (unidade) · N díg. (detectMode) | radar-goiania.html:1268 | OK | (sem mudança) | "Inscrição" é jargão cadastral aceitável no chip técnico de confirmação (§26.4 nota) |
+| `label:` Inscrição (lote) · N díg. (detectMode) | radar-goiania.html:1269 | OK | (sem mudança) | idem acima |
+| `label:` Quadra X · Lote Y (detectMode) | radar-goiania.html:1277 | OK | (sem mudança) | claro, sem jargão |
+| `label:` Endereço · ... (detectMode) | radar-goiania.html:1297 | OK | (sem mudança) | acentuação correta |
+| `label:` Prédio · ... (detectMode) | radar-goiania.html:1303 | OK | (sem mudança) | acentuação correta |
+| `label:` Ambíguo (detectMode) | radar-goiania.html:1308 | OK | (sem mudança) | acentuação correta, claro |
+| `label:` Prédio (?) · ... (detectMode) | radar-goiania.html:1312 | OK | (sem mudança) | acentuação correta; "(?)" comunica incerteza sem gíria |
 
 ---
 
