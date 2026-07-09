@@ -870,7 +870,7 @@
 
       <button class="go" id="btnGo" onclick="buscar()">Buscar</button>
       <p class="hint">💡 ou <b>clique direto no mapa</b> sobre o imóvel para identificar o lote</p>
-      <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Oportunidades Caixa (<span id="caixaN">0</span>)</button>
+      <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">🏦 Ver Oportunidades Caixa (<span id="caixaN">0</span>)</button>
     </div>
 
     <!-- Fase 10 SALV-01: container ESTATICO, irmao de #results — nenhuma rota de busca o toca.
@@ -2876,7 +2876,7 @@ function render(list,opts){
            de string JS single-quoted) — corrigido aqui tambem reaproveitando o data-ci JA presente
            no .bldg-head pai (nenhum atributo novo): verNoMapa(this) le this.closest(...).dataset.ci
            por referencia de elemento, nunca reconstruindo string JS com texto interpolado. */
-        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa(this)" title="Centralizar este prédio no mapa">no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div>${bldgSumarioHTML(ci)}</div>${bldgOrdHTML(ci)}`;
+        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa(this)" title="Centralizar este prédio no mapa">Ver no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div>${bldgSumarioHTML(ci)}</div>${bldgOrdHTML(ci)}`;
       }
     }
     /* Fase 12 (12-02): filtro de EXIBICAO por predio (BLDGSTATE) — nunca remove de LAST, so pula
@@ -3448,23 +3448,23 @@ function showDetail(a,ll){
   }
   document.getElementById("dActsMore").innerHTML=`
     <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>
-    <button type="button" onclick="abrirCustos()">🧮 Custos de compra (ITBI + cartório)</button>
+    <button type="button" onclick="abrirCustos()">🧮 Calcular custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
     ${mapLinks}
     <div class="zapgroup">
       <div class="zapgroup-lbl">Copiar para WhatsApp</div>
-      <button type="button" class="zapbtn" onclick="copyZap('resumo')">💬 Resumo do imóvel ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('proprietario')">🏠 Mensagem para o proprietário ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('comprador')">🔑 Mensagem para o comprador ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('preco')">💲 Argumento de preço ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('riscos')">⚠️ Riscos e ressalvas ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('resumo')">💬 Copiar resumo do imóvel ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('proprietario')">🏠 Copiar mensagem para o proprietário ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('comprador')">🔑 Copiar mensagem para o comprador ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('preco')">💲 Copiar argumento de preço ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('riscos')">⚠️ Copiar riscos e ressalvas ⧉</button>
     </div>
     <div class="zapgroup">
       <div class="zapgroup-lbl">Documentos da negociação</div>
-      <button type="button" class="zapbtn" onclick="abrirNeg('proposta')">📄 Proposta de Compra e Venda</button>
-      <button type="button" class="zapbtn" onclick="abrirNeg('exclusividade')">🔑 Termo de Exclusividade</button>
-      <button type="button" class="zapbtn" onclick="abrirNeg('contrato')">🧾 Contrato de Compra e Venda</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('proposta')">📄 Gerar Proposta de Compra e Venda</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('exclusividade')">🔑 Gerar Termo de Exclusividade</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('contrato')">🧾 Gerar Contrato de Compra e Venda</button>
     </div>
     <div class="zapgroup">
       <button type="button" class="zapbtn" onclick="abrirCaptacao()">🧾 Captar este imóvel</button>
@@ -4679,7 +4679,7 @@ function initCaixa(){
   if(g&&(Date.now()-g)/864e5>14){
     const d=CAIXA.gerado.split("-").reverse().join("/");
     btn.title="Lista da Caixa de "+d+" — pode estar desatualizada (rode atualizar-caixa.py)";
-    btn.innerHTML="🏦 Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
+    btn.innerHTML="🏦 Ver Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
   }
 }
 function caixaPopup(i){
