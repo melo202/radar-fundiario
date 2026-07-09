@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: executing
-stopped_at: Completed 14-04-PLAN.md
-last_updated: "2026-07-09T21:32:48.956Z"
+status: verifying
+stopped_at: Completed 14-05-PLAN.md
+last_updated: "2026-07-09T21:42:56.590Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 13
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 30
-  completed_plans: 29
-  percent: 97
+  completed_plans: 30
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 14 (Linguagem Impecável (pt-BR) — gate de release) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-09
 
 Progress: [░░░░░░░░░░] 0%
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14 P02 | 12min | 3 tasks | 2 files |
 | Phase 14 P03 | 8min | 2 tasks | 2 files |
 | Phase 14 P04 | 6min | 2 tasks | 2 files |
+| Phase 14 P05 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 14]: [14-03]: 4 toasts de erro corrigidos p/ padrao §26.3 (o que houve + o que fazer); 1 tooltip do botao Caixa perdeu instrucao de script Python inadequada ao corretor; toasts de limitacao de dado (sem coordenada) mantidos sem saida forcada (nao sao erro do usuario)
 - [Phase 14]: [14-04]: zapArgumento (fallback sem porque[0]) perdeu exposicao crua de score/mediana ao cliente final; zapRiscos ganhou o verbo 'e' que faltava ('nao e uma avaliacao oficial'); nenhuma edicao exigiu tocar tests/templates.test.mjs
 - [Phase 14]: [14-04]: captFollowup ('Follow-up') mantido sem mudanca — anglicismo ja estabelecido em outras 2 ancoras do app (label + toast), troca isolada quebraria consistencia de nomenclatura
+- [Phase 14]: [14-05]: achado transversal de concordancia de genero 'no regiao'->'na regiao' corrigido via helper localTxt em 6 funcoes RADAR_PURE (zapResumo/zapProprietario/zapComprador/captAbordagem/captScript/fichaRapidaTexto); auditoria dos Planos 01/04 atualizada retroativamente
+- [Phase 14]: [14-05]: gate LING-01 fechado - 14-AUDITORIA.md com 11 secoes completas, contagem (~287 revisadas/30 alteradas) e sign-off dos 8 criterios SS26, todos PASS; npm test 107/107 verde
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:32:48.953Z
-Stopped at: Completed 14-04-PLAN.md
+Last session: 2026-07-09T21:42:56.587Z
+Stopped at: Completed 14-05-PLAN.md
 Resume file: None

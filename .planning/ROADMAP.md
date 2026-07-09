@@ -40,7 +40,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11 (completed 2026-07-07)
 - [x] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar (completed 2026-07-07)
 - [x] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela (completed 2026-07-07)
-- [ ] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
+- [x] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26 (completed 2026-07-09)
 - [ ] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor
 - [ ] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
 - [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
@@ -180,7 +180,7 @@ Plans:
 - [x] 14-02-PLAN.md — Varredura de UI de entrada: botões (verbo de ação), placeholders, títulos/PWA, onboarding, "O que o Radar faz", legenda
 - [x] 14-03-PLAN.md — Varredura de feedback: toasts/erros (§26.3), estados vazios, tooltips e aria-label
 - [x] 14-04-PLAN.md — RADAR_PURE: templates de WhatsApp + Captação (com atualização dos testes acoplados em lockstep)
-- [ ] 14-05-PLAN.md — RADAR_PURE: documentos + negociação (disclaimers preservados) + prédio + consolidação do gate §26
+- [x] 14-05-PLAN.md — RADAR_PURE: documentos + negociação (disclaimers preservados) + prédio + consolidação do gate §26
 
 ### Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território
 **Goal**: O corretor vê o "calor" de valor do território e as métricas do setor, sem avalanche de requisições.
@@ -249,7 +249,7 @@ Plans:
 | 11.1 Documentos da Negociação (Proposta/Exclusividade/Contrato) | v2.1 | 3/3 | Complete    | 2026-07-07 |
 | 12. Prédio Comercial | v2.1 | 2/2 | Complete    | 2026-07-07 |
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
-| 14. Linguagem Impecável (gate) | v2.1 | 4/5 | In Progress|  |
+| 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete   | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 0/TBD | Not started | - |
 | 16. Detector + Farming/Caderno | v2.1 | 0/TBD | Not started | - |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
