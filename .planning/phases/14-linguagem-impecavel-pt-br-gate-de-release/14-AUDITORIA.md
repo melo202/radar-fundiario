@@ -327,9 +327,16 @@ Varredura das 5 funções `zap*` (radar-goiania.html:1438-1501). Nenhum emoji, C
 
 ## Captação (RADAR_PURE)
 
+Varredura das 4 funções `capt*` (radar-goiania.html:1504-1537) + `oportunidadeItem`/`histAdd` (1551-1576). Nenhuma alteração de texto necessária — as 4 funções já atendem §26 (verbo de ação/tom direto, sem gíria/CAPS/hype); `oportunidadeItem`/`histAdd` são funções puras de dados (allowlist/FIFO) sem string visível ao usuário, fora do escopo de auditoria de tom.
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 04)* | | | | |
+| `captAbordagem` — "Olá! Sou corretor(a) e trabalho com imóveis no {bairro}. Notei seu imóvel na {endereco}{Q/L} e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?" + assinatura | 1504-1510 | OK | (sem mudança) | §26.8 (abordagem direta, sem pressão/gíria; "sem compromisso" já sinaliza tom consultivo, não invasivo) |
+| `captScript` — 4 passos numerados ("1." apresentação, "2." pergunta de interesse, "3." agenda visita/envia faixa, "4." agradece mesmo se negativa), SEM assinatura (script de ligação interno) | 1514-1520 | OK | (sem mudança) | §26.8 (roteiro objetivo, verbo de ação em cada passo); numeração "1."–"4." preservada (asserida em `tests/templates.test.mjs`) |
+| `captChecklist` — 5 itens estáticos com bullet "•" (Matrícula/RGI, IPTU+CND, Certidões pessoais, Convenção/ata de condomínio, Documento de identidade+CPF), SEM assinatura | 1524-1529 | OK | (sem mudança) | §26 (termos técnicos de documento — jargão aceitável em checklist do próprio corretor, não em mensagem enviada ao cliente); 5 termos ("matrícula"/"iptu"/"certidões pessoais"/"condomínio"/"identidade") e contagem de bullets preservados (asserido em `tests/templates.test.mjs`) |
+| `captFollowup` — "Follow-up: retornar contato com proprietário/interessado do imóvel na {endereco} em até 3 dias úteis para confirmar interesse na captação." (tarefa interna, SEM assinatura) | 1534-1536 | avaliado-mantido | (sem mudança) | "Follow-up" é anglicismo, mas já é termo estabelecido no app (`.captblock-lbl` linha 1053 "Tarefa de follow-up"; toast linha 4197 "Tarefa de follow-up copiada.") — troca isolada quebraria consistência de nomenclatura (§26.7) sem ganho, texto é tarefa interna do corretor, nunca enviado ao cliente |
+| `oportunidadeItem` — retorna objeto de 12 campos (allowlist LGPD), sem string livre exposta ao usuário | 1551-1568 | N/A (sem texto de UI) | (sem mudança) | fora do escopo de tom §26 (dado estruturado, não copy); contrato de allowlist (SALV-01/T-10-01) intocado |
+| `histAdd` — FIFO puro sobre array, sem string de UI | 1573-1576 | N/A (sem texto de UI) | (sem mudança) | fora do escopo de tom §26 (lógica pura, sem copy) |
 
 ## Documentos + Negociação (RADAR_PURE)
 
