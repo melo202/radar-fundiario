@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 after v2.0 milestone (Mapa-first + Motion + Satélite) — shipped, audited (passed), archived*
+*Last updated: 2026-07-09 after Phase 14 (Linguagem Impecável pt-BR — gate LING-01 fechado: ~287 strings auditadas/30 corrigidas via checklist §26, suíte 108/108; cockpit v2.1 Fases 7-14 completas, restam 15-18 Território/PD)*
