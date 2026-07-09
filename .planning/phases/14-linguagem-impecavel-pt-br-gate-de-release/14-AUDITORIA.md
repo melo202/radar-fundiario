@@ -192,9 +192,67 @@ Cores inline (`#2c5545`, `#a8842c`, `#b5451f`, `#57503f`) **não tocadas** — s
 
 ## Toasts/Erros + Estados vazios
 
+Varredura das 46 linhas retornadas por `grep -n "toast(" radar-goiania.html` (contagem inalterada antes/depois). Duas linhas (2540, 2708) não são chamadas de toast: a primeira é a definição da função central; a segunda é um comentário que menciona `toast()`. Mensagens de confirmação/sucesso não precisam de saída (§26.3 aplica-se a erros); mensagens puramente informativas (contagem de resultados, aviso de dado ausente) foram avaliadas quanto a oferecer instrução quando fazem sentido ter uma.
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 03)* | | | | |
+| `"Lotes delimitados — toque num lote para abrir os dados."` / `"...passe o mouse para identificar, clique para abrir."` | 2253 | OK | (sem mudança) | informativo já com instrução de uso |
+| `"Lote sem registro no cadastro."` (loadCi, clique direto em lote sem cadastro) | 2328 | **alterada** | `"Lote sem registro no cadastro. Tente outro lote."` | §26.3 (faltava a saída — adicionado próximo passo) |
+| `"Falha ao carregar o lote. Tente de novo."` | 2330 | OK | (sem mudança) | §26.3 já atendido |
+| `"Nenhum lote nesse ponto. Clique sobre o imóvel."` | 2347 | OK | (sem mudança) | §26.3 já atendido |
+| `"Falha ao identificar o ponto. Tente de novo."` | 2349 | OK | (sem mudança) | §26.3 já atendido |
+| `"{setor} no mapa — dê zoom nos lotes ou digite quadra e lote."` | 2500 | OK | (sem mudança) | informativo + instrução |
+| `function toast(msg){...}` (definição da função central) | 2540 | n/a | — | não é uma chamada de toast, é a função em si |
+| `"Resultado muito grande — a lista pode estar incompleta. Refine a busca."` | 2591 | OK | (sem mudança) | §26.3 já atendido |
+| `"Digite a inscrição cadastral."` | 2608 | OK | (sem mudança) | validação de campo — a instrução já É o "o que fazer" |
+| `"Escolha o setor na lista (digite e clique)."` | 2619 | OK | (sem mudança) | idem |
+| `"Digite a rua/avenida."` | 2620 | OK | (sem mudança) | idem |
+| `"Digite o nome da rua (além de \"rua/av\")."` | 2624 | OK | (sem mudança) | idem |
+| `"Digite o nome do edifício (mínimo 3 letras)."` | 2661 | OK | (sem mudança) | idem |
+| `"Escolha o setor na lista (digite e clique)."` (modo prédio) | 2675 | OK | (sem mudança) | idem |
+| `"Digite ao menos a quadra."` | 2679 | OK | (sem mudança) | idem |
+| `toast(aviso)` — `"Número {n} não consta no cadastro (prédios ficam sem número) — mostrando a rua inteira; ache o prédio pelo nome na lista."` | 2701 | OK | (sem mudança) | §26.3 já atendido (explica + saída "ache o prédio pelo nome na lista") |
+| `toast(msg)` — `"Você está offline — a busca precisa de internet."` / `"Falha ao consultar o cadastro. Tente de novo."` | 2706 | OK | (sem mudança) | §26.3; a saída de "offline" é reforçada pelo botão "Tentar de novo" do estado vazio irmão (linha 2711/2712) — decisão já documentada em comentário no código |
+| comentário `/* ... toast() ... */` | 2708 | n/a | — | comentário de código, não é uma chamada real |
+| `toast(msg)` — 4 variantes de "sem resultado" (bd/addr/apto/default) | 2747 | OK | (sem mudança) | todas as 4 variantes já têm saída própria ("Tente parte do nome…", "Confira a rua…", "Tente sem o apartamento…", "Confira quadra/lote ou tente só a quadra.") |
+| `"🏢 {n} imóveis deste prédio — veja a lista abaixo"` | 2782 | OK | (sem mudança) | informativo + instrução |
+| `"{n} imóveis no mapa — a lista completa está na aba Consulta."` | 2785 | OK | (sem mudança) | informativo + instrução |
+| `"🏢 {n} imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha)."` | 2789 | OK | (sem mudança) | informativo + instrução |
+| `"Você já marcou 4 — o máximo para comparar. Desmarque uma para trocar."` | 3072 | OK | (sem mudança) | §26.3 já atendido |
+| `"Encontrado, mas sem coordenada cadastrada."` | 3226 | avaliado-mantido | (sem mudança) | limitação de dado do cadastro (não é erro do usuário) — o registro já está acessível na lista/ficha; nenhuma ação corretiva possível para o corretor |
+| `"Este prédio não tem coordenada no cadastro."` | 3249 | avaliado-mantido | (sem mudança) | mesma limitação de dado (botão "no mapa ↗" sem coordenada para plotar); nenhuma ação disponível — não é um erro que o usuário cause ou resolva |
+| `"Imóvel sem coordenada no cadastro — abrindo a ficha."` | 3303 | OK | (sem mudança) | explica + já informa a ação que o próprio sistema toma |
+| `"Não foi possível salvar — armazenamento do navegador indisponível ou cheio."` (oppSave) | 3500 | **alterada** | `"Não foi possível salvar — armazenamento do navegador indisponível ou cheio. Libere espaço e tente de novo."` | §26.3 (faltava a saída — adicionado próximo passo) |
+| `"Oportunidade removida."` | 3534 | OK | (sem mudança) | confirmação — sem necessidade de saída |
+| `"Oportunidade salva."` | 3542 | OK | (sem mudança) | confirmação — sem necessidade de saída |
+| `"Não foi possível salvar — armazenamento do navegador indisponível ou cheio."` (histSave) | 3508 | **alterada** | `"Não foi possível salvar — armazenamento do navegador indisponível ou cheio. Libere espaço e tente de novo."` | §26.3, mesma correção do par oppSave |
+| `"Oportunidade removida."` | 3653 | OK | (sem mudança) | confirmação — sem necessidade de saída |
+| `"Inscrição {v} copiada — cole na consulta oficial."` | 3681 | OK | (sem mudança) | confirmação + próxima ação |
+| `"Link copiado."` (sucesso) / `"Não foi possível copiar o link."` (falha) | 3688 | **alterada** (só o ramo de falha) | sucesso sem mudança; falha → `"Não foi possível copiar o link. Tente de novo."` | §26.3 (faltava a saída no ramo de falha) |
+| `"Não foi possível copiar — tente selecionar o texto manualmente."` (copyTexto, falhou) | 3714 | OK | (sem mudança) | §26.3 já atendido |
+| `toast(okMsg)` (copyTexto, fallback de execCommand) | 3727 | OK | (sem mudança) | confirmação de sucesso (ex.: "Copiado! Cole no WhatsApp.") — sem necessidade de saída |
+| `toast(okMsg)` (copyTexto, clipboard API) | 3731 | OK | (sem mudança) | idem |
+| `"Preencha o nome do proponente e o valor ofertado para continuar."` | 4113 | OK | (sem mudança) | validação com verbo de ação |
+| `"Preencha o nome do proprietário e do corretor para continuar."` | 4117 | OK | (sem mudança) | idem |
+| `"Preencha o nome das partes e o preço total para continuar."` | 4121 | OK | (sem mudança) | idem |
+| `"Preencha seu nome para assinar o documento."` | 4404 | OK | (sem mudança) | idem |
+| `"Informe o valor de venda sugerido (passo Valor)."` | 4405 | OK | (sem mudança) | idem |
+| `"Resumo copiado — cole no WhatsApp."` | 4666 | OK | (sem mudança) | confirmação + próxima ação |
+| `"Imóveis da Caixa à venda (lista de {n}). Toque num pino dourado."` | 4714 | OK | (sem mudança) | informativo + instrução |
+| `"{n} linhas exportadas para CSV."` | 4739 | OK | (sem mudança) | confirmação — sem necessidade de saída |
+| `"Não foi possível usar o microfone. Digite sua busca."` | 5028 | OK | (sem mudança) | §26.3 já atendido |
+| `"Não foi possível usar o microfone. Digite sua busca."` (catch do `.start()`) | 5030 | OK | (sem mudança) | §26.3 já atendido |
+
+### Estados vazios (4 blocos `.empty`)
+
+| Bloco | Âncora (linha) | Veredito | Critério §26.8 |
+|---|---|---|---|
+| `#emptyState` (tela inicial de busca) | 880 | OK | "Toque num exemplo para começar:" + 4 chips tocáveis com valor de busca pronto — próximo passo em 1 toque |
+| Erro de busca (falha de rede/consulta) | 2711-2712 | OK | mensagem explicativa + botão "Tentar de novo" (`onclick="buscar()"`) — próximo passo em 1 toque |
+| Sem resultado | 2761 | OK | mensagem já contém a saída (varia por modo) + botão contextual quando aplicável ("Buscar como Prédio" / "Tentar outro nome") |
+| Libs do mapa não carregaram | 4824 | OK | "Verifique a conexão com a internet e recarregue a página." — instrução clara com 2 verbos de ação |
+
+Nenhum `id`, classe `.empty` ou handler foi alterado — só o texto de 3 toasts (2328, 3500, 3508 dupla, 3688 ramo de falha) recebeu o próximo passo que faltava.
 
 ## Tooltips/aria-label
 

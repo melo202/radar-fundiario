@@ -2325,7 +2325,7 @@ async function loadCi(ci){
     const d=await jsonp({where:`ci='${String(ci).replace(/\D/g,"")}'`,outFields:"*",returnGeometry:"false",resultRecordCount:2000,f:"json"});
     if(tk!==SEARCHTOKEN)return;
     const items=sanitiza((d.features||[]).map(f=>f.attributes));
-    if(!items.length){toast("Lote sem registro no cadastro.");return;}
+    if(!items.length){toast("Lote sem registro no cadastro. Tente outro lote.");return;}
     finish(items,true); /* veio do mapa: prédio abre o seletor de imóvel */
   }catch(err){if(tk===SEARCHTOKEN)toast("Falha ao carregar o lote. Tente de novo.");}
   finally{if(tk===SEARCHTOKEN)loading(false);}
@@ -3497,7 +3497,7 @@ function oppLoad(){
 }
 function oppSave(arr){
   try{localStorage.setItem("radar_oportunidades",JSON.stringify(arr));return true;}
-  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio.");return false;}
+  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio. Libere espaço e tente de novo.");return false;}
 }
 function histLoad(){
   /* CR (10-REVIEW): mesma guarda Array.isArray de oppLoad — histPush roda a cada abertura de ficha. */
@@ -3505,7 +3505,7 @@ function histLoad(){
 }
 function histSave(arr){
   try{localStorage.setItem("radar_historico",JSON.stringify(arr));return true;}
-  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio.");return false;}
+  catch(e){toast("Não foi possível salvar — armazenamento do navegador indisponível ou cheio. Libere espaço e tente de novo.");return false;}
 }
 function oppTem(insc){
   return oppLoad().some(it=>it.insc===insc);
@@ -3685,7 +3685,7 @@ function copyLink(insc){
   if(!insc||!navigator.clipboard)return;
   const url=location.origin+location.pathname+"?insc="+encodeURIComponent(insc);
   navigator.clipboard.writeText(url)
-    .then(()=>toast("Link copiado."),()=>toast("Não foi possível copiar o link."));
+    .then(()=>toast("Link copiado."),()=>toast("Não foi possível copiar o link. Tente de novo."));
 }
 /* Fase 10 ZAP-01/CAPT-01 (10-03): monta o objeto data (shape travado em 10-01-SUMMARY) a partir
    da ficha atualmente aberta (DCUR) — usado tanto pelo grupo WhatsApp quanto pelo Modo Captação.
