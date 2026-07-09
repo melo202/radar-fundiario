@@ -1053,10 +1053,20 @@
       <span class="dtag" id="terrSetorNome"></span>
       <div class="dnote" id="terrAviso" hidden></div>
       <div class="dgrid" id="terrGrid"></div>
-      <div class="acts" id="terrActions"></div>
+      <!-- Fase 15 TERR-03: rodapé de ação (lei da Fase 10) — 1 primária (liga/desliga choropleth,
+           estado espelhado com a legenda via sincTerrPanelToggle/toggleChoropleth) + 1 secundária
+           ("Buscar lote no setor", reusa o fluxo de busca por setor já existente). -->
+      <div class="acts" id="terrActions">
+        <button type="button" id="terrPanelToggle" class="primary" aria-pressed="false" onclick="toggleChoropleth();sincTerrPanelToggle()">Colorir mapa por valor</button>
+        <button type="button" onclick="buscarNoSetor()">Buscar lote no setor</button>
+      </div>
       <details class="maisopcoes">
         <summary>Ver metodologia</summary>
-        <div class="footbody" id="terrMetodologia"></div>
+        <div class="footbody" id="terrMetodologia">
+          <p>As faixas de valor são calculadas por quantis — cortes que dividem a amostra do setor em 5 partes iguais de R$/m², da mais barata à mais cara.</p>
+          <p>Todo número acima mostra "Amostra de N de M lotes": a leitura é sobre a amostra coletada (até 3 páginas do cadastro), não necessariamente o setor inteiro.</p>
+          <p>Nota de viés: as faixas usam os primeiros lotes do cadastro por ordem de registro (OBJECTID) — pode sub/sobre-representar parte do setor; é uma leitura da amostra, não do setor inteiro.</p>
+        </div>
       </details>
     </div>
 
@@ -2490,14 +2500,14 @@ function recolherLegenda(){
   }
 }
 /* toggleChoropleth(): fonte única de verdade do estado ligado/desligado do choropleth —
-   sincroniza aria-pressed da legenda E do botão do painel (Plano 03, terrPanelToggle). */
+   sincroniza aria-pressed da legenda E do botão do painel (15-03, terrPanelToggle via
+   sincTerrPanelToggle — mesma função usada pelo próprio onclick do botão, nunca 2 fontes). */
 function toggleChoropleth(){
   CHOROPLETH_ON=!CHOROPLETH_ON;
   const p=String(CHOROPLETH_ON);
   const t=document.getElementById("terrToggle");
   if(t)t.setAttribute("aria-pressed",p);
-  const pb=document.getElementById("terrPanelToggle");
-  if(pb)pb.setAttribute("aria-pressed",p);
+  if(typeof sincTerrPanelToggle==="function")sincTerrPanelToggle();
   desenharChoropleth();
   const leg=document.getElementById("terrLegenda");
   if(leg)leg.hidden=!CHOROPLETH_ON;
@@ -3032,6 +3042,7 @@ async function abrirTerritorio(layer){
     loading(true,MOTION_MSG.faixas);
     const st=aplicarChoropleth(scan);
     montarPainel(scan,st,layer||baiHi);
+    checarVarreduraParcial(scan); /* 15-03 Task 2: varredura best-effort — avisa sem bloquear */
     loading(false);
   }catch(e){
     loading(false);
@@ -3119,6 +3130,56 @@ function fecharTerrPanel(){
   const b=document.getElementById("btnVerTerr");
   if(b&&!b.hidden)b.focus();
 }
+
+/* sincTerrPanelToggle(): fonte única de verdade do label+aria do botão primário do painel —
+   chamada tanto pelo próprio onclick do botão quanto por toggleChoropleth() (15-02), garantindo
+   que painel e legenda NUNCA dessincronizem (nunca 2 botões com estados diferentes ao mesmo tempo,
+   15-UI-SPEC.md Copywriting Contract). */
+function sincTerrPanelToggle(){
+  const b=document.getElementById("terrPanelToggle");
+  if(!b)return;
+  b.textContent=CHOROPLETH_ON?"Desligar cor por valor":"Colorir mapa por valor";
+  b.setAttribute("aria-pressed",String(CHOROPLETH_ON));
+}
+
+/* buscarNoSetor(): secundária do rodapé de ação — reusa o fluxo de busca por setor já existente
+   (setMode/pickBairro, o MESMO usado pelo dropdown da caixa única em pickCaixaItem) em vez de um
+   fluxo novo; pré-preenche o setor do painel atual e foca o 1º campo do modo Quadra/Lote. */
+function buscarNoSetor(){
+  if(TERR_PANEL_CD==null){toast("Nenhum setor aberto no momento.");return;}
+  fecharTerrPanel();
+  setMode("ql");
+  pickBairro(String(TERR_PANEL_CD));
+  const b=COMBO.find(x=>String(x.code)===String(TERR_PANEL_CD));
+  const inp=document.getElementById("caixaInput");
+  if(b&&inp)inp.value=b.disp;
+  setView("busca");
+  focusFirstField();
+}
+
+/* checarVarreduraParcial(scan): varredura best-effort (15-RESEARCH.md) — se o orçamento de
+   páginas não foi esgotado (paginas<3) mas a amostra ficou menor que o total real, algo
+   interrompeu a varredura antes do esperado; avisa sem bloquear (os números já calculados
+   continuam exibidos, T-15-08). Toque tenta de novo, limpando o cache do cdbairro p/ não repetir
+   o mesmo resultado parcial. */
+function checarVarreduraParcial(scan){
+  const av=document.getElementById("terrAviso");
+  if(!av)return;
+  if(scan&&scan.paginas<3&&scan.amostrado<scan.total){
+    av.textContent="Não foi possível concluir a varredura — os números abaixo usam só as páginas que chegaram. Toque para tentar de novo.";
+    av.hidden=false;
+    av.style.cursor="pointer";
+    av.onclick=()=>{delete TERRCACHE[String(scan.cdbairro)];abrirTerritorio(baiHi);};
+  }else{
+    av.hidden=true;
+    av.onclick=null;
+  }
+}
+
+/* VERIFICAÇÃO AO VIVO ORÇAMENTO: abrir painel/choropleth do Bueno (cdbairro=16) com DevTools
+   Network aberto; contar requisições a MapServer/3/query — deve ser ≤3 paginadas + 1
+   returnCountOnly; __terrReq reflete as paginadas (TERR_NET_START, ~2907). */
+function terrUltimoOrcamento(){return __terrReq;}
 
 async function buscar(){
   const btn=document.getElementById("btnGo");
