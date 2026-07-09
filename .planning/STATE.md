@@ -4,7 +4,7 @@ milestone: v2.1
 milestone_name: Cockpit Comercial
 status: verifying
 stopped_at: Completed 15-03-PLAN.md
-last_updated: "2026-07-09T23:23:21.033Z"
+last_updated: "2026-07-09T23:49:32.915Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 13
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 15 (Setor-Scan Compartilhado, Choropleth & Painel do Território) — EXECUTING
-Plan: 3 of 3
+Phase: 16
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-09
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 27 (v2.1)
+- Total plans completed: 30 (v2.1)
 - Average duration: —
 - Total execution time: —
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 | 11.1 | 3 | - | - |
 | 12 | 2 | - | - |
 | 14 | 5 | - | - |
+| 15 | 3 | - | - |
 
 **Recent Trend:**
 
