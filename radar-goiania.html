@@ -2406,6 +2406,10 @@ let CHOROPLETH_ON=false;
 let TERR_LOTE_BIN=new Map();
 const TERR_SETOR_ATIVO=new Set();
 let TERR_BREAKS=null;
+/* TERR_LAST_ST (WR-01 15-REVIEW.md): última estatística (n/total/breaks) devolvida por
+   aplicarChoropleth() — guardada para toggleChoropleth() poder rechamar montarLegenda() ao
+   religar o choropleth sem precisar de um novo scan (o toggle não recebe `st` no escopo). */
+let TERR_LAST_ST=null;
 
 /* função de resolução de estilo (não objeto cru) — deixa a extensão v2.1 (styling por território) barata.
    Fase 4 SAT-01: branch por satelliteOn — sobre imagem escura, solta o wash de fillColor e reforça o traço
@@ -2456,6 +2460,7 @@ function aplicarChoropleth(scan){
     }
   }
   TERR_SETOR_ATIVO.add(scan.cdbairro);
+  TERR_LAST_ST=st; /* WR-01 15-REVIEW.md: guardado p/ toggleChoropleth() religar a legenda sem novo scan */
   return st;
 }
 /* desenharChoropleth(): troca em massa via setStyle — MESMO padrão de setSatelite (2144-2145
@@ -2509,8 +2514,16 @@ function toggleChoropleth(){
   if(t)t.setAttribute("aria-pressed",p);
   if(typeof sincTerrPanelToggle==="function")sincTerrPanelToggle();
   desenharChoropleth();
-  const leg=document.getElementById("terrLegenda");
-  if(leg)leg.hidden=!CHOROPLETH_ON;
+  /* WR-01 15-REVIEW.md: montarLegenda() era definida mas nunca chamada — a legenda aparecia
+     (leg.hidden=false) com os 5 swatches sem rótulo de R$/m² e sem o rótulo de honestidade
+     (rotuloAmostra). Ao ligar, popula com a última estatística conhecida (TERR_LAST_ST, setada
+     por aplicarChoropleth); ao desligar, apenas esconde — nunca mostra swatch sem número. */
+  if(CHOROPLETH_ON&&TERR_LAST_ST){
+    montarLegenda(TERR_LAST_ST);
+  }else{
+    const leg=document.getElementById("terrLegenda");
+    if(leg)leg.hidden=true;
+  }
 }
 let bairroLayer=null,baiHi=null;
 /* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
@@ -3041,6 +3054,7 @@ async function abrirTerritorio(layer){
     const scan=await territorioScan(cd);
     loading(true,MOTION_MSG.faixas);
     const st=aplicarChoropleth(scan);
+    montarLegenda(st); /* WR-01 15-REVIEW.md: popula #terrLbl1..5 + #terrAmostra (faltava) */
     montarPainel(scan,st,layer||baiHi);
     checarVarreduraParcial(scan); /* 15-03 Task 2: varredura best-effort — avisa sem bloquear */
     loading(false);
