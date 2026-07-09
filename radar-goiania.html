@@ -3144,9 +3144,14 @@ function montarPainel(scan,st,layer){
 }
 
 /* fecharTerrPanel(): fecho por × ou Esc — devolve o foco ao gatilho (#btnVerTerr), mesmo padrão
-   de foco/trap já usado pelos outros sheets do app. */
+   de foco/trap já usado pelos outros sheets do app. WR-03 15-REVIEW.md: também chamada
+   defensivamente por finish()/showDetail() ("1 sheet por vez") — o guard `!p.classList.contains
+   ("show")` evita roubar o foco pro #btnVerTerr quando o painel já estava fechado (não havia
+   sheet nenhum pra fechar, então também não há foco nenhum a devolver). */
 function fecharTerrPanel(){
-  document.getElementById("terrPanel").classList.remove("show");
+  const p=document.getElementById("terrPanel");
+  if(!p||!p.classList.contains("show"))return;
+  p.classList.remove("show");
   const b=document.getElementById("btnVerTerr");
   if(b&&!b.hidden)b.focus();
 }
@@ -3328,6 +3333,7 @@ async function buscar(){
    o SELETOR de imóvel em vez de jogar o corretor na aba de busca. */
 function finish(items,fromMap){
     closeChooser(); /* resultado novo: descarta qualquer seletor de prédio anterior (evita sheet fantasma) */
+    fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes de qualquer resultado novo (senão fica atrás do #detail/#chooser, mesmo z-index) */
     /* Fase 12 (12-02): reset de estado de sessao no INICIO de finish() — mesma filosofia defensiva
        de closeChooser() acima. CMP/BLDGSTATE nunca sobrevivem a uma busca diferente. */
     CMP=[];BLDGSTATE={};fecharComparacao();atualizarCmpFab();
@@ -3970,6 +3976,7 @@ function atualizarScores(a, statsR){
   }))}</p>`;
 }
 function showDetail(a,ll){
+  fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes do #detail abrir (mesmo z-index/DOM depois dele; sem isto ficava visualmente escondido atrás) */
   const d=document.getElementById("detail");
   const addr=addrDe(a);
   const ci=clean(a.ci), insc=clean(a.nrinscr), ul=unitLabel(a), ed=clean(a.nmedificio);
