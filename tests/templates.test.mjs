@@ -91,6 +91,19 @@ test("zapResumo/zapProprietario/zapComprador/zapArgumento com faixa null nao inv
   }
 });
 
+// --- localTxt: concordancia de genero no fallback sem bairro (WR-01 do review da Fase 14) ------
+
+test("zap*/capt* sem bairro usam 'na região' — nunca 'no região'", () => {
+  const semBairro = { ...FIXTURES.zapComData, bairro: "" };
+  const fns = { ...ZAP_FNS, captAbordagem: P.captAbordagem, captScript: P.captScript };
+  for (const [name, fn] of Object.entries(fns)) {
+    const result = fn(semBairro);
+    assert.ok(!result.includes("no região"), `${name}(semBairro) NAO deveria conter "no região" (concordância), obteve: ${JSON.stringify(result)}`);
+  }
+  // pelo menos as aberturas que citam localizacao devem usar o feminino correto
+  assert.ok(P.zapResumo(semBairro).includes("na região"), `zapResumo(semBairro) deveria conter "na região", obteve: ${JSON.stringify(P.zapResumo(semBairro))}`);
+});
+
 // --- zapRiscos: honestidade sempre, nunca afirmacao absoluta -----------------------------------
 
 test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
