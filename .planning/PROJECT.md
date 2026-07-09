@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-09 after Phase 14 (Linguagem Impecável pt-BR — gate LING-01 fechado: ~287 strings auditadas/30 corrigidas via checklist §26, suíte 108/108; cockpit v2.1 Fases 7-14 completas, restam 15-18 Território/PD)*
+*Last updated: 2026-07-09 after Phase 15 (Território fundação: setor-scan compartilhado ≤3 req + cache/dedupe, choropleth 5 quantis via setStyle, painel do território com honestidade de amostra; outFields restrito VERIFICADO ao vivo (~80% menos payload) com fallback; suíte 121/121; Fases 7-15 completas, restam 16-18)*
