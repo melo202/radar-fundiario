@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
 status: executing
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-07-09T21:17:37.804Z"
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-07-09T21:25:55.709Z"
 last_activity: 2026-07-09
 progress:
   total_phases: 13
   completed_phases: 8
   total_plans: 30
-  completed_plans: 27
-  percent: 90
+  completed_plans: 28
+  percent: 93
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 14 (Linguagem Impecável (pt-BR) — gate de release) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-07-09
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 14 P01 | 2min | 3 tasks | 3 files |
 | Phase 14 P02 | 12min | 3 tasks | 2 files |
+| Phase 14 P03 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 14]: Achado A4 (colisao de 'Oportunidades' entre Caixa e Minhas oportunidades) ratificado como avaliado/mantido, sem mudanca de nome
 - [Phase 14]: [14-02]: 12 botoes substantivo-isolados corrigidos com verbo de acao reaproveitando vocabulario ja existente no app (Ver/Calcular/Copiar/Gerar); seletores/navegacao/icones tratados como excecao documentada ao §26.2
 - [Phase 14]: [14-02]: legenda de pinos 'Atencao' mantida sem renomeacao — rotulo intencional e testado do sistema paralelo STATUS_LABEL/statusDeUnidade (Fase 13), distinto do badge scoreOportunidade da ficha
+- [Phase 14]: [14-03]: 4 toasts de erro corrigidos p/ padrao §26.3 (o que houve + o que fazer); 1 tooltip do botao Caixa perdeu instrucao de script Python inadequada ao corretor; toasts de limitacao de dado (sem coordenada) mantidos sem saida forcada (nao sao erro do usuario)
 
 ### Pending Todos
 
@@ -90,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:17:37.800Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-07-09T21:25:55.705Z
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None
