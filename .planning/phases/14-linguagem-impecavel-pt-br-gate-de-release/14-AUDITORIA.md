@@ -315,9 +315,15 @@ Nenhum `id`, `role=`, `aria-controls`, `aria-describedby` ou `aria-labelledby` f
 
 ## WhatsApp (RADAR_PURE)
 
+Varredura das 5 funções `zap*` (radar-goiania.html:1438-1501). Nenhum emoji, CAPS em bloco ou gíria encontrado; honestidade (`assinatura`/faixa=null) já garantida pelo contrato original (10-01). 2 correções pontuais de tom/gramática, ambas sem asserção acoplada (mudança segura sem editar `tests/templates.test.mjs`).
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 04)* | | | | |
+| `zapResumo` — abertura `${tipoImovel} no ${bairro}.` + leitura + faixa (ou ressalva honesta) + assinatura | 1438-1447 | OK | (sem mudança) | §26.8 (tom direto, dado concreto, sem hype); honestidade preservada (faixa=null nunca inventa valor) |
+| `zapProprietario` — abertura "Olá! Encontrei seu imóvel no {bairro} no Radar…" + faixa/ressalva + pendências opcionais + "Podemos conversar?" + assinatura | 1451-1462 | OK | (sem mudança) | §26.8 (convite direto, sem pressão/hype, pendências citadas como recomendação, não como cobrança) |
+| `zapComprador` — "Encontrei esse imóvel no {bairro}…" + faixa/recomendação de avaliação + "Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar." + assinatura | 1465-1474 | OK | (sem mudança) | §26.8 (tom consultivo, sem promessa de resultado) |
+| `zapArgumento` — fallback sem `porque[0]`: `` Está na faixa "${rotulo}" (score ${score}) em relação à mediana dos comparáveis. `` | 1478-1489 | **alterada** | `` Está na faixa "${rotulo}" em relação aos comparáveis da região. `` | §26.8 (tom robótico — número de `score` cru e jargão "mediana" expostos ao cliente final num fallback de mensagem de WhatsApp; texto principal via `porque[0]` não foi tocado — é gerado por `scoreOportunidade()`, fora do escopo desta varredura, já ratificado no Plano 01); sem asserção acoplada (branch não coberto por `tests/templates.test.mjs`, confirmado por leitura das fixtures) |
+| `zapRiscos` — pontos a confirmar + `"Esta é uma faixa estimada, não uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."` + assinatura | 1493-1500 | **alterada** | `"Esta é uma faixa estimada, não é uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."` | §26.1 (erro gramatical — faltava o verbo "é"; corrigido para bater com o termo de honestidade documentado em 14-RESEARCH.md/interfaces do plano); teste (`zapRiscos contem termo de honestidade…`) já passava via `"faixa estimada"` (asserção por `.some()`), continua verde e agora também casa com `"não é uma avaliação oficial"` |
 
 ## Captação (RADAR_PURE)
 

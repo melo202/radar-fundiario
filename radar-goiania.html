@@ -1483,7 +1483,7 @@ function zapArgumento(data){
   }
   const base=(d.scoreOp.porque&&d.scoreOp.porque[0])
     ? d.scoreOp.porque[0]
-    : `Está na faixa "${d.scoreOp.rotulo}" (score ${d.scoreOp.score}) em relação à mediana dos comparáveis.`;
+    : `Está na faixa "${d.scoreOp.rotulo}" em relação aos comparáveis da região.`;
   return `Sobre o valor: este imóvel ${base.charAt(0).toLowerCase()+base.slice(1)} Isso reforça o valor pedido.`+
     assinatura(d.perfil);
 }
@@ -1496,7 +1496,7 @@ function zapRiscos(data){
     ? d.scoreConf.porque.join("; ")
     : "área privativa, estado de conservação, documentação e número de comparáveis na região";
   return `Alguns pontos para confirmar antes de avançar: ${pontos}. `+
-    "Esta é uma faixa estimada, não uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
+    "Esta é uma faixa estimada, não é uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
     assinatura(d.perfil);
 }
 
