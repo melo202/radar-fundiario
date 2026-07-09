@@ -2169,7 +2169,10 @@ function mixUso(lotes){
   const counts={};
   list.forEach(l=>{const u=l.uso==null?0:+l.uso; counts[u]=(counts[u]||0)+1;});
   const arr=Object.keys(counts).map(u=>({uso:+u,n:counts[u]})).sort((a,b)=>b.n-a.n);
-  const top=arr.slice(0,3).map(x=>({label:USO[x.uso]!=null?USO[x.uso]:"—",pct:(x.n/total)*100}));
+  /* IN-03 15-REVIEW.md: fallback SÓ p/ código fora do domínio conhecido (0–6, já cobre "—" p/
+     uso=0) — inclui o código bruto no rótulo (ex. "— (9)") pra nunca colidir visualmente com
+     outro código também fora do domínio nem com o "—" legítimo de uso=0 (USO[0] já existe). */
+  const top=arr.slice(0,3).map(x=>({label:USO[x.uso]!=null?USO[x.uso]:("— ("+x.uso+")"),pct:(x.n/total)*100}));
   if(arr.length>3){
     const restoN=arr.slice(3).reduce((s,x)=>s+x.n,0);
     top.push({label:"Outros",pct:(restoN/total)*100});
