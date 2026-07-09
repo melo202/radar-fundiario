@@ -2698,6 +2698,70 @@ async function fetchWhere(where,maxPages=30){
   return sanitiza(all.map(f=>f.attributes));
 }
 
+// TERR_NET_START — varredura compartilhada de setor (Fase 15, 15-01, TERR-01): cache de sessão +
+// dedupe de chamada em voo + orçamento HARD de páginas + fallback automático de outFields.
+// Testado por tests/territorio.test.mjs (loadNetBlock, slice isolado via node:vm com
+// jsonp/sanitiza/capCache/toast stubados) — não editar sem rodar `node --test tests/territorio.test.mjs`.
+/* allowlist EXATA de TERR-01 — NUNCA dtnascimen (LGPD); ci/nrinscr identificam o lote sem expor
+   titular; x_coord/y_coord permitem plotar o lote no mapa a partir do resultado do scan. */
+const TERR_FIELDS="vlvenal,areaedif,areaterr,vlimp98,dtinclusao,uso,cdbairro,nrquadra,nrlote,ci,nrinscr,x_coord,y_coord";
+let __terrReq=0; /* contador de requisições paginadas do scan em curso — reset a cada territorioScanRun */
+const TERRCACHE={}; /* cache de sessão por cdbairro — mesmo padrão de CMPCACHE (3757), teto menor (território é mais pesado por entrada) */
+/* fetchWhereRestrito(where,fields,maxPages): clone de fetchWhere com outFields restrito (15-RESEARCH.md,
+   verificado ao vivo: funciona, ~80% menos payload) — se qualquer página falhar (d.error OU exceção do
+   jsonp/servidor), reinicia automaticamente UMA vez com outFields:"*" (nunca trava o scan, Pitfall 1).
+   SEMPRE retorna sanitiza(...) nos DOIS caminhos — defesa em profundidade LGPD contra allowlist mal editada. */
+async function fetchWhereRestrito(where,fields,maxPages){
+  async function varrePaginas(useFields){
+    let all=[],offset=0,page=2000,guard=0;
+    while(true){
+      const d=await jsonp({where,outFields:useFields,returnGeometry:"false",
+        resultOffset:offset,resultRecordCount:page,orderByFields:"OBJECTID",f:"json"});
+      __terrReq++;
+      if(d&&d.error)throw new Error((d.error&&d.error.message)||"outFields rejeitado pelo servidor");
+      const fs=d.features||[];all=all.concat(fs);
+      if(fs.length<page)break;
+      offset+=page;
+      if(++guard>=maxPages)break;
+    }
+    return all;
+  }
+  let all;
+  try{
+    all=await varrePaginas(fields);
+  }catch(e){
+    /* fallback automático: outFields restrito falhou -> outFields="*" (comprovado estável) uma única vez */
+    all=await varrePaginas("*");
+  }
+  return sanitiza(all.map(f=>f.attributes));
+}
+/* territorioScanRun(cdbairro): amostra paginada (até 3 páginas x 2000 = até 6.000 lotes) + total
+   REAL via returnCountOnly em paralelo — nunca baixa o setor inteiro no fluxo padrão (Pitfall
+   CONTEXT.md/ROADMAP: orçamento HARD ≤3 requisições paginadas). */
+async function territorioScanRun(cdbairro){
+  __terrReq=0;
+  const where="cdbairro="+(+cdbairro)+" AND vlvenal>0";
+  const [lotes,totalD]=await Promise.all([
+    fetchWhereRestrito(where,TERR_FIELDS,3),
+    jsonp({where,returnCountOnly:"true",f:"json"})
+  ]);
+  const total=(totalD&&totalD.count)||lotes.length;
+  return {lotes,total,amostrado:lotes.length,paginas:__terrReq,cdbairro:+cdbairro};
+}
+/* territorioScan(cdbairroRaw): função compartilhada única (TERR-01) — Painel + Choropleth abertos
+   juntos disparam UMA varredura (dedupe via promise em voo guardada no cache, não o resultado).
+   +cdbairro: coerção numérica ANTES de qualquer WHERE (mesmo padrão de 2500/2631/2672/2688,
+   ASVS V5) — NaN aborta, nunca interpola string crua. */
+async function territorioScan(cdbairroRaw){
+  const cdbairro=+cdbairroRaw;
+  if(!Number.isFinite(cdbairro))throw new Error("cdbairro inválido");
+  const key=String(cdbairro);
+  capCache(TERRCACHE,30);
+  if(!TERRCACHE[key])TERRCACHE[key]=territorioScanRun(cdbairro).catch(err=>{delete TERRCACHE[key];throw err;});
+  return TERRCACHE[key];
+}
+// TERR_NET_END
+
 async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
