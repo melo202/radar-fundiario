@@ -256,9 +256,62 @@ Nenhum `id`, classe `.empty` ou handler foi alterado — só o texto de 3 toasts
 
 ## Tooltips/aria-label
 
-| String original | Âncora (linha) | Veredito | String final | Critério §26 |
+Varredura das 35 ocorrências de `aria-label="` e das 8 ocorrências de `title="` (contagem ao vivo confirmada nesta plano — RESEARCH estimava 7 para `title`; grep real = 8). Nenhum valor de `role=`/`aria-controls`/`aria-describedby`/`aria-labelledby` foi tocado (11 ocorrências combinadas, inalteradas).
+
+### aria-label (35)
+
+| String original | Âncora (linha) | Elemento/contexto visual | Veredito | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 03)* | | | | |
+| `"Fechar busca"` | 799 | `pillClose`, botão `×` | OK | narra a mesma ação do glifo (fechar) + objeto (busca) |
+| `"Buscar por voz"` | 812 | `caixaVoz`, botão `🎤` | OK | verbo + contexto coerente com o ícone de microfone |
+| `"Limpar busca"` | 813 | `caixaClear`, botão `×` | OK | verbo + objeto coerente |
+| `"Sugestões de setor e rua"` | 815 | `caixaList`, `role="listbox"` | OK | rótulo de região/lista, não é botão — descreve o conteúdo |
+| `"Toque para corrigir o modo de busca detectado"` | 817 | `detectChip`, `role="status"` clicável (div com `tabindex`/`onclick`/`onkeydown`) | OK | narra a ação (toque = ativa) — chip interativo, não `<button>` nativo, mas o padrão §26.2 se aplica igual |
+| `"Escolha o que você quis dizer"` | 819 | `ambigChips`, `role="group"` | OK | rótulo de grupo de chips de desambiguação |
+| `"Exemplos de busca"` | 883 | `exampleChips`, `role="group"` | OK | rótulo de grupo |
+| `"Abrir busca de imóvel"` | 916 | `searchPill`, botão (pill visual de busca) | OK | verbo "Abrir" + objeto, coerente com o padrão de search pill |
+| `"Dispensar dica"` | 921 | `coach-x`, botão `×` | OK | verbo + objeto (dica de coach mark) |
+| `"Navegação do mapa"` | 923 | `breadcrumb`, `<nav>` | OK | rótulo de landmark de navegação |
+| `"Legenda dos pinos no mapa"` | 932 | `pinoLegenda`, `<div>` | OK | rótulo descritivo de região |
+| `"Detalhe do imóvel"` | 939 | `detail`, `role="region"` | OK | rótulo de região |
+| `"Fechar detalhe"` | 943 | `.x`, botão `×` (fecha `#detail`) | OK | verbo + objeto específico |
+| `"Escolha o imóvel"` | 978 | `chooser`, `role="region"` | OK | rótulo de região (seletor de unidade) |
+| `"Fechar"` | 981 | `.x`, botão `×` (fecha `#chooser`) | OK | dialog/região pai já anuncia o contexto ("Escolha o imóvel"); "Fechar" isolado é suficiente e consistente com o padrão dos demais sheets |
+| `"Como usar o Radar Fundiário"` | 991 | `onbOverlay`, `role="dialog"` | OK | título do diálogo de onboarding |
+| `"Laudo de avaliação"` | 1018 | `wiz`, `role="dialog"` | OK | título do diálogo |
+| `"Voltar"` | 1020 | `wBack`, botão `‹` | OK | verbo coerente com a seta de voltar |
+| `"Fechar laudo"` | 1022 | `wclose`, botão `×` (fecha `#wiz`) | OK | verbo + objeto específico |
+| `"Modo captação"` | 1029 | `captSheet`, `role="dialog"` | OK | título do diálogo |
+| `"Fechar"` | 1033 | `wclose`, botão `×` (fecha `#captSheet`) | OK | dialog pai já anuncia "Modo captação"; consistente com o padrão de close genérico |
+| `"Documentos da negociação"` | 1068 | `negSheet`, `role="dialog"` | OK | título do diálogo |
+| `"Voltar"` | 1070 | `negBackBtn`, botão `‹` | OK | verbo coerente |
+| `"Fechar"` | 1072 | `wclose`, botão `×` (fecha `#negSheet`) | OK | idem 981/1033 |
+| `"Comparação de unidades"` | 1079 | `cmpSheet`, `role="dialog"` | OK | título do diálogo |
+| `"Fechar"` | 1083 | `wclose`, botão `×` (fecha `#cmpSheet`) | OK | idem |
+| `"Fechar laudo"` | 1095 | `lvx`, botão `×` (fecha visualização do laudo/PDF) | OK | específico, consistente com 1022 |
+| `"Custos de compra"` | 1101 | `calc`, `role="dialog"` | OK | título do diálogo |
+| `"Fechar"` | 1104 | `calcx`, botão `×` (fecha `#calc`) | OK | idem 981/1033/1072 |
+| `"Ver satélite"` / `"Ver ruas"` (dinâmico, `setSatelite()`) | 2099 (inicial), 2118 (JS) | `btnSat`, botão toggle `🛰️`/`🗺️`, `aria-pressed` sincronizado | OK | já é dinâmico e coerente com o estado — narra a AÇÃO do próximo toque (mapa mostra satélite → label "Ver satélite"; satélite ligado → label "Ver ruas"), glifo troca junto |
+| `"Ordenar unidades"` | 2963 | `<div role="group">`, chips de critério de ordenação | OK | rótulo de grupo |
+| `"Buscar unidade neste prédio"` | 2971 | `<input type="search">`, placeholder "Buscar unidade (ex.: apto 302)" | OK | verbo coerente com o placeholder do mesmo campo |
+| `"Desmarcar da comparação"` / `"Marcar para comparar"` (dinâmico) | 3140 | `cmp-toggle`, botão `☑`/`☐` | OK | já dinâmico e coerente com o estado do checkbox (confirmado também nas atualizações JS em 3069/3076) |
+| `"Remover esta oportunidade"` | 3600 | `saveditem-rm`, botão `×` | OK | verbo + objeto específico (evita "Fechar" genérico onde a ação real é excluir um item salvo) |
+| `"Remover foto {i+1}"` | 4321 | `.rm`, botão `×` (remove foto do wizard de laudo) | OK | verbo + objeto específico, inclui índice da foto |
+
+### title (8)
+
+| String original | Âncora (linha) | Botão/elemento que contém | Veredito | String final | Critério §26 |
+|---|---|---|---|---|---|
+| `"Alternar satélite"` | 2099 | `btnSat` 🛰️/🗺️ | OK | (sem mudança) | frase curta mas completa; complementa o `aria-label` dinâmico do mesmo botão (ação genérica de alternância, coerente com um toggle) |
+| `"Baixar os resultados em planilha"` | 2867 | `.csv`, botão "⬇ Baixar planilha" | OK | (sem mudança) | frase completa, coerente com o botão (detalha "em planilha") |
+| `"Centralizar este prédio no mapa"` | 2879 | `.tomap`, botão "Ver no mapa ↗" | OK | (sem mudança) | frase completa, coerente e mais específica que o rótulo do botão |
+| `"Este item casou por aproximação — confira quadra/lote/rua"` | 3143 | `span.matchapprox` "~aproximado" (não é botão, é uma marca de qualidade de match) | OK | (sem mudança) | frase completa, explica + oferece o que checar (§26.3-like) |
+| `"Abre a CND da prefeitura já com a inscrição {insc} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular"` | 3452 | `<a>` "Titular (CND) ⧉↗" | OK | (sem mudança) | frase completa, coerente com o link, avisa a expectativa (CAPTCHA, nome do titular) |
+| `"Copia um link direto para este imóvel (?insc={insc}) — cole no WhatsApp/e-mail"` | 3453 | botão "Copiar link deste imóvel ⧉" | OK | (sem mudança) | frase completa, coerente; `?insc=` citado apenas como referência de leitura, valor do parâmetro não alterado |
+| `"este imóvel"` | 3855 | `<div class="me">` marcador de posição no gráfico de barra (não é botão) | avaliado-mantido | (sem mudança) | rótulo curto de marcador em visualização de dados (padrão "you-are-here" de gráfico), não é tooltip de botão — a exigência de "frase completa" do §26 aplica-se a tooltips de CTA, não a rótulos de eixo/marcador |
+| `"Lista da Caixa de {data} — pode estar desatualizada (rode atualizar-caixa.py)"` (dinâmico, `initCaixa()`) | 4681 | `#btnCaixa`, botão "🏦 Ver Oportunidades Caixa" | **alterada** | `"Lista da Caixa de {data} — pode estar desatualizada."` | §26 (removida instrução de uso interno/admin `rode atualizar-caixa.py` — não é uma ação que o corretor consegue executar; o corretor não tem acesso ao script Python de atualização) |
+
+Nenhum `id`, `role=`, `aria-controls`, `aria-describedby` ou `aria-labelledby` foi alterado (11 ocorrências combinadas, contagem inalterada). Apenas 1 `title` recebeu edição de texto (linha 4681, remoção de instrução técnica não acionável pelo usuário final).
 
 ## WhatsApp (RADAR_PURE)
 

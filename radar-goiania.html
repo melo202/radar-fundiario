@@ -4678,7 +4678,7 @@ function initCaixa(){
   const g=CAIXA.gerado&&Date.parse(CAIXA.gerado);
   if(g&&(Date.now()-g)/864e5>14){
     const d=CAIXA.gerado.split("-").reverse().join("/");
-    btn.title="Lista da Caixa de "+d+" — pode estar desatualizada (rode atualizar-caixa.py)";
+    btn.title="Lista da Caixa de "+d+" — pode estar desatualizada.";
     btn.innerHTML="🏦 Ver Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
   }
 }
