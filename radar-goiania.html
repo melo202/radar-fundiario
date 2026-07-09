@@ -2361,6 +2361,10 @@ const LOTINFO={};
    (snapshot datado, runtime, precache radar-v7). Fetch LAZY: nunca no boot (zoom-gate), só na 1ª
    ação de território. Glebas sem cdbairro (motivo "sem-parcela") ficam de fora do arquivo -> nunca
    coloríveis (honestidade, 15-RESEARCH.md Pitfall 2). */
+/* cdbairroParaIds (IN-01 15-REVIEW.md): lookup reverso (cdbairro -> lista de `id`s de polígono)
+   — nenhum consumidor nesta fase ainda; reserva INTENCIONAL p/ v2.1 (Fase 16/17, farming:
+   destacar/iterar TODOS os polígonos de um cdbairro sem varrer bairroLayer inteiro de novo).
+   Mantido (não removido) — custo é só memória de um Map pequeno, populado 1x por sessão. */
 let idParaCdbairro=null, cdbairroParaIds=null;
 async function carregarLookupCdbairro(){
   if(idParaCdbairro)return;
