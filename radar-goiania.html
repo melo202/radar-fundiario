@@ -1114,7 +1114,6 @@ const SVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaSer
 const LOTSVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/0/query";
 const BAISVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/2/query";
 
-const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const brl=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 /* venal 0/ausente é dado NÃO LANÇADO no cadastro (comum em garagem/box/imóvel não avaliado),
    não "R$ 0" de verdade — mostrar "não informado" em vez de um zero enganoso. */
@@ -1134,6 +1133,10 @@ const addrDe=a=>logradouroDe(a)+(clean(a.nrimovel)&&clean(a.nrimovel)!=="S/N"?",
 
 // RADAR_PURE_START — funções puras de matching/normalização. Testadas por tests/busca.test.mjs
 // (que lê e avalia este bloco isoladamente via node:vm — não editar sem rodar `node --test tests/`).
+/* Fase 15 (15-01): USO movido para DENTRO do bloco (era declarado em 1117, fora de RADAR_PURE) —
+   mesmo raciocínio de quant() (3758): uma função pura nova (mixUso) precisa da tabela de domínio
+   dentro do bloco testável; relocação, não duplicação — única fonte de verdade, mesmo <script>. */
+const USO={0:"—",1:"Residencial",2:"Comercial/Serviço",3:"Industrial",4:"Público/Institucional",5:"Misto",6:"Territorial"};
 const clean=v=>String(v==null?"":v).trim();
 const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/\s+/g," ").trim();
 /* núcleo do nome da rua: sem acento, sem "RUA/AV/R." na frente — o cadastro embute o tipo no nome ("R  MARAJO") */
@@ -2007,6 +2010,103 @@ function statusDeUnidade(input){
   if(score>=66) return "bom";
   if(score>=33) return "atencao";
   return "risco";
+}
+
+/* Fase 15 (15-01, TERR-01/03): funções puras de estatística do território — R$/m² por lote,
+   quantis de amostra, faixas de quantil discretas (choropleth), idade mediana do cadastro, mix
+   de uso e o rótulo de honestidade estatística exigido em todo número derivado de amostra.
+   Nascem AQUI (dentro de RADAR_PURE) por Pitfall 3 (15-RESEARCH.md) — fora deste bloco o
+   harness de teste (node:vm slice) não as vê. */
+
+/* pm2Lote(a): R$/m² de um lote — reusa a MESMA guarda de __pm2 (1913)/compsStats (2856): usa
+   areaedif se edificado (>0), senão cai para areaterr (terreno vago); 0/ausente NUNCA é dado
+   real, nunca divide por zero. */
+function pm2Lote(a){
+  const v=+a.vlvenal||0, ae=+a.areaedif||0, at=+a.areaterr||0;
+  const area=ae>0?ae:at;
+  return (v>0&&area>0)?v/area:null;
+}
+
+/* quantilAmostra(sorted,p): cópia deliberada da fórmula de quant() (3758, fora do bloco
+   RADAR_PURE) — interpolação linear entre vizinhos, mesma "mediana" do app inteiro (Fase 9). */
+function quantilAmostra(sorted,p){
+  const i=p*(sorted.length-1),lo=Math.floor(i),hi=Math.ceil(i);
+  return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);
+}
+
+/* breaksQuantil(sortedPm2): 4 cortes internos (quintis) para 5 faixas discretas do choropleth
+   (TERR-02) — nunca gradiente contínuo. Amostra curta (<5) não sustenta 5 faixas -> null. */
+function breaksQuantil(sortedPm2){
+  if(!sortedPm2||sortedPm2.length<5)return null;
+  return [.2,.4,.6,.8].map(p=>quantilAmostra(sortedPm2,p));
+}
+
+/* binQuantil(breaks,v): mapeia um valor para a faixa 1..5 — monotônico, mínimo do setor cai em
+   1, máximo em 5, cobre bordas exatas. Sem breaks (amostra curta) -> null (nunca inventa faixa). */
+function binQuantil(breaks,v){
+  if(!breaks)return null;
+  if(v<=breaks[0])return 1;
+  if(v<=breaks[1])return 2;
+  if(v<=breaks[2])return 3;
+  if(v<=breaks[3])return 4;
+  return 5;
+}
+
+/* anoMedianoCadastro(lotes): idade mediana do cadastro a partir de dtinclusao — MESMA validação
+   de fmtDt (1128, regex ^\d{8}$ + sentinela "00000000"): registros inválidos/ausentes são
+   DESCARTADOS antes da mediana (Pitfall 5), nunca entram como 0/NaN. */
+function anoMedianoCadastro(lotes){
+  const anos=(lotes||[])
+    .map(l=>{const s=clean(l.dtinclusao);return (/^\d{8}$/.test(s)&&s!=="00000000")?+s.slice(0,4):null;})
+    .filter(a=>a!=null)
+    .sort((a,b)=>a-b);
+  return anos.length?quantilAmostra(anos,.5):null;
+}
+
+/* mixUso(lotes): agrupa por uso (rótulos de USO, movida para dentro deste bloco na Fase 15 —
+   mesmo raciocínio de quant(): função pura nova precisa alcançar a tabela de domínio dentro do
+   bloco testável). Top-3 por % + "Outros" somando o resto, só quando há >3 categorias presentes. */
+function mixUso(lotes){
+  const list=lotes||[];
+  const total=list.length;
+  if(!total)return [];
+  const counts={};
+  list.forEach(l=>{const u=l.uso==null?0:+l.uso; counts[u]=(counts[u]||0)+1;});
+  const arr=Object.keys(counts).map(u=>({uso:+u,n:counts[u]})).sort((a,b)=>b.n-a.n);
+  const top=arr.slice(0,3).map(x=>({label:USO[x.uso]!=null?USO[x.uso]:"—",pct:(x.n/total)*100}));
+  if(arr.length>3){
+    const restoN=arr.slice(3).reduce((s,x)=>s+x.n,0);
+    top.push({label:"Outros",pct:(restoN/total)*100});
+  }
+  return top;
+}
+
+/* estatTerritorio(lotes,total): agrega a amostra em uma única leitura para o Painel do
+   Território (TERR-03) — mediana+Q1-Q3 de R$/m², IPTU mediano (vlimp98>0), idade mediana do
+   cadastro, mix de uso e os cortes de quantil para o choropleth (TERR-02). `total` é o
+   nº REAL do setor (returnCountOnly, TERR-01) — nunca confundido com `n` (tamanho da amostra). */
+function estatTerritorio(lotes,total){
+  const list=lotes||[];
+  const pm2s=list.map(pm2Lote).filter(v=>v!=null).sort((a,b)=>a-b);
+  const n=pm2s.length;
+  const iptus=list.map(l=>+l.vlimp98||0).filter(v=>v>0).sort((a,b)=>a-b);
+  return {
+    n,
+    total,
+    medianaPm2:n?quantilAmostra(pm2s,.5):null,
+    q1Pm2:n?quantilAmostra(pm2s,.25):null,
+    q3Pm2:n?quantilAmostra(pm2s,.75):null,
+    iptuMediano:iptus.length?quantilAmostra(iptus,.5):null,
+    anoMediano:anoMedianoCadastro(list),
+    mix:mixUso(list),
+    breaks:breaksQuantil(pm2s),
+  };
+}
+
+/* rotuloAmostra(n,total): rótulo de honestidade estatística — OBRIGATÓRIO em todo número
+   derivado de amostra (UI-SPEC Copywriting Contract); nunca omitido, mesmo quando n===total. */
+function rotuloAmostra(n,total){
+  return "Amostra de "+(n).toLocaleString("pt-BR")+" de "+(total).toLocaleString("pt-BR")+" lotes";
 }
 // RADAR_PURE_END
 

@@ -690,4 +690,109 @@ export const FIXTURES = {
     { input: -5, esperado: "risco" }, // numero negativo tratado como risco, nunca excecao
     { input: "78", esperado: "semdado" }, // string nao-numerica pura nunca e coagida silenciosamente
   ],
+
+  // Fase 15 (15-01, TERR-01/03): fixtures das 8 funcoes puras de estatistica de territorio
+  // (pm2Lote/quantilAmostra/breaksQuantil/binQuantil/anoMedianoCadastro/mixUso/estatTerritorio/
+  // rotuloAmostra), novas no bloco RADAR_PURE. Contrato de HONESTIDADE: areaedif=null/0/ausente
+  // NUNCA e tratado como dado real; dtinclusao invalido/sentinela/ausente e DESCARTADO antes da
+  // mediana; mix com >3 usos agrupa o resto em "Outros".
+  TERR_FIX: {
+    pm2Lote: [
+      // edificado (areaedif>0) usa areaedif -> 300000/100 = 3000
+      { a: { vlvenal: 300000, areaedif: 100 }, out: 3000 },
+      // areaedif=0 (terreno vago, NAO e dado real) -> cai para areaterr -> 200000/400 = 500
+      { a: { vlvenal: 200000, areaedif: 0, areaterr: 400 }, out: 500 },
+      // sem venal -> null
+      { a: { vlvenal: 0, areaterr: 400 }, out: null },
+      // sem area nenhuma (null/null) -> null
+      { a: { vlvenal: 100000, areaedif: null, areaterr: null }, out: null },
+      // area totalmente ausente (undefined) -> null
+      { a: { vlvenal: 100000 }, out: null },
+    ],
+
+    quantilAmostra: [
+      { sorted: [10, 20, 30, 40], p: 0.5, out: 25 }, // interpolacao linear, mesma formula de quant()
+    ],
+
+    breaksQuantilCasos: {
+      amostraOk: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000], // >=5, 4 cortes crescentes
+      amostraCurta: [100, 200, 300], // <5 -> null (nao sustenta 5 faixas)
+    },
+
+    binQuantilCasos: {
+      breaks: [200, 400, 600, 800], // 5 faixas: <=200->1, <=400->2, <=600->3, <=800->4, >800->5
+    },
+
+    // dtinclusao: valido (20100101/20120101/20180909) + invalido (sentinela "00000000",
+    // null, ausente) — os 3 invalidos sao DESCARTADOS antes da mediana (nunca 0/NaN).
+    anoMedianoCadastroCasos: {
+      mistoValidoInvalido: {
+        lotes: [
+          { dtinclusao: "20100101" },
+          { dtinclusao: "20120101" },
+          { dtinclusao: "20180909" },
+          { dtinclusao: "00000000" }, // sentinela — descartado
+          { dtinclusao: null }, // ausente — descartado
+          {}, // sem o campo — descartado
+        ],
+        expectAno: 2012, // mediana de [2010,2012,2018] (n=3, sem interpolacao) = 2012
+      },
+      todosInvalidos: {
+        lotes: [{ dtinclusao: "00000000" }, { dtinclusao: null }, {}],
+        expectAno: null,
+      },
+    },
+
+    // mix de uso com >3 categorias presentes: top-3 por contagem + "Outros" somando o resto.
+    mixUsoCasos: {
+      maisDe3Usos: {
+        // uso1 x5, uso2 x3, uso3 x2, uso5 x1, uso6 x1 = total 12 (5 categorias -> top3 + Outros)
+        lotes: [
+          ...Array.from({ length: 5 }, () => ({ uso: 1 })),
+          ...Array.from({ length: 3 }, () => ({ uso: 2 })),
+          ...Array.from({ length: 2 }, () => ({ uso: 3 })),
+          { uso: 5 },
+          { uso: 6 },
+        ],
+        expectTopLabels: ["Residencial", "Comercial/Serviço", "Industrial"],
+        expectOutrosPct: (2 / 12) * 100,
+      },
+      ate3Usos: {
+        // exatamente 3 categorias presentes -> NUNCA adiciona "Outros"
+        lotes: [{ uso: 1 }, { uso: 1 }, { uso: 2 }, { uso: 3 }],
+        expectLabels: ["Residencial", "Comercial/Serviço", "Industrial"],
+      },
+      vazio: { lotes: [], expectEmpty: true },
+    },
+
+    // estatTerritorio: amostra pequena (3 lotes com pm2/iptu/ano validos + 1 lote sem venal,
+    // descartado do pm2/iptu/ano) — coerencia entre as 8 metricas derivadas.
+    estatTerritorioCasos: {
+      amostraPequena: {
+        lotes: [
+          { vlvenal: 300000, areaedif: 100, vlimp98: 1000, dtinclusao: "20100101", uso: 1 }, // pm2=3000
+          { vlvenal: 400000, areaedif: 100, vlimp98: 1200, dtinclusao: "20120101", uso: 1 }, // pm2=4000
+          { vlvenal: 500000, areaedif: 100, vlimp98: 1400, dtinclusao: "20140101", uso: 2 }, // pm2=5000
+          { vlvenal: 0, areaterr: 400, vlimp98: 0, dtinclusao: "00000000", uso: 3 }, // sem base -> descartado
+        ],
+        total: 4000, // total REAL do setor (returnCountOnly) — nunca confundido com n (amostra)
+        expect: {
+          n: 3,
+          total: 4000,
+          medianaPm2: 4000,
+          q1Pm2: 3500,
+          q3Pm2: 4500,
+          iptuMediano: 1200,
+          anoMediano: 2012,
+          breaks: null, // amostra de 3 pm2 validos < 5 -> sem cortes de quantil
+        },
+      },
+    },
+
+    // rotuloAmostra: casos obrigatorios do UI-SPEC — nunca omitido, mesmo com amostra completa.
+    rotuloAmostraCasos: [
+      { n: 6000, total: 57225, out: "Amostra de 6.000 de 57.225 lotes" },
+      { n: 1842, total: 1842, out: "Amostra de 1.842 de 1.842 lotes" },
+    ],
+  },
 };
