@@ -343,6 +343,20 @@
   .terr-swlbl{font:700 10.5px/1.3 "IBM Plex Mono";color:var(--muted);white-space:nowrap}
   .terr-amostra{margin-top:8px;font:500 13px/1.4 "IBM Plex Sans";color:var(--muted)}
 
+  /* Fase 15 TERR-03: Painel do Meu Território reusa .detail/.dgrid/.cell/.chips/.acts/.maisopcoes
+     VERBATIM (herdam os paddings legados, 15-UI-SPEC.md nota de exceção) — só os elementos NOVOS
+     abaixo seguem a escala de 4px desta fase. */
+  .terr-metric-sub{margin:2px 0 0;font:500 13px/1.4 "IBM Plex Sans";color:var(--muted)}
+  .terr-honesto{display:block;margin-top:4px;font:700 10.5px/1.3 "IBM Plex Mono";color:var(--muted)}
+  .terr-mix-chip{display:inline-flex;align-items:center;padding:6px 12px;border-radius:20px;
+    border:1.5px solid var(--line);background:var(--paper);font:600 12px/1 "IBM Plex Sans";color:var(--ink)}
+  /* botão "Ver território" no breadcrumb — só visível quando há setor em foco com cdbairro fiscal
+     (mostrarVerTerr); reusa a moldura de pílula do #breadcrumb, cor de CTA (accent). */
+  #breadcrumb .crumb.verterr{color:var(--accent);cursor:pointer;font-weight:700;background:transparent;
+    border:0;border-left:1px solid var(--line);margin-left:2px;font-family:inherit}
+  #breadcrumb .crumb.verterr:hover{color:var(--accent-ink)}
+  #breadcrumb .crumb.verterr[hidden]{display:none}
+
   /* Fase 13 DESC-01: onboarding 3 cartões — overlay modal, z-index abaixo dos sheets de documento
      (.wiz/#calc=2000+), acima do .detail(500). REDUCE-safe via mAnimate; classList "show" SEMPRE
      em par com o atributo hidden (só hidden nunca revela — a regra de classe display:none vence). */
@@ -953,6 +967,10 @@
       <button type="button" class="crumb city" onclick="goHomeCrumb()">Goiânia</button>
       <span class="crumb sep" aria-hidden="true">›</span>
       <span class="crumb bairro" id="crumbBairro"></span>
+      <!-- Fase 15 TERR-03: hidden por padrão — mostrarVerTerr(layer) só revela quando o setor em
+           foco tem cdbairro fiscal (nunca p/ gleba); onclick é atribuído dinamicamente pra sempre
+           abrir o território do layer atual (nunca um baiHi desatualizado). -->
+      <button type="button" id="btnVerTerr" class="crumb verterr" hidden>Ver território</button>
     </nav>
     <!-- Fase 13 PIN-01: legenda SEMPRE-visível quando há pinos plotados (não é toggle) — hidden
          removido/adicionado por atualizarLegenda(), chamada ao fim de plot(). Diferenciador entre
@@ -1019,6 +1037,26 @@
       <details class="foot dmetodologia">
         <summary>Metodologia e fontes</summary>
         <div class="footbody" id="dMetodologia"></div>
+      </details>
+    </div>
+
+    <!-- Fase 15 TERR-03: Painel do Meu Território — reusa .detail (bottom-sheet mobile / painel
+         flutuante desktop), NUNCA .wiz (é leitura de dado, não fluxo de etapas). Nunca abre junto
+         com #detail — regra "1 sheet por vez"; abrirTerritorio() chama closeDetail() antes de abrir
+         este, e o handler de Esc (keydown) trata #terrPanel como o sheet mais recente. -->
+    <div class="detail" id="terrPanel" role="region" aria-label="Painel do território">
+      <div class="shead">
+        <div class="grab" onclick="fecharTerrPanel()" aria-hidden="true"></div>
+        <button class="x" onclick="fecharTerrPanel()" aria-label="Fechar painel do território">×</button>
+      </div>
+      <h3>Meu Território</h3>
+      <span class="dtag" id="terrSetorNome"></span>
+      <div class="dnote" id="terrAviso" hidden></div>
+      <div class="dgrid" id="terrGrid"></div>
+      <div class="acts" id="terrActions"></div>
+      <details class="maisopcoes">
+        <summary>Ver metodologia</summary>
+        <div class="footbody" id="terrMetodologia"></div>
       </details>
     </div>
 
@@ -2557,9 +2595,13 @@ function highlightBairro(layer){
   const lbl=(nm&&nm.trim())?esc(nm):"Área rural / gleba";
   layer.setTooltipContent(lbl);layer.openTooltip();
   baiHi=layer;
+  mostrarVerTerr(layer); /* Fase 15 TERR-03: botão "Ver território" só aparece p/ setor com cdbairro fiscal */
 }
 function clearBaiHi(){
   if(baiHi){baiHi.setStyle(baiStyle(baiHi.feature));baiHi.closeTooltip();baiHi=null;}
+  /* Fase 15 TERR-03: nenhum bairro em foco -> nenhum "Ver território" (evita abrir o painel do
+     layer errado depois de limpar o hover). */
+  const btn=document.getElementById("btnVerTerr"); if(btn)btn.hidden=true;
 }
 /* ---------------- breadcrumb Goiânia › Bairro (Plano 02) ---------------- */
 function showBreadcrumb(nm){
@@ -2581,6 +2623,7 @@ function drillBairro(layer){
   const tk=++DRILLTOKEN; /* drills sucessivos rápidos não competem — só o último fitBounds vale */
   setTimeout(()=>{ if(tk!==DRILLTOKEN)return; map.invalidateSize();map.fitBounds(b.pad(0.05));},90);
   showBreadcrumb(layer.feature.properties.nm_disp||layer.feature.properties.nm_bai);
+  mostrarVerTerr(layer); /* Fase 15 TERR-03: drill também conta como "setor em foco" */
 }
 function onEachBairro(feature,layer){
   layer.bindTooltip("",{sticky:true,direction:"top",opacity:.96});
@@ -2842,6 +2885,11 @@ const MOTION_MSG={
   estimativa:   "Calculando estimativa…",
   comparaveis:  "Buscando comparáveis…",
   mapa:         "Preparando mapa…",
+  /* Fase 15 TERR-03: 2 estágios da varredura de território (mesma gramática: maiúscula inicial,
+     gerúndio, reticências) — varrendo cobre as páginas pagas (até 3), faixas cobre o cálculo
+     client-side de quantis/mediana/mix logo depois. */
+  varrendo:     "Varrendo setor…",
+  faixas:       "Calculando faixas de valor…",
 };
 /* Fase 13 MOT-01: skeleton shimmer injetado em #results no início de buscar(), sempre
    substituído por render() real ou pelo bloco de erro do catch — nunca "pendurado". */
@@ -2948,6 +2996,129 @@ async function territorioScan(cdbairroRaw){
   return TERRCACHE[key];
 }
 // TERR_NET_END
+
+/* ---------------- Painel do Meu Território (Fase 15, 15-03, TERR-03) ----------------
+   Entrada de UI a partir do setor em foco (bairro destacado/buscado); dispara o mesmo
+   territorioScan compartilhado consumido pelo choropleth (15-01/15-02) — abrir painel + ligar
+   choropleth do mesmo setor nunca disparam 2 varreduras (dedupe do TERRCACHE). */
+let TERR_PANEL_CD=null; /* cdbairro atualmente exibido no painel — usado por buscarNoSetor() (Task 2) */
+
+/* mostrarVerTerr(layer): mostra/esconde #btnVerTerr conforme o setor em foco tenha cdbairro fiscal
+   (resolveCdbairroDeLayer) — glebas (bairros-goiania.recon.json motivo "sem-parcela") nunca
+   mostram o botão. O fetch do lookup aqui é só o ASSET LOCAL (bairro-cdbairro.json, já no
+   precache do sw.js radar-v7) — nunca o scan de rede do endpoint; não fere o zoom-gate/orçamento
+   de TERR-01 (esse só se aplica a territorioScan). */
+async function mostrarVerTerr(layer){
+  const b=document.getElementById("btnVerTerr");
+  if(!b)return;
+  await carregarLookupCdbairro();
+  const cd=resolveCdbairroDeLayer(layer);
+  b.hidden=(cd==null);
+  b.onclick=()=>abrirTerritorio(layer); /* fecha sobre o layer ATUAL — nunca um baiHi desatualizado */
+}
+
+/* abrirTerritorio(layer): única entrada do Painel do Território — zoom-gate (só dispara sob esta
+   ação explícita, nunca em pan/zoom passivo). Fecha #detail primeiro ("1 sheet por vez"), varre o
+   setor (territorioScan, cache/dedupe de 15-01), aplica o choropleth (aplicarChoropleth, 15-02) e
+   só então monta o painel — nunca recalcula 2x a mesma varredura. */
+async function abrirTerritorio(layer){
+  await carregarLookupCdbairro();
+  const cd=resolveCdbairroDeLayer(layer||baiHi);
+  if(cd==null){toast("Este setor não tem dado fiscal para o território.");return;}
+  closeDetail();
+  loading(true,MOTION_MSG.varrendo);
+  try{
+    const scan=await territorioScan(cd);
+    loading(true,MOTION_MSG.faixas);
+    const st=aplicarChoropleth(scan);
+    montarPainel(scan,st,layer||baiHi);
+    loading(false);
+  }catch(e){
+    loading(false);
+    toast("Não foi possível varrer o setor. Verifique a conexão e tente de novo.");
+  }
+}
+
+/* montarPainel(scan,st,layer): preenche #terrPanel na ordem conclusão-primeiro (15-UI-SPEC.md
+   Componente 2: R$/m² mediano -> IPTU mediano -> idade mediana -> mix de uso -> nº de lotes).
+   T-15-07: nome do setor via esc()+textContent (mesmo padrão já usado em showBreadcrumb/
+   highlightBairro — NUNCA innerHTML com dado do endpoint); métricas via brl()/textContent; mix de
+   uso via chips estáticos com textContent. Rótulo de honestidade (rotuloAmostra) OBRIGATÓRIO
+   abaixo de CADA métrica — nunca omitido, mesmo quando a amostra é completa (n===total). */
+function montarPainel(scan,st,layer){
+  const nomeEl=document.getElementById("terrSetorNome");
+  const grid=document.getElementById("terrGrid");
+  TERR_PANEL_CD=scan?scan.cdbairro:null;
+  if(!scan||!st){
+    nomeEl.textContent="";
+    grid.innerHTML='<div class="cell" style="grid-column:1/-1"><div class="k">Nenhum setor selecionado</div><div class="terr-metric-sub">Toque num bairro no mapa ou busque um setor para ver as métricas do território.</div></div>';
+    document.getElementById("terrPanel").classList.add("show");
+    return;
+  }
+  const nm=layer&&layer.feature&&(layer.feature.properties.nm_disp||layer.feature.properties.nm_bai);
+  nomeEl.textContent=(nm&&nm.trim())?esc(nm):"Setor "+scan.cdbairro;
+  if(st.n===0){
+    /* Empty state (UI-SPEC): lotes existem, mas nenhum tem venal informado — sem base p/ faixas. */
+    grid.innerHTML='<div class="cell" style="grid-column:1/-1"><div class="k">Sem dado de valor neste setor</div><div class="terr-metric-sub">Os lotes existem, mas nenhum tem venal informado no cadastro — não é possível calcular as faixas.</div></div>';
+    document.getElementById("terrPanel").classList.add("show");
+    return;
+  }
+  const hon=rotuloAmostra(st.n,st.total); /* mesmo rótulo abaixo de TODA métrica derivada da amostra */
+  grid.innerHTML=`
+    <div class="cell hl">
+      <div class="k">R$/m² mediano</div>
+      <div class="dvalor-v" id="terrPm2"></div>
+      <div class="terr-metric-sub" id="terrPm2Faixa"></div>
+      <div class="terr-honesto" id="terrHonPm2"></div>
+    </div>
+    <div class="cell">
+      <div class="k">IPTU mediano</div>
+      <div class="v" id="terrIptu"></div>
+      <div class="terr-honesto" id="terrHonIptu"></div>
+    </div>
+    <div class="cell">
+      <div class="k">Idade mediana do cadastro</div>
+      <div class="v" id="terrIdade"></div>
+      <div class="terr-honesto" id="terrHonIdade"></div>
+    </div>
+    <div class="cell">
+      <div class="k">Mix de uso</div>
+      <div class="chips" id="terrMix"></div>
+      <div class="terr-honesto" id="terrHonMix"></div>
+    </div>
+    <div class="cell">
+      <div class="k">Nº de lotes no setor</div>
+      <div class="v" id="terrTotal"></div>
+      <div class="terr-honesto" id="terrHonTotal"></div>
+    </div>`;
+  document.getElementById("terrPm2").textContent=brl(st.medianaPm2);
+  document.getElementById("terrPm2Faixa").textContent="Q1 "+brl(st.q1Pm2)+" · Q3 "+brl(st.q3Pm2);
+  document.getElementById("terrHonPm2").textContent=hon;
+  document.getElementById("terrIptu").textContent=brl(st.iptuMediano);
+  document.getElementById("terrHonIptu").textContent=hon;
+  document.getElementById("terrIdade").textContent=st.anoMediano!=null?("desde "+st.anoMediano):"—";
+  document.getElementById("terrHonIdade").textContent=hon;
+  const mixEl=document.getElementById("terrMix");
+  mixEl.innerHTML="";
+  (st.mix||[]).forEach(m=>{
+    const c=document.createElement("span");
+    c.className="terr-mix-chip";
+    c.textContent=m.label+" "+Math.round(m.pct)+"%"; /* label vem de USO (domínio fixo do app) + pct numérico — nunca dado cru do endpoint */
+    mixEl.appendChild(c);
+  });
+  document.getElementById("terrHonMix").textContent=hon;
+  document.getElementById("terrTotal").textContent=(scan.total).toLocaleString("pt-BR");
+  document.getElementById("terrHonTotal").textContent=hon;
+  document.getElementById("terrPanel").classList.add("show");
+}
+
+/* fecharTerrPanel(): fecho por × ou Esc — devolve o foco ao gatilho (#btnVerTerr), mesmo padrão
+   de foco/trap já usado pelos outros sheets do app. */
+function fecharTerrPanel(){
+  document.getElementById("terrPanel").classList.remove("show");
+  const b=document.getElementById("btnVerTerr");
+  if(b&&!b.hidden)b.focus();
+}
 
 async function buscar(){
   const btn=document.getElementById("btnGo");
@@ -5213,6 +5384,11 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
      prioridade máxima (por cima de qualquer sheet). */
   const onb=document.getElementById("onbOverlay");
   if(onb&&!onb.hidden){onbFechar();return;}
+  /* Fase 15 (15-03): #terrPanel é o PRIMEIRO check da cadeia de SHEETS (abaixo só do onboarding,
+     que é modal-bloqueante de prioridade máxima) — mesma regra "sheet mais recente tem
+     prioridade" já usada pelos checks abaixo; fecho devolve foco ao #btnVerTerr (gatilho). */
+  const tp=document.getElementById("terrPanel");
+  if(tp&&tp.classList.contains("show")){fecharTerrPanel();return;}
   /* Fase 12 (12-02): #cmpSheet é o PRIMEIRO check da cadeia — sheet mais recente tem prioridade,
      mutuamente exclusivo com os sheets de documento (#negSheet/#captSheet/#wiz). */
   const cmps=document.getElementById("cmpSheet");
