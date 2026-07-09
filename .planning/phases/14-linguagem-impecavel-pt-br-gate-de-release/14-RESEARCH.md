@@ -256,7 +256,11 @@ Nenhum threat pattern novo é introduzido por esta fase — ela não adiciona su
 | A1 | Emoji em `analisePredicoTexto` (🏢/📍) não viola "sem ironia/gíria" e deve ser mantido | Achado A3 | Baixo — se o usuário/planner decidir remover, é edição pontual de 1 função + 2 testes (`predio.test.mjs` linhas 222, 262 e 254-255), não recalibra o resto da fase |
 | A2 | O formato/local da "tabela de auditoria" (artefato) fica a critério do planejamento, sem exigência de arquivo específico | Validation Architecture / Wave 0 Gaps | Baixo — CONTEXT.md explicitamente delega esta decisão ("formato da tabela... a critério do Claude") |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Ambas as questões foram resolvidas durante o planejamento (plan-check 2026-07-09):
+> **Q1 RESOLVED:** o conteúdo dos 3 cartões do onboarding está na constante `ONB_CARDS` em `radar-goiania.html:4772` (confirmado ao vivo) — usado no 14-02-PLAN.md Task 3.
+> **Q2 RESOLVED:** tabela de auditoria única e consolidada em `14-AUDITORIA.md`, com seções por categoria — criada no 14-01-PLAN.md e consolidada no 14-05-PLAN.md.
 
 1. **Onde exatamente fica o texto renderizado do onboarding (`#onbBody`)?**
    - O que sabemos: o container está na linha 991-1005; `radar_onboard` é a chave de persistência; os 3 cartões são construídos via JS (não há HTML estático linha a linha para os 3 slides).
