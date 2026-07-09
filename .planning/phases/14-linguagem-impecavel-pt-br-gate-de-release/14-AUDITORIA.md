@@ -148,9 +148,47 @@ Varredura das 19 ocorrências de `placeholder="` (inclui 2 atribuições via JS,
 
 ## Onboarding + O que o Radar faz + Legenda
 
+Nenhuma alteração nesta seção — textos já revisados na Fase 13 (13-03) e Plano 01 (A1); auditoria confirma conformidade com §26.
+
+### Onboarding (`ONB_CARDS`, 3 cartões)
+
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Plano 03)* | | | | |
+| Cartão 1 — `titulo:"Busque qualquer imóvel"` | radar-goiania.html:4773 | OK | (sem mudança) | título com verbo de ação ("Busque") |
+| Cartão 1 — `texto:"Digite endereço, quadra/lote, nome do prédio ou inscrição — numa caixa só. O Radar entende o que você quer dizer."` | 4773 | OK | (sem mudança) | claro, sem jargão de 1ª camada, acentuação correta |
+| Cartão 1 — `cta:"Próximo"` | 4773 | OK | (sem mudança) | navegação — pré-aprovado (§26.2 nota: "Próximo"/"Começar" são aceitáveis como navegação) |
+| Cartão 2 — `titulo:"Veja valor e oportunidade"` | 4774 | OK | (sem mudança) | verbo de ação ("Veja") |
+| Cartão 2 — `texto:"Cada imóvel mostra a faixa de valor estimado, o score de oportunidade e uma leitura em linguagem simples — sem jargão técnico."` | 4774 | OK | (sem mudança) | claro, sem jargão, acentuação correta |
+| Cartão 2 — `cta:"Próximo"` | 4774 | OK | (sem mudança) | idem cartão 1 |
+| Cartão 3 — `titulo:"Gere documentos e capte"` | 4775 | OK | (sem mudança) | verbo de ação ("Gere") |
+| Cartão 3 — `texto:"Gere ficha, relatório ou laudo em PDF, copie mensagens prontas pro WhatsApp e monte a proposta — tudo pelo Radar."` | 4775 | OK | (sem mudança) | claro, verbos de ação no corpo, acentuação correta |
+| Cartão 3 — `cta:"Começar"` | 4775 | OK | (sem mudança) | navegação — pré-aprovado |
+
+Estrutura de `ONB_CARDS` (array de 3 objetos, campos `titulo`/`texto`/`cta`), `radar_onboard` (chave de persistência) e `onbRender()` **intactos** — nenhuma mudança estrutural, só confirmação de conformidade textual.
+
+### "O que o Radar faz" (`#oQueFaz`, 5 itens)
+
+| String original | Âncora (linha) | Veredito | String final | Critério §26 |
+|---|---|---|---|---|
+| `<b>Busca unificada</b> — endereço, quadra/lote, prédio ou inscrição numa caixa só.` + botão `Buscar agora →` | 898 | OK | (sem mudança) | rótulo do item é substantivo (padrão de lista de recursos, comum em telas de descoberta), mas a AÇÃO REAL (botão) já tem verbo — consistente com o padrão da fase 13 (nunca texto explicativo genérico sem ação real) |
+| `<b>Valor e oportunidade</b> — faixa estimada, score de oportunidade e leitura em linguagem simples.` + botão `Ver como →` | 899 | OK | (sem mudança) | idem |
+| `<b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato.` + botão `Ver como →` | 900 | OK | (sem mudança) | idem |
+| `<b>Ação comercial</b> — mensagens prontas pro WhatsApp, modo captação, salvar oportunidades.` + botão `Ver como →` | 901 | OK | (sem mudança) | idem |
+| `<b>Oportunidades da Caixa</b> — imóveis à venda da Caixa, plotados no mapa.` + botão `Ver no mapa →` | 902 | OK | (sem mudança) | idem |
+| `summary`: "O que o Radar faz" | 895 | OK | (sem mudança) | nome travado desde a Fase 13 (13-03) — não renomeado, glossário canônico ratificado |
+
+### Legenda de pinos (`#pinoLegenda`, 5 rótulos)
+
+| String original | Âncora (linha) | Veredito | String final | Critério §26 |
+|---|---|---|---|---|
+| `Boa oportunidade` (verde #2c5545) | 933 | OK | (sem mudança) | consistente com `scoreOportunidade` (score≥66) |
+| `Atenção` (dourado #a8842c) | 934 | avaliado-mantido | (sem mudança) | rótulo do tier intermediário do sistema `statusDeUnidade`/`STATUS_LABEL` (Fase 13, VIS-01/PIN-01) — **sistema paralelo e intencionalmente distinto** do rótulo do badge individual da ficha (`scoreOportunidade` usa "Oportunidade média" para o mesmo intervalo 33≤score<66); `STATUS_LABEL.atencao="Atenção"` (radar-goiania.html:3172) é usado no mapa de comparação de unidades do prédio e é coberto por teste (`tests/fixtures.mjs:671-689`, chave `"atencao"`) — renomear seria mudança funcional/arquitetural (Rule 4), fora do escopo de texto-apenas desta fase; ambos os sistemas são internamente coerentes e não colidem (contextos de UI diferentes: pin/mapa agregado vs. badge da ficha individual) |
+| `Oportunidade baixa` (vermelho #b5451f) | 935 | OK (já corrigido no Plano 01, A1) | (sem mudança nesta plano) | consistente com `scoreOportunidade` (score<33) e `STATUS_LABEL.risco` |
+| `🏦 Caixa` (dourado #a8842c, mesma cor de "Atenção") | 936 | OK | (sem mudança) | distinção por ícone (🏦) + rótulo textual, não por cor — já avaliado como Achado A4 no Plano 01 (ambiguidade de "Oportunidades" AVALIADA, sem mudança); aqui o hex compartilhado com "Atenção" é intencional (ambos "dourado = olhar com atenção", precedente de A4) |
+| `Sem dado ainda` (cinza #57503f) | 937 | OK | (sem mudança) | claro, consistente com `STATUS_LABEL.semdado` |
+| `grep -c "Oportunidade baixa" radar-goiania.html` | — | verificado | ≥3 ocorrências confirmadas (função, legenda, `STATUS_LABEL`, fixture) | consistência confirmada (herdada do Plano 01) |
+
+Cores inline (`#2c5545`, `#a8842c`, `#b5451f`, `#57503f`) **não tocadas** — são funcionais (T-14-01).
 
 ## Toasts/Erros + Estados vazios
 
