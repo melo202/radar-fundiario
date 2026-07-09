@@ -2402,9 +2402,11 @@ const TERR_INK={1:"#7fa8c2",2:"#5f8fab",3:"#3f6f91",4:"#1f4d75",5:"#062f47"};
 const TERR_FILLOP_CARTO={1:.15,2:.18,3:.20,4:.22,5:.25};
 const TERR_FILLOP_SAT={1:.35,2:.38,3:.40,4:.42,5:.45};
 const _TERR_SAT_LINE=(_baiCss.getPropertyValue("--paper-2").trim()||"#f2eee4");
-/* Estado global do choropleth — populado incrementalmente (só setores já escaneados), nunca
-   simula dado não coletado. TERR_LOTE_BIN: ci (limpo) -> faixa 1-5. TERR_SETOR_ATIVO: cdbairros
-   escaneados (o setor recebe o wash mesmo sem detalhar a faixa por lote no nível do polígono). */
+/* Estado global do choropleth — nunca simula dado não coletado. TERR_LOTE_BIN: ci (limpo) ->
+   faixa 1-5, do setor mais recente. TERR_SETOR_ATIVO: cdbairro do setor mais recente (o setor
+   recebe o wash mesmo sem detalhar a faixa por lote no nível do polígono) — Set de tamanho 1 no
+   máximo (IN-02 15-REVIEW.md: aplicarChoropleth() faz .clear() antes de marcar o novo setor, pra
+   espelhar a MESMA regra "substitui, nunca acumula" já usada por TERR_LOTE_BIN acima). */
 let CHOROPLETH_ON=false;
 let TERR_LOTE_BIN=new Map();
 const TERR_SETOR_ATIVO=new Set();
@@ -2462,6 +2464,12 @@ function aplicarChoropleth(scan){
       if(p!=null&&a.ci!=null)TERR_LOTE_BIN.set(clean(a.ci),binQuantil(TERR_BREAKS,p));
     }
   }
+  /* IN-02 15-REVIEW.md: TERR_LOTE_BIN acima é SUBSTITUÍDO (new Map()) a cada scan — guarda só o
+     setor mais recente. TERR_SETOR_ATIVO precisa espelhar a MESMA regra (limpar antes de marcar
+     o setor atual), senão o contorno de um setor visitado antes continua "aceso" com o wash fixo
+     de faixa 3 (baiStyle) mesmo depois que seus lotes já voltaram ao neutro — inconsistência
+     visual entre bairro (antigo, ainda colorido) e lotes (antigo, já neutros) ao trocar de setor. */
+  TERR_SETOR_ATIVO.clear();
   TERR_SETOR_ATIVO.add(scan.cdbairro);
   TERR_LAST_ST=st; /* WR-01 15-REVIEW.md: guardado p/ toggleChoropleth() religar a legenda sem novo scan */
   return st;
