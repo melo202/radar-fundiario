@@ -932,7 +932,7 @@
     <div id="pinoLegenda" class="pino-legenda" hidden aria-label="Legenda dos pinos no mapa">
       <span><i class="pl-dot" style="background:#2c5545"></i>Boa oportunidade</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>Atenção</span>
-      <span><i class="pl-dot" style="background:#b5451f"></i>Abaixo da mediana</span>
+      <span><i class="pl-dot" style="background:#b5451f"></i>Oportunidade baixa</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
       <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
     </div>
@@ -1348,7 +1348,7 @@ function scoreOportunidade(myPm2, stats, flags){
       ? `Está ${diffPct}% abaixo da mediana da vizinhança.`
       : `Está ${diffPct}% acima da mediana da vizinhança.`];
   } else {
-    rotulo="Abaixo da mediana";
+    rotulo="Oportunidade baixa";
     porque=[`Está ${diffPct}% acima da mediana da vizinhança — entre os mais caros da região.`];
   }
   return {score, rotulo, porque};
@@ -3169,7 +3169,7 @@ const PINO_STYLE={
   semdado:  {fillColor:"#57503f", radius:7},
 };
 const STATUS_LABEL={
-  bom:"Boa oportunidade", atencao:"Atenção", risco:"Abaixo da mediana", semdado:"Sem dado ainda",
+  bom:"Boa oportunidade", atencao:"Atenção", risco:"Oportunidade baixa", semdado:"Sem dado ainda",
 };
 /* T-13-05: prioridade única de "melhor status por CI" (prédio) — usada IDENTICAMENTE
    por plot() e pick(), nunca duplicada com critérios diferentes (mais otimista vence). */

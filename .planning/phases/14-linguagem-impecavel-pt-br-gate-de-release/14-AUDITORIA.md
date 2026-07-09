@@ -103,7 +103,10 @@ Termos travados em fases anteriores — a Fase 14 **ratifica**, não redecide.
 
 | String original | Âncora (linha) | Veredito | String final | Critério §26 |
 |---|---|---|---|---|
-| *(a preencher — Task 2/3 deste plano)* | | | | |
+| `rotulo="Abaixo da mediana"` (scoreOportunidade, score<33) | radar-goiania.html:1351 | alterada | `Oportunidade baixa` | §26.4 (zero jargão na 1ª camada — badge de score é 1ª camada, fora de accordion) |
+| `Abaixo da mediana` (legenda de pinos #pinoLegenda) | radar-goiania.html:935 | alterada | `Oportunidade baixa` | §26.4 + §26.7 (consistência com o rótulo) |
+| `risco:"Abaixo da mediana"` (STATUS_LABEL, mapa de comparação de unidades) | radar-goiania.html:3172 | alterada | `Oportunidade baixa` | §26.4 + §26.7 |
+| `expectRotulo:"Abaixo da mediana"` (fixture consumida por tests/scores.test.mjs) | tests/fixtures.mjs:65 | alterada | `Oportunidade baixa` | acoplamento de teste (mesma correção A1, mesmo commit) |
 
 ---
 
