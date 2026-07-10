@@ -4536,19 +4536,19 @@ async function renderDetectorCriterioPD(){
   }catch(e){/* degradação graciosa — lista já visível continua utilizável sem o rótulo */}
 }
 
-/* abrirFichaDetector(i): reusa showDetail(a,ll) — mesmo caminho de pick()/verNoMapa(). showDetail
-   já chama fecharTerrPanel() no início (WR-03, "1 sheet por vez"), então o painel/detector fecham
-   sozinhos ao abrir a ficha. */
+/* abrirFichaDetector(i): A-05 (20) — rehidrata o lote via loadCi() (where ci='…', outFields:*) em
+   vez de showDetail(a) com o candidato do scan territorial, que traz apenas campos parciais (sem
+   endereço/venal completos) e mostrava a ficha truncada. loadCi()->finish() carrega o registro
+   completo do cadastro; finish()/showDetail já fecham o #terrPanel ("1 sheet por vez"). O
+   destaque/zoom no mapa é preservado com map.setView() ANTES do loadCi. */
 function abrirFichaDetector(i){
   const a=TERR_DETECTOR_CAND[i];if(!a)return;
   setView("mapa");
   if(a.x_coord&&a.y_coord){
     const ll=toWGS(a.x_coord,a.y_coord);
     map.setView(ll,18);
-    showDetail(a,ll);
-  }else{
-    showDetail(a);
   }
+  loadCi(clean(a.ci||a.nrinscr));
 }
 
 /* salvarDetectorNoCadernoUI(i,btn): mesma filosofia de salvarNoCadernoUI() (ficha, 16-02) — ação
