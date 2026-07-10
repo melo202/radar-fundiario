@@ -3957,7 +3957,9 @@ function abrirFichaDetector(i){
 
 /* salvarDetectorNoCadernoUI(i,btn): mesma filosofia de salvarNoCadernoUI() (ficha, 16-02) — ação
    rápida de 1 toque, status default "nao_visitado", nunca duplica (item já existente abre/rola até
-   ele no #cadernoBlock). Falha de escrita SEMPRE visível (ERRO_ESCRITA_CADERNO, T-16-04). */
+   ele no #cadernoBlock). Falha de escrita SEMPRE visível (ERRO_ESCRITA_CADERNO, T-16-04). Grava
+   snapshot/snapshotAt no 1º save (17-REVIEW.md WR-02, mesmo subconjunto DIFF_ALLOW de
+   salvarNoCadernoUI) — sem isso, lote salvo pelo Detector nunca ativa o diff (#dDiff) na ficha. */
 function salvarDetectorNoCadernoUI(i,btn){
   const a=TERR_DETECTOR_CAND[i];if(!a)return;
   if(!cadernoDisponivel()){
@@ -3976,7 +3978,9 @@ function salvarDetectorNoCadernoUI(i,btn){
     const item={
       ci,nrinscr:clean(a.nrinscr),cdbairro:a.cdbairro,nrquadra:a.nrquadra,nrlote:a.nrlote,
       vlvenal:a.vlvenal,areaedif:a.areaedif,areaterr:a.areaterr,vlimp98:a.vlimp98,
-      dtinclusao:a.dtinclusao,uso:a.uso
+      dtinclusao:a.dtinclusao,uso:a.uso,
+      snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},
+      snapshotAt:new Date().toISOString()
     };
     cadernoSalvar(item).then(()=>{
       toast("Salvo no caderno.");
@@ -5002,9 +5006,12 @@ function renderCadernoBtn(){
 /* renderDiffUI(a) (Fase 17, 17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no
    IndexedDB via cadernoBuscar(ci), nunca trava o resto do render síncrono da ficha. Chave do
    Caderno é clean(a.ci||a.nrinscr) (Pitfall 1, 17-RESEARCH.md) — NUNCA a variável local `ci` de
-   showDetail, senão o diff nunca acha o item salvo. Lote nunca salvo (ou sem snapshot ainda)
-   mantém #dDiff hidden (bloco não existe pra esse imóvel, UI-SPEC §1). Grava snapshot novo
-   silenciosamente ao final; falha de escrita gera toast padrão, nunca esconde o diff já exibido
+   showDetail, senão o diff nunca acha o item salvo. Lote nunca salvo mantém #dDiff hidden (bloco
+   não existe pra esse imóvel, UI-SPEC §1). Item salvo SEM snapshot (lote salvo pelo Detector antes
+   do fix de WR-02, ou importado de Caderno anterior à Fase 17) ganha BACKFILL: snapshot dos dados
+   frescos atuais é gravado nesta revisita, mas o diff só aparece a PARTIR da próxima (não há base
+   de comparação ainda — 17-REVIEW.md WR-02). Grava snapshot novo silenciosamente ao final (caso
+   normal, já com snapshot); falha de escrita gera toast padrão, nunca esconde o diff já exibido
    (T-17-08). */
 function renderDiffUI(a){
   const el=document.getElementById("dDiff");
@@ -5013,7 +5020,13 @@ function renderDiffUI(a){
   const ci=clean(a.ci||a.nrinscr);
   cadernoBuscar(ci).then(item=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
-    if(!item||!item.snapshot){el.hidden=true;return;}
+    if(!item){el.hidden=true;return;}
+    if(!item.snapshot){
+      /* backfill silencioso — sem diff nesta visita, só a partir da próxima. */
+      el.hidden=true;
+      cadernoAtualizar(ci,{snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},snapshotAt:new Date().toISOString()}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+      return;
+    }
     const mud=diffLote(item.snapshot,a);
     const dt=new Date(item.snapshotAt);
     const dataFmt=isNaN(dt)?"—":String(dt.getDate()).padStart(2,"0")+"/"+String(dt.getMonth()+1).padStart(2,"0");
