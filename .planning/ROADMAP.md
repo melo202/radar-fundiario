@@ -63,7 +63,12 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.1-*.md`.
   3. Refinamento estético: profundidade/elevação consistente (sombras/bordas), acabamento dos cards/sheets/botões, densidade e alinhamento revisados — mantendo papel/óxido cartográfico e cor-só-status (VIS-01)
   4. Focus-trap nas 6 superfícies modais (onboarding, wizard, negSheet, captSheet, cmpSheet, chooser/detail) — Tab/Shift+Tab circulam dentro do modal, Esc fecha, foco retorna ao gatilho (fecha o IN-03 da Fase 13)
   5. Legibilidade AA preservada em CARTO e satélite; motion/reduced-motion intactos; 239+ testes verdes; PDFs continuam profissionais na fonte nova
-**Plans**: TBD · **UI hint**: yes
+**Plans**: 3 plans (sequenciais, mesmo arquivo) · **UI hint**: yes
+
+Plans:
+- [ ] 19-01-PLAN.md — Fundação tipográfica: @font-face Archivo+JetBrains Mono (base64) + CSP font-src + migração das 196 declarações (TYPO-01)
+- [ ] 19-02-PLAN.md — Refinamento estético: tokens --elev-0/1/2/3 + acabamento hover/active/focus/divisores (PREM-01)
+- [ ] 19-03-PLAN.md — Focus-trap único nas 6 superfícies modais + gate final/UAT (A11Y-01)
 
 ### Phase 20: Auditoria Fable 5 (gate final)
 **Goal**: Tudo que foi construído (v2.0-v2.2) passa por uma auditoria profunda executada por agentes **Fable 5** (modelo mais capaz disponível), e as correções são aplicadas também pelo Fable 5 — o gate de qualidade final antes de considerar o app "produto".
@@ -80,7 +85,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.1-*.md`.
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
-| 19. Estética Premium | v2.2 | 0/TBD | Not started | - |
+| 19. Estética Premium | v2.2 | 0/3 | Planned | - |
 | 20. Auditoria Fable 5 | v2.2 | 0/TBD | Not started | - |
 
 **Backlog (v2.3+):** ativação da pesquisa de mercado por IA sobre o seam dormant; upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria.
