@@ -35,13 +35,15 @@ function loadPureBlock() {
   assert.ok(src.includes("function sanitizeCaderno"), "sanitizeCaderno ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
   assert.ok(src.includes("function statusValido"), "statusValido ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
   assert.ok(src.includes("function validarImportCaderno"), "validarImportCaderno ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
+  assert.ok(src.includes("function mergeCadernoImport"), "mergeCadernoImport ausente do bloco RADAR_PURE (A-09)");
+  assert.ok(src.includes("function construirCdbairroParaNome"), "construirCdbairroParaNome ausente do bloco RADAR_PURE (B-10)");
   // Fase 17 (17-01, Task 3): allowlist recursiva do snapshot — ausente em RED, presente apos GREEN.
   assert.ok(src.includes('"snapshot"'), "CADERNO_ALLOW ainda nao inclui \"snapshot\" (17-01 Task 3 nao cumprida)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {medianasPorQuadra,limiarQuadraValorizada,razaoOcupacao,detectarSubutilizados,leituraDetector,DETECTOR_RATIO_MAX,sanitizeCaderno,CADERNO_STATUS,statusValido,validarImportCaderno};",
+      "\n;globalThis.__exports = {medianasPorQuadra,limiarQuadraValorizada,razaoOcupacao,detectarSubutilizados,leituraDetector,DETECTOR_RATIO_MAX,sanitizeCaderno,CADERNO_STATUS,statusValido,validarImportCaderno,mergeCadernoImport,tsCaderno,construirCdbairroParaNome};",
     { filename: "radar-pure-caderno.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -294,4 +296,52 @@ test("validarImportCaderno: import de item com snapshot.dtnascimen -> aceito SEM
   assert.ok(!("dtnascimen" in r.itens[0].snapshot), "snapshot.dtnascimen nunca deveria sobreviver ao import");
   assert.equal(r.itens[0].snapshot.vlvenal, 300000);
   assert.equal(r.itens[0].ci, "999");
+});
+
+// --- A-09: sanitizeCaderno trunca endereco + mergeCadernoImport preserva o mais novo -----------
+
+test("sanitizeCaderno trunca endereco em 120 chars (A-09)", () => {
+  const longo = "R".repeat(300);
+  const out = P.sanitizeCaderno({ ci: "1", endereco: longo });
+  assert.equal(out.endereco.length, 120, "endereco deveria ser truncado a 120 chars");
+});
+
+test("mergeCadernoImport: importado MAIS NOVO sobrescreve; local mais novo/empate é preservado (A-09)", () => {
+  const locais = [
+    { ci: "A", nota: "local A", updatedAt: "2026-05-01T00:00:00.000Z" }, // local mais VELHO
+    { ci: "B", nota: "local B", updatedAt: "2026-07-01T00:00:00.000Z" }, // local mais NOVO
+    { ci: "C", nota: "local C", savedAt: "2026-06-01T00:00:00.000Z" },   // empate exato
+  ];
+  const entrantes = [
+    { ci: "A", nota: "import A", updatedAt: "2026-06-01T00:00:00.000Z" }, // mais novo -> vence
+    { ci: "B", nota: "import B", updatedAt: "2026-05-01T00:00:00.000Z" }, // mais velho -> perde
+    { ci: "C", nota: "import C", savedAt: "2026-06-01T00:00:00.000Z" },   // empate -> mantém local (perde)
+    { ci: "D", nota: "import D", updatedAt: "2026-01-01T00:00:00.000Z" }, // ci inédito -> entra
+  ];
+  const persistir = P.mergeCadernoImport(locais, entrantes);
+  const cis = JSON.parse(JSON.stringify(persistir.map((it) => it.ci))).sort(); // normaliza cross-realm
+  assert.deepEqual(cis, ["A", "D"], "só o importado mais novo (A) e o ci inédito (D) devem ser persistidos");
+  const a = persistir.find((it) => it.ci === "A");
+  assert.equal(a.nota, "import A", "o importado mais novo deveria trazer sua própria nota");
+});
+
+test("mergeCadernoImport: sem locais -> todos os importados entram; entrantes vazio -> []", () => {
+  const entrantes = [{ ci: "X", savedAt: "2026-01-01T00:00:00.000Z" }, { ci: "Y" }];
+  assert.equal(P.mergeCadernoImport([], entrantes).length, 2, "sem local, todo importado com ci entra");
+  assert.equal(P.mergeCadernoImport(null, null).length, 0, "entrantes ausente -> [] (nunca lança)");
+});
+
+// --- B-10: construirCdbairroParaNome (cd -> nm_disp) -------------------------------------------
+
+test("construirCdbairroParaNome: mapeia cdbairro -> nm_disp (com acento/prefixo), primeira ocorrência vence (B-10)", () => {
+  const features = [
+    { properties: { id: "p1", nm_disp: "Setor Bueno", nm_bai: "BUENO" } },
+    { properties: { id: "p2", nm_disp: "Jardim América", nm_bai: "AMERICA" } },
+    { properties: { id: "p3" } }, // sem cd resolvido -> ignorado
+  ];
+  const idParaCd = new Map([["p1", 16], ["p2", 42]]);
+  const map = P.construirCdbairroParaNome(features, idParaCd);
+  assert.equal(map.get(16), "Setor Bueno");
+  assert.equal(map.get(42), "Jardim América");
+  assert.equal(map.size, 2, "feature sem cd resolvido nunca entra");
 });

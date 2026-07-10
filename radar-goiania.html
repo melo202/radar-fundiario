@@ -2561,6 +2561,7 @@ function sanitizeCaderno(obj){
   if(out.ci!=null&&!CADERNO_CI_RE.test(String(out.ci)))delete out.ci;
   if(out.tag!=null)out.tag=String(out.tag).slice(0,40);
   if(out.nota!=null)out.nota=String(out.nota).slice(0,500);
+  if(out.endereco!=null)out.endereco=String(out.endereco).slice(0,120); /* A-09: trava o endereço importado (nunca ilimitado) */
   if(out.status!==undefined&&!CADERNO_STATUS.includes(out.status))out.status="nao_visitado";
   /* Fase 17 (17-01, T-17-01/Pitfall 5, 17-RESEARCH.md): allowlist RECURSIVA do sub-objeto
      `snapshot` — a allowlist de CADERNO_ALLOW acima só filtra a CHAVE de topo ("snapshot"
@@ -2599,6 +2600,26 @@ function validarImportCaderno(json){
   if(!Array.isArray(arr))return {ok:false,erro:"shape"};
   const itens=arr.filter(o=>o&&o.ci!=null).map(sanitizeCaderno).filter(o=>o.ci!=null);
   return {ok:true,itens};
+}
+
+/* tsCaderno(it): recência de um item — updatedAt (edição mais recente) com fallback para savedAt.
+   ISO 8601 compara corretamente por ordem lexicográfica; ausência -> "" (perde para qualquer data). */
+function tsCaderno(it){return String((it&&(it.updatedAt||it.savedAt))||"");}
+
+/* mergeCadernoImport(locais,entrantes) (A-09): decide, por ci, quais itens IMPORTADOS devem
+   sobrescrever os locais — só quando o importado é MAIS NOVO (tsCaderno). Empate ou local mais novo
+   mantém o LOCAL, nunca sobrescreve nota/status do usuário silenciosamente. Retorna apenas os itens
+   a PERSISTIR (importados vencedores + de ci inédito). PURA/testável. */
+function mergeCadernoImport(locais,entrantes){
+  const localPorCi=new Map();
+  (locais||[]).forEach(it=>{if(it&&it.ci!=null)localPorCi.set(String(it.ci),it);});
+  const persistir=[];
+  (entrantes||[]).forEach(it=>{
+    if(!it||it.ci==null)return;
+    const local=localPorCi.get(String(it.ci));
+    if(!local||tsCaderno(it)>tsCaderno(local))persistir.push(it);
+  });
+  return persistir;
 }
 
 /* Fase 17 (17-01, TERR-06): diff de cadastro entre visitas — compara o snapshot salvo com o dado
@@ -2691,6 +2712,22 @@ function construirNomeParaCdbairro(features,idParaCd){
       if(!map.has(k))map.set(k,new Set());
       map.get(k).add(cd);
     });
+  });
+  return map;
+}
+
+/* construirCdbairroParaNome(features,idParaCd): reverso de construirNomeParaCdbairro — Map<cdbairro,
+   nm_disp> (nome de EXIBIÇÃO, com prefixo/acento). Usado para rotular o setor no Caderno (B-10),
+   ex.: "Setor Bueno (16)". Feature sem cd resolvido nunca entra; primeira ocorrência de cd vence. */
+function construirCdbairroParaNome(features,idParaCd){
+  const map=new Map();
+  (features||[]).forEach(f=>{
+    const props=f&&f.properties;
+    if(!props)return;
+    const cd=idParaCd&&idParaCd.get?idParaCd.get(props.id):(idParaCd&&idParaCd[props.id]);
+    if(cd==null)return;
+    const nome=props.nm_disp||props.nm_bai;
+    if(nome&&!map.has(cd))map.set(cd,nome);
   });
   return map;
 }
@@ -3152,6 +3189,16 @@ async function garantirNomeParaCdbairro(){
   const feats=(BAIRROS&&BAIRROS.features)||BAIRROS||[];
   nomeParaCdbairro=construirNomeParaCdbairro(feats,idParaCdbairro);
   return nomeParaCdbairro;
+}
+/* garantirCdbairroParaNome() (B-10): Map<cdbairro,nm_disp> memoizado — mesmo dado lazy de
+   garantirNomeParaCdbairro (zero requisição nova), reverso para rotular o setor no Caderno. */
+let cdbairroParaNome=null;
+async function garantirCdbairroParaNome(){
+  if(cdbairroParaNome)return cdbairroParaNome;
+  await carregarLookupCdbairro();
+  const feats=(BAIRROS&&BAIRROS.features)||BAIRROS||[];
+  cdbairroParaNome=construirCdbairroParaNome(feats,idParaCdbairro);
+  return cdbairroParaNome;
 }
 
 /* ---------------- divisas de bairro (Fase 3, MAPA-02/03): outline estático do bairros-goiania.json (Fase 1) -----
@@ -4336,7 +4383,7 @@ function montarPainel(scan,st,layer){
       if(!el||TERR_PANEL_CD!==cd)return;
       if(matches.length>0){
         el.dataset.bairros=String(cd);
-        el.textContent="🏦 "+matches.length+" imóvel(is) Caixa neste setor — toque para ver no mapa";
+        el.textContent=(matches.length===1?"🏦 1 imóvel Caixa neste setor":"🏦 "+matches.length+" imóveis Caixa neste setor")+" — toque para ver no mapa"; /* B-09: plural correto */
         el.hidden=false;
       }else{
         el.hidden=true;
@@ -5983,9 +6030,15 @@ function cadernoImportarJSON(input){
   reader.onload=()=>{
     const val=validarImportCaderno(String(reader.result||""));
     if(!val.ok){toast("Arquivo inválido — não é um backup do caderno. Nada foi importado. Escolha outro arquivo.");return;}
-    Promise.all(val.itens.map(it=>cadernoSalvar(it))).then(saved=>{
-      toast(saved.length+" lotes importados para o caderno.");
-      renderCadernoBlock();
+    /* A-09: merge por ci — só grava importados MAIS NOVOS que o local; a versão local mais recente
+       (nota/status de campo) é preservada em vez de ser sobrescrita silenciosamente pelo put. */
+    cadernoListar({}).then(locais=>{
+      const persistir=mergeCadernoImport(locais,val.itens);
+      const mantidos=val.itens.length-persistir.length;
+      return Promise.all(persistir.map(it=>cadernoSalvar(it))).then(saved=>{
+        toast(saved.length+" lotes importados para o caderno"+(mantidos>0?"; "+mantidos+" mantidos (sua versão local é mais recente)":"")+".");
+        renderCadernoBlock();
+      });
     }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
   };
   reader.onerror=()=>toast(ERRO_ESCRITA_CADERNO);
@@ -6113,10 +6166,18 @@ async function renderCadernoBlock(){
       caixaBadgeHtml=`<button type="button" class="cadbook-caixabadge" id="cadernoCaixaBadge" data-bairros="${esc(cx.bairros.join(','))}" onclick="abrirCaixaNoMapaUI(this)">${esc(rotulo)}</button>`;
     }
   }
+  /* B-10: nome do setor (nm_disp, com acento) — lookup lazy memoizado; degrada para o código puro
+     se o mapa de bairros ainda não carregou (nunca quebra o render do caderno). */
+  let nomesSetor=null;
+  try{nomesSetor=await garantirCdbairroParaNome();}catch(e){nomesSetor=null;}
   const visiveis=itens.slice(0,CADERNO_PAGINA);
   const rows=visiveis.map(it=>{
     const fechou=it.status==="fechou";
-    const meta="Q "+esc(it.nrquadra||"—")+" · L "+esc(it.nrlote||"—")+" · Setor "+esc(it.cdbairro||"—");
+    const nomeSetor=nomesSetor&&it.cdbairro!=null?nomesSetor.get(it.cdbairro):null;
+    const setorLabel=it.cdbairro==null?"Setor —"
+      :nomeSetor?esc(nomeSetor)+" ("+esc(it.cdbairro)+")"
+      :"Setor "+esc(it.cdbairro);
+    const meta="Q "+esc(it.nrquadra||"—")+" · L "+esc(it.nrlote||"—")+" · "+setorLabel;
     const notaPrevTxt=it.nota?String(it.nota).slice(0,60):"";
     const statusChips=CADERNO_STATUS.map(s=>{
       const ativo=it.status===s;
@@ -6280,8 +6341,8 @@ function histPush(a){
 function inscDoEl(x){return (x&&x.closest&&x.closest("[data-insc]"))?x.closest("[data-insc]").dataset.insc:x;}
 function copyInsc(x){
   const v=inscDoEl(x);
-  if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
-    .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
+  /* B-12: via copyTexto — fallback (execCommand) + feedback garantido, nunca falha silenciosa. */
+  if(v)copyTexto(v,"Inscrição "+v+" copiada — cole na consulta oficial.");
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
 function copyLink(x){
@@ -7290,7 +7351,8 @@ function copiarCustos(){
     "Registro do imóvel: "+brlExato(registro),
     "CUSTO TOTAL: "+brl(total),
     "— tabelas oficiais TJGO 2026; estimativa, confira na fonte. Radar Fundiário."].filter(Boolean).join("\n");
-  if(navigator.clipboard)navigator.clipboard.writeText(L).then(()=>toast("Resumo copiado — cole no WhatsApp."),()=>{});
+  /* B-12: via copyTexto — fallback (execCommand) + feedback garantido, nunca falha silenciosa. */
+  copyTexto(L,"Resumo copiado — cole no WhatsApp.");
 }
 
 /* ---------------- camada Caixa (dados estáticos de caixa-goiania.js, gerado por atualizar-caixa.py) ---------------- */
