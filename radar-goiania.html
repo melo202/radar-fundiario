@@ -4460,6 +4460,14 @@ async function renderDetectorCriterioPD(){
   if(!cand||!cand.length)return;
   try{
     const porQuadra=await consultarPDPorQuadra(cand);
+    /* WR-04 18-REVIEW.md: TERR_DETECTOR_CAND é reatribuído a uma NOVA referência de array a cada
+       renderDetectorLista() — se o usuário rodar um novo scan (ou a lista for re-renderizada)
+       ANTES desta Promise resolver, `cand` (referência CAPTURADA no início desta função) já não é
+       mais TERR_DETECTOR_CAND, mas os ids #terrdetCrit{i} foram RECRIADOS para candidatos
+       DIFERENTES. `if(!el)return` só protege contra elemento REMOVIDO (lista encolheu), nunca
+       contra elemento REAPROVEITADO por outro lote — mesmo padrão de guarda de invalidação já
+       usado no arquivo (SEARCHTOKEN/DRILLTOKEN/ZONASTOKEN/DCUR!==a). */
+    if(TERR_DETECTOR_CAND!==cand)return; /* lista foi re-renderizada enquanto a Promise resolvia */
     cand.forEach((a,i)=>{
       const el=document.getElementById("terrdetCrit"+i);
       if(!el)return; // lista pode ter sido re-renderizada (novo scan) enquanto a Promise resolvia
