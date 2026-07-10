@@ -7712,6 +7712,10 @@ function loadCnefe(){
   const ambig=document.getElementById("ambigChips");
   const clearBtn=document.getElementById("caixaClear");
   const vozBtn=document.getElementById("caixaVoz");
+  /* B-04: snapshot do estado vazio inicial de #results (#emptyState + exemplos) capturado no boot,
+     ANTES de qualquer busca. Restaurado ao limpar a caixa (#caixaClear) — o .empty volta e o CSS
+     `:has(#results .empty)` revela #savedBlocks/#cadernoBlock de novo (antes só apareciam até a 1ª busca). */
+  const EMPTYSTATE_HTML=(document.getElementById("results")||{}).innerHTML||"";
   let deb=null;
   /* WR-03 (08-REVIEW.md): guarda de de-duplicacao — parseGeoPaste pode re-casar a MESMA coordenada
      em ticks de debounce sucessivos (usuario pausa apos colar, ou o debounce dispara 2x em sequencia
@@ -7840,13 +7844,19 @@ function loadCnefe(){
   chip.addEventListener("click",toggleCorrectMenu);
   clearBtn.addEventListener("click",()=>{
     inp.value="";clearBtn.style.display="none";chip.hidden=true;chip.classList.remove("show","media");
-    ambig.hidden=true;LASTDETECT=null;lastGeoKey=null;closeCaixaList();inp.focus();
+    ambig.hidden=true;LASTDETECT=null;lastGeoKey=null;closeCaixaList();
+    /* B-04: restaura o estado vazio de #results — traz de volta #savedBlocks/#cadernoBlock via CSS :has.
+       O listener dos exemplos é delegado no #results estático (abaixo), então sobrevive a este innerHTML. */
+    const rbox=document.getElementById("results");if(rbox)rbox.innerHTML=EMPTYSTATE_HTML;
+    inp.focus();
   });
   ambig.addEventListener("click",e=>{
     const b=e.target.closest("button[data-mode]");if(!b)return;
     applyDetectAndSearch(b.dataset.mode,{rua:b.dataset.rua,numero:b.dataset.numero,quadra:b.dataset.quadra,value:b.dataset.value});
   });
-  document.getElementById("exampleChips").addEventListener("click",e=>{
+  /* B-04: delegado no #results ESTÁTICO (nunca recriado, só seu innerHTML muda) em vez de no
+     #exampleChips — assim os exemplos continuam funcionando após o restore do estado vazio no #caixaClear. */
+  document.getElementById("results").addEventListener("click",e=>{
     const b=e.target.closest("button[data-example]");if(!b)return;
     const txt=b.dataset.example;
     inp.value=txt;
