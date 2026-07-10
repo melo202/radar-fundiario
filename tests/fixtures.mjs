@@ -96,7 +96,9 @@ export const FIXTURES = {
     tipoImovel: "Apartamento",
     faixa: { lo: 690000, hi: 780000 },
     scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
-    scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
+    // F5 ZAP-01/02: scoreConf NUNCA mais fabricado à mão — o teste computa a SAÍDA REAL de
+    // scoreConfianca(scoreConfInputs) (o `porque` fabricado escondia o formato real pontuado).
+    scoreConfInputs: { areaOk: false, nComps: 6, atipico: false, venalOk: true }, // => nivel "media"
     leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
     perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
   },
@@ -110,7 +112,7 @@ export const FIXTURES = {
     tipoImovel: "Apartamento",
     faixa: { lo: 690000, hi: 780000 },
     scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
-    scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
+    scoreConfInputs: { areaOk: false, nComps: 6, atipico: false, venalOk: true }, // F5 ZAP-01/02: saída real computada no teste
     leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
     perfil: null,
   },

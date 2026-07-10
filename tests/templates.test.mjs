@@ -38,13 +38,21 @@ function loadPureBlock() {
   vm.createContext(sandbox);
   new vm.Script(
     src + "\n;globalThis.__exports = {zapResumo,zapProprietario,zapComprador,zapArgumento,zapRiscos," +
-      "captAbordagem,captScript,captChecklist,captFollowup,oportunidadeItem,histAdd};",
+      "captAbordagem,captScript,captChecklist,captFollowup,oportunidadeItem,histAdd,scoreConfianca};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
 }
 
 const P = loadPureBlock();
+
+// F5 ZAP-01/02: os data de teste usam a SAÍDA REAL de scoreConfianca (fixture guarda só os
+// inputs) — o `porque` fabricado à mão nunca reproduzia o formato real pontuado
+// ("faltou a área confirmada; 6 comparáveis na vizinhança.") e escondia o bug de interpolação.
+const zapComData = { ...FIXTURES["zapComData"], scoreConf: null };
+zapComData.scoreConf = P.scoreConfianca(FIXTURES["zapComData"].scoreConfInputs);
+const zapSemPerfil = { ...FIXTURES["zapSemPerfil"], scoreConf: null };
+zapSemPerfil.scoreConf = P.scoreConfianca(FIXTURES["zapSemPerfil"].scoreConfInputs);
 
 const ZAP_FNS = {
   zapResumo: P.zapResumo,
@@ -57,24 +65,24 @@ const ZAP_FNS = {
 
 test("zap* com perfil.nome termina com assinatura exata", () => {
   for (const [name, fn] of Object.entries(ZAP_FNS)) {
-    const result = fn(FIXTURES.zapComData);
+    const result = fn(zapComData);
     assert.ok(
       result.endsWith("— Ana Souza, CRECI 12345"),
       `${name}(zapComData) deveria terminar com "— Ana Souza, CRECI 12345", obteve: ${JSON.stringify(result)}`
     );
   }
-  const riscos = P.zapRiscos(FIXTURES.zapComData);
+  const riscos = P.zapRiscos(zapComData);
   assert.ok(riscos.endsWith("— Ana Souza, CRECI 12345"), `zapRiscos deveria terminar com assinatura, obteve: ${JSON.stringify(riscos)}`);
 });
 
 test("zap* sem perfil NAO contem placeholder de assinatura", () => {
   const placeholderRe = /\[\s*seu\s+nome\s*\]/i;
   for (const [name, fn] of Object.entries(ZAP_FNS)) {
-    const result = fn(FIXTURES.zapSemPerfil);
+    const result = fn(zapSemPerfil);
     assert.ok(!placeholderRe.test(result), `${name}(zapSemPerfil) NAO deveria conter placeholder "[seu nome]", obteve: ${JSON.stringify(result)}`);
     assert.ok(!result.includes("— Ana Souza"), `${name}(zapSemPerfil) NAO deveria conter assinatura de outro fixture`);
   }
-  const riscos = P.zapRiscos(FIXTURES.zapSemPerfil);
+  const riscos = P.zapRiscos(zapSemPerfil);
   assert.ok(!placeholderRe.test(riscos), `zapRiscos(zapSemPerfil) NAO deveria conter placeholder`);
 });
 
@@ -94,7 +102,7 @@ test("zapResumo/zapProprietario/zapComprador/zapArgumento com faixa null nao inv
 // --- localTxt: concordancia de genero no fallback sem bairro (WR-01 do review da Fase 14) ------
 
 test("zap*/capt* sem bairro usam 'na região' — nunca 'no região'", () => {
-  const semBairro = { ...FIXTURES.zapComData, bairro: "" };
+  const semBairro = { ...zapComData, bairro: "" };
   const fns = { ...ZAP_FNS, captAbordagem: P.captAbordagem, captScript: P.captScript };
   for (const [name, fn] of Object.entries(fns)) {
     const result = fn(semBairro);
@@ -108,7 +116,7 @@ test("zap*/capt* sem bairro usam 'na região' — nunca 'no região'", () => {
 
 test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
   const honestidadeTermos = ["recomendo confirmar", "faixa estimada", "não é uma avaliação oficial"];
-  for (const data of [FIXTURES.zapComData, FIXTURES.zapSemFaixa]) {
+  for (const data of [zapComData, FIXTURES.zapSemFaixa]) {
     const result = P.zapRiscos(data);
     const lower = result.toLowerCase();
     assert.ok(
@@ -124,7 +132,7 @@ test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
 
 test("zapArgumento com score baixo (acima da mediana) NAO afirma 'reforça o valor pedido'", () => {
   const caro = {
-    ...FIXTURES.zapComData,
+    ...zapComData,
     scoreOp: { score: 18, rotulo: "Preço alto", porque: ["Está 22% acima da mediana da vizinhança — entre os mais caros da região."] },
   };
   const result = P.zapArgumento(caro);
@@ -133,7 +141,7 @@ test("zapArgumento com score baixo (acima da mediana) NAO afirma 'reforça o val
 });
 
 test("zapArgumento com score alto (abaixo da mediana) reforça o valor pedido", () => {
-  const result = P.zapArgumento(FIXTURES.zapComData); // score 78, "8% abaixo"
+  const result = P.zapArgumento(zapComData); // score 78, "8% abaixo"
   assert.ok(result.includes("reforça o valor pedido"), `imóvel barato deveria reforçar o valor pedido, obteve: ${JSON.stringify(result)}`);
   assert.ok(!result.includes("negociar o valor"), `imóvel barato NAO deveria abrir margem para negociar, obteve: ${JSON.stringify(result)}`);
 });
@@ -142,20 +150,20 @@ test("zapArgumento com score alto (abaixo da mediana) reforça o valor pedido", 
 
 test("captAbordagem/captScript/captChecklist/captFollowup retornam string nao vazia", () => {
   for (const fn of [P.captAbordagem, P.captScript, P.captChecklist, P.captFollowup]) {
-    const result = fn(FIXTURES.zapComData);
+    const result = fn(zapComData);
     assert.ok(typeof result === "string" && result.length > 0, `captacao fn deveria retornar string nao vazia, obteve: ${JSON.stringify(result)}`);
   }
 });
 
 test("captScript contem os 4 passos numerados", () => {
-  const result = P.captScript(FIXTURES.zapComData);
+  const result = P.captScript(zapComData);
   for (const step of ["1.", "2.", "3.", "4."]) {
     assert.ok(result.includes(step), `captScript deveria conter o passo "${step}", obteve: ${JSON.stringify(result)}`);
   }
 });
 
 test("captChecklist contem os 5 itens documentais com bullet", () => {
-  const result = P.captChecklist(FIXTURES.zapComData);
+  const result = P.captChecklist(zapComData);
   const itens = ["matrícula", "iptu", "certidões pessoais", "condomínio", "identidade"];
   const lower = result.toLowerCase();
   for (const item of itens) {
@@ -166,8 +174,8 @@ test("captChecklist contem os 5 itens documentais com bullet", () => {
 });
 
 test("captFollowup contem o endereco interpolado de data.endereco", () => {
-  const result = P.captFollowup(FIXTURES.zapComData);
-  assert.ok(result.includes(FIXTURES.zapComData.endereco), `captFollowup deveria conter "${FIXTURES.zapComData.endereco}", obteve: ${JSON.stringify(result)}`);
+  const result = P.captFollowup(zapComData);
+  assert.ok(result.includes(zapComData.endereco), `captFollowup deveria conter "${zapComData.endereco}", obteve: ${JSON.stringify(result)}`);
 });
 
 // --- oportunidadeItem: allowlist positiva + negativa (LGPD) -------------------------------------
@@ -227,4 +235,71 @@ test("histAdd nao muta o array original (identidade de referencia preservada)", 
   assert.equal(list29.length, originalLength, "lista original NAO deveria ter seu length alterado");
   assert.equal(list29, originalRef, "referencia da lista original deveria permanecer a mesma");
   assert.notEqual(result, list29, "histAdd deveria retornar um NOVO array, nao o mesmo objeto");
+});
+
+// --- F5 ZAP-01/02: pendencias derivadas da SAIDA REAL de scoreConfianca -------------------------
+// A frase-diagnostico `porque` (ja pontuada, feita para o painel) nunca pode ser interpolada crua
+// como "itens a confirmar" — gerava ". ." no meio da mensagem e listava "dados completos" como
+// pendencia. Os casos abaixo alimentam os templates com scoreConfianca() real, nunca fabricado.
+
+test("zapProprietario/zapRiscos: caminho comum (3-7 comparaveis, dados completos) sai gramatical", () => {
+  // nivel "media" so pela nota informativa de contagem — NENHUMA pendencia real
+  const conf = P.scoreConfianca({ areaOk: true, nComps: 6, atipico: false, venalOk: true });
+  assert.equal(conf.nivel, "media", "premissa do caso: 6 comparaveis com dados completos => media");
+  const data = { ...zapComData, scoreConf: conf };
+  for (const [name, fn] of [["zapProprietario", P.zapProprietario], ["zapRiscos", P.zapRiscos]]) {
+    const result = fn(data);
+    assert.ok(!/\.\s*\./.test(result), `${name} NAO deveria conter ponto duplicado/ponto no meio da frase, obteve: ${JSON.stringify(result)}`);
+    assert.ok(!/\.,/.test(result), `${name} NAO deveria conter ".,", obteve: ${JSON.stringify(result)}`);
+    assert.ok(!/confirmar \d+ compar/i.test(result), `${name} NAO deveria pedir para "confirmar N comparáveis" (nota informativa nao e pendencia), obteve: ${JSON.stringify(result)}`);
+  }
+});
+
+test("zapRiscos: confianca ALTA nunca lista 'dados completos' como pendencia", () => {
+  const conf = P.scoreConfianca({ areaOk: true, nComps: 10, atipico: false, venalOk: true });
+  assert.equal(conf.nivel, "alta", "premissa do caso: 10 comparaveis com dados completos => alta");
+  const result = P.zapRiscos({ ...zapComData, scoreConf: conf });
+  assert.ok(!result.includes("dados completos"), `zapRiscos NAO deveria listar o diagnostico positivo "dados completos" como pendencia, obteve: ${JSON.stringify(result)}`);
+  assert.ok(!/\.\s*\./.test(result), `zapRiscos NAO deveria conter ponto duplicado, obteve: ${JSON.stringify(result)}`);
+  // sem pendencia real, cai na lista generica default (sempre sensata antes de decidir)
+  assert.ok(result.includes("área privativa"), `zapRiscos sem pendencia real deveria usar a lista generica, obteve: ${JSON.stringify(result)}`);
+});
+
+test("zapProprietario: pendencia real (area) vira substantivo em frase gramatical, nunca o diagnostico cru", () => {
+  const conf = P.scoreConfianca({ areaOk: false, nComps: 6, atipico: false, venalOk: true });
+  const result = P.zapProprietario({ ...zapComData, scoreConf: conf });
+  assert.ok(
+    result.includes("Recomendo confirmar a área do imóvel para uma avaliação mais precisa."),
+    `zapProprietario deveria citar a pendencia como substantivo, obteve: ${JSON.stringify(result)}`
+  );
+  assert.ok(!result.includes("faltou"), `zapProprietario NAO deveria interpolar a frase-diagnostico crua ("faltou..."), obteve: ${JSON.stringify(result)}`);
+  assert.ok(!/\.\s*\./.test(result), `zapProprietario NAO deveria conter ponto duplicado, obteve: ${JSON.stringify(result)}`);
+});
+
+test("zapRiscos: 2 pendencias reais viram lista com virgula + 'e' final, sem pontuacao interna", () => {
+  const conf = P.scoreConfianca({ areaOk: false, nComps: 2, atipico: false, venalOk: true }); // baixa: area + poucos comparaveis
+  const result = P.zapRiscos({ ...zapComData, scoreConf: conf });
+  assert.ok(
+    result.includes("a área do imóvel e o valor com mais comparáveis da região."),
+    `zapRiscos deveria listar as 2 pendencias com "e" final e um unico ponto, obteve: ${JSON.stringify(result)}`
+  );
+  assert.ok(!result.includes(";"), `zapRiscos NAO deveria conter o "; " de diagnostico do painel, obteve: ${JSON.stringify(result)}`);
+  assert.ok(!/\.\s*\./.test(result), `zapRiscos NAO deveria conter ponto duplicado, obteve: ${JSON.stringify(result)}`);
+});
+
+test("zap*/capt*: nenhuma mensagem contem ponto duplicado ou '.,' com scoreConf real (todas as confiancas)", () => {
+  const confs = [
+    P.scoreConfianca({ areaOk: true, nComps: 9, atipico: false, venalOk: true }),   // alta
+    P.scoreConfianca({ areaOk: true, nComps: 6, atipico: false, venalOk: true }),   // media (nota)
+    P.scoreConfianca({ areaOk: false, nComps: 6, atipico: false, venalOk: true }),  // media (pendencia)
+    P.scoreConfianca({ areaOk: false, nComps: 2, atipico: true, venalOk: false }),  // baixa (4 pendencias)
+    null,
+  ];
+  const fns = { zapResumo: P.zapResumo, zapProprietario: P.zapProprietario, zapComprador: P.zapComprador,
+    zapArgumento: P.zapArgumento, zapRiscos: P.zapRiscos, captAbordagem: P.captAbordagem, captFollowup: P.captFollowup };
+  for (const conf of confs) for (const [name, fn] of Object.entries(fns)) {
+    const result = fn({ ...zapComData, scoreConf: conf });
+    assert.ok(!/\.\s*\./.test(result), `${name} (conf=${conf ? conf.nivel : "null"}) NAO deveria conter ponto duplicado, obteve: ${JSON.stringify(result)}`);
+    assert.ok(!/\.,/.test(result), `${name} (conf=${conf ? conf.nivel : "null"}) NAO deveria conter ".,", obteve: ${JSON.stringify(result)}`);
+  }
 });

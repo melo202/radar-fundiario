@@ -1680,10 +1680,15 @@ function scoreConfianca(inputs){
      (fixture obrigatoria: areaOk=false + nComps=6 => "media"). So n<3 conta como defeito. */
   const pendencias=[];
   const notas=[];
-  if(!areaOk) pendencias.push("faltou a área confirmada");
-  if(!venalOk) pendencias.push("valor venal não informado");
-  if(atipico) pendencias.push("imóvel atípico na amostra (uso pouco comum na vizinhança)");
-  if(n<3) pendencias.push(`poucos comparáveis na vizinhança (${n})`);
+  /* F5 ZAP-01/02: `confirmar` — itens LIMPOS (substantivos, sem verbo nem pontuação) paralelos às
+     pendências, para os templates de mensagem interpolarem em frase ("Recomendo confirmar X e Y").
+     `porque` segue sendo a frase-diagnóstico do painel; nota informativa (contagem de comparáveis)
+     e diagnóstico positivo ("dados completos") NUNCA entram em `confirmar` — não são pendências. */
+  const confirmar=[];
+  if(!areaOk){ pendencias.push("faltou a área confirmada"); confirmar.push("a área do imóvel"); }
+  if(!venalOk){ pendencias.push("valor venal não informado"); confirmar.push("o valor venal"); }
+  if(atipico){ pendencias.push("imóvel atípico na amostra (uso pouco comum na vizinhança)"); confirmar.push("o uso do imóvel (atípico na vizinhança)"); }
+  if(n<3){ pendencias.push(`poucos comparáveis na vizinhança (${n})`); confirmar.push("o valor com mais comparáveis da região"); }
   else if(n<8) notas.push(`${n} comparáveis na vizinhança`);
   let nivel;
   if(pendencias.length===0 && n>=8) nivel="alta";
@@ -1693,7 +1698,7 @@ function scoreConfianca(inputs){
   const porque = partes.length
     ? [partes.join("; ")+"."]
     : [`${n} comparáveis na vizinhança, dados completos.`];
-  return {nivel, porque};
+  return {nivel, porque, confirmar};
 }
 
 /* LEIT-01 (Fase 9): leitura pratica em pt-BR por TEMPLATE determinístico (zero LLM, zero jargao --
@@ -1749,6 +1754,27 @@ function faixaTxt(faixa){
    RADAR_PURE (WhatsApp/Captação/Ficha rápida) que interpolam bairro com fallback regional. */
 function localTxt(bairro){ return bairro ? `no ${bairro}` : "na região"; }
 
+/* F5 ZAP-01/02: pendenciasConfirmar(scoreConf) — itens LIMPOS a confirmar, prontos para
+   interpolação em frase de mensagem. Usa scoreConf.confirmar (substantivos sem pontuação,
+   gerados por scoreConfianca); fallback para shape antigo (sem `confirmar`) deriva do
+   diagnóstico `porque` SEM a pontuação final e NUNCA lista diagnóstico positivo
+   ("dados completos") nem a nota de contagem de comparáveis como pendência. */
+function pendenciasConfirmar(scoreConf){
+  if(!scoreConf) return [];
+  if(Array.isArray(scoreConf.confirmar)) return scoreConf.confirmar.filter(Boolean);
+  const bruto=Array.isArray(scoreConf.porque) ? scoreConf.porque.join("; ") : "";
+  return bruto.replace(/\.\s*$/,"").split(/;\s*/).map(s=>s.trim())
+    .filter(Boolean)
+    .filter(s=>!/dados completos/i.test(s))
+    .filter(s=>!/^\d+\s+compar/i.test(s));
+}
+/* listaE(itens): "a, b e c" — vírgulas + "e" final (lista gramatical dentro de frase,
+   nunca o "; " de diagnóstico do painel). */
+function listaE(itens){
+  if(!itens||!itens.length) return "";
+  return itens.length===1 ? itens[0] : itens.slice(0,-1).join(", ")+" e "+itens[itens.length-1];
+}
+
 /* zapResumo(data): "[Tipo] no [bairro]. [leitura]. Faixa estimada: [lo]–[hi]." — sem faixa,
    variante honesta (nunca interpola undefined/NaN). */
 function zapResumo(data){
@@ -1763,15 +1789,19 @@ function zapResumo(data){
 }
 
 /* zapProprietario(data): esqueleto UI-SPEC — "Olá! Encontrei seu imóvel no [bairro]..." —
-   sem faixa, adapta sem travar o convite; pendencias de scoreConf (se nivel!=="alta") citadas. */
+   sem faixa, adapta sem travar o convite. F5 ZAP-01: pendências REAIS (pendenciasConfirmar,
+   substantivos sem pontuação) citadas em frase gramatical; a frase-diagnóstico `porque` (já
+   pontuada, feita para o painel) NUNCA é interpolada crua — no caminho comum (3-7 comparáveis,
+   dados completos) não há pendência e a frase é simplesmente omitida. */
 function zapProprietario(data){
   const d=data||{};
   const ft=faixaTxt(d.faixa);
   const faixaFrase=ft
     ? `a faixa de valor fica entre ${ft}`
     : "ainda não consegui estimar uma faixa de valor com os dados disponíveis, mas gostaria de conversar sobre o seu imóvel";
-  const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&d.scoreConf.porque&&d.scoreConf.porque.length)
-    ? ` Recomendo confirmar ${d.scoreConf.porque.join("; ")} para uma avaliação mais precisa.`
+  const itensConf=pendenciasConfirmar(d.scoreConf);
+  const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&itensConf.length)
+    ? ` Recomendo confirmar ${listaE(itensConf)} para uma avaliação mais precisa.`
     : "";
   return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Radar e, pela análise cadastral e comparáveis da região, ${faixaFrase}.`+
     pendencias+" Podemos conversar?"+assinatura(d.perfil);
@@ -1808,12 +1838,16 @@ function zapArgumento(data){
     assinatura(d.perfil);
 }
 
-/* zapRiscos(data): lista de pontos a confirmar (scoreConf.porque OU generica default) + frase de
-   responsabilidade OBRIGATORIA (nunca promete validade juridica). */
+/* zapRiscos(data): lista de pontos a confirmar (pendências REAIS de pendenciasConfirmar OU a
+   genérica default) + frase de responsabilidade OBRIGATORIA (nunca promete validade juridica).
+   F5 ZAP-02: nunca interpola a frase-diagnóstico `porque` já pontuada (gerava ".." e listava
+   "dados completos" como pendência em confiança alta) — sem pendência real, cai na lista
+   genérica default, sempre sensata antes de decidir. */
 function zapRiscos(data){
   const d=data||{};
-  const pontos=(d.scoreConf&&d.scoreConf.porque&&d.scoreConf.porque.length)
-    ? d.scoreConf.porque.join("; ")
+  const itensConf=pendenciasConfirmar(d.scoreConf);
+  const pontos=itensConf.length
+    ? listaE(itensConf)
     : "área privativa, estado de conservação, documentação e número de comparáveis na região";
   return `Alguns pontos para confirmar antes de avançar: ${pontos}. `+
     "Esta é uma faixa estimada, não é uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
