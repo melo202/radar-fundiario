@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-09 after Phase 15 (Território fundação: setor-scan compartilhado ≤3 req + cache/dedupe, choropleth 5 quantis via setStyle, painel do território com honestidade de amostra; outFields restrito VERIFICADO ao vivo (~80% menos payload) com fallback; suíte 121/121; Fases 7-15 completas, restam 16-18)*
+*Last updated: 2026-07-10 after Phase 16 (Detector de subutilizado — filtro puro sobre o scan, 0.15 ratio + quadra valorizada; Caderno de território em IndexedDB radar_territorio com allowlist anti-PII, export/import, tudo verificado AO VIVO em Chromium incl. XSS/PII/persistência; 1 XSS crítico achado e corrigido no review; suíte 141/141; Fases 7-16 completas, restam 17-18)*
