@@ -451,6 +451,25 @@
   .detail .acts .zapbtn:hover{border-color:var(--ink)}
 
   .dtecnico .dgrid{margin-bottom:10px}
+
+  /* Fase 18 (18-02, PD-03): accordion "Urbanístico" — reusa .dgrid/.cell/.dnote/.dvalor-v/
+     .skel-card/.skel-line VERBATIM (18-UI-SPEC.md §Design System); só os elementos genuinamente
+     novos abaixo. Badges reusam --status-atencao/--status-bom já existentes (Fase 13) — ZERO cor
+     hard-coded nova. Badges são texto estático, NÃO interativo (sem piso de 44px); #urbRetry É
+     controle (button nativo, piso de 44px obrigatório). */
+  .urb-badges{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+  .urb-badges[hidden]{display:none}
+  .urb-badge{display:inline-flex;align-items:center;padding:6px 8px;border-radius:2px;
+    font:600 11px/1.3 "IBM Plex Sans";border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+  .urb-badge.is-atencao{background:var(--status-atencao);border-color:var(--status-atencao);color:#fff}
+  .urb-badge.is-potencial{background:var(--status-bom);border-color:var(--status-bom);color:#fff}
+  .urb-ca .v{white-space:normal}
+  .urb-rural{padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:2px}
+  .urb-rural .k{font:700 13px/1.2 "IBM Plex Sans";color:var(--ink);margin-bottom:6px}
+  .urb-rural .dnote{margin-bottom:0}
+  .urb-retry{min-height:44px;padding:0 14px;margin:8px 0;border:1.5px solid var(--ink);
+    background:var(--paper);color:var(--ink);font:600 13px/1 "IBM Plex Sans";border-radius:2px;cursor:pointer}
+  .urb-retry:hover{background:var(--ink);color:var(--paper-2)}
   /* comparáveis da vizinhança */
   .dcomps{margin:0 0 12px}
   .cmpbtn{width:100%;border:1.5px solid var(--lot);background:var(--paper);color:var(--lot);
@@ -1129,6 +1148,16 @@
           <div class="dgrid" id="dGrid"></div>
           <div class="dnote" id="dNote"></div>
         </div>
+      </details>
+
+      <!-- Fase 18 (18-02, PD-03): accordion "Urbanístico" — irmã dos outros 2 accordions técnicos
+           vizinhos (dados técnicos/metodologia); populado por renderUrbanisticoUI(a), IRMÃ
+           ASSÍNCRONA de renderDiffUI (nunca trava o render síncrono da ficha). Disclaimer fixo do
+           SEPLANH SEMPRE presente no corpo resolvido/parcial/rural/resolvido_sem_unidade (REGRA
+           DE OURO: número de CA nunca aparece quando conferido:false). -->
+      <details class="foot durbanistico" id="dUrbanistico">
+        <summary>Urbanístico</summary>
+        <div class="footbody" id="dUrbBody"></div>
       </details>
 
       <details class="foot dmetodologia">
@@ -2692,6 +2721,77 @@ function resolverZonaUI(respostas){
     return {estado:"resolvido",macrozona,unidade,regra,badges};
   }
   return {estado:"resolvido_sem_unidade",macrozona,unidade:null,regra:PD_MZC_BASICO,badges};
+}
+/* fmtCA(n): número de CA em pt-BR (1 casa, vírgula) — "1,0"/"6,0". null -> null (nunca fabrica). */
+function fmtCA(n){return n==null?null:(Math.round(n*10)/10).toFixed(1).replace(".",",");}
+/* montarUrbBodyHTML(estado) (Fase 18, 18-02, PD-03/T-18-01/T-18-05): monta a STRING de HTML do
+   corpo do accordion "Urbanístico" a partir do MESMO objeto de resolverZonaUI/pdConsultarLote
+   ({estado,macrozona,unidade,regra,badges}) — PURA (sem DOM), testável por assert de string
+   (mesmo padrão de CADERNO_ALLOW, 18-RESEARCH.md §Validation). Estado "carregando" NUNCA passa
+   por aqui — decidido pelo chamador ANTES de ter resposta (renderUrbanisticoUI). REGRA DE OURO
+   (T-18-01): só emite dígito de CA quando regra.conferido===true — testado por regex de guarda.
+   Todo campo textual vindo de layer (nome/sigla) passa por esc(); PD_DISCLAIMER (constante do
+   app) nunca precisa de esc(). */
+function montarUrbBodyHTML(estado){
+  const e=estado||{};
+  if(e.estado==="erro"){
+    return '<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora. Toque para tentar de novo.</div>';
+  }
+  if(e.estado==="rural"){
+    const nomeRural=esc(e.macrozona||"Macrozona Rural");
+    return `<div class="urb-rural">
+      <div class="k">Fora da Macrozona Construída</div>
+      <p class="dnote">Este imóvel está em ${nomeRural} — zona rural do Plano Diretor. Aqui, o Anexo Urbano (CA, altura, unidades territoriais) não se aplica; esta consulta é só para a área urbana da cidade.</p>
+    </div>` + `<div class="dnote">${PD_DISCLAIMER}</div>`;
+  }
+  // resolvido / resolvido_sem_unidade / parcial: monta o que houver disponível (T-18-08 do parcial: nunca some com o que já resolveu)
+  const r=e.regra||null;
+  const linhas=[];
+  if(e.macrozona){
+    linhas.push('<div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">Macrozona Construída</div></div>');
+  }
+  if(e.unidade){
+    linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Unidade Territorial</div><div class="v">${esc(e.unidade.sigla)} — ${esc(e.unidade.nome)}</div></div>`);
+  }
+  let notaSemCA="";
+  if(r&&r.conferido===true&&r.ca_basico!=null){
+    const cb=fmtCA(r.ca_basico);
+    const valorCA=(e.unidade&&r.ca_maximo!=null)?("CA básico "+cb+"x · CA máximo "+fmtCA(r.ca_maximo)+"x")
+      :(e.unidade?("CA básico "+cb+"x · sem teto de índice de aproveitamento definido"):("CA básico "+cb+"x"));
+    linhas.push(`<div class="cell urb-ca" style="grid-column:1/-1"><div class="k">Índice de aproveitamento (CA)</div><div class="v dvalor-v">${valorCA}</div></div>`);
+    if(r.usos_conferido===true&&r.usos){
+      linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Usos</div><div class="v">${esc(r.usos)}</div></div>`);
+    }
+    if(r.altura_max!=null){
+      linhas.push(`<div class="cell"><div class="k">Altura máxima</div><div class="v">${r.altura_max} m</div></div>`);
+    }
+    if(r.nota_altura){
+      linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Ocupação por altura</div><div class="v">${esc(r.nota_altura)}</div></div>`);
+    }
+  } else if(e.unidade){
+    notaSemCA=`<div class="dnote">CA e altura desta zona ainda não foram conferidos contra o Anexo oficial da LC 349/2022 — mostramos só a zona (${esc(e.unidade.sigla)}), que vem direto do mapa oficial da Prefeitura.</div>`;
+  }
+  if(e.estado==="resolvido_sem_unidade"){
+    notaSemCA=`<div class="dnote">Dentro da Macrozona Construída, sem unidade territorial específica identificada nas camadas consultadas. O Coeficiente de Aproveitamento Básico de 1,0x é universal na Macrozona Construída (Art. 242, VII, LC 349/2022); o índice máximo depende da unidade territorial, não identificada aqui.</div>`;
+  }
+  const badges=e.badges||{};
+  const badgeDefs=[
+    {k:"aeis",cls:"is-atencao",txt:"Interesse Social (AEIS)"},
+    {k:"apac",cls:"is-atencao",txt:"Patrimônio Cultural (APAC)"},
+    {k:"add",cls:"is-atencao",txt:"Desaceleração de Densidade (ADD)"},
+    {k:"eixo",cls:"is-potencial",txt:"Eixo de Desenvolvimento"},
+    {k:"corredor",cls:"is-potencial",txt:"Corredor de Transporte"}
+  ];
+  const badgeHTML=badgeDefs.filter(b=>badges[b.k]).map(b=>`<span class="urb-badge ${b.cls}">${b.txt}</span>`).join("");
+  let notaParcial="";
+  if(e.estado==="parcial"){
+    notaParcial='<div class="dnote">Algumas informações do Plano Diretor não carregaram — o que aparece acima já é confiável, só pode estar incompleto.</div><button type="button" class="urb-retry" id="urbRetry">Tentar de novo</button>';
+  }
+  return (linhas.length?`<div class="dgrid">${linhas.join("")}</div>`:"")
+    + notaSemCA
+    + `<div class="urb-badges"${badgeHTML?"":" hidden"}>${badgeHTML}</div>`
+    + notaParcial
+    + `<div class="dnote">${PD_DISCLAIMER}</div>`;
 }
 // RADAR_PURE_END
 
@@ -4869,12 +4969,17 @@ function renderScoresInto(op,conf){
     opBody=`<span class="score-num">${op.score}<span class="score-max">/100</span></span><span class="score-lbl">${esc(op.rotulo)}</span>`;
   }
   const opWhy=op?esc(op.porque.join(" ")):"Sem comparáveis suficientes na vizinhança para calcular a posição de preço.";
+  /* Fase 18 (18-02, PD-04): #scoreOpWhyPD é um placeholder VAZIO, só existe quando op!=null (é
+     um acréscimo ao porquê DO SCORE, que só existe com op calculado) — atualizarScorePorquePD()
+     o preenche de forma assíncrona/idempotente quando a zona do PD estiver conferida. W1: o
+     NÚMERO 0-100 de scoreOportunidade permanece INTOCADO — isto é só texto explicativo no render. */
+  const opWhyPD=op?'<span id="scoreOpWhyPD"></span>':"";
   const confCls="score conf-"+conf.nivel;
   const confLbl={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
   const confWhy=esc(conf.porque.join(" "));
   box.innerHTML=`
     <button type="button" class="score ${opCls}" aria-expanded="false" aria-controls="scoreOpWhy" onclick="toggleScoreWhy(this)">${opBody}<span class="score-chev" aria-hidden="true">▸</span></button>
-    <div id="scoreOpWhy" class="score-why" hidden>${opWhy}</div>
+    <div id="scoreOpWhy" class="score-why" hidden>${opWhy}${opWhyPD}</div>
     <button type="button" class="${confCls}" aria-expanded="false" aria-controls="scoreConfWhy" onclick="toggleScoreWhy(this)"><span class="score-lbl-main">Confiança: <b>${confLbl}</b></span><span class="score-chev" aria-hidden="true">▸</span></button>
     <div id="scoreConfWhy" class="score-why" hidden>${confWhy}</div>`;
 }
@@ -4904,6 +5009,12 @@ function atualizarScores(a, statsR){
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
   renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
+  /* Fase 18 (18-02, PD-04): compare() pode terminar ANTES ou DEPOIS do Plano Diretor resolver
+     (2 consultas assíncronas independentes) — renderScoresInto acima reconstrói #dScores do zero,
+     então reaplica aqui o estado do PD já cacheado em a.__pdEstado (se a consulta já tiver
+     terminado), senão a linha "Em {zona}..." desapareceria silenciosamente quando compare()
+     termina por último. */
+  if(a.__pdEstado)atualizarScorePorquePD(a,a.__pdEstado);
   document.getElementById("dLeitura").innerHTML=`<p>${esc(leituraPratica({
     tipoImovel: unitLabel(a)||USO[a.uso]||"Imóvel",
     bairro: clean(a.nmbairro),
@@ -5024,6 +5135,7 @@ function showDetail(a,ll){
     </div>`;
   renderCadernoBtn(); /* Fase 16 (16-02): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4) — cadernoTem() bate no IndexedDB, nunca trava o resto do render */
   renderDiffUI(a); /* Fase 17 (17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no IndexedDB, chave clean(a.ci||a.nrinscr) (Pitfall 1) */
+  renderUrbanisticoUI(a); /* Fase 18 (18-02, PD-03): IRMÃ ASSÍNCRONA de renderDiffUI — consulta lazy do Plano Diretor pro lote em foco, nunca trava o render síncrono da ficha */
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
     <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
@@ -5204,6 +5316,53 @@ function renderDiffUI(a){
     list.appendChild(li);
     el.hidden=false;
   });
+}
+/* renderUrbanisticoUI(a,isRetry) (Fase 18, 18-02, PD-03): IRMÃ ASSÍNCRONA de renderDiffUI — bate
+   no Plano Diretor via pdConsultarLote (bateria lazy de 9 layers, PDCACHE dedupe por ci), NUNCA
+   trava o resto do render síncrono da ficha. Mostra o skeleton IMEDIATAMENTE (a11y — accordion
+   nunca aparece vazio/em branco, 18-UI-SPEC §4). isRetry=true (botão "Tentar de novo" do estado
+   parcial) limpa PDCACHE[ci] antes de reconsultar. Guarda de corrida idêntica a renderDiffUI
+   (5265): ficha pode ter mudado enquanto a Promise resolvia. */
+function renderUrbanisticoUI(a,isRetry){
+  const acc=document.getElementById("dUrbanistico"),body=document.getElementById("dUrbBody");
+  if(!acc||!body)return;
+  if(!a||!a.x_coord||!a.y_coord){body.hidden=true;return;}
+  body.hidden=false;
+  body.innerHTML='<div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w80"></div><div class="skel-line w40"></div></div>';
+  const ci=clean(a.ci||a.nrinscr);
+  if(isRetry)delete PDCACHE[ci];
+  pdConsultarLote(a.x_coord,a.y_coord,ci).then(estado=>{
+    if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
+    body.innerHTML=montarUrbBodyHTML(estado);
+    if(estado.estado==="erro")toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
+    const retryBtn=document.getElementById("urbRetry");
+    /* handler do retry via listener (nunca onclick interpolando dado de servidor — CR-01, Fase 16); id estático, sem dado do endpoint envolvido */
+    if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
+    a.__pdEstado=estado; /* cache p/ atualizarScores() reaplicar a linha do porquê independente da ordem das 2 consultas assíncronas (compare() × pdConsultarLote) */
+    atualizarScorePorquePD(a,estado); /* PD-04: acrescenta "Em {zona}..." ao porquê do score JÁ renderizado, quando conferido */
+  }).catch(()=>{
+    if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
+    body.innerHTML='<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora. Toque para tentar de novo.</div>';
+    toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
+  });
+}
+/* atualizarScorePorquePD(a,estadoPD) (Fase 18, 18-02, PD-04): acrescenta ao "porquê" do score de
+   oportunidade JÁ RENDERIZADO (#scoreOpWhyPD, ver renderScoresInto) a linha "Em {zona} — CA
+   básico {x}x, potencial de {y} m²" — SÓ quando a unidade territorial está identificada E o CA
+   está conferido (REGRA DE OURO estendida ao score). NUNCA toca scoreOportunidade() (função pura,
+   W1 — número 0-100 permanece intencionalmente inalterado; isto é só texto explicativo no render).
+   Omissão honesta quando não conferido/indisponível — nunca escreve "—" nem linha fabricada.
+   Idempotente (id fixo #scoreOpWhyPD, textContent substitui em vez de acumular) — seguro em
+   retry/reordenação das 2 consultas assíncronas. */
+function atualizarScorePorquePD(a,estadoPD){
+  if(!DCUR||DCUR!==a)return; /* ficha mudou enquanto a Promise resolvia */
+  const el=document.getElementById("scoreOpWhyPD");
+  if(!el)return; /* sem score de oportunidade calculado ainda (op null) — nada a acrescentar */
+  const r=estadoPD&&estadoPD.regra;
+  const unidade=estadoPD&&estadoPD.unidade;
+  const potencial=(r&&r.conferido===true&&unidade&&unidade.sigla)?potencialConstrutivo(a.areaterr,unidade.sigla):null;
+  if(potencial==null){el.textContent="";return;}
+  el.textContent=" Em "+(unidade.nome||r.nome||unidade.sigla)+" — CA básico "+fmtCA(r.ca_basico)+"x, potencial de "+Math.round(potencial).toLocaleString("pt-BR")+" m².";
 }
 /* salvarNoCadernoUI(): ação rápida de 1 toque (mesma filosofia do ⭐) — grava com status default
    "nao_visitado", sem abrir editor. Item já existente (mesmo ci) NÃO duplica (T-16 nunca duplica
