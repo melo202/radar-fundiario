@@ -817,6 +817,32 @@
   .terrdet-empty strong{display:block;font:700 15px/1.3 "IBM Plex Sans";color:var(--ink);margin-bottom:4px}
   .terrdet-trunc{font:500 11px/1.4 "IBM Plex Sans";color:var(--muted);margin-bottom:8px}
 
+  /* Fase 17 (17-02, TERR-06/07): Diff de Cadastro (#dDiff) + destaque Caixa no Caderno/Painel/Popup —
+     CSS novo, escala 4px (17-UI-SPEC.md §Spacing). Zero cor nova: --ink/--muted/--paper-2/--gold
+     reusados verbatim. Diff é NEUTRO por decisão travada — .ddiff-sign/.ddiff-txt nunca usam
+     --status-*, mesmo peso/cor pro sinal e pro texto (a palavra "subiu"/"desceu" já está no texto). */
+  .ddiff{background:var(--paper-2);padding:8px 16px;border-radius:2px;margin:-4px 0 12px}
+  .ddiff-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+  .ddiff-tt{font:700 13px/1.2 "IBM Plex Sans";color:var(--ink)}
+  .ddiff-data{font:700 10.5px/1.3 "IBM Plex Mono",monospace;color:var(--muted)}
+  .ddiff-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .ddiff-item{display:flex;align-items:baseline;gap:4px}
+  .ddiff-sign{color:var(--ink)}
+  .ddiff-txt{font:500 13px/1.4 "IBM Plex Sans";color:var(--ink)}
+  .ddiff-empty{font:500 13px/1.4 "IBM Plex Sans";color:var(--muted);list-style:none}
+
+  /* Badge Caixa no Caderno (#cadernoCaixaBadge) e linha Caixa no Painel (#terrCaixaLine) — ambos
+     <button>, piso 44px (17-UI-SPEC.md §Spacing: são controles de toque, não decoração). Dourado
+     textual via glifo 🏦 (nenhuma cor CSS nova). */
+  .cadbook-caixabadge,.terr-caixa-line{width:100%;min-height:44px;text-align:left;padding:8px 12px;
+    border:1.5px solid var(--gold);border-radius:2px;background:var(--paper-2);color:var(--ink);
+    font:600 13px/1.3 "IBM Plex Sans";cursor:pointer;margin-bottom:8px}
+  .cadbook-caixabadge:hover,.terr-caixa-line:hover{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
+  .cadbook-caixabadge[hidden],.terr-caixa-line[hidden]{display:none}
+
+  /* Linha extra no popup Caixa (caixaPopup) quando o imóvel cai em setor salvo no Caderno. */
+  .cxp-terr{font:500 11.5px/1.4 "IBM Plex Sans";color:var(--muted);margin-top:2px}
+
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
   .toast.show{display:block}
@@ -1078,6 +1104,15 @@
       <div class="dscores" id="dScores"></div>
 
       <div class="dleitura" id="dLeitura"></div>
+
+      <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
+           padrão; renderDiffUI(a) preenche e revela SÓ quando o lote já está no Caderno com
+           snapshot gravado (nunca para lote nunca salvo). Diff é NEUTRO (nunca cor de status,
+           17-UI-SPEC.md §Color) — o sinal ▲/▼/● é tipográfico, mesma cor do texto ao lado. -->
+      <div class="ddiff" id="dDiff" hidden>
+        <div class="ddiff-head"><span class="ddiff-tt">📓 Desde sua última visita</span><span class="ddiff-data" id="dDiffData"></span></div>
+        <ul class="ddiff-list" id="dDiffList"></ul>
+      </div>
 
       <div class="acts" id="dActsPrim"></div>
       <details class="maisopcoes">
@@ -4806,6 +4841,7 @@ function showDetail(a,ll){
       <button type="button" class="zapbtn" onclick="abrirCaptacao()">🧾 Captar este imóvel</button>
     </div>`;
   renderCadernoBtn(); /* Fase 16 (16-02): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4) — cadernoTem() bate no IndexedDB, nunca trava o resto do render */
+  renderDiffUI(a); /* Fase 17 (17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no IndexedDB, chave clean(a.ci||a.nrinscr) (Pitfall 1) */
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
     <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
@@ -4915,6 +4951,68 @@ function renderCadernoBtn(){
     btn2.setAttribute("aria-pressed",salvo?"true":"false");
     btn2.textContent=salvo?"✓ No caderno":"📓 Salvar no caderno";
   }).catch(()=>{}); /* falha de LEITURA de estado (não de escrita) — não precisa de toast; o botão fica no rótulo default */
+}
+/* renderDiffUI(a) (Fase 17, 17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no
+   IndexedDB via cadernoBuscar(ci), nunca trava o resto do render síncrono da ficha. Chave do
+   Caderno é clean(a.ci||a.nrinscr) (Pitfall 1, 17-RESEARCH.md) — NUNCA a variável local `ci` de
+   showDetail, senão o diff nunca acha o item salvo. Lote nunca salvo (ou sem snapshot ainda)
+   mantém #dDiff hidden (bloco não existe pra esse imóvel, UI-SPEC §1). Grava snapshot novo
+   silenciosamente ao final; falha de escrita gera toast padrão, nunca esconde o diff já exibido
+   (T-17-08). */
+function renderDiffUI(a){
+  const el=document.getElementById("dDiff");
+  if(!el||!a)return;
+  if(!cadernoDisponivel())return;
+  const ci=clean(a.ci||a.nrinscr);
+  cadernoBuscar(ci).then(item=>{
+    if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
+    if(!item||!item.snapshot){el.hidden=true;return;}
+    const mud=diffLote(item.snapshot,a);
+    const dt=new Date(item.snapshotAt);
+    const dataFmt=isNaN(dt)?"—":String(dt.getDate()).padStart(2,"0")+"/"+String(dt.getMonth()+1).padStart(2,"0");
+    document.getElementById("dDiffData").textContent="desde "+dataFmt;
+    const textos=formatarDiff(mud,dataFmt);
+    const list=document.getElementById("dDiffList");
+    list.innerHTML="";
+    if(!textos.length){
+      const li=document.createElement("li");
+      li.className="ddiff-empty";
+      li.textContent="Sem mudanças no cadastro desde a última visita.";
+      list.appendChild(li);
+    }else{
+      mud.forEach((m,idx)=>{
+        const txt=textos[idx];
+        if(!txt)return;
+        let sinal="●"; /* categórico (uso/dtinclusao) — sem direção comercial */
+        if(m.tipo==="pct")sinal=m.direcao==="subiu"?"▲":"▼";
+        else if(m.tipo==="area")sinal=(m.subtipo==="nova"||m.subtipo==="aumentou")?"▲":"▼";
+        const li=document.createElement("li");
+        li.className="ddiff-item";
+        const sp=document.createElement("span");
+        sp.className="ddiff-sign";sp.setAttribute("aria-hidden","true");sp.textContent=sinal;
+        const tx=document.createElement("span");
+        tx.className="ddiff-txt";tx.textContent=txt;
+        li.appendChild(sp);li.appendChild(tx);
+        list.appendChild(li);
+      });
+    }
+    el.hidden=false;
+    /* grava snapshot NOVO silenciosamente — sucesso sem toast (autosave, mesmo padrão da Fase 16);
+       falha nunca esconde o diff já exibido, só avisa por toast padrão de escrita. */
+    cadernoAtualizar(ci,{snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},snapshotAt:new Date().toISOString()}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+  }).catch(()=>{
+    /* erro inesperado de LEITURA (não "não encontrado", que resolve com undefined acima) — nunca
+       falha silenciosa (UI-SPEC §1). */
+    if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
+    document.getElementById("dDiffData").textContent="";
+    const list=document.getElementById("dDiffList");
+    list.innerHTML="";
+    const li=document.createElement("li");
+    li.className="ddiff-empty";
+    li.textContent="Não foi possível comparar com sua última visita. Tente abrir a ficha de novo.";
+    list.appendChild(li);
+    el.hidden=false;
+  });
 }
 /* salvarNoCadernoUI(): ação rápida de 1 toque (mesma filosofia do ⭐) — grava com status default
    "nao_visitado", sem abrir editor. Item já existente (mesmo ci) NÃO duplica (T-16 nunca duplica
