@@ -10,7 +10,7 @@
 
 ## Auditoria Fable 5 (Fase 20 — gate final)
 
-- [ ] **FABLE-01**: **Auditoria completa por Fable 5 + correções por Fable 5** — agentes SEM override de modelo (herdam a sessão Fable 5) auditam: correção/bugs, segurança (XSS/LGPD/PII), consistência de UX/linguagem, PDFs/documentos, mobile, performance percebida, integridade do dado oficial; findings adversarialmente verificados antes de corrigir; correções em commits atômicos com suíte verde; relatório final versionado
+- [x] **FABLE-01**: **Auditoria completa por Fable 5 + correções por Fable 5** — agentes SEM override de modelo (herdam a sessão Fable 5) auditam: correção/bugs, segurança (XSS/LGPD/PII), consistência de UX/linguagem, PDFs/documentos, mobile, performance percebida, integridade do dado oficial; findings adversarialmente verificados antes de corrigir; correções em commits atômicos com suíte verde; relatório final versionado
 
 ## Out of Scope (v2.2)
 
@@ -25,7 +25,7 @@
 | TYPO-01 | 19 | Complete |
 | PREM-01 | 19 | Complete |
 | A11Y-01 | 19 | Complete |
-| FABLE-01 | 20 | Pending |
+| FABLE-01 | 20 | Complete |
 
 ---
 *Requirements definidos: 2026-07-10 (pedido direto do usuário: tipografia/estética premium + auditoria final pelo Fable 5)*

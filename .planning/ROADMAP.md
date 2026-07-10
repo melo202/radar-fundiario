@@ -49,7 +49,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.1-*.md`.
 **Milestone Goal:** O app GANHA cara de produto premium — tipografia bonita e profissional em todo o app, estética refinada (o usuário achou a letra atual "muito feia" e o app sem cara premium) — e fecha com uma auditoria completa executada e corrigida pelo **Fable 5** (pedido explícito do usuário, 2026-07-10). Sem IA no produto, sem CRM/Hub (limite de parada mantido).
 
 - [x] **Phase 19: Estética Premium — Tipografia & Refinamento Visual** — nova tipografia em todo o app (substituir a atual, considerada feia), refinamento estético premium (profundidade, microdetalhes, polish) mantendo a identidade cartográfica e a lei "cor só onde significa status"; inclui o passe de a11y focus-trap nas 6 superfícies modais (IN-03 diferido da Fase 13) (completed 2026-07-10)
-- [ ] **Phase 20: Auditoria Fable 5 (gate final)** — auditoria completa de TUDO (código, segurança, UX, consistência, PDFs, mobile) executada por agentes rodando **Fable 5**, com as correções também aplicadas pelo Fable 5; é a última fase do milestone
+- [x] **Phase 20: Auditoria Fable 5 (gate final)** — auditoria completa de TUDO (código, segurança, UX, consistência, PDFs, mobile) executada por agentes rodando **Fable 5**, com as correções também aplicadas pelo Fable 5; é a última fase do milestone (completed 2026-07-10)
 
 ## Phase Details
 
@@ -86,6 +86,6 @@ Plans:
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
 | 19. Estética Premium | v2.2 | 3/3 | Complete    | 2026-07-10 |
-| 20. Auditoria Fable 5 | v2.2 | 0/TBD | Not started | - |
+| 20. Auditoria Fable 5 | v2.2 | 1/1 | Complete    | 2026-07-10 |
 
 **Backlog (v2.3+):** ativação da pesquisa de mercado por IA sobre o seam dormant; upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria.
