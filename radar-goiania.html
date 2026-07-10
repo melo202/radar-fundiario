@@ -3722,7 +3722,7 @@ function abrirFichaDetector(i){
 function salvarDetectorNoCadernoUI(i,btn){
   const a=TERR_DETECTOR_CAND[i];if(!a)return;
   if(!cadernoDisponivel()){
-    toast("Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.");
+    toast(CADERNO_INDISPONIVEL);
     return;
   }
   const ci=clean(a.ci||a.nrinscr);
@@ -4746,7 +4746,7 @@ function renderCadernoBtn(){
   if(!btn||!DCUR)return;
   if(!cadernoDisponivel()){
     btn.disabled=true;
-    btn.title="Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.";
+    btn.title=CADERNO_INDISPONIVEL;
     return;
   }
   btn.disabled=false;btn.title="";
@@ -4765,7 +4765,7 @@ function renderCadernoBtn(){
 function salvarNoCadernoUI(){
   if(!DCUR)return;
   if(!cadernoDisponivel()){
-    toast("Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.");
+    toast(CADERNO_INDISPONIVEL);
     return;
   }
   const a=DCUR;
@@ -4902,6 +4902,10 @@ function renderSavedBlocks(){
    16-RESEARCH.md). Chamada 1x no boot (ao lado de renderSavedBlocks()) e depois de toda escrita
    local. CADERNO_FILTRO/CADERNO_PAGINA preservam filtro/paginação entre re-renders. */
 const ERRO_ESCRITA_CADERNO="Não foi possível salvar no caderno. Verifique o espaço do navegador e tente de novo.";
+/* IN-03 (16-REVIEW.md): mesma mensagem de degradação (IndexedDB indisponível) aparecia copiada
+   verbatim em 4 lugares (renderCadernoBlock/renderCadernoBtn/salvarNoCadernoUI/
+   salvarDetectorNoCadernoUI) — extraída aqui, ao lado de ERRO_ESCRITA_CADERNO, e reusada nos 4. */
+const CADERNO_INDISPONIVEL="Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.";
 const CADERNO_STATUS_LBL={nao_visitado:"Não visitado",visitei:"Visitei",conversei:"Conversei",recusou:"Recusou",fechou:"Fechou"};
 let CADERNO_FILTRO={cdbairro:"",status:""};
 let CADERNO_PAGINA=30;
@@ -4911,7 +4915,7 @@ async function renderCadernoBlock(){
   if(!cadernoDisponivel()){
     box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
       <div class="savedblock-head"><span class="savedblock-tt">📓 Caderno de território</span></div>
-      <div class="dnote">Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.</div>
+      <div class="dnote">${CADERNO_INDISPONIVEL}</div>
     </div>`;
     return;
   }
