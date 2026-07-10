@@ -300,6 +300,30 @@ test("territorioScan: falha na 2ª página restrita não dobra o orçamento — 
   assert.equal(r.paginas, totalPageCalls, "contador de páginas expõe o orçamento TOTAL gasto (restrito+fallback), não só o do fallback");
 });
 
+test("territorioScan (F5 TERR-02): página que REJEITA (erro de rede, sem d.error) também é debitada — restrito+fallback nunca excedem 3 tentativas reais", async () => {
+  let totalPageCalls = 0,
+    fallbackCalls = 0;
+  const pagCheia = () => ({ features: Array.from({ length: 2000 }, () => ({ attributes: { vlvenal: 100000, areaedif: 50 } })) });
+  const jsonpStub = async (params) => {
+    if (params.returnCountOnly === "true") return { count: 999999 };
+    totalPageCalls++;
+    if (params.outFields !== "*") {
+      // páginas 1-2 restritas OK (cheias); 3ª REJEITA como exceção de rede (jsonp rejeitado,
+      // NUNCA d.error) — o caminho que antes escapava do débito do orçamento e dava ao fallback
+      // "*" uma 4ª requisição real (TERR-02, provado no relatório 05).
+      if (totalPageCalls < 3) return pagCheia();
+      throw new Error("timeout de rede");
+    }
+    fallbackCalls++;
+    return pagCheia();
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const r = await NET.territorioScan(88);
+  assert.ok(totalPageCalls <= 3, `o teto HARD de 3 vale sob QUALQUER falha — tentativas reais (incl. rejeitadas) = ${totalPageCalls}`);
+  assert.equal(fallbackCalls, 0, "orçamento esgotado na tentativa restrita -> o fallback * não ganha requisição extra");
+  assert.equal(r.paginas, 3, "contador de páginas reflete TENTATIVAS de rede, não só respostas");
+});
+
 test("territorioScan: coerção numérica de cdbairro — nunca injeta string crua no WHERE", async () => {
   let capturedWhere = null;
   const jsonpStub = async (params) => {

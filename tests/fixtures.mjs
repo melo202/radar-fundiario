@@ -841,9 +841,13 @@ export const FIXTURES = {
     },
 
     // rotuloAmostra: casos obrigatorios do UI-SPEC — nunca omitido, mesmo com amostra completa.
+    // F5 TERR-07/B-17: clamp n<=total (count obsoleto de base viva nunca produz "6.000 de 4.000")
+    // + plural correto de "lote" ("1 de 1 lote", nunca "1 lotes").
     rotuloAmostraCasos: [
       { n: 6000, total: 57225, out: "Amostra de 6.000 de 57.225 lotes" },
       { n: 1842, total: 1842, out: "Amostra de 1.842 de 1.842 lotes" },
+      { n: 6000, total: 4000, out: "Amostra de 4.000 de 4.000 lotes" }, // clamp: n nunca excede total
+      { n: 1, total: 1, out: "Amostra de 1 de 1 lote" }, // singular
     ],
 
     // scoresDePlot (Fase 13, fix CR-01 13-REVIEW.md): score "de plot" p/ colorir o pino no fluxo

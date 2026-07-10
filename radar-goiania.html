@@ -2548,7 +2548,12 @@ function estatTerritorio(lotes,total){
 /* rotuloAmostra(n,total): rótulo de honestidade estatística — OBRIGATÓRIO em todo número
    derivado de amostra (UI-SPEC Copywriting Contract); nunca omitido, mesmo quando n===total. */
 function rotuloAmostra(n,total){
-  return "Amostra de "+(n).toLocaleString("pt-BR")+" de "+(total).toLocaleString("pt-BR")+" lotes";
+  /* F5 TERR-07/B-17: clamp n<=total (amostra e returnCountOnly correm em paralelo contra uma base
+     viva — um count obsoleto/menor produzia "Amostra de 6.000 de 4.000 lotes", aritmeticamente
+     absurdo) + plural correto ("1 de 1 lote", nunca "1 lotes"). */
+  const t=+total||0;
+  const nn=Math.min(+n||0,t);
+  return "Amostra de "+nn.toLocaleString("pt-BR")+" de "+t.toLocaleString("pt-BR")+(t===1?" lote":" lotes");
 }
 
 /* scoresDePlot(lotes,scan): CR-01 (13-REVIEW.md) — score "de plot" p/ colorir o pino no fluxo
@@ -4121,9 +4126,13 @@ async function fetchWhereRestrito(where,fields,maxPages){
     let all=[],offset=0,page=2000;
     while(true){
       if(guardTotal>=maxPages)break;
+      /* F5 TERR-02: débito do orçamento ANTES do await — o teto conta TENTATIVAS de rede, não só
+         respostas. Uma página que REJEITA (timeout/erro de rede, sem d.error) também bateu no
+         endpoint; com o débito depois do await, essa página não era cobrada e o fallback "*"
+         ganhava orçamento extra — o HARD de 3 virava 4-5 round-trips reais sob falha de rede. */
+      __terrReq++;guardTotal++;
       const d=await jsonp({where,outFields:useFields,returnGeometry:"false",
         resultOffset:offset,resultRecordCount:page,orderByFields:"OBJECTID",f:"json"});
-      __terrReq++;guardTotal++;
       if(d&&d.error)throw new Error((d.error&&d.error.message)||"outFields rejeitado pelo servidor");
       const fs=d.features||[];all=all.concat(fs);
       if(fs.length<page)break;
@@ -4465,8 +4474,11 @@ async function mostrarVerTerr(layer){
    ação explícita, nunca em pan/zoom passivo). Fecha #detail primeiro ("1 sheet por vez"), varre o
    setor (territorioScan, cache/dedupe de 15-01), aplica o choropleth (aplicarChoropleth, 15-02) e
    só então monta o painel — nunca recalcula 2x a mesma varredura. */
+let TERRTOKEN=0; /* F5 AQ-02: token de invalidação de abrirTerritorio — padrão SEARCHTOKEN/LOTTOKEN/ZONASTOKEN; fecha a corrida latente de 2 scans concorrentes (hoje barrada pelo overlay .loading, mas o token não depende disso) */
 async function abrirTerritorio(layer){
+  const terrTok=++TERRTOKEN;
   await carregarLookupCdbairro();
+  if(terrTok!==TERRTOKEN)return; /* outro "Ver território" foi pedido enquanto o lookup resolvia */
   /* layerAtual (WR-04 15-REVIEW.md): capturado UMA vez no início — usado em todo o resto da
      função (inclusive no fechamento do "tentar de novo" de checarVarreduraParcial) em vez de
      reler `baiHi` global, que pode já ter mudado (highlightBairro) até o retry ser clicado. */
@@ -4477,13 +4489,19 @@ async function abrirTerritorio(layer){
   loading(true,MOTION_MSG.varrendo);
   try{
     const scan=await territorioScan(cd);
+    if(terrTok!==TERRTOKEN)return; /* F5 AQ-02: scan de um setor pedido ANTES resolveu por último — nunca renderiza painel/choropleth do setor errado (o pedido mais novo cuida do loading) */
     loading(true,MOTION_MSG.faixas);
     const st=aplicarChoropleth(scan);
+    /* F5 TERR-06: aplicarChoropleth só atualiza ESTADO (bins/setor ativo) — se "Colorir por valor"
+       já estava ligado, o wash do setor ANTERIOR ficava aceso no mapa até o próximo moveend.
+       Redesenha via setStyle (idempotente); com a camada desligada não itera 4.000 lotes à toa. */
+    if(CHOROPLETH_ON)desenharChoropleth();
     montarLegenda(st); /* WR-01 15-REVIEW.md: popula #terrLbl1..5 + #terrAmostra (faltava) */
     montarPainel(scan,st,layerAtual);
     checarVarreduraParcial(scan,layerAtual); /* 15-03 Task 2: varredura best-effort — avisa sem bloquear */
     loading(false);
   }catch(e){
+    if(terrTok!==TERRTOKEN)return; /* pedido obsoleto: quem gerencia o loading/toast é o mais novo */
     loading(false);
     toast("Não foi possível varrer o setor. Verifique a conexão e tente de novo.");
   }
