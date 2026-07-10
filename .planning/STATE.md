@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
 status: executing
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-07-10T00:39:56.684Z"
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-07-10T00:53:50.280Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
   completed_phases: 10
   total_plans: 36
-  completed_plans: 34
-  percent: 94
+  completed_plans: 35
+  percent: 97
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 16 (Detector de Lote Subutilizado & Farming/Caderno) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-10
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 15 P02 | 25min | 3 tasks | 3 files |
 | Phase 15 P03 | 20min | 2 tasks | 1 files |
 | Phase 16 P01 | 20min | 3 tasks | 3 files |
+| Phase 16 P02 | 35min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 15]: [15-03]: fix Rule 1 - clearBaiHi() agora esconde btnVerTerr ao limpar o hover, evitando abrir territorio de um layer que ja saiu de foco
 - [Phase 16]: [16-01]: DETECTOR_RATIO_MAX fixo em 0.15 (constante nomeada), nao relativo/quantil - mais simples de explicar, upgrade p/ potencial-do-PD fica p/ Fase 18
 - [Phase 16]: [16-01]: fix Rule 1 - cross-realm assert.deepEqual em caderno.test.mjs (medianasPorQuadra/detectarSubutilizados) normalizado via JSON round-trip / length, mesmo padrao ja usado por mixUso em territorio.test.mjs
+- [Phase 16]: [16-02]: botao Salvar no caderno fica em #dActsMore (nunca #dActsPrim, teto da lei da tela preservado); filtro de setor do caderno usa cdbairro numerico (allowlist nao inclui nmbairro)
+- [Phase 16]: [16-02]: fix Rule 3 - .dnote (scoped a .detail) estendido com #cadernoBlock .dnote e regra de visibilidade :has() analoga a #savedBlocks, para o bloco Caderno renderizar corretamente fora de .detail
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T00:39:56.681Z
-Stopped at: Completed 16-01-PLAN.md
+Last session: 2026-07-10T00:53:50.277Z
+Stopped at: Completed 16-02-PLAN.md
 Resume file: None

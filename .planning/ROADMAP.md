@@ -207,7 +207,7 @@ Plans:
 **Plans**: 3 plans (ondas sequenciais — todas editam radar-goiania.html)
 Plans:
 - [x] 16-01-PLAN.md — Funções puras TDD: detector (medianasPorQuadra/limiarQuadraValorizada/razaoOcupacao/detectarSubutilizados/leituraDetector, DETECTOR_RATIO_MAX=0.15) + decisão do caderno (sanitizeCaderno allowlist, enum de status, validarImportCaderno)
-- [ ] 16-02-PLAN.md — Camada IndexedDB (radar_territorio v1) + bloco "Caderno de território" no painel Consulta + salvar da ficha (#dActsMore) + export/import JSON
+- [x] 16-02-PLAN.md — Camada IndexedDB (radar_territorio v1) + bloco "Caderno de território" no painel Consulta + salvar da ficha (#dActsMore) + export/import JSON
 - [ ] 16-03-PLAN.md — Detector UI (#terrDetectorView view-swap em #terrPanel) + salvar do detector + destaque no mapa (pino 🏗️) + verificação manual (persistência/PII, checkpoint)
 
 ### Phase 17: Diff de Cadastro & Cruzamento Caixa
@@ -255,7 +255,7 @@ Plans:
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
-| 16. Detector + Farming/Caderno | v2.1 | 1/3 | In Progress|  |
+| 16. Detector + Farming/Caderno | v2.1 | 2/3 | In Progress|  |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
