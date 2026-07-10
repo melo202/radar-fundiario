@@ -3326,7 +3326,7 @@ function setSatelite(on){
      blocker do plan-check 15-02] sem o ci guardado, alternar satélite com o choropleth ligado
      apagaria a cor de todos os lotes (ci===undefined derruba a guarda CHOROPLETH_ON&&ci!=null). */
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
-  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+  restyleLotsChunked();
   try{localStorage.setItem("radar_sat", on?"1":"0");}catch(e){}
 }
 function toggleSatelite(){ setSatelite(!satelliteOn); }
@@ -3509,12 +3509,31 @@ function aplicarChoropleth(scan){
   TERR_LAST_ST=st; /* WR-01 15-REVIEW.md: guardado p/ toggleCamadaTematica() religar a legenda de valor sem novo scan */
   return st;
 }
+/* restyleLotsChunked() (F5 EST-05): re-estilo em massa de até 4000 <path> SVG (toggle choropleth/
+   satélite/destaque do detector) fatiado em chunks por rAF — o resultado final é IDÊNTICO ao
+   eachLayer síncrono (mesma lotStyle(ci) por lote, que lê o estado global VIGENTE quando o chunk
+   roda), só o custo de pico sai do caminho do toque. Token invalida chunks obsoletos (mesmo idioma
+   de SATTOKEN/LOTTOKEN): um toggle mais novo sempre vence, nunca intercala estilos de duas gerações. */
+let LOTSTYLETOKEN=0;
+function restyleLotsChunked(){
+  if(!(lotLayer&&lotLayer.eachLayer))return;
+  const tk=++LOTSTYLETOKEN;
+  const ls=[];lotLayer.eachLayer(p=>ls.push(p));
+  const CHUNK=500;
+  let i=0;
+  (function passo(){
+    if(tk!==LOTSTYLETOKEN)return; /* um restyle mais novo assumiu — este para aqui */
+    const fim=Math.min(i+CHUNK,ls.length);
+    for(;i<fim;i++)ls[i].setStyle(lotStyle(ls[i]._terrCi));
+    if(i<ls.length)requestAnimationFrame(passo);
+  })();
+}
 /* desenharChoropleth(): troca em massa via setStyle — MESMO padrão de setSatelite (2144-2145
    original) — nunca recria geometria. `p._terrCi` é gravado em refreshLots no momento da criação
    de cada polígono de lote. */
 function desenharChoropleth(){
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
-  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+  restyleLotsChunked();
 }
 /* montarLegenda(st): preenche #terrLegenda com os rótulos de faixa (R$/m², via legendaFaixas —
    F5 TERR-01: só as faixas EFETIVAS aparecem; quantis degenerados encolhem a legenda em vez de
@@ -3952,7 +3971,10 @@ function filterCombo(qtext){
   if(q) hits.sort((a,b)=>{const ai=a.search.indexOf(q),bi=b.search.indexOf(q);return ai-bi||a.disp.localeCompare(b.disp,"pt");});
   hits=hits.slice(0,50);
   comboActive=-1;
-  if(!hits.length){list.innerHTML='<div class="combo-empty">nenhum setor com esse nome</div>';list.classList.add("show");return;}
+  /* F5 EST-06: listbox só pode conter option — o aviso de vazio vira role="option" aria-disabled
+     (anunciado como item indisponível, nunca nó de texto solto num popup "expandido e vazio").
+     Não é .combo-item: a navegação por ↑/↓ (que varre .combo-item) nunca o foca. */
+  if(!hits.length){list.innerHTML='<div class="combo-empty" role="option" aria-disabled="true" aria-selected="false">nenhum setor com esse nome</div>';list.classList.add("show");return;}
   list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" id="opt-${String(b.code).replace(/\D/g,"")}" aria-selected="false" data-code="${esc(b.code)}" onclick="pickBairro(this.dataset.code)">
     <span class="code">${esc(b.code)}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
   list.classList.add("show");
@@ -3983,7 +4005,9 @@ function updateCaixaList(qtext){
   hits=hits.slice(0,50);
   caixaActive=-1;
   inp.setAttribute("aria-expanded","true");
-  if(!hits.length){list.innerHTML='<div class="combo-empty">nenhuma sugestão</div>';list.classList.add("show");return;}
+  /* F5 EST-06: mesmo fix do combo de setor — aviso de vazio como option desabilitada, semântica
+     válida de listbox p/ NVDA/VoiceOver. */
+  if(!hits.length){list.innerHTML='<div class="combo-empty" role="option" aria-disabled="true" aria-selected="false">nenhuma sugestão</div>';list.classList.add("show");return;}
   list.innerHTML=hits.map(h=>`<div class="combo-item" role="option" id="${h.id}" aria-selected="false"
       data-kind="${h.kind}" data-code="${esc(h.code||"")}" data-nome="${esc(h.__nome||"")}"
       onclick="pickCaixaItem(this)">
@@ -4945,12 +4969,12 @@ function salvarDetectorNoCadernoUI(i,btn){
    choropleth enquanto ele não está vazio. */
 function destacarDetectorNoMapa(cand){
   TERR_DETECTOR_HILITE=new Set((cand||[]).map(a=>clean(a.ci||a.nrinscr)).filter(Boolean));
-  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+  restyleLotsChunked();
 }
 function limparDestaqueDetector(){
   if(!TERR_DETECTOR_HILITE.size)return;
   TERR_DETECTOR_HILITE=new Set();
-  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+  restyleLotsChunked();
 }
 
 /* VERIFICAÇÃO AO VIVO ORÇAMENTO: abrir painel/choropleth do Bueno (cdbairro=16) com DevTools
