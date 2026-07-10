@@ -6345,8 +6345,9 @@ function abrirSeletorFinalidade(){
   if(!DCUR)return;
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
   LZ={a:DCUR,fase:"finalidade",finalidadeUso:null,tipoDoc:null,prof};
-  WIZRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
-  document.getElementById("wiz").hidden=false;
+  const wiz=document.getElementById("wiz");
+  wiz.hidden=false;
+  trapFocus(wiz); /* Fase 19 (19-03, A11Y-01): substitui a captura manual WIZRET */
   wizRender();
   document.querySelector(".finop")?.focus();
 }
@@ -6375,12 +6376,10 @@ function finEscolherDoc(tipoDoc){
   getComps(LZ.a).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   wizRender();
 }
-let WIZRET=null;
 function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;
-  if(WIZRET&&WIZRET.focus){try{WIZRET.focus();}catch(e){}}WIZRET=null;}
+  untrapFocus();} /* Fase 19 (19-03, A11Y-01): substitui o restore manual de WIZRET */
 /* Fase 10 CAPT-01 (10-03): Modo Captação — sheet .wiz sem steps, populado pelos 4 templates puros
    (captAbordagem/captScript/captChecklist/captFollowup, RADAR_PURE 10-01) via dadosFicha(). */
-let CAPTRET=null; /* variável própria (não compartilha WIZRET — os dois sheets podem coexistir) */
 function abrirCaptacao(){
   if(!DCUR)return;
   const d=dadosFicha();if(!d)return;
@@ -6391,21 +6390,21 @@ function abrirCaptacao(){
   const disc=document.getElementById("captDisclaimer");
   disc.textContent="Textos gerados automaticamente a partir dos dados do imóvel — revise antes de enviar. Não substituem orientação jurídica."+
     (d.perfil===null?" Textos sem assinatura — complete seu perfil no wizard de documento para assinar automaticamente.":"");
-  CAPTRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
   const sheet=document.getElementById("captSheet");
   sheet.hidden=false;
+  trapFocus(sheet); /* Fase 19 (19-03, A11Y-01): substitui a captura manual CAPTRET */
   if(!REDUCE)mAnimate(sheet,{opacity:[0,1]},{duration:0.18});
   const closeBtn=sheet.querySelector(".wclose");if(closeBtn)closeBtn.focus();
 }
 function fecharCaptacao(){
   document.getElementById("captSheet").hidden=true;
-  if(CAPTRET&&CAPTRET.focus){try{CAPTRET.focus();}catch(e){}}CAPTRET=null;
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de CAPTRET */
 }
 /* Fase 11.1 (11.1-02): wizard NEG (Documentos da negociação) — sheet .wiz PRÓPRIO (#negSheet),
    estado NEG PRÓPRIO (paralelo a LZ/CAPTRET), NUNCA persistido (privacidade — nem localStorage
    nem IndexedDB recebem dado de parte/valor/matrícula em nenhum caminho de código). Zero função
    aqui lê/escreve LZ; o wizard do laudo nunca lê/escreve NEG. */
-let NEG=null, NEGRET=null;
+let NEG=null;
 function abrirNeg(tipo){
   if(!DCUR)return;
   let prof={};try{prof=JSON.parse(localStorage.getItem("radar_prof")||"{}");}catch(e){}
@@ -6420,9 +6419,9 @@ function abrirNeg(tipo){
     matTexto:"",
     minutaTexto:"", minutaEditada:null
   };
-  NEGRET=document.activeElement; /* devolve o foco ao fechar (leitor de tela/teclado) */
   const sheet=document.getElementById("negSheet");
   sheet.hidden=false;
+  trapFocus(sheet); /* Fase 19 (19-03, A11Y-01): substitui a captura manual NEGRET */
   if(!REDUCE)mAnimate(sheet,{opacity:[0,1]},{duration:0.18});
   negRender();
   const primeiro=sheet.querySelector(".winput");if(primeiro)primeiro.focus();
@@ -6430,7 +6429,7 @@ function abrirNeg(tipo){
 function fecharNeg(){
   document.getElementById("negSheet").hidden=true;
   NEG=null; /* descarte silencioso — privacidade por design, sem confirmação (NEG nunca persistido) */
-  if(NEGRET&&NEGRET.focus){try{NEGRET.focus();}catch(e){}}NEGRET=null;
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de NEGRET */
 }
 function negBack(){
   if(!NEG)return;
@@ -7308,6 +7307,38 @@ function initCoach(){
   if(!seen){const c=document.getElementById("coachMark"); if(c)c.style.display="inline-flex";}
 }
 
+/* ---------------- Fase 19 (19-03, A11Y-01): utilitário ÚNICO de focus-trap — generalizado do
+   padrão onbLastFocus/WIZRET/NEGRET/CAPTRET já existente, aplicado às 6 superfícies modais
+   (#onbOverlay, .wiz#laudoSheet, #negSheet, #captSheet, #cmpSheet, #detail/#chooser). Single-slot
+   (TRAP_CONTAINER global): abrir um novo trap com outro já ativo exige untrapFocus() antes
+   (documentado nos call-sites de showDetail/#detail — a única superfície reaberta em cima de si
+   mesma na navegação real). Nunca envolve o formulário de busca (#insc/#rua); usa só keydown,
+   não conflita com o drag touch do bottom sheet (SHEETDRAGY0). */
+let TRAP_CONTAINER=null, TRAP_LASTFOCUS=null, TRAP_HANDLER=null;
+function trapFocus(container){
+  TRAP_LASTFOCUS = document.activeElement;      // gatilho — devolve foco aqui ao destrapar
+  TRAP_CONTAINER = container;
+  TRAP_HANDLER = function(e){
+    if(e.key !== "Tab") return;
+    const focaveis = trapFocaveis(container);
+    if(!focaveis.length) return;
+    const first = focaveis[0], last = focaveis[focaveis.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  };
+  container.addEventListener("keydown", TRAP_HANDLER);
+}
+function untrapFocus(){
+  if(TRAP_CONTAINER && TRAP_HANDLER) TRAP_CONTAINER.removeEventListener("keydown", TRAP_HANDLER);
+  if(TRAP_LASTFOCUS && document.body.contains(TRAP_LASTFOCUS)) TRAP_LASTFOCUS.focus();
+  TRAP_CONTAINER = null; TRAP_LASTFOCUS = null; TRAP_HANDLER = null;
+}
+function trapFocaveis(container){
+  return Array.from(container.querySelectorAll(
+    'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(el => el.offsetParent !== null);   // exclui display:none/hidden
+}
+
 /* ---------------- Fase 13 DESC-01: onboarding 3 cartões (independente do coach acima) ---------------- */
 // Conteúdo dos 3 cartões (copy literal, travado — não reformular)
 const ONB_CARDS=[
@@ -7315,7 +7346,7 @@ const ONB_CARDS=[
   {titulo:"Veja valor e oportunidade", texto:"Cada imóvel mostra a faixa de valor estimado, o score de oportunidade e uma leitura em linguagem simples — sem jargão técnico.", cta:"Próximo"},
   {titulo:"Gere documentos e capte", texto:"Gere ficha, relatório ou laudo em PDF, copie mensagens prontas pro WhatsApp e monte a proposta — tudo pelo Radar.", cta:"Começar"},
 ];
-let onbIdx=0, onbLastFocus=null;
+let onbIdx=0;
 function initOnboard(){
   /* deep-link ?insc= vence o onboarding: 1º acesso via link compartilhado tem que abrir a FICHA
      prometida, não um modal bloqueante por cima — pula o auto-show (o usuário ainda pode ver os
@@ -7335,9 +7366,11 @@ function onbAbrir(idx){
   onbIdx=idx||0;
   const ov=document.getElementById("onbOverlay");
   /* IN-02 (13-REVIEW.md): só captura o foco de origem se o overlay AINDA não está aberto —
-     reentrância (hoje inalcançável pela UI) não sobrescreveria onbLastFocus com o .onb-skip que o
-     próprio onbAbrir foca, preservando o contrato "devolve o foco a quem abriu". */
-  if(!ov.classList.contains("show"))onbLastFocus=document.activeElement;
+     reentrância (hoje inalcançável pela UI) não sobrescreveria o gatilho com o .onb-skip que o
+     próprio onbAbrir foca, preservando o contrato "devolve o foco a quem abriu". Fase 19 (19-03,
+     A11Y-01): trapFocus() já faz a captura (TRAP_LASTFOCUS=document.activeElement) — a mesma
+     guarda de reentrância se aplica à CHAMADA do trap, não só à captura antiga. */
+  if(!ov.classList.contains("show"))trapFocus(ov);
   /* o CSS é .onb{display:none} + .onb.show{display:flex} — toggle SÓ do atributo hidden NUNCA
      revelaria o overlay (a regra de classe vence). Toggle dos DOIS em par. */
   ov.hidden=false; ov.classList.add("show");
@@ -7353,8 +7386,10 @@ function onbFechar(){
   try{localStorage.setItem("radar_onboard","1");}catch(e){}
   const ov=document.getElementById("onbOverlay");
   ov.hidden=true; ov.classList.remove("show"); /* par do onbAbrir */
-  if(onbLastFocus&&document.body.contains(onbLastFocus)) onbLastFocus.focus();
-  else { const p=document.getElementById("searchPill"); if(p) p.focus(); }
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de onbLastFocus */
+  /* fallback: se o trap não tinha gatilho válido pra devolver foco (onbAbrir chamado em
+     reentrância, guarda acima), garante que o foco não se perde no <body>. */
+  if(document.activeElement===document.body){ const p=document.getElementById("searchPill"); if(p) p.focus(); }
 }
 // "O que o Radar faz" -> reabre o onboarding NO CARTÃO relevante, sem checar radar_onboard
 // (reentrada manual — nunca conta como "1ª exibição")
