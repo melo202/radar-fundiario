@@ -66,7 +66,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.1-*.md`.
 **Plans**: 3 plans (sequenciais, mesmo arquivo) · **UI hint**: yes
 
 Plans:
-- [ ] 19-01-PLAN.md — Fundação tipográfica: @font-face Archivo+JetBrains Mono (base64) + CSP font-src + migração das 196 declarações (TYPO-01)
+- [x] 19-01-PLAN.md — Fundação tipográfica: @font-face Archivo+JetBrains Mono (base64) + CSP font-src + migração das 196 declarações (TYPO-01)
 - [ ] 19-02-PLAN.md — Refinamento estético: tokens --elev-0/1/2/3 + acabamento hover/active/focus/divisores (PREM-01)
 - [ ] 19-03-PLAN.md — Focus-trap único nas 6 superfícies modais + gate final/UAT (A11Y-01)
 
@@ -85,7 +85,7 @@ Plans:
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
-| 19. Estética Premium | v2.2 | 0/3 | Planned | - |
+| 19. Estética Premium | v2.2 | 1/3 | In Progress|  |
 | 20. Auditoria Fable 5 | v2.2 | 0/TBD | Not started | - |
 
 **Backlog (v2.3+):** ativação da pesquisa de mercado por IA sobre o seam dormant; upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria.

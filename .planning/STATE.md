@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Polimento Premium
-status: verifying
-stopped_at: v2.2 Polimento Premium criado (Fases 19-20); iniciando Fase 19
-last_updated: "2026-07-10T06:23:35.106Z"
+status: executing
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-07-10T07:11:56.907Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 18 — Inteligência Urbanística — Plano Diretor 2022
+**Current focus:** Phase 19 — Estética Premium — Tipografia & Refinamento Visual
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 19 (Estética Premium — Tipografia & Refinamento Visual) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-07-10
 
 Progress: [░░░░░░░░░░] 0%
@@ -79,6 +79,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 18 P01 | 20min | 3 tasks | 3 files |
 | Phase 18 P02 | 17min | 3 tasks | 2 files |
 | Phase 18 P03 | 35min | 3 tasks | 2 files |
+| Phase 19 P01 | 15min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 18]: [18-02]: PDQUADRACACHE (detector, por chaveQuadra) nunca compartilha map com PDCACHE (lote, por ci) - W3, evita cache-poisoning; pdBateriaConsulta extraida para reuso sem duplicar a bateria de 9 queries
 - [Phase 18]: [18-03]: proximoEstadoCamada (funcao pura) testa exclusividade tri-state isoladamente, mesmo padrao ja usado para funcoes DOM/Leaflet pesadas nunca testadas via node:vm
 - [Phase 18]: [18-03]: fix Rule 1 - .detail .acts .chips button.on (especificidade 0,4,1) corrige colisao de especificidade com .detail .acts button que impediria o accent do chip ativo de aparecer
+- [Phase 19]: 2 blocos @font-face com range de peso (400-800/500-700) em vez de 7 discretos - mesma fonte variavel servida pelo Google Fonts, payload real 86,4KB medido
+- [Phase 19]: CSP recebeu font-src 'self' data: como unico acrescimo; sw.js NAO bumpado (fonte vive dentro do HTML NETWORK_FIRST, radar-v7 mantido)
+- [Phase 19]: 14 declaracoes Open Sans do pipeline #laudo/PDF migradas por papel funcional (texto/heading/valor -> Archivo; eyebrow/rotulo/rodape -> JetBrains Mono), nao replace cego
 
 ### Pending Todos
 
@@ -141,6 +145,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T06:23:35.103Z
-Stopped at: v2.2 Polimento Premium criado (Fases 19-20); iniciando Fase 19
+Last session: 2026-07-10T07:11:56.904Z
+Stopped at: Completed 19-01-PLAN.md
 Resume file: None
