@@ -47,7 +47,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
  (completed 2026-07-09)
 - [x] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
  (completed 2026-07-10)
-- [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
+- [x] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo (completed 2026-07-10)
 - [ ] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial
 
 ## Phase Details
@@ -223,7 +223,7 @@ Plans:
   2. Imóveis Caixa plotados são cruzados com o território salvo, destacando quando um imóvel Caixa cai num setor/lote já farmado
 **Plans**: 2 plans (waves sequenciais)
 - [x] 17-01-PLAN.md — Núcleo de dados: diffLote/formatarDiff/matching Caixa (RADAR_PURE, TDD) + snapshot LGPD recursivo + cadernoBuscar + 1º save
-- [ ] 17-02-PLAN.md — UI: bloco de diff na ficha + badge/linha/anel/popup Caixa + ação 1 toque + verificação
+- [x] 17-02-PLAN.md — UI: bloco de diff na ficha + badge/linha/anel/popup Caixa + ação 1 toque + verificação
 
 ### Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)
 **Goal**: A ficha responde "o que este lote PODE SER" — zona/unidade territorial do Modelo Espacial, coeficiente de aproveitamento, usos — e essa inteligência alimenta o score de oportunidade e o detector de subutilizado. Tudo dado oficial determinístico (lei + GIS da prefeitura), zero IA.
@@ -262,7 +262,7 @@ Plans:
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
-| 17. Diff de Cadastro + Caixa | v2.1 | 1/2 | In Progress|  |
+| 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete   | 2026-07-10 |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**

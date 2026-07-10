@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: executing
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-07-10T02:29:32.061Z"
+status: verifying
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-07-10T02:45:17.972Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 38
-  completed_plans: 37
-  percent: 97
+  completed_plans: 38
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 17 (Diff de Cadastro & Cruzamento Caixa) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
 Progress: [░░░░░░░░░░] 0%
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 16 P02 | 35min | 3 tasks | 1 files |
 | Phase 16 P03 | ~45min | 3 tasks | 1 files |
 | Phase 17 P01 | 10min | 3 tasks | 4 files |
+| Phase 17 P02 | 12min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 17]: [17-01]: sem bump de CADERNO_VERSION - snapshot embutido no item (item.snapshot+item.snapshotAt), IndexedDB nao tem schema de valor fixo
 - [Phase 17]: [17-01]: match de bairro Caixa so exato-normalizado (norm()), nunca fuzzy - honestidade sobre recall (74% medido); colisao nome->multiplos cdbairro resolvida via Set, match se QUALQUER candidato bater
 - [Phase 17]: [17-01]: sanitizeCaderno ganhou allowlist RECURSIVA para snapshot (dtnascimen/cpf dentro do sub-objeto nunca sobrevivem, mesmo com a chave de topo liberada)
+- [Phase 17]: [17-02]: BAIRROS (global declarada, nunca populada) agora recebe o FeatureCollection em loadBairroPolys() - garantirNomeParaCdbairro() precisa das features reais, zero requisicao nova
+- [Phase 17]: [17-02]: toggleCaixa() tornou-se async; construcao dos pinos/aneis extraida para garantirCaixaLayer() (idempotente), compartilhada com abrirCaixaNoMapaUI() para nunca duplicar construcao nem disparar 2 toasts
 
 ### Pending Todos
 
@@ -125,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T02:29:32.057Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-07-10T02:45:17.969Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None
