@@ -912,6 +912,9 @@
 
   /* ---------- mobile: telas Busca⇄Mapa, bottom sheet, alvos ≥44px, safe-area ---------- */
   @media(max-width:820px){
+    /* D-02 (20): no mobile a pill de camadas ocupa o topo do mapa — desce a legenda pra não colidir
+       (16px base + 44px alvo de toque da pill + 8px de folga + safe-area). */
+    .terr-legenda{top:calc(16px + 44px + 8px + env(safe-area-inset-top))}
     .wrap{display:block;height:100vh;height:100dvh;overflow:hidden}
     .panel,.mapwrap{height:calc(100vh - 56px);height:calc(100dvh - 56px - env(safe-area-inset-bottom))}
     .panel{border-right:0}
