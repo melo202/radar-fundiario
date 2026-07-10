@@ -3518,11 +3518,16 @@ function montarPainel(scan,st,layer){
    de foco/trap já usado pelos outros sheets do app. WR-03 15-REVIEW.md: também chamada
    defensivamente por finish()/showDetail() ("1 sheet por vez") — o guard `!p.classList.contains
    ("show")` evita roubar o foco pro #btnVerTerr quando o painel já estava fechado (não havia
-   sheet nenhum pra fechar, então também não há foco nenhum a devolver). */
+   sheet nenhum pra fechar, então também não há foco nenhum a devolver). WR-01 (16-REVIEW.md):
+   TODO caminho que fecha o painel (×, alça, Esc, buscarNoSetor()/"1 sheet por vez") também limpa o
+   destaque gold do detector no mapa — limparDestaqueDetector() é idempotente (early-return se o Set
+   já está vazio) e não depende de #terrDetectorView estar visível, então é seguro chamar aqui
+   incondicionalmente, mesmo quando o detector nunca foi aberto nesta sessão do painel. */
 function fecharTerrPanel(){
   const p=document.getElementById("terrPanel");
   if(!p||!p.classList.contains("show"))return;
   p.classList.remove("show");
+  limparDestaqueDetector();
   const b=document.getElementById("btnVerTerr");
   if(b&&!b.hidden)b.focus();
 }
