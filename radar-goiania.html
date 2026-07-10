@@ -4580,6 +4580,12 @@ async function buscar(){
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
   const tk=++SEARCHTOKEN;
   btn.disabled=true;closeDetail();
+  /* CR-02 (13-REVIEW.md): snapshot do #results ANTES do skeleton — early-returns de validação
+     (inscrição/setor/rua vazios, "só a quadra" etc.) saem do try sem passar por finish()/catch,
+     e o finally não reescrevia #results, deixando o skeleton shimmer preso para sempre. O finally
+     restaura este conteúdo quando o skeleton nunca foi substituído por um render real. */
+  const resultsBox=document.getElementById("results");
+  const prevResults=resultsBox?resultsBox.innerHTML:"";
   /* Fase 13 MOT-01: mensagem 1 (fases REAIS de buscar()) — cobre TODOS os modos, antes de
      qualquer branch/rede. Skeleton shimmer complementa o overlay de loading em #results. */
   loading(true,MOTION_MSG.localizando);
@@ -4694,7 +4700,16 @@ async function buscar(){
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Falha na busca</div>${msg}
         <div class="chips" style="justify-content:center;margin-top:14px"><button type="button" onclick="buscar()">Tentar de novo</button></div></div>`;
     }
-  }finally{if(tk===SEARCHTOKEN){loading(false);btn.disabled=false;}}
+  }finally{if(tk===SEARCHTOKEN){
+    loading(false);btn.disabled=false;
+    /* CR-02 (13-REVIEW.md): se um early-return de validação saiu sem render/plot nem catch, o
+       skeleton continua em #results (nenhum outro caminho o reescreveu) — restaura o conteúdo
+       anterior. Detecção pela presença de .skel-card (só existe em SKELETON_HTML; qualquer render
+       real — finish/catch — reescreve o innerHTML inteiro e remove o skeleton) — mais robusto que
+       comparar innerHTML cru, que o browser pode normalizar ao reler. */
+    const box=document.getElementById("results");
+    if(box&&box.querySelector(".skel-card"))box.innerHTML=prevResults;
+  }}
 }
 
 /* aplica filtro de apto/garagem, ordena, renderiza e plota.
