@@ -255,7 +255,7 @@ Plans:
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
-| 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete   | 2026-07-10 |
+| 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 

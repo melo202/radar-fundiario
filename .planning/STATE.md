@@ -4,7 +4,7 @@ milestone: v2.1
 milestone_name: Cockpit Comercial
 status: verifying
 stopped_at: Completed 16-03-PLAN.md
-last_updated: "2026-07-10T01:15:32.742Z"
+last_updated: "2026-07-10T01:39:12.854Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 16 (Detector de Lote Subutilizado & Farming/Caderno) — EXECUTING
-Plan: 3 of 3
+Phase: 17
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 30 (v2.1)
+- Total plans completed: 33 (v2.1)
 - Average duration: —
 - Total execution time: —
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | 12 | 2 | - | - |
 | 14 | 5 | - | - |
 | 15 | 3 | - | - |
+| 16 | 3 | - | - |
 
 **Recent Trend:**
 
