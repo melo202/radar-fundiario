@@ -1170,4 +1170,59 @@ export const FIXTURES = {
       santaGenovevaColisao: { id: "c4", b: "SANTA GENOVEVA", x: 692000, y: 8152000 },
     },
   },
+
+  // Fase 18 (18-01, PD-01): fixtures das respostas sintéticas das 9 layers do Modelo Espacial,
+  // no formato Promise.allSettled-shaped consumido por resolverZonaUI — {layer, status, value}.
+  // Layers seguem as chaves de PD_LAYERS (macrozona/aa/add/aos/aeis/apac/ooau/eixo/corredor).
+  // A fixture "macrozonaSemUnidade" cobre o 6º estado (BLOCKER 2, 18-01-PLAN.md): macrozona
+  // Construída resolvida, mas NENHUMA das layers AA/ADD/AOS intersectou (lote urbano em AAB).
+  PD_FIX: (() => {
+    const LAYER_KEYS = ["macrozona", "aa", "add", "aos", "aeis", "apac", "ooau", "eixo", "corredor"];
+    function vazio() {
+      return { features: [] };
+    }
+    function comFeature(attrs) {
+      return { features: [{ attributes: attrs }] };
+    }
+    // baseTodasFulfilled: 9 entradas fulfilled com value vazio (sem feature) — ponto de partida
+    // para as fixtures que só precisam sobrescrever 1-2 layers específicas.
+    function baseTodasFulfilled(overrides) {
+      return LAYER_KEYS.map((layer) => ({
+        layer,
+        status: "fulfilled",
+        value: (overrides && overrides[layer]) || vazio(),
+      }));
+    }
+    return {
+      respostas: {
+        // todas resolvidas, macrozona Construída, AA presente -> estado "resolvido"
+        aaResolvido: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+          aa: comFeature({ sigla: "AA", nm_des: "AREA ADENSAVEL" }),
+        }),
+        // todas resolvidas, macrozona Construída, NENHUMA das AA/ADD/AOS intersectou (6º estado)
+        macrozonaSemUnidade: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+        }),
+        // macrozona rural (nome não contém "CONSTRU") -> estado "rural"
+        rural: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA RURAL" }),
+        }),
+        // TODAS as 9 falharam -> estado "erro"
+        todasFalharam: LAYER_KEYS.map((layer) => ({ layer, status: "rejected", value: null })),
+        // mix: macrozona/AA resolvidos, mas 1 layer falhou (corredor) -> estado "parcial"
+        parcial: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+          aa: comFeature({ sigla: "AA", nm_des: "AREA ADENSAVEL" }),
+        }).map((r) => (r.layer === "corredor" ? { layer: "corredor", status: "rejected", value: null } : r)),
+        // AEIS presente junto de AA -> badges.aeis===true; OOAU consultada mas SEM badge
+        comAeis: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+          aa: comFeature({ sigla: "AA", nm_des: "AREA ADENSAVEL" }),
+          aeis: comFeature({ sigla: "AEIS", nm_des: "AREA ESPECIAL DE INTERESSE SOCIAL" }),
+          ooau: comFeature({ nm_des: "OUTORGA ONEROSA DE ALTERACAO DE USO" }),
+        }),
+      },
+    };
+  })(),
 };
