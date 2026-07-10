@@ -5135,10 +5135,12 @@ function abrirComparacao(){
   const titulo=document.getElementById("cmpTitle");if(titulo)titulo.textContent="Comparação ("+CMP.length+")";
   const sheet=document.getElementById("cmpSheet");
   sheet.hidden=false;
+  trapFocus(document.getElementById("cmpSheet")); /* Fase 19 (19-03, A11Y-01): #cmpSheet não tinha pattern prévio de captura de foco */
   const close=sheet.querySelector(".wclose");if(close)close.focus();
 }
 function fecharComparacao(){
   const sheet=document.getElementById("cmpSheet");if(sheet)sheet.hidden=true; /* NAO limpa CMP — marcacoes persistem */
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #cmpSheet não restaurava foco ao gatilho antes */
 }
 
 function scrollToResults(){
@@ -5331,12 +5333,17 @@ function showChooser(ci){
     const est=mercadoEstimado(a), val=est?"~"+brlC((est.lo+est.hi)/2):(a.vlvenal>0?brl(a.vlvenal):"—");
     return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${venalTxt(a.vlvenal)}</span></span><span class="val">${val}</span></button>`;
   }).join("");
-  closeDetail();
+  closeDetail(); /* já chama untrapFocus() (Fase 19) antes do trap abaixo — nunca vaza o handler do #detail */
   setView("mapa");
-  document.getElementById("chooser").classList.add("show");
+  const chooser=document.getElementById("chooser");
+  chooser.classList.add("show");
+  trapFocus(chooser); /* Fase 19 (19-03, A11Y-01): #chooser não tinha pattern prévio de captura de foco */
 }
 function chooseThis(i){closeChooser();pick(i);}
-function closeChooser(){document.getElementById("chooser").classList.remove("show");}
+function closeChooser(){
+  document.getElementById("chooser").classList.remove("show");
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #chooser não restaurava foco ao gatilho antes */
+}
 
 /* ---------------- selecionar ---------------- */
 function pick(i){
@@ -5574,6 +5581,14 @@ function showDetail(a,ll){
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
   d.classList.add("show");
+  /* Fase 19 (19-03, A11Y-01): showDetail() pode ser chamado com #detail JÁ visível/trapado (ex.:
+     clicar noutro pino no mapa com a ficha aberta) — untrapFocus() antes de trapFocus() evita
+     vazar o keydown handler anterior (single-slot TRAP_CONTAINER). Decisão documentada no
+     19-03-SUMMARY.md: nesse caso específico o "gatilho" devolvido ao fechar passa a ser o
+     elemento que tinha o foco no momento da REABERTURA, não o clique original que abriu a
+     primeira ficha — comportamento aceitável (nunca perde o foco pro <body>). */
+  untrapFocus();
+  trapFocus(d);
   SHEETGEN++; /* invalida qualquer cleanup async de um close anterior (WR-02) */
   /* Fase 6 Plano 02: spring de abertura do sheet mobile; fade sutil no card desktop.
      Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null — a alça já está com o dedo). */
@@ -7281,6 +7296,8 @@ function exportCSV(){
 function closeDetail(){
   const d=document.getElementById("detail");
   d.classList.remove("show");
+  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #detail é o ramo else catch-all da cadeia de Esc —
+    só acrescenta a restauração de foco, não altera essa estrutura de fallback */
   /* Fase 6 Plano 02: fecho mais rápido (não-spring) via mAnimate; anima da posição ATUAL do
      transform (que pode já estar em translateY(dy) se veio de um drag-to-dismiss — não zera antes).
      Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null). */
