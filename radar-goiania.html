@@ -1393,7 +1393,7 @@
 <div id="laudo"></div>
 
 <!-- Visão em tela do laudo (fallback do PWA standalone no iOS, onde window.print não abre) -->
-<div id="laudoView" hidden>
+<div id="laudoView" hidden role="dialog" aria-modal="true" aria-label="Laudo de avaliação">
   <div class="lvbar">
     <button class="lvprint" onclick="imprimirLaudo()">🖨️ Salvar PDF</button>
     <button class="lvx" onclick="fecharLaudoView()" aria-label="Fechar laudo">×</button>
@@ -4244,6 +4244,9 @@ function montarPainel(scan,st,layer){
      view volta a mostrar as métricas — nunca reabre já em cima de um #terrDetectorView de uma
      sessão anterior do painel (fecharDetector() também limpa o destaque no mapa, se havia). */
   fecharDetector();
+  /* B-07/D-07 (20): trap de foco no #terrPanel. Só empilha se o painel ainda NÃO estava aberto —
+     montarPainel() é remontado sobre si mesmo (trocar de setor) e empilhar de novo vazaria traps. */
+  const _terrWasShown=document.getElementById("terrPanel").classList.contains("show");
   const nomeEl=document.getElementById("terrSetorNome");
   const grid=document.getElementById("terrGrid");
   TERR_PANEL_CD=scan?scan.cdbairro:null;
@@ -4275,6 +4278,7 @@ function montarPainel(scan,st,layer){
     nomeEl.textContent="";
     grid.innerHTML='<div class="cell" style="grid-column:1/-1"><div class="k">Nenhum setor selecionado</div><div class="terr-metric-sub">Toque num bairro no mapa ou busque um setor para ver as métricas do território.</div></div>';
     document.getElementById("terrPanel").classList.add("show");
+    if(!_terrWasShown)trapFocus(document.getElementById("terrPanel"));/*B-07/D-07(20)*/
     return;
   }
   const nm=layer&&layer.feature&&(layer.feature.properties.nm_disp||layer.feature.properties.nm_bai);
@@ -4283,6 +4287,7 @@ function montarPainel(scan,st,layer){
     /* Empty state (UI-SPEC): lotes existem, mas nenhum tem venal informado — sem base p/ faixas. */
     grid.innerHTML='<div class="cell" style="grid-column:1/-1"><div class="k">Sem dado de valor neste setor</div><div class="terr-metric-sub">Os lotes existem, mas nenhum tem venal informado no cadastro — não é possível calcular as faixas.</div></div>';
     document.getElementById("terrPanel").classList.add("show");
+    if(!_terrWasShown)trapFocus(document.getElementById("terrPanel"));/*B-07/D-07(20)*/
     return;
   }
   const hon=rotuloAmostra(st.n,st.total); /* mesmo rótulo abaixo de TODA métrica derivada da amostra */
@@ -4332,6 +4337,7 @@ function montarPainel(scan,st,layer){
   document.getElementById("terrTotal").textContent=(scan.total).toLocaleString("pt-BR");
   document.getElementById("terrHonTotal").textContent=hon;
   document.getElementById("terrPanel").classList.add("show");
+  if(!_terrWasShown)trapFocus(document.getElementById("terrPanel"));/*B-07/D-07(20)*/
 }
 
 /* fecharTerrPanel(): fecho por × ou Esc — devolve o foco ao gatilho (#btnVerTerr), mesmo padrão
@@ -4348,8 +4354,12 @@ function fecharTerrPanel(){
   if(!p||!p.classList.contains("show"))return;
   p.classList.remove("show");
   limparDestaqueDetector();
+  /* B-07/D-07 (20): untrapFocus(p) já devolve o foco ao gatilho capturado (lastFocus). Mantém o
+     fallback explícito p/ #btnVerTerr caso não houvesse trap ativo (ex.: painel aberto por caminho
+     legado) — untrapFocus(p) vira no-op se p não está na pilha, então nada colide. */
+  untrapFocus(p);
   const b=document.getElementById("btnVerTerr");
-  if(b&&!b.hidden)b.focus();
+  if(b&&!b.hidden&&document.activeElement===document.body)b.focus();
 }
 
 /* sincTerrPanelToggle() (Fase 15, botão único) foi SUBSTITUÍDA por sincCamadaChips() (Fase 18,
@@ -6683,7 +6693,7 @@ function montarNeg(){
     <div class="foot">RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA · EMITIDO EM ${hoje}</div>`;
   fecharNeg();
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
 }
 /* copyCapt(tipo): recalcula dadosFicha() (barato, garante consistência se os scores atualizaram
    com o sheet aberto) e copia o template correspondente com toast especifico. */
@@ -7000,7 +7010,7 @@ function montarLaudo(){
      sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
      é ele que vai para o PDF — e só é limpo ao fechar (fecharLaudoView). */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
 }
 /* montarFichaRapida(): monta o objeto `data` a partir de LZ (nunca DCUR — dentro do wizard a fonte
    de verdade é LZ, mesma regra "DCUR fechado" do Estado Transversal) e chama fichaRapidaTexto()
@@ -7055,7 +7065,7 @@ function renderFichaRapida(a,data,fr){
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo();
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0;
+  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
 }
 /* dispara o PDF a partir do CLIQUE do usuário (gesto real → não é bloqueado) */
 function imprimirLaudo(){
@@ -7070,10 +7080,12 @@ function imprimirLaudo(){
   window.print();
 }
 function fecharLaudoView(){
-  document.getElementById("laudoView").hidden=true;
+  const lv=document.getElementById("laudoView");
+  lv.hidden=true;
   document.getElementById("laudoViewBody").innerHTML="";
   document.getElementById("laudo").innerHTML=""; /* libera as fotos da memória */
   document.body.classList.remove("print-laudo");
+  untrapFocus(lv); /* B-07/D-07 (20) */
 }
 
 /* ---------------- calculadora de custos de compra ----------------
@@ -7092,12 +7104,12 @@ function abrirCustos(){
   /* sugere a estimativa de mercado (proxy do preço real); se não houver, cai no venal como palpite */
   const negocio=est?Math.round((est.lo+est.hi)/2):(a.vlvenal||0);
   CALC={a,venal:a.vlvenal||0,negocio,cartorio:null,financiado:false};
-  CRET=document.activeElement;
-  document.getElementById("calc").hidden=false;
+  const calc=document.getElementById("calc");
+  calc.hidden=false;
+  trapFocus(calc); /* B-07/D-07 (20): usa a pilha de focus-trap no lugar do CRET manual */
   renderCustos();
 }
-let CRET=null;
-function fecharCustos(){document.getElementById("calc").hidden=true;CALC=null;if(CRET&&CRET.focus){try{CRET.focus();}catch(e){}}}
+function fecharCustos(){const calc=document.getElementById("calc");calc.hidden=true;CALC=null;untrapFocus(calc);}
 function renderCustos(){
   if(!CALC)return;
   const a=CALC.a;
