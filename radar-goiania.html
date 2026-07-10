@@ -7341,36 +7341,42 @@ function initCoach(){
 }
 
 /* ---------------- Fase 19 (19-03, A11Y-01): utilitário ÚNICO de focus-trap — generalizado do
-   padrão onbLastFocus/WIZRET/NEGRET/CAPTRET já existente, aplicado às 6 superfícies modais
-   (#onbOverlay, .wiz#laudoSheet, #negSheet, #captSheet, #cmpSheet, #detail/#chooser). Single-slot
-   (TRAP_CONTAINER global): abrir um novo trap com outro já ativo exige untrapFocus() antes
-   (documentado nos call-sites de showDetail/#detail — a única superfície reaberta em cima de si
-   mesma na navegação real). Nunca envolve o formulário de busca (#insc/#rua); usa só keydown,
-   não conflita com o drag touch do bottom sheet (SHEETDRAGY0). */
-let TRAP_CONTAINER=null, TRAP_LASTFOCUS=null, TRAP_HANDLER=null;
+   padrão onbLastFocus/WIZRET/NEGRET/CAPTRET já existente, aplicado às superfícies modais
+   (#onbOverlay, .wiz#laudoSheet, #negSheet, #captSheet, #cmpSheet, #detail/#chooser, #calc,
+   #laudoView, #terrPanel). PILHA (A-03≡D-01, Fase 20): TRAPS empilha um trap por superfície aberta,
+   então sheets aninhados (ficha → sheet secundário → fecha) devolvem o foco na ordem correta.
+   untrapFocus(c) remove a entrada DESSE container onde quer que esteja na pilha (preserva WR-01:
+   um fecharX() cujo container não está na pilha vira no-op, sem destruir o trap de outro modal
+   visível). Sem argumento, desempilha o topo. Nunca envolve o formulário de busca (#insc/#rua);
+   usa só keydown, não conflita com o drag touch do bottom sheet (SHEETDRAGY0). */
+let TRAPS=[];
 function trapFocus(container){
-  TRAP_LASTFOCUS = document.activeElement;      // gatilho — devolve foco aqui ao destrapar
-  TRAP_CONTAINER = container;
-  TRAP_HANDLER = function(e){
+  const entry={container, lastFocus:document.activeElement, handler:function(e){
     if(e.key !== "Tab") return;
     const focaveis = trapFocaveis(container);
     if(!focaveis.length) return;
     const first = focaveis[0], last = focaveis[focaveis.length-1];
     if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
     else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-  };
-  container.addEventListener("keydown", TRAP_HANDLER);
+  }};
+  TRAPS.push(entry);
+  container.addEventListener("keydown", entry.handler);
 }
 function untrapFocus(container){
-  /* WR-01 (19-REVIEW.md): slot único (TRAP_CONTAINER) é compartilhado por 6 superfícies — sem essa
-     checagem, um fecharX() cujo sheet nunca foi o dono do trap ativo (ex.: closeChooser() chamado
-     por finish() com #detail aberto) destruía o trap de OUTRO modal ainda visível. Chamada COM
-     container só desmonta se for de fato o dono; chamada SEM argumento (fluxos de reabertura, ex.:
-     showDetail() sobre si mesmo) preserva o comportamento global anterior. */
-  if(container && container!==TRAP_CONTAINER) return;
-  if(TRAP_CONTAINER && TRAP_HANDLER) TRAP_CONTAINER.removeEventListener("keydown", TRAP_HANDLER);
-  if(TRAP_LASTFOCUS && document.body.contains(TRAP_LASTFOCUS)) TRAP_LASTFOCUS.focus();
-  TRAP_CONTAINER = null; TRAP_LASTFOCUS = null; TRAP_HANDLER = null;
+  /* WR-01 (19-REVIEW.md) preservado na pilha: COM container, remove a entrada desse container onde
+     quer que esteja (topo ou não) — se ele não tiver trap ativo, no-op (não mexe em outro modal).
+     SEM argumento, desempilha o topo (fluxos de reabertura sobre si mesmo). */
+  let idx;
+  if(container){
+    idx = TRAPS.map(t=>t.container).lastIndexOf(container);
+    if(idx === -1) return;
+  }else{
+    idx = TRAPS.length-1;
+    if(idx < 0) return;
+  }
+  const entry = TRAPS.splice(idx,1)[0];
+  entry.container.removeEventListener("keydown", entry.handler);
+  if(entry.lastFocus && document.body.contains(entry.lastFocus)) entry.lastFocus.focus();
 }
 function trapFocaveis(container){
   return Array.from(container.querySelectorAll(
