@@ -17,7 +17,7 @@ Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
 | `UPPER(...)` em where | Funciona (`useStandardizedQueries: true`) | Busca case-insensitive server-side ok |
 | CORS | Sem cabeçalho `Access-Control-Allow-Origin` | JSONP continua necessário |
 | Consulta pesada (count da base toda) | **502 Proxy Error** | Servidor frágil sob carga — minimizar volume |
-| Setores distintos | 709 | Carga de bairros (limite 2000) está segura |
+| Setores distintos | **687** no dataset local `bairro-cdbairro.json` (medido 2026-07-10, travado em `tests/datasets.test.mjs`). Nota: a recon de 02/07/2026 mediu 709 cds distintos direto no endpoint vivo — o snapshot local diverge porque só mapeia bairros com cdbairro resolvido (86 features ficam sem cd) | Carga de bairros (limite 2000) está segura |
 | Maiores setores (com `vlvenal>0`) | Bueno 57.225 · Oeste 32.472 · Jd Goiás 23.402 · Marista 20.746 · Jd América 19.175 | A trava antiga de 6×2000=12.000 truncava silenciosamente os setores mais importantes |
 | Paginação (`resultOffset`) | Suportada; `maxRecordCount` = 1.000.000 | Loop de páginas ok |
 | Campos usados pelo app (19) | Todos existem na camada (85 campos) | — |
