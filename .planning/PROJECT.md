@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 after Phase 16 (Detector de subutilizado — filtro puro sobre o scan, 0.15 ratio + quadra valorizada; Caderno de território em IndexedDB radar_territorio com allowlist anti-PII, export/import, tudo verificado AO VIVO em Chromium incl. XSS/PII/persistência; 1 XSS crítico achado e corrigido no review; suíte 141/141; Fases 7-16 completas, restam 17-18)*
+*Last updated: 2026-07-10 after Phase 17 (Diff de cadastro na revisita — snapshot embutido no caderno, leitura comercial "venal subiu 12%"; cruzamento Caixa×território com badge/anel/popup, matching exato-normalizado 74% sem falso positivo; verificação passed 10/10 com evidência ao vivo em Chromium; suíte 184/184; Fases 7-17 completas, resta 18)*
