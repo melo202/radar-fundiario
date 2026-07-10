@@ -30,6 +30,7 @@ function loadPureBlock() {
   assert.ok(src.includes("function resolverZonaUI"), "resolverZonaUI ausente do bloco RADAR_PURE (Task 3)");
   assert.ok(src.includes("function montarUrbBodyHTML"), "montarUrbBodyHTML ausente do bloco RADAR_PURE (18-02 Task 2)");
   assert.ok(src.includes("function detectorRotuloPD"), "detectorRotuloPD ausente do bloco RADAR_PURE (18-02 Task 3)");
+  assert.ok(src.includes("function proximoEstadoCamada"), "proximoEstadoCamada ausente do bloco RADAR_PURE (18-03 Task 2)");
   // esc()/clean() (18-02 Task 2): montarUrbBodyHTML usa esc() para todo campo textual de layer —
   // esc() vive FORA de RADAR_PURE (é usado por praticamente todo o app, definido antes do bloco),
   // então é stubado aqui como identidade (mesmo padrão já sugerido pelo 18-02-PLAN.md); clean() já
@@ -38,7 +39,7 @@ function loadPureBlock() {
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA,detectorRotuloPD};",
+      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA,detectorRotuloPD,proximoEstadoCamada};",
     { filename: "radar-pure-pd.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -483,4 +484,124 @@ test("detectorRotuloPD: quadra resolvida mas zona não conferida (ex. APAC) -> a
   };
   const info = P.detectorRotuloPD(candidato, porQuadraMap);
   assert.equal(info.criterio, "terreno");
+});
+
+// --- 18-03 Task 2: proximoEstadoCamada (tri-state PURO, exclusividade do seletor de camada) -----
+// Testado como transição pura em vez de via toggleCamadaTematica/DOM diretamente — MESMO padrão já
+// estabelecido no app: funções DOM/Leaflet-pesadas (toggleChoropleth/baiStyle/desenharChoropleth,
+// Fase 15) nunca são exercitadas via node:vm; a REGRA que elas aplicam (aqui, exclusividade) é
+// extraída para uma função pura testável, e toggleCamadaTematica só a consome.
+
+test("proximoEstadoCamada: ligar 'zonas' com 'valor' ativo -> 'zonas' (EXCLUSIVIDADE — zera o estado de valor)", () => {
+  assert.equal(P.proximoEstadoCamada("valor", "zonas"), "zonas");
+});
+
+test("proximoEstadoCamada: ligar 'valor' com 'zonas' ativo -> 'valor' (EXCLUSIVIDADE — zera o estado de zonas)", () => {
+  assert.equal(P.proximoEstadoCamada("zonas", "valor"), "valor");
+});
+
+test("proximoEstadoCamada: clicar no chip JÁ ativo desliga a camada (volta a 'nenhuma')", () => {
+  assert.equal(P.proximoEstadoCamada("valor", "valor"), "nenhuma");
+  assert.equal(P.proximoEstadoCamada("zonas", "zonas"), "nenhuma");
+});
+
+test("proximoEstadoCamada: a partir de 'nenhuma', ligar qualquer chip ativa exatamente aquele modo (nunca os dois)", () => {
+  assert.equal(P.proximoEstadoCamada("nenhuma", "valor"), "valor");
+  assert.equal(P.proximoEstadoCamada("nenhuma", "zonas"), "zonas");
+});
+
+// --- 18-03 Task 2: carregarZonasViewport (bloco PD_ZONA_NET, I/O viewport-limited + ZONACACHE) ---
+
+function mockBounds(west, south, east, north) {
+  // formato L.LatLngBounds (duck-typing, "L mockado" per 18-03-PLAN.md Task 2) — o app sempre chama
+  // com map.getBounds() real; aqui só as 4 funções que carregarZonasViewport de fato usa.
+  return { getWest: () => west, getSouth: () => south, getEast: () => east, getNorth: () => north };
+}
+
+function loadZonaNetBlock(stubs) {
+  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  const iStart = html.indexOf("PD_ZONA_NET_START");
+  const iEnd = html.indexOf("PD_ZONA_NET_END");
+  assert.ok(iStart > -1 && iEnd > iStart, "marcadores PD_ZONA_NET ausentes ou fora de ordem em radar-goiania.html (18-03 Task 2)");
+  const start = html.indexOf("\n", iStart) + 1;
+  const end = html.lastIndexOf("\n", iEnd);
+  const src = html.slice(start, end);
+  assert.ok(src.includes("function carregarZonasViewport"), "carregarZonasViewport ausente do bloco PD_ZONA_NET");
+  assert.ok(src.includes("const ZONACACHE"), "ZONACACHE ausente do bloco PD_ZONA_NET");
+  assert.ok(src.includes('returnGeometry:"true"'), 'a query de zonas deveria pedir returnGeometry:"true" (geometria da viewport)');
+  assert.ok(src.includes("esriGeometryEnvelope"), "a query de zonas deveria usar geometryType esriGeometryEnvelope (viewport, nunca ponto)");
+  // PD_LAYERS/PD_SVC_BASE vêm de RADAR_PURE/PD_NET (já testados lá) — injetados aqui como os demais
+  // dependências externas ao slice (jsonp/capCache), mesmo padrão de loadNetBlock.
+  const sandbox = {
+    jsonp: stubs.jsonp,
+    proj4: stubs.proj4 || ((from, to, pt) => pt),
+    capCache:
+      stubs.capCache ||
+      ((o, max) => {
+        const k = Object.keys(o);
+        if (k.length > max) delete o[k[0]];
+      }),
+    PD_LAYERS: { macrozona: 33, aa: 31, add: 30, aos: 29, aeis: 7, apac: 28, ooau: 32, eixo: 4, corredor: 1 },
+    PD_SVC_BASE: "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Mapa_ModeloEspacial/MapServer",
+  };
+  vm.createContext(sandbox);
+  new vm.Script(src + "\n;globalThis.__exports = {carregarZonasViewport,ZONACACHE};", { filename: "pd-zona-net.js" }).runInContext(sandbox);
+  return sandbox.__exports;
+}
+
+test("carregarZonasViewport: as 6 queries (AA/ADD/AOS/AEIS/APAC/OOAU) SEMPRE incluem geometry de envelope + returnGeometry:\"true\"", async () => {
+  const chamadas = [];
+  const jsonpStub = async (params) => {
+    chamadas.push(params);
+    return { features: [] };
+  };
+  const NET = loadZonaNetBlock({ jsonp: jsonpStub });
+  await NET.carregarZonasViewport(mockBounds(-49.3, -16.7, -49.2, -16.6));
+  assert.equal(chamadas.length, 6, "deveria consultar exatamente as 6 layers de unidade territorial (nunca as 9 do PD_NET — macrozona/eixo/corredor não fazem parte do choropleth de zonas)");
+  chamadas.forEach((p) => {
+    assert.equal(p.geometryType, "esriGeometryEnvelope", "geometryType deveria ser envelope (viewport), nunca ponto");
+    assert.equal(p.returnGeometry, "true", "returnGeometry deveria ser \"true\" — sem geometria não há o que desenhar");
+    assert.ok(typeof p.geometry === "string" && p.geometry.split(",").length === 4, "geometry deveria ser um envelope com 4 coordenadas (xmin,ymin,xmax,ymax)");
+  });
+});
+
+test('carregarZonasViewport: bounds ausente/inválido -> retorna null e NUNCA dispara jsonp (guarda anti "cidade inteira", T-18-02)', async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [] };
+  };
+  const NET = loadZonaNetBlock({ jsonp: jsonpStub });
+  assert.equal(await NET.carregarZonasViewport(null), null);
+  assert.equal(await NET.carregarZonasViewport({}), null); // sem getWest — não é um L.LatLngBounds válido
+  assert.equal(calls, 0, "jsonp NUNCA deveria disparar sem um bbox válido — mesmo que carregarZonasViewport seja chamada");
+});
+
+test("carregarZonasViewport: 2ª chamada com o MESMO viewport (arredondado) usa ZONACACHE — não redispara jsonp", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [] };
+  };
+  const NET = loadZonaNetBlock({ jsonp: jsonpStub });
+  const b = mockBounds(-49.30001, -16.70001, -49.20001, -16.60001);
+  await NET.carregarZonasViewport(b);
+  const callsAfterFirst = calls;
+  assert.equal(callsAfterFirst, 6);
+  await NET.carregarZonasViewport(b); // mesmo viewport (arredonda pro mesmo inteiro em 31982)
+  assert.equal(calls, callsAfterFirst, "2ª chamada com o mesmo viewport arredondado não deveria redisparar jsonp — ZONACACHE dedupe");
+  assert.equal(Object.keys(NET.ZONACACHE).length, 1, "ZONACACHE deveria ter exatamente 1 entrada (mesma chave reusada)");
+});
+
+test("carregarZonasViewport: viewport bem DIFERENTE dispara sua PRÓPRIA bateria (cache é por chave de viewport, nunca global)", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [] };
+  };
+  const NET = loadZonaNetBlock({ jsonp: jsonpStub });
+  await NET.carregarZonasViewport(mockBounds(-49.3, -16.7, -49.2, -16.6));
+  const callsAfterFirst = calls;
+  await NET.carregarZonasViewport(mockBounds(-47.0, -15.0, -46.9, -14.9)); // longe o bastante p/ arredondar em chave diferente
+  assert.equal(calls, callsAfterFirst + 6, "viewport diferente deveria disparar sua própria bateria de 6 queries, nunca reusar o cache de outro lugar");
 });

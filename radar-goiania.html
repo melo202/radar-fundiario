@@ -2855,6 +2855,14 @@ function detectorRotuloPD(a,porQuadraMap){
     : "Critério: área construída ÷ área do terreno (Plano Diretor não disponível para este candidato)";
   return Object.assign({rotulo},crit);
 }
+/* proximoEstadoCamada(atual,modo) (Fase 18, 18-03, PD-05): transição PURA do seletor tri-state de
+   camada temática do Território (nenhuma/valor/zonas) — clicar no chip já ativo desliga (volta a
+   "nenhuma"); clicar no inativo troca, SEMPRE exclusivo (nunca duas camadas ligadas ao mesmo
+   tempo, 18-UI-SPEC "evita salada de cor"). Usada por toggleCamadaTematica() p/ decidir
+   CHOROPLETH_ON/ZONAS_ON sem duplicar a regra de exclusividade em 2 lugares. */
+function proximoEstadoCamada(atual,modo){
+  return atual===modo?"nenhuma":modo;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -2926,6 +2934,7 @@ function initMap(){
   map.on("click",onMapClick);
   initLots();
   map.createPane("bairros").style.zIndex=370; /* abaixo do pane "lots" (380) e do overlayPane (400) */
+  map.createPane("zonas").style.zIndex=375; /* Fase 18 (18-03, PD-05): entre bairros(370) e lots(380) — a camada de zonas do PD nunca compete com o hover/hit-area do lote */
   map.on("zoomend",()=>{
     if(!bairroLayer)return;
     const z=map.getZoom();
@@ -2934,6 +2943,9 @@ function initMap(){
            bairroLayer.setStyle(baiStyle); /* MALHA-01: re-aplica a densidade da malha por zoom */
            if(typeof baiHi!=="undefined"&&baiHi&&baiHi.setStyle)baiHi.setStyle(BAI_HOVER); /* não perde o destaque ao dar zoom */ }
   });
+  /* Fase 18 (18-03, PD-05): reconsulta a viewport ao mover o mapa ENQUANTO ZONAS_ON — mesmo padrão
+     debounced de refreshLots (LOTDEB); nunca dispara a cada frame de pan (T-18-02). */
+  map.on("moveend",()=>{ if(ZONAS_ON){clearTimeout(ZONASDEB);ZONASDEB=setTimeout(desenharZonas,300);} });
   /* ---------------- Fase 4 SAT-01: satélite Esri (keyless) + overlay de referência ----------------
      criadas aqui mas NÃO adicionadas ao map — ruas continua sendo o default no boot; o toggle
      custom (setSatelite) é que decide qual base tile fica visível. NUNCA trocar por zoom. */
@@ -3074,12 +3086,17 @@ const _TERR_SAT_LINE=(_baiCss.getPropertyValue("--paper-2").trim()||"#f2eee4");
    máximo (IN-02 15-REVIEW.md: aplicarChoropleth() faz .clear() antes de marcar o novo setor, pra
    espelhar a MESMA regra "substitui, nunca acumula" já usada por TERR_LOTE_BIN acima). */
 let CHOROPLETH_ON=false;
+/* ZONAS_ON (Fase 18, 18-03, PD-05): estado da camada de zonas do Plano Diretor — EXCLUSIVO com
+   CHOROPLETH_ON (toggleCamadaTematica nunca deixa os dois true ao mesmo tempo). Renderizada como
+   6 layers Leaflet SEPARADAS (ZONA_LAYERS), não via baiStyle/lotStyle (a malha base não muda). */
+let ZONAS_ON=false;
 let TERR_LOTE_BIN=new Map();
 const TERR_SETOR_ATIVO=new Set();
 let TERR_BREAKS=null;
 /* TERR_LAST_ST (WR-01 15-REVIEW.md): última estatística (n/total/breaks) devolvida por
-   aplicarChoropleth() — guardada para toggleChoropleth() poder rechamar montarLegenda() ao
-   religar o choropleth sem precisar de um novo scan (o toggle não recebe `st` no escopo). */
+   aplicarChoropleth() — guardada para toggleCamadaTematica() (Fase 18, 18-03) poder rechamar
+   montarLegenda() ao religar "valor" sem precisar de um novo scan (o toggle não recebe `st` no
+   escopo). */
 let TERR_LAST_ST=null;
 /* TERR_DETECTOR_HILITE (Fase 16, 16-03, TERR-04): Set de `ci` (limpos) dos lotes detectados como
    subutilizados — consumido por lotStyle() abaixo. Reforça (nunca bloqueia) a lista do detector:
@@ -3152,7 +3169,7 @@ function aplicarChoropleth(scan){
      visual entre bairro (antigo, ainda colorido) e lotes (antigo, já neutros) ao trocar de setor. */
   TERR_SETOR_ATIVO.clear();
   TERR_SETOR_ATIVO.add(scan.cdbairro);
-  TERR_LAST_ST=st; /* WR-01 15-REVIEW.md: guardado p/ toggleChoropleth() religar a legenda sem novo scan */
+  TERR_LAST_ST=st; /* WR-01 15-REVIEW.md: guardado p/ toggleCamadaTematica() religar a legenda de valor sem novo scan */
   return st;
 }
 /* desenharChoropleth(): troca em massa via setStyle — MESMO padrão de setSatelite (2144-2145
@@ -3196,36 +3213,128 @@ function recolherLegenda(){
     else body.hidden=true;
   }
 }
+/* toggleCamadaTematica(modo) (Fase 18, 18-03, PD-05): fonte única de verdade do seletor de camada
+   temática do Território — tri-state (nenhuma/valor/zonas) que SUBSTITUI toggleChoropleth()
+   isolado (Fase 15, 15-02). Clicar no chip já ativo desliga a camada (volta a "nenhuma"); clicar
+   no inativo troca — EXCLUSIVIDADE explícita (18-UI-SPEC "evita salada de cor"): ligar zonas
+   desliga valor e vice-versa, nunca as duas ao mesmo tempo (proximoEstadoCamada, RADAR_PURE).
+   Sincroniza aria-pressed dos 2 chips E do toggle da legenda (sincCamadaChips, fonte única — mesmo
+   princípio "nunca dessincroniza" já fixado em sincTerrPanelToggle na Fase 15). Reusa
+   CHOROPLETH_ON/desenharChoropleth para o modo "valor" (inalterado); adiciona o caminho "zonas"
+   (desenharZonas/limparZonas, viewport-limited, T-18-02). */
+function toggleCamadaTematica(modo){
+  const atual=CHOROPLETH_ON?"valor":(ZONAS_ON?"zonas":"nenhuma");
+  const novo=proximoEstadoCamada(atual,modo);
+  CHOROPLETH_ON=(novo==="valor");
+  ZONAS_ON=(novo==="zonas");
+  desenharChoropleth();
+  if(ZONAS_ON){montarLegendaZonas();desenharZonas();}
+  else{limparZonas();}
+  /* WR-01 15-REVIEW.md (herdado): ao ligar "valor", popula com a última estatística conhecida
+     (TERR_LAST_ST, setada por aplicarChoropleth) — nunca mostra swatch sem número. */
+  if(CHOROPLETH_ON&&TERR_LAST_ST)montarLegenda(TERR_LAST_ST);
+  sincCamadaChips(novo);
+}
+/* sincCamadaChips(novo) (Fase 18, 18-03, PD-05): fonte única de verdade do estado visual dos 2
+   chips (#terrChipValor/#terrChipZonas) E do toggle da legenda (#terrToggle) — SUBSTITUI
+   sincTerrPanelToggle() (Fase 15, botão único). Chamada exclusivamente por toggleCamadaTematica(),
+   garantindo que painel/legenda NUNCA dessincronizem. */
+function sincCamadaChips(novo){
+  const cv=document.getElementById("terrChipValor"),cz=document.getElementById("terrChipZonas");
+  if(cv){cv.classList.toggle("on",novo==="valor");cv.setAttribute("aria-pressed",String(novo==="valor"));}
+  if(cz){cz.classList.toggle("on",novo==="zonas");cz.setAttribute("aria-pressed",String(novo==="zonas"));}
+  const t=document.getElementById("terrToggle"),leg=document.getElementById("terrLegenda");
+  const sv=document.getElementById("terrSwatchesValor"),sz=document.getElementById("terrSwatchesZonas");
+  if(leg)leg.dataset.mode=novo;
+  if(novo==="valor"){
+    if(t){t.textContent="Cor por valor";t.setAttribute("aria-pressed","true");}
+    if(sv)sv.hidden=false;
+    if(sz)sz.hidden=true;
+    if(!TERR_LAST_ST&&leg)leg.hidden=true;
+  }else if(novo==="zonas"){
+    if(t){t.textContent="Cor por zonas do Plano Diretor";t.setAttribute("aria-pressed","true");}
+    if(sv)sv.hidden=true;
+    if(sz)sz.hidden=false;
+  }else{
+    if(t){t.textContent="Cor por valor";t.setAttribute("aria-pressed","false");}
+    if(leg)leg.hidden=true;
+  }
+}
+/* ---------------- choropleth de zonas do Plano Diretor (Fase 18, 18-03, PD-05) ----------------
+   6 layers Leaflet SEPARADAS e semi-transparentes EMPILHADAS (nunca 1 fill "vencedor" por
+   prioridade — 18-UI-SPEC.md §Color nota 3: um lote pode estar em AA+AEIS ao mesmo tempo, camadas
+   booleanas independentes). Fill/traço vêm de carregarZonasViewport (PD_ZONA_NET, viewport-limited
+   + ZONACACHE) — nunca a cidade inteira (T-18-02). Opacidade FLAT por fundo (categórica, não
+   escalonada como o choropleth de valor); traço = MESMA rampa por zoom de baiStyle, cor do traço
+   sobre satélite -> var(--paper-2) (mesmo princípio "solta o wash, reforça o traço" da Fase 15). */
+const ZONA_SIGLAS=["aa","add","aos","aeis","apac","ooau"];
+let ZONA_LAYERS={};
+let ZONASDEB=null;
+let ZONASTOKEN=0;
+/* limparZonas(): remove as 6 layers do mapa (toggle off, ou troca p/ "valor") — nunca deixa
+   camada órfã. Idempotente (chamável mesmo sem nenhuma layer desenhada ainda). */
+function limparZonas(){
+  ZONA_SIGLAS.forEach(k=>{
+    if(ZONA_LAYERS[k]){
+      if(typeof map!=="undefined"&&map&&map.hasLayer(ZONA_LAYERS[k]))map.removeLayer(ZONA_LAYERS[k]);
+      delete ZONA_LAYERS[k];
+    }
+  });
+}
+/* zonaEstiloPorSigla(sigla): resolve fill (--zone-{sigla}) + traço da paleta oficial, opacidade
+   flat por fundo (.22 CARTO / .42 satélite, 18-UI-SPEC §Color) e a MESMA rampa de traço por zoom
+   de baiStyle. fillOpacity NUNCA 0 (a zona só é desenhada quando existe — nunca um estado "neutro"
+   sobreposto ao mapa). */
+function zonaEstiloPorSigla(sigla){
+  const z=(typeof map!=="undefined"&&map)?map.getZoom():12;
+  const t=Math.max(0,Math.min(1,(z-12)/4));
+  const fill=_baiCss.getPropertyValue("--zone-"+sigla).trim()||"#d8d3c4";
+  const linha=satelliteOn?_TERR_SAT_LINE:(_baiCss.getPropertyValue("--zone-"+sigla+"-line").trim()||"#57503f");
+  return satelliteOn
+    ? {pane:"zonas",color:linha,weight:1.2+t*0.6,fillColor:fill,fillOpacity:.42,opacity:1,bubblingMouseEvents:false}
+    : {pane:"zonas",color:linha,weight:0.5+t*0.7,fillColor:fill,fillOpacity:.22,opacity:1,bubblingMouseEvents:false};
+}
+/* desenharZonas(): consulta (carregarZonasViewport, PD_ZONA_NET) + desenha as 6 layers de zona
+   para a VIEWPORT ATUAL do mapa (T-18-02 — nunca a cidade inteira). Chamada ao ligar o chip
+   "zonas" e a cada moveend enquanto ZONAS_ON (mesmo padrão debounced de refreshLots/LOTDEB).
+   ZONASTOKEN invalida respostas obsoletas (mapa já se moveu de novo, ou usuário já desligou) —
+   MESMO padrão de LOTTOKEN em refreshLots. Falha de 1 layer nunca derruba as outras
+   (Promise.allSettled já dentro de carregarZonasViewport). */
+async function desenharZonas(){
+  if(!ZONAS_ON||typeof map==="undefined"||!map)return;
+  const sz=map.getSize();
+  if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
+  const tk=++ZONASTOKEN;
+  let porZona=null;
+  try{porZona=await carregarZonasViewport(map.getBounds());}
+  catch(e){porZona=null;}
+  if(tk!==ZONASTOKEN||!ZONAS_ON)return;
+  const am=document.getElementById("terrAmostra");
+  if(am)am.textContent="";
+  if(!porZona)return;
+  ZONA_SIGLAS.forEach(sigla=>{
+    if(ZONA_LAYERS[sigla]){map.removeLayer(ZONA_LAYERS[sigla]);delete ZONA_LAYERS[sigla];}
+    const resp=porZona[sigla];
+    const feats=(resp&&resp.features)||[];
+    if(!feats.length)return;
+    const grupo=L.layerGroup();
+    feats.forEach(f=>{
+      const g=f.geometry;if(!g||!g.rings||!g.rings.length)return;
+      L.polygon(g.rings.map(rg=>rg.map(pt=>toWGS(pt[0],pt[1]))),zonaEstiloPorSigla(sigla)).addTo(grupo);
+    });
+    ZONA_LAYERS[sigla]=grupo;
+    grupo.addTo(map);
+  });
+}
 /* montarLegendaZonas() (Fase 18, 18-03, PD-05): espelha montarLegenda() — revela a legenda e marca
-   o texto de carregamento enquanto a geometria da viewport chega (desenharZonas(), Task 2, limpa o
-   texto ao terminar). Os swatches de zona são ESTÁTICOS no HTML (paleta fixa, nunca dado do
-   endpoint) — diferente de montarLegenda(), não há rótulo dinâmico a popular aqui. */
+   o texto de carregamento enquanto a geometria da viewport chega (desenharZonas() limpa o texto ao
+   terminar). Os swatches de zona são ESTÁTICOS no HTML (paleta fixa, nunca dado do endpoint) —
+   diferente de montarLegenda(), não há rótulo dinâmico a popular aqui. */
 function montarLegendaZonas(){
   const leg=document.getElementById("terrLegenda");
   if(leg)leg.hidden=false;
   const am=document.getElementById("terrAmostra");
   if(am)am.textContent="Carregando zonas do setor…";
-}
-/* toggleChoropleth(): fonte única de verdade do estado ligado/desligado do choropleth —
-   sincroniza aria-pressed da legenda E do botão do painel (15-03, terrPanelToggle via
-   sincTerrPanelToggle — mesma função usada pelo próprio onclick do botão, nunca 2 fontes). */
-function toggleChoropleth(){
-  CHOROPLETH_ON=!CHOROPLETH_ON;
-  const p=String(CHOROPLETH_ON);
-  const t=document.getElementById("terrToggle");
-  if(t)t.setAttribute("aria-pressed",p);
-  if(typeof sincTerrPanelToggle==="function")sincTerrPanelToggle();
-  desenharChoropleth();
-  /* WR-01 15-REVIEW.md: montarLegenda() era definida mas nunca chamada — a legenda aparecia
-     (leg.hidden=false) com os 5 swatches sem rótulo de R$/m² e sem o rótulo de honestidade
-     (rotuloAmostra). Ao ligar, popula com a última estatística conhecida (TERR_LAST_ST, setada
-     por aplicarChoropleth); ao desligar, apenas esconde — nunca mostra swatch sem número. */
-  if(CHOROPLETH_ON&&TERR_LAST_ST){
-    montarLegenda(TERR_LAST_ST);
-  }else{
-    const leg=document.getElementById("terrLegenda");
-    if(leg)leg.hidden=true;
-  }
 }
 let bairroLayer=null,baiHi=null;
 /* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
@@ -3803,6 +3912,40 @@ async function consultarPDPorQuadra(candidatos){
 }
 // PD_NET_END
 
+// PD_ZONA_NET_START — consulta de geometria das 6 layers de unidade territorial do choropleth de
+// zonas no Território (Fase 18, 18-03, PD-05): AA/ADD/AOS/AEIS/APAC/OOAU, returnGeometry=true,
+// LIMITADA ao envelope da VIEWPORT/setor em foco — NUNCA a cidade inteira (T-18-02, DoS: o payload
+// é real, 86 KB/12 polígonos medido em 4×4 km, 18-RESEARCH.md). Cache de sessão por chave de
+// viewport ARREDONDADA (Math.round do bbox em 31982) via ZONACACHE dedicado (nunca compartilhado
+// com PDCACHE/PDQUADRACACHE — cada cache do PD tem seu próprio escopo, mesmo princípio W3 do
+// 18-02-PLAN.md). Testado por tests/pd.test.mjs (loadZonaNetBlock, jsonp+proj4+bounds mockados —
+// bounds no formato de L.LatLngBounds, "L mockado" per 18-03-PLAN.md Task 2).
+const ZONACACHE={};
+async function carregarZonasViewport(bounds){
+  // guarda anti "cidade inteira": sem bbox válido (bounds ausente/não é um L.LatLngBounds), a
+  // consulta NUNCA dispara — retorna null, o chamador (desenharZonas) trata como "nada a desenhar".
+  if(!bounds||typeof bounds.getWest!=="function")return null;
+  const west=bounds.getWest(),south=bounds.getSouth(),east=bounds.getEast(),north=bounds.getNorth();
+  if(![west,south,east,north].every(v=>typeof v==="number"&&isFinite(v)))return null;
+  const p1=proj4("EPSG:4326","EPSG:31982",[west,south]);
+  const p2=proj4("EPSG:4326","EPSG:31982",[east,north]);
+  const key=Math.round(p1[0])+","+Math.round(p1[1])+","+Math.round(p2[0])+","+Math.round(p2[1]);
+  capCache(ZONACACHE,20);
+  if(ZONACACHE[key])return ZONACACHE[key];
+  const geometry=p1[0].toFixed(1)+","+p1[1].toFixed(1)+","+p2[0].toFixed(1)+","+p2[1].toFixed(1);
+  const chaves=["aa","add","aos","aeis","apac","ooau"];
+  const promessas=chaves.map(k=>
+    jsonp({geometry,geometryType:"esriGeometryEnvelope",inSR:"31982",spatialRel:"esriSpatialRelIntersects",
+      outFields:"sigla",returnGeometry:"true",f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[k]+"/query")
+  );
+  const settled=await Promise.allSettled(promessas);
+  const porZona={};
+  chaves.forEach((k,i)=>{porZona[k]=settled[i].status==="fulfilled"?settled[i].value:{features:[]};});
+  ZONACACHE[key]=porZona;
+  return porZona;
+}
+// PD_ZONA_NET_END
+
 // CADERNO_IO_START — camada de I/O real do Caderno de território (Fase 16, 16-02, TERR-05):
 // wrapper IndexedDB nativo mínimo, promise-based. FORA de RADAR_PURE (indexedDB.open é I/O real,
 // não mockável/testável de forma útil em node:vm) — toda a LÓGICA DE DECISÃO (allowlist, enum,
@@ -4131,16 +4274,9 @@ function fecharTerrPanel(){
   if(b&&!b.hidden)b.focus();
 }
 
-/* sincTerrPanelToggle(): fonte única de verdade do label+aria do botão primário do painel —
-   chamada tanto pelo próprio onclick do botão quanto por toggleChoropleth() (15-02), garantindo
-   que painel e legenda NUNCA dessincronizem (nunca 2 botões com estados diferentes ao mesmo tempo,
-   15-UI-SPEC.md Copywriting Contract). */
-function sincTerrPanelToggle(){
-  const b=document.getElementById("terrPanelToggle");
-  if(!b)return;
-  b.textContent=CHOROPLETH_ON?"Desligar cor por valor":"Colorir mapa por valor";
-  b.setAttribute("aria-pressed",String(CHOROPLETH_ON));
-}
+/* sincTerrPanelToggle() (Fase 15, botão único) foi SUBSTITUÍDA por sincCamadaChips() (Fase 18,
+   18-03, PD-05, definida junto de toggleCamadaTematica) — #terrPanelToggle não existe mais
+   (2 chips exclusivos #terrChipValor/#terrChipZonas no lugar). Removida em vez de mantida morta. */
 
 /* buscarNoSetor(): secundária do rodapé de ação — reusa o fluxo de busca por setor já existente
    (setMode/pickBairro, o MESMO usado pelo dropdown da caixa única em pickCaixaItem) em vez de um
