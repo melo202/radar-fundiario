@@ -4839,6 +4839,10 @@ function finish(items,fromMap){
     }else if(ehPredio){
       /* desktop mapa-first: a lista está no card de busca (overlay) — toque num imóvel para abrir a ficha */
       toast("🏢 "+units.length+" imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha).");
+    }else{
+      /* D-06 (20): desktop com resultados não-prédio não anunciava nada — o #toast (role=status
+         aria-live=polite) leva a contagem ao leitor de tela, que só via a .count visualmente. */
+      toast(units.length+(units.length>1?" imóveis encontrados.":" imóvel encontrado."));
     }
 }
 
