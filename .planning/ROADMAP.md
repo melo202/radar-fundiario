@@ -262,7 +262,7 @@ Plans:
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
-| 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete   | 2026-07-10 |
+| 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete    | 2026-07-10 |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**

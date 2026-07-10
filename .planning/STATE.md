@@ -4,7 +4,7 @@ milestone: v2.1
 milestone_name: Cockpit Comercial
 status: verifying
 stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-07-10T02:45:17.972Z"
+last_updated: "2026-07-10T03:05:49.494Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 17 (Diff de Cadastro & Cruzamento Caixa) — EXECUTING
-Plan: 2 of 2
+Phase: 18
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 33 (v2.1)
+- Total plans completed: 35 (v2.1)
 - Average duration: —
 - Total execution time: —
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | 14 | 5 | - | - |
 | 15 | 3 | - | - |
 | 16 | 3 | - | - |
+| 17 | 2 | - | - |
 
 **Recent Trend:**
 
