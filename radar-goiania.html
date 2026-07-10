@@ -37,9 +37,9 @@
     --grid:#d8d0be;
     --lot:#2c5545;        /* verde-lote (divisa de lote no mapa oficial) */
     --lot-bright:#3f7a63;
-    --accent:#b5451f;     /* vermelho-óxido de carimbo cadastral */
-    --accent-2:#c9691f;
-    --accent-ink:#8f3116; /* accent escurecido p/ hover (fecha o par botão/hover no sistema) */
+    --accent:#1d5a73;     /* petróleo (azul-esverdeado cartográfico) — chrome/marca. WCAG: 5,99:1 sobre --paper (texto AA ✓), 7,60:1 c/ #fff (botões AA ✓) */
+    --accent-2:#3d8fb0;   /* petróleo claro — .bm-faixa b sobre --ink e pino selecionado. WCAG: 4,81:1 sobre --ink #141a1f (AA ≥4,5 ✓) */
+    --accent-ink:#164a5f; /* petróleo escuro — hover/texto pequeno. WCAG: 7,60:1 sobre --paper, 8,32:1 sobre --paper-2 (AA ✓) */
     --gold:#a8842c;
     --muted:#57503f;      /* escurecido p/ passar AA sobre o papel (era #6b6353, ~3.7:1) */
     --ok:#2c5545;
@@ -50,7 +50,7 @@
     --elev-2:0 6px 18px rgba(20,26,31,.16);   /* dropdowns/menus/combo */
     --elev-3:0 10px 28px rgba(20,26,31,.24);  /* modais/sheets */
     /* ===== paleta do LAUDO (troque estas 8 linhas para recolorir o laudo inteiro) ===== */
-    --l-accent:#ff7d00;   /* laranja — títulos de seção, valores-chave, seta "maior liquidez" */
+    --l-accent:#1d5a73;   /* petróleo — títulos de seção/PDF, valores-chave, seta "maior liquidez" (era laranja #ff7d00). WCAG: 7,60:1 c/ #fff (cards/botão do laudo, AA ✓) */
     --l-ink:#232526;      /* grafite — pill "Fachada", valor-herói, assinatura */
     --l-blue:#4577c0;     /* azul — seta "menor liquidez" */
     --l-text:#333638;     /* corpo do texto */
@@ -68,8 +68,8 @@
     --status-bom-ink:var(--lot-bright);  /* = #3f7a63, ja existente — hover/estado ativo */
     --status-atencao:var(--gold);        /* = #a8842c, mesmo dourado de .score-op.media */
     --status-atencao-ink:#7d621f;        /* mesmo hex literal ja usado em .score-op.media .score-num */
-    --status-risco:var(--accent);        /* = #b5451f, mesmo oxido de .score-op.baixa/erro */
-    --status-risco-ink:var(--accent-ink);/* = #8f3116, ja existente */
+    --status-risco:#c0392b;              /* vermelho-alerta clássico, DESACOPLADO do --accent (que virou petróleo). WCAG: 5,44:1 c/ #fff (badge AA ✓), 4,29:1 sobre --paper (preenchimento/borda/texto-grande ≥3:1 ✓) */
+    --status-risco-ink:#8f271c;          /* vermelho-alerta escuro p/ texto pequeno/hover. WCAG: 6,69:1 sobre --paper, 7,32:1 sobre --paper-2 (AA ✓) */
     --status-caixa:var(--gold);          /* = #a8842c, MESMO hex do pino dourado CAIXA (toggleCaixa) */
     --status-semdado:var(--muted);       /* = #57503f, cinza neutro ja usado em texto secundario */
     /* Fase 15 TERR-02: paleta do choropleth de R$/m² — família de cor NOVA e distinta dos pinos
@@ -206,8 +206,8 @@
   .bm{display:flex;flex-direction:column;gap:2px}
   .bm b{font:700 15px/1.1 "Archivo";color:var(--paper-2);font-variant-numeric:tabular-nums}
   .bm span{font:600 10.5px/1.2 "Archivo";color:var(--line)}
-  .bm-faixa b{color:var(--accent-2)}/* F5 EST-01: --accent sobre --ink dava 3,20:1 (reprova AA);
-    --accent-2 #c9691f = 4,61:1 sobre --ink — passa AA e mantém a faixa na família do accent */
+  .bm-faixa b{color:var(--accent-2)}/* F5 EST-01: --accent sobre --ink reprova AA;
+    --accent-2 petróleo #3d8fb0 = 4,81:1 sobre --ink — passa AA e mantém a faixa na família do accent */
   .bldg-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .bldg-ord-toggle,.bldg-zap{min-height:44px;border:1.5px solid var(--paper-2);background:transparent;color:var(--paper-2);
     font:600 12.5px/1 "Archivo";border-radius:2px;padding:0 12px;cursor:pointer}
@@ -454,15 +454,15 @@
   .score-op{border-left:4px solid var(--line)}
   .score-op.alta{border-left-color:var(--lot)}
   .score-op.media{border-left-color:var(--gold)}
-  .score-op.baixa{border-left-color:var(--accent)}
+  .score-op.baixa{border-left-color:var(--status-risco)}/* risco → vermelho-alerta, desacoplado do accent (chrome) */
   .conf-alta{border-left:4px solid var(--lot)}
   .conf-media{border-left:4px solid var(--gold)}
-  .conf-baixa{border-left:4px solid var(--accent)}
+  .conf-baixa{border-left:4px solid var(--status-risco)}/* risco → vermelho-alerta */
   .conf-pre{border-left:4px solid var(--line)}/* F5 FICHA-04: pré-consulta — neutro, nunca cor de status */
   .score-num{font:800 20px/1 "Archivo";color:var(--ink);font-variant-numeric:tabular-nums}
   .score-op.alta .score-num{color:var(--lot)}
   .score-op.media .score-num{color:#7d621f}
-  .score-op.baixa .score-num{color:var(--accent)}
+  .score-op.baixa .score-num{color:var(--status-risco)}/* risco → vermelho-alerta; texto grande (20px/800) sobre --paper = 4,29:1 (≥3:1 ✓) */
   .score-max{font:600 12px/1;color:var(--muted)}
   .score-lbl,.score-lbl-main{display:block;font:700 13px/1.2 "Archivo";margin-top:2px}
   .score-chev{float:right;color:var(--muted)}
@@ -515,7 +515,7 @@
   /* Fase 9 CMP-01: conclusão-primeiro — frase antes da estatística, que recolhe em <details> */
   .cmp-conclusao{font:600 13.5px/1.5 "Archivo";color:var(--ink);margin-bottom:8px}
   .cmp-conclusao b{color:var(--ink)}
-  .cmp-conclusao b.abaixo{color:var(--accent)}
+  .cmp-conclusao b.abaixo{color:var(--status-risco-ink)}/* pólo negativo (par com .acima verde) → vermelho-alerta; texto pequeno usa -ink (6,69:1 sobre --paper, AA ✓) */
   .cmp-conclusao b.acima{color:var(--lot)}
   .cmp-acts{margin-bottom:2px}
   .cmpbtn-sm{min-height:44px;font:600 11px/1;padding:8px 10px;border:1px solid var(--line);
@@ -529,7 +529,7 @@
   .cmp-detalhe .footbody{padding-top:8px}
   .cmp .h{font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
   .cmp .h .badge{float:right;font:700 9px/1 "JetBrains Mono";padding:3px 6px;border-radius:2px;letter-spacing:.06em}
-  .badge.alta{background:var(--lot);color:#fff}.badge.media{background:var(--gold);color:#fff}.badge.baixa{background:var(--accent);color:#fff}
+  .badge.alta{background:var(--lot);color:#fff}.badge.media{background:var(--gold);color:#fff}.badge.baixa{background:var(--status-risco);color:#fff}/* triade alta/media/baixa = verde/dourado/vermelho; baixa → vermelho-alerta (5,44:1 c/ #fff, AA ✓) */
   .cmp .bar{position:relative;height:14px;background:var(--grid);border-radius:7px;margin:16px 4px 4px}
   .cmp .bar .iqr{position:absolute;top:0;bottom:0;background:var(--lot-bright);opacity:.45;border-radius:7px}
   .cmp .bar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
@@ -653,7 +653,7 @@
   .findoc-desc{font:500 12px/1.4 "Archivo";color:var(--muted)}
   /* Fase 11-02: Painel de Confiança + Pendências (Componente 2 do UI-SPEC) */
   .confcard{background:var(--paper-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
-  .confcard.conf-baixa{border-color:var(--accent);border-width:2px}
+  .confcard.conf-baixa{border-color:var(--status-risco);border-width:2px}/* risco → vermelho-alerta */
   .conf-nivel{font:700 16px/1.2 "Archivo";color:var(--ink)}
   .conf-porque{font:500 12.5px/1.5 "Archivo";color:var(--muted);margin-top:6px}
   .checklist{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -819,7 +819,7 @@
   .saveditem-hist .saveditem-addr{font-weight:600}
   .saveditem-meta{font:500 11.5px/1.3 "Archivo";color:var(--muted)}
   .saveditem-rm{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}
-  .saveditem-rm:hover,.saveditem-rm:focus-visible{color:var(--accent)}
+  .saveditem-rm:hover,.saveditem-rm:focus-visible{color:var(--status-risco-ink)}/* remover (destrutivo) → vermelho-alerta escuro, coerente com .cadbook-rm */
   .savedempty{font:500 12.5px/1.5 "Archivo";color:var(--muted);padding:6px 2px}
 
   /* Fase 16 (16-02, TERR-05): Caderno de território — CSS novo, escala 4px (16-UI-SPEC.md
@@ -856,7 +856,7 @@
   .cadbook-nota{width:100%;min-height:80px;font:500 16px/1.5 "Archivo";padding:8px;border-radius:2px;
     border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical;box-sizing:border-box}/* D-03 (20): 16px evita auto-zoom no iOS */
   .cadbook-rm{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
-    background:transparent;color:var(--status-risco);font:600 12px/1 "Archivo";cursor:pointer;align-self:flex-start}
+    background:transparent;color:var(--status-risco-ink);font:600 12px/1 "Archivo";cursor:pointer;align-self:flex-start}/* texto pequeno 12px → -ink p/ AA (6,69:1 sobre --paper) */
   .cadbook-export-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .cadbook-export-row button{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
     background:var(--paper);color:var(--ink);font:600 12px/1 "Archivo";cursor:pointer}
