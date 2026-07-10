@@ -132,8 +132,9 @@
 
   .search{padding:18px 22px;border-bottom:1px dashed var(--line)}
   .moderow{display:flex;gap:6px;margin-bottom:8px;background:var(--paper);border:1px solid var(--line);padding:3px;border-radius:2px}
-  .moderow button{flex:1;border:0;background:transparent;font:600 12.5px/1 "Archivo";color:var(--muted);padding:11px 2px;cursor:pointer;border-radius:1px;white-space:nowrap;transition:transform .1s ease}
+  .moderow button{flex:1;border:0;background:transparent;font:600 12.5px/1 "Archivo";color:var(--muted);padding:11px 2px;cursor:pointer;border-radius:1px;white-space:nowrap;transition:transform .1s ease,background .12s ease}
   .moderow button.on{background:var(--ink);color:var(--paper-2)}
+  .moderow button:not(.on):hover{background:var(--paper-2)}
   .moderow button:active{transform:scale(.98)}
   /* Inscrição é o modo mais raro (jargão de cadastro) — vira link discreto, fora da fileira */
   .modemore{display:flex;align-items:center;min-height:44px;width:100%;margin:0 0 10px;border:0;background:transparent;color:var(--muted);
@@ -142,8 +143,8 @@
   .modemore.on{color:var(--accent);font-weight:700}
   label{display:block;font:600 12px/1.2 "Archivo";letter-spacing:.01em;color:var(--muted);margin:0 0 5px}
   select,input{width:100%;background:var(--paper);border:1.5px solid var(--line);color:var(--ink);
-    font:500 16px/1 "Archivo";padding:10px 11px;border-radius:2px;margin-bottom:12px}
-  select:focus,input:focus{outline:none;border-color:var(--accent)}
+    font:500 16px/1 "Archivo";padding:10px 11px;border-radius:2px;margin-bottom:12px;transition:border-color .12s ease}
+  select:focus,input:focus{outline:none;border-color:var(--ink)}
   /* foco de teclado visível (antes só a borda mudava de cor — invisível ao navegar por Tab) */
   button:focus-visible,.card:focus-visible,summary:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .ql{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -165,8 +166,8 @@
      font-size:16px mandatorio (mata autozoom iOS, mesmo contrato do resto do app). */
   .caixa{position:relative;margin-bottom:8px}
   .caixa-input{width:100%;background:var(--paper);border:1.5px solid var(--line);color:var(--ink);
-    font:500 16px/1 "Archivo";padding:12px 46px 12px 11px;border-radius:2px;margin-bottom:0;min-height:44px}
-  .caixa-input:focus{outline:none;border-color:var(--accent)}
+    font:500 16px/1 "Archivo";padding:12px 46px 12px 11px;border-radius:2px;margin-bottom:0;min-height:44px;transition:border-color .12s ease}
+  .caixa-input:focus{outline:none;border-color:var(--ink)}
   .caixa-ic{position:absolute;top:0;right:0;width:44px;height:44px;border:0;background:transparent;
     color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .caixa-ic:hover{color:var(--ink)}
@@ -213,9 +214,9 @@
     font:500 14px/1.3 "Archivo";border-radius:2px;padding:0 12px}
   .card .unit{font:700 12px/1 "JetBrains Mono",monospace;color:var(--accent);letter-spacing:.02em;margin-bottom:4px}
   .go{width:100%;background:var(--accent);color:#fff;border:0;font:700 14px/1 "Archivo";letter-spacing:.02em;
-    padding:13px;border-radius:2px;cursor:pointer;box-shadow:var(--elev-1);transition:transform .05s,background .15s}
+    padding:13px;border-radius:2px;cursor:pointer;box-shadow:var(--elev-1);transition:transform .08s ease,background .15s ease}
   .go:hover{background:var(--accent-ink)}
-  .go:active{transform:translateY(1px)}
+  .go:active{transform:scale(.98)}
   .go[disabled]{opacity:.5;cursor:wait}
   .hint{margin:10px 2px 0;font:500 11.5px/1.4 "Archivo";color:var(--muted)}
   .hint b{color:var(--accent)}
@@ -230,8 +231,8 @@
     color:var(--muted);font:600 12px/1.4 "Archivo";padding:12px;border-radius:2px;cursor:pointer;min-height:44px}
   .mais:hover{border-color:var(--accent);color:var(--accent)}
   .card{position:relative;margin:8px 16px;background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--lot);
-    border-radius:2px;padding:14px 16px;cursor:pointer;transition:border-color .12s,transform .1s ease,filter .1s ease}
-  .card:hover{border-left-color:var(--accent);border-color:var(--muted)}
+    border-radius:2px;padding:14px 16px;cursor:pointer;box-shadow:var(--elev-0);transition:box-shadow .15s ease,border-color .12s ease,transform .1s ease,filter .1s ease}
+  .card:hover{border-left-color:var(--accent);border-color:var(--ink);box-shadow:var(--elev-1)}
   .card.sel{border-left-color:var(--accent);border-color:var(--ink);background:var(--paper-2)}
   .card:active{transform:scale(.98);filter:brightness(.97)}
   .card .addr{font:700 15px/1.25 "Archivo";color:var(--ink);margin:0 0 3px} /* endereço = manchete do card */
@@ -282,7 +283,7 @@
   .cmp-table th{position:sticky;top:0;background:var(--paper-2);font:700 11px/1.2 "JetBrains Mono",monospace;
     text-transform:uppercase;letter-spacing:.04em;color:var(--ink);padding:10px 12px;border-bottom:2px solid var(--line);
     text-align:left;white-space:nowrap}
-  .cmp-table td{padding:10px 12px;font:600 13px/1.25 "Archivo";color:var(--ink);border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .cmp-table td{padding:10px 12px;font:600 13px/1.25 "Archivo";color:var(--ink);border-bottom:1px solid var(--grid);white-space:nowrap;font-variant-numeric:tabular-nums}
   .cmp-table tbody tr:nth-child(even){background:var(--paper)}
   .cmp-rowlbl{font:600 12px/1.3 "Archivo";color:var(--muted);position:sticky;left:0;background:var(--paper-2);
     white-space:nowrap;padding-right:16px}
@@ -397,8 +398,9 @@
   .onb-dots span.on{background:var(--ink)}
   .onb-body h2{font:800 20px/1.2 "Archivo";color:var(--ink);margin:0 0 10px}
   .onb-body p{font:500 14px/1.5 "Archivo";color:var(--muted);margin:0}
-  .onb-next{width:100%;margin-top:20px;min-height:44px;border:0;background:var(--accent);color:#fff;font:700 15px/1 "Archivo";border-radius:2px;cursor:pointer}
+  .onb-next{width:100%;margin-top:20px;min-height:44px;border:0;background:var(--accent);color:#fff;font:700 15px/1 "Archivo";border-radius:2px;cursor:pointer;transition:transform .08s ease,background .15s ease}
   .onb-next:hover{background:var(--accent-ink)}
+  .onb-next:active{transform:scale(.98)}
   @media(max-width:820px){.onb-card{max-width:calc(100vw - 32px)}}
 
   .detail{position:absolute;left:16px;right:16px;bottom:16px;z-index:500;background:var(--paper-2);
@@ -779,6 +781,7 @@
   .detail .acts a,.detail .acts button{flex:1;min-width:130px;text-align:center;text-decoration:none;border:1.5px solid var(--ink);
     border-radius:2px;padding:10px;font:600 12px/1 "Archivo";color:var(--ink);background:var(--paper);transition:background .12s,transform .1s ease;cursor:pointer}
   .detail .acts a:hover,.detail .acts button:hover{background:var(--ink);color:var(--paper-2)}
+  .detail .acts a:not(.primary):hover,.detail .acts button:not(.primary):hover{background:var(--paper-2);color:var(--ink)}
   .detail .acts a:active,.detail .acts button:active{transform:scale(.98)}
   .detail .acts a.primary,.detail .acts button.primary{background:var(--accent);border-color:var(--accent);color:#fff} /* WR-01: a CTA primária nova é <button> */
   .detail .acts a.primary:hover,.detail .acts button.primary:hover{background:var(--accent-ink)}
