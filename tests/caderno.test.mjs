@@ -204,3 +204,25 @@ test("sanitizeCaderno: ci fora do formato cadastral (aspas/script) faz o campo `
   const out = P.sanitizeCaderno({ ci: "x');alert(1);('", cdbairro: 16 });
   assert.ok(!("ci" in out) || out.ci == null, "ci malicioso nunca deveria sobreviver, mesmo fora do fluxo de import");
 });
+
+// WR-03 (16-REVIEW.md): maxlength="40"/"500" do <input>/<textarea> so protege durante digitacao
+// real no navegador — nunca contra import/atribuicao programatica. sanitizeCaderno precisa impor o
+// mesmo limite no VALOR, nao so filtrar por CHAVE (allowlist).
+test("sanitizeCaderno: tag/nota gigantes (import ou atribuicao programatica) sao truncados para 40/500 chars", () => {
+  const out = P.sanitizeCaderno(CF.itemTagNotaGigante);
+  assert.equal(out.tag.length, 40, "tag deveria ser truncada para 40 chars, mesmo limite do maxlength do HTML");
+  assert.equal(out.nota.length, 500, "nota deveria ser truncada para 500 chars, mesmo limite do maxlength do HTML");
+});
+
+test("sanitizeCaderno: status fora do enum fixo CADERNO_STATUS nunca sobrevive como esta — normalizado para 'nao_visitado'", () => {
+  const out = P.sanitizeCaderno(CF.itemStatusInvalido);
+  assert.equal(out.status, "nao_visitado");
+});
+
+test("validarImportCaderno: item importado com tag/nota gigantes chega truncado (defesa em profundidade cobre o caminho de import)", () => {
+  const r = P.validarImportCaderno([CF.itemTagNotaGigante]);
+  assert.equal(r.ok, true);
+  assert.equal(r.itens.length, 1);
+  assert.equal(r.itens[0].tag.length, 40);
+  assert.equal(r.itens[0].nota.length, 500);
+});

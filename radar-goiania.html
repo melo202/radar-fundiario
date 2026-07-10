@@ -2378,11 +2378,18 @@ const CADERNO_CI_RE=/^[\w.\-\/]{1,40}$/;
    não reusado aqui de propósito: um campo sensível novo do endpoint NUNCA passaria por padrão
    nesta allowlist, fail-safe). CR-01 (16-REVIEW.md): além da allowlist de CHAVE, `ci` agora também
    tem o VALOR validado — fora do formato cadastral (CADERNO_CI_RE) é descartado (out.ci fica
-   undefined, o item some do resultado — nunca chega ao DOM/onclick inline). */
+   undefined, o item some do resultado — nunca chega ao DOM/onclick inline). WR-03 (16-REVIEW.md):
+   `tag`/`nota` são truncados AQUI (não só no maxlength do HTML, trivialmente contornável via
+   import/atribuição programática) para o mesmo limite de 40/500 chars da UI; `status`, quando
+   presente mas fora do enum fixo, nunca é aceito como está — cai para o default seguro
+   "nao_visitado" (o mesmo default já usado por cadernoSalvar quando o campo está ausente). */
 function sanitizeCaderno(obj){
   const out={};
   CADERNO_ALLOW.forEach(k=>{if(obj&&obj[k]!==undefined)out[k]=obj[k];});
   if(out.ci!=null&&!CADERNO_CI_RE.test(String(out.ci)))delete out.ci;
+  if(out.tag!=null)out.tag=String(out.tag).slice(0,40);
+  if(out.nota!=null)out.nota=String(out.nota).slice(0,500);
+  if(out.status!==undefined&&!CADERNO_STATUS.includes(out.status))out.status="nao_visitado";
   return out;
 }
 

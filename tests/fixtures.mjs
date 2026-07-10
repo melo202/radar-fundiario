@@ -953,6 +953,22 @@ export const FIXTURES = {
       { ci: '10"><script>alert(1)</script>', cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 },
       { ci: "3020150346", cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 }, // ci valido, no MESMO import — deve sobreviver
     ],
+    // WR-03 (16-REVIEW.md): tag/nota gigantes (bem acima do maxlength=40/500 do HTML) — vindas de
+    // um import/atribuicao programatica, nunca protegidas pelo atributo do <input>/<textarea>.
+    // sanitizeCaderno deve truncar, nunca aceitar o tamanho cru.
+    itemTagNotaGigante: {
+      ci: "444",
+      cdbairro: 16,
+      tag: "T".repeat(200),
+      nota: "N".repeat(2000),
+    },
+    // WR-03: status fora do enum fixo (nunca deveria acontecer via UI, mas import/chamador
+    // futuro pode mandar qualquer string) -> sanitizeCaderno normaliza para "nao_visitado".
+    itemStatusInvalido: {
+      ci: "555",
+      cdbairro: 16,
+      status: "status-inventado",
+    },
     importItemComPII: [
       {
         ci: "333",
