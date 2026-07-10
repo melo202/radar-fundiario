@@ -6,7 +6,7 @@
 
 - [x] **TYPO-01**: **Nova tipografia em todo o app** — substituir a família atual (feedback do usuário 2026-07-10: "a letra é muito feia") por uma escolha premium/legível cobrindo UI + mapa + sheets + PDFs/documentos; fallback de sistema robusto; funciona offline/PWA sem quebrar o arquivo único (@font-face embutida em base64 OU stack de sistema premium — decidir na fase medindo payload); zero texto residual na fonte antiga
 - [x] **PREM-01**: **Refinamento estético premium** — profundidade/elevação consistente (sombras/bordas/raios), acabamento de cards/sheets/botões/inputs, densidade e alinhamento revisados — mantendo a identidade cartográfica (papel/óxido) e a lei "cor só onde significa status" (VIS-01 do v2.1); legibilidade AA sobre CARTO e satélite; reduced-motion intacto
-- [ ] **A11Y-01**: **Focus-trap nas 6 superfícies modais** (onboarding, wizard `.wiz`, `#negSheet`, `#captSheet`, `#cmpSheet`, `#detail`/chooser) — Tab/Shift+Tab circulam dentro; Esc fecha; foco retorna ao gatilho (fecha o IN-03 diferido da Fase 13)
+- [x] **A11Y-01**: **Focus-trap nas 6 superfícies modais** (onboarding, wizard `.wiz`, `#negSheet`, `#captSheet`, `#cmpSheet`, `#detail`/chooser) — Tab/Shift+Tab circulam dentro; Esc fecha; foco retorna ao gatilho (fecha o IN-03 diferido da Fase 13)
 
 ## Auditoria Fable 5 (Fase 20 — gate final)
 
@@ -24,7 +24,7 @@
 |-------------|------|--------|
 | TYPO-01 | 19 | Complete |
 | PREM-01 | 19 | Complete |
-| A11Y-01 | 19 | Pending |
+| A11Y-01 | 19 | Complete |
 | FABLE-01 | 20 | Pending |
 
 ---
