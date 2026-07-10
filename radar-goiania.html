@@ -4396,12 +4396,17 @@ function checarVarreduraParcial(scan,layer){
   const av=document.getElementById("terrAviso");
   if(!av)return;
   if(scan&&scan.paginas<3&&scan.amostrado<scan.total){
-    av.textContent="Não foi possível concluir a varredura — os números abaixo usam só as páginas que chegaram. Toque para tentar de novo.";
+    /* D-04 (20): ação de retry como <button> real (focável/acionável por teclado, alvo de 44px via
+       .urb-retry) em vez de div inteira com onclick. Texto estático — sem dado do endpoint. */
+    av.innerHTML='Não foi possível concluir a varredura — os números abaixo usam só as páginas que chegaram. <button type="button" class="urb-retry" id="terrRetry">Tentar de novo</button>';
     av.hidden=false;
-    av.style.cursor="pointer";
-    av.onclick=()=>{delete TERRCACHE[String(scan.cdbairro)];abrirTerritorio(layer);};
+    av.style.cursor="";
+    av.onclick=null;
+    const btn=document.getElementById("terrRetry");
+    if(btn)btn.onclick=()=>{delete TERRCACHE[String(scan.cdbairro)];abrirTerritorio(layer);};
   }else{
     av.hidden=true;
+    av.innerHTML="";
     av.onclick=null;
   }
 }
