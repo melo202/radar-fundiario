@@ -150,6 +150,10 @@ Traço (`weight`): mesma rampa por zoom já existente em `baiStyle()` (`0.5+t*0.
 | Rótulo Macrozona (quando resolvido, dentro da Macrozona Construída) | "Macrozona Construída" |
 | Rótulo Unidade Territorial | "{sigla} — {nomeCompleto}" (ex.: "AA — Área Adensável") |
 | CA (quando `conferido:true`) | "CA básico {ca_basico}x · CA máximo {ca_maximo}x" |
+| Usos (quando `usos_conferido:true` — AA/ADD, Art. 196 I/II) | "Usos: {usos}" (ex.: "Usos: qualquer uso") |
+| Ocupação por altura (AA/ADD, `nota_altura` conferido — Art. 190 II/III) | "100% do terreno até 11 m; 50% acima (sem altura máxima definida)" |
+| CA — Macrozona Construída sem unidade (estado g) | "CA básico 1,0x" (nunca máximo — não há unidade que o defina; Art. 242, VII) |
+| Empty state — dentro da Macrozona Construída, sem unidade territorial (estado g) | "Dentro da Macrozona Construída, sem unidade territorial específica identificada nas camadas consultadas. O Coeficiente de Aproveitamento Básico de 1,0x é universal na Macrozona Construída (Art. 242, VII); o índice máximo depende da unidade territorial, não identificada aqui." |
 | Altura (quando conferida) | "Altura máxima: {altura_max} m" |
 | Badge AEIS | "Interesse Social (AEIS)" |
 | Badge APAC | "Patrimônio Cultural (APAC)" |
@@ -194,8 +198,9 @@ Todo texto acima segue o gate §26 (Fase 14): verbo de ação nos botões, erro 
   <div class="dgrid">
     <div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">Macrozona Construída</div></div>
     <div class="cell" style="grid-column:1/-1"><div class="k">Unidade Territorial</div><div class="v">AA — Área Adensável</div></div>
-    <div class="cell urb-ca"><div class="k">CA básico · máximo</div><div class="v dvalor-v">3,0x · 6,0x</div></div>
-    <div class="cell"><div class="k">Altura máxima</div><div class="v">sem limite acima de 11m (100%/50% da área)</div></div>
+    <div class="cell urb-ca"><div class="k">CA básico · máximo</div><div class="v dvalor-v">1,0x · 6,0x</div></div>
+    <div class="cell" style="grid-column:1/-1"><div class="k">Usos</div><div class="v">qualquer uso</div></div>
+    <div class="cell"><div class="k">Ocupação por altura</div><div class="v">100% do terreno até 11 m; 50% acima (sem altura máxima definida)</div></div>
   </div>
   <div class="urb-badges">
     <span class="urb-badge is-atencao">Interesse Social (AEIS)</span>
@@ -238,6 +243,17 @@ Todo texto acima segue o gate §26 (Fase 14): verbo de ação nos botões, erro 
   <div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora. Toque para tentar de novo.</div>
   ```
   mais o toast padrão do app (`toast()`, mesmo componente já usado em erros de rede) reforçando a mesma mensagem — nunca falha silenciosa.
+
+  **(g) Resolvido, dentro da Macrozona Construída, SEM unidade territorial específica (BLOCKER 2 — lote urbano fora de AA/ADD/AOS; caso real: AAB, que não tem layer própria na bateria de 9):**
+  ```html
+  <div class="dgrid">
+    <div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">Macrozona Construída</div></div>
+    <div class="cell urb-ca"><div class="k">CA básico</div><div class="v dvalor-v">1,0x</div></div>
+  </div>
+  <div class="dnote">Dentro da Macrozona Construída, sem unidade territorial específica identificada nas camadas consultadas. O Coeficiente de Aproveitamento Básico de 1,0x é universal na Macrozona Construída (Art. 242, VII, LC 349/2022); o índice máximo depende da unidade territorial, não identificada aqui.</div>
+  <div class="dnote">Informação urbanística indicativa, extraída do Plano Diretor (LC 349/2022 e alterações). Não substitui a Certidão de Uso do Solo da SEPLANH.</div>
+  ```
+  NUNCA mostra CA máximo neste estado (não há unidade territorial que o defina) — só o básico universal 1,0x, sempre com a fonte (Art. 242, VII). Sem badge de unidade; os badges de contexto (AEIS/APAC/eixo/corredor) ainda podem aparecer se a respectiva layer intersectou. Este estado elimina o crash `undefined — undefined` que ocorreria se um lote urbano sem AA/ADD/AOS caísse no render de (b) sem guarda.
 
 - **Foco visual (declaração explícita — pedido do checker):** dentro do accordion resolvido, o **âncora visual primário é a Unidade Territorial** (`.v`, 15px/700, herdado de `.cell .v`) — o número de CA (quando presente) é o segundo ponto de atenção (22px/800, mais proeminente EM TAMANHO mas só aparece quando conferido, então nunca é a única informação disponível); os badges são apoio terciário (cor + texto pequeno); o disclaimer é sempre o elemento MENOS proeminente (10.5px/500, muted), nunca competindo com o dado.
 
@@ -291,9 +307,9 @@ IDs novos: `#dUrbanistico`, `#dUrbBody`, `#urbRetry`, `#terrChipValor`, `#terrCh
 
 CSS vars novas: `--zone-aa`/`-line`, `--zone-add`/`-line`, `--zone-aos`/`-line`, `--zone-aeis`/`-line`, `--zone-apac`/`-line`, `--zone-ooau`/`-line`, `--zone-none`/`-line` (7 pares, ver §Color — todas as demais reusadas verbatim: `--ink`/`--muted`/`--accent`/`--paper`/`--paper-2`/`--status-*`).
 
-Funções puras sugeridas (RADAR_PURE, TDD): `resolverZonaUI(respostas9queries)` (monta o objeto de estado do accordion a partir das respostas paralelas — carregando/resolvido/parcial/rural/erro), `calcularPotencialPD(areaterr, ca_basico)` (só quando `conferido:true`), `criterioDetectorPD(areaedif, potencialPD)` com fallback nomeado para `areaedif/areaterr`. Funções de I/O sugeridas: `renderUrbanisticoUI(a, isRetry)` (irmã assíncrona de `renderDiffUI`/`renderCadernoBtn`, mesmo padrão "nunca trava o render síncrono da ficha"), `montarLegendaZonas()` (espelha `montarLegenda()` da Fase 15), `toggleCamadaTematica(modo)` (substitui `toggleChoropleth()` isolado, agora tri-state: nenhuma/valor/zonas).
+Funções puras sugeridas (RADAR_PURE, TDD): `resolverZonaUI(respostas9queries)` (monta o objeto de estado do accordion a partir das respostas paralelas — carregando/resolvido/resolvido_sem_unidade/parcial/rural/erro), `calcularPotencialPD(areaterr, ca_basico)` (só quando `conferido:true`), `criterioDetectorPD(areaedif, potencialPD)` com fallback nomeado para `areaedif/areaterr`. Funções de I/O sugeridas: `renderUrbanisticoUI(a, isRetry)` (irmã assíncrona de `renderDiffUI`/`renderCadernoBtn`, mesmo padrão "nunca trava o render síncrono da ficha"), `montarLegendaZonas()` (espelha `montarLegenda()` da Fase 15), `toggleCamadaTematica(modo)` (substitui `toggleChoropleth()` isolado, agora tri-state: nenhuma/valor/zonas).
 
-Constantes nomeadas: `PD_LAYERS={macrozona:33,aa:31,add:30,aos:29,aeis:7,apac:28,ooau:32,eixo:4,corredor:1}`, `PD_DISCLAIMER` (string fixa, ver §Copywriting), `PD_TABELA_CA` (JSON <2KB versionado, sigla→{nome,ca_basico,ca_maximo,altura_max,vi_outorga,taxa_ocupacao,usos,fonte,conferido} — tarefa de conferência da fase, per CONTEXT PD-02).
+Constantes nomeadas: `PD_LAYERS={macrozona:33,aa:31,add:30,aos:29,aeis:7,apac:28,ooau:32,eixo:4,corredor:1}`, `PD_DISCLAIMER` (string fixa, ver §Copywriting), `PD_TABELA_CA` (JSON <2KB versionado, sigla→{nome,ca_basico,ca_maximo,altura_max,vi_outorga,taxa_ocupacao,usos,usos_conferido,nota_ca,nota_altura,fonte,conferido} + `_meta` de auto-auditoria de emendas — tarefa de conferência da fase, per CONTEXT PD-02), `PD_MZC_BASICO` (CA básico 1,0x universal da Macrozona Construída, Art. 242 VII — usado no estado "resolvido_sem_unidade").
 
 ---
 
