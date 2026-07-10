@@ -4721,8 +4721,13 @@ async function buscar(){
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Falha na busca</div>${msg}
         <div class="chips" style="justify-content:center;margin-top:14px"><button type="button" onclick="buscar()">Tentar de novo</button></div></div>`;
     }
-  }finally{if(tk===SEARCHTOKEN){
-    loading(false);btn.disabled=false;
+  }finally{
+    /* A-01 (20): reabilitar o botão SEMPRE, mesmo quando uma busca mais nova já assumiu o token
+       (tk!==SEARCHTOKEN) — a guarda `if(btn.disabled)return` no topo impede sobreposição, então é
+       seguro reabilitar incondicionalmente e evita o botão travado se um token velho cai no finally. */
+    btn.disabled=false;
+    if(tk===SEARCHTOKEN){
+    loading(false);
     /* CR-02 (13-REVIEW.md): se um early-return de validação saiu sem render/plot nem catch, o
        skeleton continua em #results (nenhum outro caminho o reescreveu) — restaura o conteúdo
        anterior. Detecção pela presença de .skel-card (só existe em SKELETON_HTML; qualquer render
