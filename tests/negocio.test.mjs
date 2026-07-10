@@ -164,6 +164,13 @@ test("parseMatricula(texto 'Cartório do 2° Ofício' — fix plan-check) extrai
   assert.ok(result.cartorio && result.cartorio.includes(caso.expectCartorioContains), `cartorio deveria conter "${caso.expectCartorioContains}", obteve: ${JSON.stringify(result)}`);
 });
 
+test("parseMatricula não captura o ponto final de frase na matrícula (C-02: '45.678.' -> '45.678')", () => {
+  const caso = FIXTURES.parseMatriculaCasos.pontoFinal;
+  const result = P.parseMatricula(caso.texto);
+  assert.ok(result !== null, `parseMatricula deveria retornar objeto nao-null, obteve: ${JSON.stringify(result)}`);
+  assert.equal(result.matricula, caso.expectMatriculaExact, `matricula deveria ser exatamente "${caso.expectMatriculaExact}" (sem ponto final), obteve: ${JSON.stringify(result.matricula)}`);
+});
+
 test("parseMatricula(texto sem nenhum padrao reconhecivel) retorna null (distincao de match-parcial)", () => {
   const result = P.parseMatricula(FIXTURES.parseMatriculaCasos.semMatch.texto);
   assert.equal(result, null, `parseMatricula sem match deveria retornar null, obteve: ${JSON.stringify(result)}`);

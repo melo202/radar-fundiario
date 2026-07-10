@@ -442,6 +442,11 @@ export const FIXTURES = {
     vazio: {
       texto: "",
     },
+    // C-02: número seguido de ponto final de frase — a matrícula NÃO pode capturar o ponto terminal.
+    pontoFinal: {
+      texto: "Imóvel objeto da Matrícula nº 45.678. Registrado no 1º Ofício de Registro de Imóveis.",
+      expectMatriculaExact: "45.678",
+    },
   },
 
   // numeroPorExtenso: casos basicos + fronteiras do extenso pt-BR (fix plan-check) — um milhao

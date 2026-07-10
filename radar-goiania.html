@@ -2039,7 +2039,8 @@ function numeroPorExtenso(valor){
 function parseMatricula(textoColado){
   const t=String(textoColado||"");
   if(!t) return null;
-  const mMat=t.match(/matr[íi]cula\s*(?:n[ºo°.]?\s*)?([\d.]+)/i);
+  // ([\d.]*\d) não captura o ponto final de frase (matrícula "45.678." → "45.678"); C-02.
+  const mMat=t.match(/matr[íi]cula\s*(?:n[ºo°.]?\s*)?([\d.]*\d)/i);
   // cartorio: 2 ordens de frase — (1) canonica "Nº Ofício de Registro de Imóveis" (numero ANTES,
   // termina em "registro de imoveis"); (2) "Cartório do/de Nº Ofício" (numero DEPOIS da palavra
   // "cartório", sem "registro de imoveis" no fim — fix plan-check, fraseado real comum).
