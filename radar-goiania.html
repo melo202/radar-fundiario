@@ -162,6 +162,8 @@
   .combo-item .code{float:right;font:600 11px/1 "JetBrains Mono",monospace;color:var(--muted)}
   .combo-item:hover .code,.combo-item.active .code{color:var(--line)}/* F5 EST-03: paridade com .raw — --muted sobre --ink era 2,32:1; --line = 9,0:1 */
   .combo-empty{padding:12px;text-align:center;color:var(--muted);font-size:12px}
+  /* F5 D-13: utilitário visually-hidden — texto só para leitor de tela (região aria-live do chip) */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   /* caixa unica (08-04, Fase 8): input unico que substitui a moderow como busca padrao.
      Reusa exclusivamente as variaveis --paper/--paper-2/--ink/--line/--muted/--accent (08-UI-SPEC.md).
      font-size:16px mandatorio (mata autozoom iOS, mesmo contrato do resto do app). */
@@ -997,9 +999,13 @@
         <button id="caixaClear" class="caixa-ic" aria-label="Limpar busca" style="display:none">×</button>
       </div>
       <div id="caixaList" class="combo-list" role="listbox" aria-label="Sugestões de setor e rua"></div>
-      <div id="detectChip" class="detectchip" role="status" aria-live="polite" tabindex="0"
+      <!-- F5 D-13: o chip é um CONTROLE (role="button"); quem anuncia a detecção é o nó irmão
+           #detectLive (sr-only, role="status") — antes o mesmo nó misturava status+onclick e o
+           leitor de tela o anunciava como status não-acionável. -->
+      <div id="detectChip" class="detectchip" role="button" tabindex="0"
            aria-label="Toque para corrigir o modo de busca detectado" onclick="toggleCorrectMenu()"
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCorrectMenu();}"></div>
+      <div id="detectLive" class="sr-only" role="status" aria-live="polite"></div>
       <div class="chips" id="ambigChips" role="group" aria-label="Escolha o que você quis dizer" hidden></div>
 
       <!-- menu de correcao: reaproveita .moderow/.modemore existentes, SEM CSS novo -->
@@ -1084,8 +1090,10 @@
         <ul class="oqf-lista">
           <li><b>Busca unificada</b> — endereço, quadra/lote, prédio ou inscrição numa caixa só. <button type="button" onclick="focusFirstField()">Buscar agora →</button></li>
           <li><b>Valor e oportunidade</b> — faixa estimada, score de oportunidade e leitura em linguagem simples. <button type="button" onclick="onbAbrirDireto(1)">Ver como →</button></li>
-          <li><b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Ver como →</button></li>
-          <li><b>Ação comercial</b> — mensagens prontas pro WhatsApp, modo captação, salvar oportunidades. <button type="button" onclick="onbAbrirDireto(2)">Ver como →</button></li>
+          <!-- F5 B-16: os 2 itens abaixo abrem o MESMO cartão 2 do onboarding (que cobre docs+captação
+               juntos — não existem cartões distintos); "Sobre isto →" é honesto, "Ver como →" prometia demonstração -->
+          <li><b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
+          <li><b>Ação comercial</b> — mensagens prontas pro WhatsApp, modo captação, salvar oportunidades. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
           <li><b>Oportunidades da Caixa</b> — imóveis à venda da Caixa, plotados no mapa. <button type="button" onclick="toggleCaixa()">Ver no mapa →</button></li>
         </ul>
       </div>
@@ -3924,6 +3932,9 @@ function updateCaixaList(qtext){
     <span class="code">${h.kind==="setor"?"Setor":"Rua"}</span>${esc(h.label)}<span class="raw">${esc(h.sub)}</span></div>`).join("");
   list.classList.add("show");
 }
+/* F5 D-13: anuncia a detecção no nó aria-live IRMÃO do chip (#detectLive, sr-only) — o chip em si
+   é role="button" (controle); status e controle nunca no mesmo nó. Texto vazio limpa o anúncio. */
+function detectAnunciar(txt){const el=document.getElementById("detectLive");if(el)el.textContent=txt||"";}
 /* selecionar Setor: pickBairro() (existente). Selecionar Rua: preenche o modo Endereco (rua implicito),
    fecha o dropdown, deixa o usuario confirmar com Enter/Buscar (nao dispara buscar() sozinho). */
 function pickCaixaItem(el){
@@ -3940,6 +3951,7 @@ function pickCaixaItem(el){
     LASTDETECT={mode:"addr",rua:nome,numero:"",confidence:"alta",label:`Endereço · ${nome}`};
     document.getElementById("detectChip").textContent=LASTDETECT.label;
     document.getElementById("detectChip").hidden=false;document.getElementById("detectChip").classList.add("show");
+    detectAnunciar(LASTDETECT.label); /* F5 D-13 */
   }
   closeCaixaList();
   document.getElementById("caixaInput").focus();
@@ -6000,7 +6012,7 @@ function renderCadernoBtn(){
     if(!btn2||!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
     btn2.classList.toggle("is-saved",salvo);
     btn2.setAttribute("aria-pressed",salvo?"true":"false");
-    btn2.textContent=salvo?"✓ No caderno":"📓 Salvar no caderno";
+    btn2.textContent=salvo?"✓ No caderno — remover?":"📓 Salvar no caderno"; /* F5 B-14: rótulo-espelho do ⭐ ("✓ Salva — remover?") — aria-pressed agora tem toggle de verdade */
   }).catch(()=>{}); /* falha de LEITURA de estado (não de escrita) — não precisa de toast; o botão fica no rótulo default */
 }
 /* renderDiffUI(a) (Fase 17, 17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no
@@ -6136,9 +6148,10 @@ function atualizarScorePorquePD(a,estadoPD){
   if(potencial==null){el.textContent="";return;}
   el.textContent=" Em "+(unidade.nome||r.nome||unidade.sigla)+" — CA básico "+fmtCA(r.ca_basico)+"x, potencial de "+Math.round(potencial).toLocaleString("pt-BR")+" m².";
 }
-/* salvarNoCadernoUI(): ação rápida de 1 toque (mesma filosofia do ⭐) — grava com status default
-   "nao_visitado", sem abrir editor. Item já existente (mesmo ci) NÃO duplica (T-16 nunca duplica
-   dado) — em vez disso, abre/rola até o item no #cadernoBlock para edição. */
+/* salvarNoCadernoUI(): toggle real (mesma filosofia do ⭐, F5 B-14) — 1º toque grava com status
+   default "nao_visitado", sem abrir editor; 2º toque REMOVE (o rótulo "✓ No caderno — remover?"
+   já anunciou a ação e o aria-pressed volta a "false"). Substitui o antigo "Já está no caderno."
+   + scroll (B-03), que deixava a semântica de toggle do botão mentindo. */
 function salvarNoCadernoUI(){
   if(!DCUR)return;
   if(!cadernoDisponivel()){
@@ -6149,13 +6162,11 @@ function salvarNoCadernoUI(){
   const ci=clean(a.ci||a.nrinscr);
   cadernoTem(ci).then(existe=>{
     if(existe){
-      /* B-03: feedback garantido — scrollIntoView num #cadernoBlock oculto é no-op silencioso;
-         o toast sempre avisa, e só rolamos quando o bloco está de fato visível (offsetParent!=null). */
-      toast("Já está no caderno.");
-      renderCadernoBlock().then(()=>{
-        const item=Array.from(document.querySelectorAll(".cadbook-item")).find(el=>el.dataset.ci===ci);
-        if(item){item.open=true;if(item.offsetParent!==null)item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
-      });
+      cadernoRemover(ci).then(()=>{
+        toast("Removido do caderno.");
+        renderCadernoBtn();
+        renderCadernoBlock();
+      }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
       return;
     }
     const item={
@@ -6366,8 +6377,13 @@ async function renderCadernoBlock(){
       </div>
     </details>`;
   }).join("");
-  const filtroSetorOpts=`<option value="">Todos os setores</option>`+setores.map(cd=>
-    `<option value="${esc(cd)}"${String(cd)===String(CADERNO_FILTRO.cdbairro)?" selected":""}>Setor ${esc(cd)}</option>`).join("");
+  /* F5 B-15: outra metade do B-10 — o <select> de filtro usa o MESMO "Nome (código)" das linhas,
+     com o mesmo fallback "Setor {cd}" quando o mapa de nomes não carregou. */
+  const filtroSetorOpts=`<option value="">Todos os setores</option>`+setores.map(cd=>{
+    const nmSel=nomesSetor&&cd!=null?nomesSetor.get(cd):null;
+    const lblSel=nmSel?esc(nmSel)+" ("+esc(cd)+")":"Setor "+esc(cd);
+    return `<option value="${esc(cd)}"${String(cd)===String(CADERNO_FILTRO.cdbairro)?" selected":""}>${lblSel}</option>`;
+  }).join("");
   const filtroStatusOpts=`<option value="">Todos os status</option>`+CADERNO_STATUS.map(s=>
     `<option value="${s}"${s===CADERNO_FILTRO.status?" selected":""}>${CADERNO_STATUS_LBL[s]}</option>`).join("");
   box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
@@ -8080,10 +8096,11 @@ function loadCnefe(){
     if(r.confidence==="media")chip.classList.add("media");else chip.classList.remove("media");
     chip.textContent=label;
     chip.hidden=false;chip.classList.add("show");
+    detectAnunciar(label); /* F5 D-13: o anúncio vive no irmão sr-only, não no chip-botão */
   }
   function renderAmbig(r){
     LASTDETECT=r;
-    chip.classList.remove("show","media");chip.hidden=true;
+    chip.classList.remove("show","media");chip.hidden=true;detectAnunciar("");
     const n=r.digits||"";
     const btns=[`<button data-mode="addr" data-rua="Rua ${esc(n)}" data-numero="${esc(n)}">Rua ${esc(n)}</button>`,
       `<button data-mode="ql" data-quadra="${esc(n)}">Quadra ${esc(n)}</button>`];
@@ -8114,6 +8131,7 @@ function loadCnefe(){
     const val=inp.value;
     clearBtn.style.display=val?"flex":"none";
     if(!val){chip.classList.remove("show","media");chip.hidden=true;ambig.hidden=true;LASTDETECT=null;
+      detectAnunciar(""); /* F5 D-13 */
       lastGeoKey=null; /* caixa esvaziada — proxima colagem/coordenada, mesmo repetida, deve disparar */
       if(typeof updateCaixaList==="function")updateCaixaList("");
       return;}
@@ -8123,6 +8141,7 @@ function loadCnefe(){
     if(geo){
       chip.classList.remove("media");chip.textContent=`Localização · ${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)}`;
       chip.hidden=false;chip.classList.add("show");
+      detectAnunciar(chip.textContent); /* F5 D-13 */
       ambig.hidden=true;LASTDETECT=null;closeCaixaList();
       /* WR-03: mesma coordenada de um tick pro outro (usuario pausou/debounce duplicado) nao
          reabre SEARCHTOKEN/loading/consulta espacial de novo — so dispara quando a chave muda. */
@@ -8163,10 +8182,12 @@ function loadCnefe(){
       applyDetectAndSearch(LASTDETECT.mode,LASTDETECT);
     }
   });
-  chip.addEventListener("click",toggleCorrectMenu);
+  /* F5 D-13: o listener duplicado chip.addEventListener("click",toggleCorrectMenu) foi REMOVIDO —
+     o onclick inline do chip já chama toggleCorrectMenu(); com os dois registrados, um clique
+     abria e fechava o menu no MESMO gesto (toggle duplo — só o teclado funcionava). */
   clearBtn.addEventListener("click",()=>{
     inp.value="";clearBtn.style.display="none";chip.hidden=true;chip.classList.remove("show","media");
-    ambig.hidden=true;LASTDETECT=null;lastGeoKey=null;closeCaixaList();
+    ambig.hidden=true;LASTDETECT=null;lastGeoKey=null;closeCaixaList();detectAnunciar("");
     /* B-04: restaura o estado vazio de #results — traz de volta #savedBlocks/#cadernoBlock via CSS :has.
        O listener dos exemplos é delegado no #results estático (abaixo), então sobrevive a este innerHTML. */
     const rbox=document.getElementById("results");if(rbox)rbox.innerHTML=EMPTYSTATE_HTML;
