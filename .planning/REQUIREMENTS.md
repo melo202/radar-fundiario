@@ -94,10 +94,10 @@
 
 > Evidência: `.planning/research/v2.1/PLANO-DIRETOR.md` — o ArcGIS da prefeitura expõe o Modelo Espacial da LC 349/2022 (`Mapa_ModeloEspacial`, 49 camadas, query por ponto verificada ao vivo). Dado oficial determinístico; NÃO é IA.
 
-- [ ] **PD-01**: Consulta urbanística por lote via point-in-polygon nas camadas do Modelo Espacial (macrozoneamento, área adensável, AEIS, vazios, eixos) — mesmo padrão `jsonp`/token/retry; consultas agrupadas/lazy (endpoint frágil)
-- [ ] **PD-02**: Tabela estática zona→regras (CA básico/máximo, outorga/Vi, usos) com TODO número conferido contra o Anexo oficial da LC 349/2022 (resolver a divergência 6x vs 7,5x da Área Adensável na fonte primária; checar LC 358/363/364/371/373/379); número não-conferido NUNCA é exibido (mostra só a zona)
+- [x] **PD-01**: Consulta urbanística por lote via point-in-polygon nas camadas do Modelo Espacial (macrozoneamento, área adensável, AEIS, vazios, eixos) — mesmo padrão `jsonp`/token/retry; consultas agrupadas/lazy (endpoint frágil)
+- [x] **PD-02**: Tabela estática zona→regras (CA básico/máximo, outorga/Vi, usos) com TODO número conferido contra o Anexo oficial da LC 349/2022 (resolver a divergência 6x vs 7,5x da Área Adensável na fonte primária; checar LC 358/363/364/371/373/379); número não-conferido NUNCA é exibido (mostra só a zona)
 - [ ] **PD-03**: Seção "Urbanístico" na ficha (accordion): zona/unidade, CA, usos, eixo/adensamento + disclaimer fixo ("indicativo — oficial é a Certidão de Uso do Solo/SEPLANH")
-- [ ] **PD-04**: Score de oportunidade ganha fator potencial-construtivo (construído ÷ potencial do PD) e o detector de subutilizado passa a usar construído/potencial-do-PD — ambos explicáveis citando a zona
+- [x] **PD-04**: Score de oportunidade ganha fator potencial-construtivo (construído ÷ potencial do PD) e o detector de subutilizado passa a usar construído/potencial-do-PD — ambos explicáveis citando a zona
 - [ ] **PD-05**: Camada de zonas como toggle no Território (choropleth por zona), legível sobre CARTO e satélite
 
 ## Future Requirements (v2.2+ — precisa de backend/IA)
