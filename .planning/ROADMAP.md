@@ -85,7 +85,7 @@ Plans:
 
 | Fase | Milestone | Planos | Status | Concluída |
 |------|-----------|--------|--------|-----------|
-| 19. Estética Premium | v2.2 | 3/3 | Complete   | 2026-07-10 |
+| 19. Estética Premium | v2.2 | 3/3 | Complete    | 2026-07-10 |
 | 20. Auditoria Fable 5 | v2.2 | 0/TBD | Not started | - |
 
 **Backlog (v2.3+):** ativação da pesquisa de mercado por IA sobre o seam dormant; upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria.
