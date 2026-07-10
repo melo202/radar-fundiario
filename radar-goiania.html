@@ -5119,6 +5119,7 @@ function atualizarCmpFab(){
 }
 function abrirComparacao(){
   if(CMP.length<2)return; /* guarda defensiva — o FAB so aparece com 2+ */
+  fecharTerrPanel(); /* B-02≡D-08 (20): "1 sheet por vez" — fecha o #terrPanel antes de abrir o #cmpSheet (mesmo padrão de finish()/showDetail()) */
   /* unidades marcadas, NA ORDEM de marcacao (CMP), nao na ordem de LAST */
   const unidades=CMP.map(k=>LAST.find(a=>cmpChave(a)===k)).filter(Boolean);
   const cells=fn=>unidades.map(u=>`<td>${esc(String(fn(u)))}</td>`).join("");
