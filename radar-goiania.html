@@ -4359,6 +4359,7 @@ function showDetail(a,ll){
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
   document.getElementById("dActsMore").innerHTML=`
+    <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">📓 Salvar no caderno</button>
     <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">🧮 Calcular custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
@@ -4381,6 +4382,7 @@ function showDetail(a,ll){
     <div class="zapgroup">
       <button type="button" class="zapbtn" onclick="abrirCaptacao()">🧾 Captar este imóvel</button>
     </div>`;
+  renderCadernoBtn(); /* Fase 16 (16-02): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4) — cadernoTem() bate no IndexedDB, nunca trava o resto do render */
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
     <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
@@ -4468,6 +4470,90 @@ function renderSaveBtn(){
   btn.classList.toggle("is-saved",salvo);
   btn.setAttribute("aria-pressed",salvo?"true":"false");
   btn.textContent=salvo?"✓ Salva — remover?":"⭐ Salvar oportunidade";
+}
+/* renderCadernoBtn(): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4, 16-RESEARCH.md) — cadernoTem()
+   bate no IndexedDB, sempre async; estado do botão fica neutro até resolver, NUNCA bloqueia o
+   resto do render da ficha. IndexedDB indisponível -> botão desabilitado com aviso em title
+   (degradação anunciada, UI-SPEC §4), nunca escondido silenciosamente. */
+function renderCadernoBtn(){
+  const btn=document.getElementById("cadernoBtn");
+  if(!btn||!DCUR)return;
+  if(!cadernoDisponivel()){
+    btn.disabled=true;
+    btn.title="Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.";
+    return;
+  }
+  btn.disabled=false;btn.title="";
+  const ci=clean(DCUR.ci||DCUR.nrinscr);
+  cadernoTem(ci).then(salvo=>{
+    const btn2=document.getElementById("cadernoBtn");
+    if(!btn2||!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
+    btn2.classList.toggle("is-saved",salvo);
+    btn2.setAttribute("aria-pressed",salvo?"true":"false");
+    btn2.textContent=salvo?"✓ No caderno":"📓 Salvar no caderno";
+  }).catch(()=>{}); /* falha de LEITURA de estado (não de escrita) — não precisa de toast; o botão fica no rótulo default */
+}
+/* salvarNoCadernoUI(): ação rápida de 1 toque (mesma filosofia do ⭐) — grava com status default
+   "nao_visitado", sem abrir editor. Item já existente (mesmo ci) NÃO duplica (T-16 nunca duplica
+   dado) — em vez disso, abre/rola até o item no #cadernoBlock para edição. */
+function salvarNoCadernoUI(){
+  if(!DCUR)return;
+  if(!cadernoDisponivel()){
+    toast("Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.");
+    return;
+  }
+  const a=DCUR;
+  const ci=clean(a.ci||a.nrinscr);
+  cadernoTem(ci).then(existe=>{
+    if(existe){
+      renderCadernoBlock().then(()=>{
+        const item=Array.from(document.querySelectorAll(".cadbook-item")).find(el=>el.dataset.ci===ci);
+        if(item){item.open=true;item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
+      });
+      return;
+    }
+    const item={
+      ci,nrinscr:clean(a.nrinscr),cdbairro:a.cdbairro,nrquadra:a.nrquadra,nrlote:a.nrlote,
+      vlvenal:a.vlvenal,areaedif:a.areaedif,areaterr:a.areaterr,vlimp98:a.vlimp98,
+      dtinclusao:a.dtinclusao,uso:a.uso,endereco:addrDe(a)
+    };
+    cadernoSalvar(item).then(()=>{
+      toast("Salvo no caderno.");
+      renderCadernoBtn();
+      renderCadernoBlock();
+    }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+  }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+/* cadernoExportarJSON(): reusa o esqueleto de exportCSV() (Blob+<a download>+revokeObjectURL) —
+   só troca o tipo/conteúdo. Export de caderno vazio é um no-op com toast "0 lotes..." (UI-SPEC §4,
+   export sempre visível mesmo com 0 itens). */
+function cadernoExportarJSON(){
+  cadernoListar({}).then(itens=>{
+    const blob=new Blob([JSON.stringify(itens,null,2)],{type:"application/json"});
+    const u=URL.createObjectURL(blob),el=document.createElement("a");
+    el.href=u;el.download="caderno-territorio.json";document.body.appendChild(el);el.click();el.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000);
+    toast(itens.length+" lotes exportados para JSON.");
+  }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+/* cadernoImportarJSON(input): lê o arquivo via FileReader, valida via validarImportCaderno
+   (shape+allowlist por item — nunca confia no arquivo externo, T-16-02) e grava cada item
+   aditivamente (mescla por ci, put idempotente — nunca substitui o caderno inteiro). */
+function cadernoImportarJSON(input){
+  const file=input.files&&input.files[0];
+  input.value="";
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const val=validarImportCaderno(String(reader.result||""));
+    if(!val.ok){toast("Arquivo inválido — não é um backup do caderno. Nada foi importado.");return;}
+    Promise.all(val.itens.map(it=>cadernoSalvar(it))).then(saved=>{
+      toast(saved.length+" lotes importados para o caderno.");
+      renderCadernoBlock();
+    }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+  };
+  reader.onerror=()=>toast(ERRO_ESCRITA_CADERNO);
+  reader.readAsText(file);
 }
 /* helper local de data (sem lib): "consultado hoje às HH:MM" (mesmo dia) ou "consultado em DD/MM" —
    usa o mesmo estilo pt-BR do resto do app (fmtDt e' p/ datas do cadastro AAAAMMDD, nao serve aqui). */
