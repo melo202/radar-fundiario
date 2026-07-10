@@ -67,6 +67,21 @@
     --terr-q3:#6baed6; --terr-q3-ink:#3f6f91;
     --terr-q4:#3182bd; --terr-q4-ink:#1f4d75;
     --terr-q5:#08519c; --terr-q5-ink:#062f47;
+    /* Fase 18 (18-03, PD-05): paleta de zonas do Plano Diretor — fills/traços sourced AO VIVO da
+       simbologia oficial do ArcGIS (Mapa_ModeloEspacial/MapServer/{7,28,29,30,31,32}?f=json,
+       drawingInfo.renderer, 2026-07-10 — 18-UI-SPEC.md §Color), NUNCA inventada. Deliberadamente
+       fora de --lot/--gold/--accent (misturar com --status-risco confundiria "está em zona X" com
+       "é um imóvel arriscado"). Engenharia PRÓPRIA (não vieram do renderer oficial), documentado
+       explicitamente por honestidade: --zone-none(+line) (Macrozona Construída sem camada
+       específica, sem cor oficial), --zone-apac-line (oficial é transparente), --zone-aos-line
+       (AOS é pattern-fill oficial; --zone-aos é aproximação sólida do traço oficial). */
+    --zone-aa:#ffaa00;      --zone-aa-line:#e1aa00;
+    --zone-add:#ffbee8;     --zone-add-line:#6e6e6e;
+    --zone-aos:#6dbb43;     --zone-aos-line:#4a8a2e;
+    --zone-aeis:#bee8ff;    --zone-aeis-line:#141a1f;   /* = --ink */
+    --zone-apac:#ff7f7f;    --zone-apac-line:#141a1f;   /* = --ink, engenharia própria (oficial é transparente) */
+    --zone-ooau:#ffff73;    --zone-ooau-line:#6e6e6e;
+    --zone-none:#d8d3c4;    --zone-none-line:#57503f;   /* = --muted, engenharia própria */
   }
   /* Fase 6 (Motion): kill-switch global de acessibilidade — zera/encurta animation/transition
      quando o usuário/SO pede menos movimento. Presente desde o 1º commit de motion (não retrofit). */
@@ -337,10 +352,13 @@
     font:700 14px/1 "IBM Plex Mono";cursor:pointer}
   .terr-legend-body{padding:0 10px 10px}
   .terr-legend-body[hidden]{display:none}
-  .terr-swatches{display:flex;gap:4px}
+  .terr-swatches{display:flex;gap:4px;flex-wrap:wrap}
   .terr-swatch-col{display:flex;flex-direction:column;align-items:center;gap:4px}
   .terr-swatch{display:block;width:24px;height:14px;border:1px solid var(--line);border-radius:1px}
   .terr-swlbl{font:700 10.5px/1.3 "IBM Plex Mono";color:var(--muted);white-space:nowrap}
+  /* Fase 18 (18-03, PD-05): variante de .terr-swatch p/ a legenda de zonas do Plano Diretor —
+     mesmo tamanho (24x14), border-color setado inline por swatch (mesmo padrão de .terr-swatch). */
+  .zone-swatch{display:block;width:24px;height:14px;border:1px solid var(--line);border-radius:1px}
   .terr-amostra{margin-top:8px;font:500 13px/1.4 "IBM Plex Sans";color:var(--muted)}
 
   /* Fase 15 TERR-03: Painel do Meu Território reusa .detail/.dgrid/.cell/.chips/.acts/.maisopcoes
@@ -759,6 +777,12 @@
      (0,2,0) sozinho perde o tie-break pro type selector .detail .acts button e o accent nunca renderiza. */
   .detail .acts button.acts-save.is-saved{background:var(--accent);border-color:var(--accent);color:#fff}
   .detail .acts button.acts-save.is-saved:hover{background:var(--accent-ink)}
+  /* Fase 18 (18-03, PD-05): MESMO problema/solução de especificidade já documentado acima p/
+     .acts-save.is-saved — .chips button.on (0,2,1) sozinho perde o tie-break de ORDEM contra
+     .detail .acts button (0,2,1, definida depois no arquivo) e o accent do chip ativo nunca
+     renderizaria. Especificidade OBRIGATÓRIA maior: .detail .acts .chips button.on (0,4,1). */
+  .detail .acts .chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .detail .acts .chips button.on:hover{background:var(--accent-ink)}
   /* Fase 10 SALV-01: #savedBlocks e' IRMAO estatico de #results — visibilidade 100% por CSS, sem
      ancorar em #emptyState (que morre na 1a busca). As 4 rotas vazias de #results (inicial, erro,
      sem-resultado, falha de init) renderizam um .empty; com lista de resultados nao ha .empty. */
@@ -1093,18 +1117,30 @@
     <!-- Fase 15 TERR-02: legenda do choropleth de R$/m² — hidden até o 1º setor ser escaneado
          (mesma regra de #pinoLegenda: não é decorativo por padrão, só aparece com dado real).
          Ancorada no canto superior-direito (único canto livre — 15-UI-SPEC.md Componente 1). -->
-    <div id="terrLegenda" class="terr-legenda" hidden aria-label="Legenda de valor por m² no mapa">
+    <div id="terrLegenda" class="terr-legenda" hidden aria-label="Legenda de valor por m² no mapa" data-mode="valor">
       <div class="terr-legend-head">
-        <button type="button" id="terrToggle" class="terr-toggle" aria-pressed="false" onclick="toggleChoropleth()">Cor por valor</button>
+        <button type="button" id="terrToggle" class="terr-toggle" aria-pressed="false" onclick="toggleCamadaTematica(document.getElementById('terrLegenda').dataset.mode)">Cor por valor</button>
         <button type="button" id="terrChevron" class="terr-chevron" aria-expanded="true" aria-label="Recolher legenda" onclick="recolherLegenda()">⌄</button>
       </div>
       <div id="terrBody" class="terr-legend-body">
-        <div class="terr-swatches">
+        <div class="terr-swatches" id="terrSwatchesValor">
           <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw1" style="background:var(--terr-q1);border-color:var(--terr-q1-ink)"></span><span class="terr-swlbl" id="terrLbl1"></span></div>
           <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw2" style="background:var(--terr-q2);border-color:var(--terr-q2-ink)"></span><span class="terr-swlbl" id="terrLbl2"></span></div>
           <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw3" style="background:var(--terr-q3);border-color:var(--terr-q3-ink)"></span><span class="terr-swlbl" id="terrLbl3"></span></div>
           <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw4" style="background:var(--terr-q4);border-color:var(--terr-q4-ink)"></span><span class="terr-swlbl" id="terrLbl4"></span></div>
           <div class="terr-swatch-col"><span class="terr-swatch" id="terrSw5" style="background:var(--terr-q5);border-color:var(--terr-q5-ink)"></span><span class="terr-swlbl" id="terrLbl5"></span></div>
+        </div>
+        <!-- Fase 18 (18-03, PD-05): 6 zonas (18-UI-SPEC.md §Componente 2) + 1 item neutro
+             (Copywriting Contract "Legenda de zonas — item neutro") — swatches ESTÁTICOS (paleta
+             fixa, nunca dado do endpoint), alternados via data-mode/sincCamadaChips. -->
+        <div class="terr-swatches" id="terrSwatchesZonas" hidden>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-aa);border-color:var(--zone-aa-line)"></span><span class="terr-swlbl">AA</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-add);border-color:var(--zone-add-line)"></span><span class="terr-swlbl">ADD</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-aos);border-color:var(--zone-aos-line)"></span><span class="terr-swlbl">AOS</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-aeis);border-color:var(--zone-aeis-line)"></span><span class="terr-swlbl">AEIS</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-apac);border-color:var(--zone-apac-line)"></span><span class="terr-swlbl">APAC</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-ooau);border-color:var(--zone-ooau-line)"></span><span class="terr-swlbl">OOAU</span></div>
+          <div class="terr-swatch-col"><span class="zone-swatch" style="background:var(--zone-none);border-color:var(--zone-none-line)"></span><span class="terr-swlbl" style="white-space:normal;max-width:64px">Sem classificação específica</span></div>
         </div>
         <div class="terr-amostra" id="terrAmostra"></div>
       </div>
@@ -1201,12 +1237,18 @@
           </div>
         </details>
       </div>
-      <!-- Fase 15 TERR-03: rodapé de ação (lei da Fase 10) — 1 primária (liga/desliga choropleth,
-           estado espelhado com a legenda via sincTerrPanelToggle/toggleChoropleth) + 2 secundárias
-           ("Buscar lote no setor" + "Detectar oportunidades", 16-03 — teto "1 primária + 2
-           secundárias" preservado). -->
+      <!-- Fase 15 TERR-03: rodapé de ação (lei da Fase 10) — 1 primária (Fase 18, 18-03: agora os
+           2 chips exclusivos de camada temática, estado espelhado com a legenda via
+           sincCamadaChips/toggleCamadaTematica) + 2 secundárias ("Buscar lote no setor" +
+           "Detectar oportunidades", 16-03 — teto "1 primária + 2 secundárias" preservado). -->
       <div class="acts" id="terrActions">
-        <button type="button" id="terrPanelToggle" class="primary" aria-pressed="false" onclick="toggleChoropleth();sincTerrPanelToggle()">Colorir mapa por valor</button>
+        <!-- Fase 18 (18-03, PD-05): 2 chips mutuamente exclusivos SUBSTITUEM o antigo botão único
+             #terrPanelToggle (Fase 15) — ocupa o mesmo slot de "1 primária" da lei da Fase 10.
+             toggleCamadaTematica() é a fonte única de verdade tri-state (nenhuma/valor/zonas). -->
+        <div class="chips" role="group" aria-label="Camada temática do mapa" id="terrLayerChips">
+          <button type="button" id="terrChipValor" aria-pressed="false" onclick="toggleCamadaTematica('valor')">Colorir por valor</button>
+          <button type="button" id="terrChipZonas" aria-pressed="false" onclick="toggleCamadaTematica('zonas')">Colorir por zonas do Plano Diretor</button>
+        </div>
         <button type="button" onclick="buscarNoSetor()">Buscar lote no setor</button>
         <button type="button" id="terrDetectBtn" onclick="detectarOportunidadesUI()">Detectar oportunidades</button>
       </div>
@@ -3153,6 +3195,16 @@ function recolherLegenda(){
     if(c&&c.finished)c.finished.then(()=>body.hidden=true).catch(()=>body.hidden=true);
     else body.hidden=true;
   }
+}
+/* montarLegendaZonas() (Fase 18, 18-03, PD-05): espelha montarLegenda() — revela a legenda e marca
+   o texto de carregamento enquanto a geometria da viewport chega (desenharZonas(), Task 2, limpa o
+   texto ao terminar). Os swatches de zona são ESTÁTICOS no HTML (paleta fixa, nunca dado do
+   endpoint) — diferente de montarLegenda(), não há rótulo dinâmico a popular aqui. */
+function montarLegendaZonas(){
+  const leg=document.getElementById("terrLegenda");
+  if(leg)leg.hidden=false;
+  const am=document.getElementById("terrAmostra");
+  if(am)am.textContent="Carregando zonas do setor…";
 }
 /* toggleChoropleth(): fonte única de verdade do estado ligado/desligado do choropleth —
    sincroniza aria-pressed da legenda E do botão do painel (15-03, terrPanelToggle via
