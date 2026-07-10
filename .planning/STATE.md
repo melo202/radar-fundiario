@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: verifying
-stopped_at: Completed 15-03-PLAN.md
-last_updated: "2026-07-09T23:49:32.915Z"
-last_activity: 2026-07-09
+status: executing
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-07-10T00:39:56.684Z"
+last_activity: 2026-07-10
 progress:
   total_phases: 13
   completed_phases: 10
-  total_plans: 33
-  completed_plans: 33
-  percent: 100
+  total_plans: 36
+  completed_plans: 34
+  percent: 94
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 15 — Setor-Scan Compartilhado, Choropleth & Painel do Território
+**Current focus:** Phase 16 — Detector de Lote Subutilizado & Farming/Caderno
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-09
+Phase: 16 (Detector de Lote Subutilizado & Farming/Caderno) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-07-10
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 15 P01 | 15min | 2 tasks | 3 files |
 | Phase 15 P02 | 25min | 3 tasks | 3 files |
 | Phase 15 P03 | 20min | 2 tasks | 1 files |
+| Phase 16 P01 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 15]: [15-03]: nome do setor no painel usa esc()+textContent (padrao ja usado em showBreadcrumb), replicado por consistencia de convencao do projeto
 - [Phase 15]: [15-03]: buscarNoSetor() reusa setMode/pickBairro (mesmo par usado por pickCaixaItem para itens setor) - nenhum caminho de busca novo
 - [Phase 15]: [15-03]: fix Rule 1 - clearBaiHi() agora esconde btnVerTerr ao limpar o hover, evitando abrir territorio de um layer que ja saiu de foco
+- [Phase 16]: [16-01]: DETECTOR_RATIO_MAX fixo em 0.15 (constante nomeada), nao relativo/quantil - mais simples de explicar, upgrade p/ potencial-do-PD fica p/ Fase 18
+- [Phase 16]: [16-01]: fix Rule 1 - cross-realm assert.deepEqual em caderno.test.mjs (medianasPorQuadra/detectarSubutilizados) normalizado via JSON round-trip / length, mesmo padrao ja usado por mixUso em territorio.test.mjs
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-09T23:23:21.030Z
-Stopped at: Completed 15-03-PLAN.md
+Last session: 2026-07-10T00:39:56.681Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
