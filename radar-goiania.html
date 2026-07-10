@@ -6736,7 +6736,25 @@ function finEscolherDoc(tipoDoc){
   getComps(LZ.a).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   wizRender();
 }
-function fecharLaudo(){const wiz=document.getElementById("wiz");wiz.hidden=true;LZ=null;
+/* laudoTemDados(): espelho de negTemDados (F5 B-13) — há conteúdo PRODUZIDO pelo usuário em risco
+   de perda no wizard do laudo? Ignora defaults regeneráveis (conserv "Bom", data de hoje,
+   finalidade padrão, comps consultados); conta fotos, observações, valor, solicitante,
+   diferenciais e área privativa. Na fase "finalidade" ainda não há passo preenchido. */
+function laudoTemDados(){
+  if(!LZ||LZ.fase==="finalidade")return false;
+  if(LZ.fotos&&LZ.fotos.length)return true;
+  if(LZ.obs&&LZ.obs.trim())return true;
+  if(LZ.valor!=null)return true;
+  if(LZ.solicitante&&LZ.solicitante.trim())return true;
+  if(LZ.difs&&LZ.difs.length)return true;
+  if(LZ.privativa!=null)return true;
+  return false;
+}
+function fecharLaudo(forcar){const wiz=document.getElementById("wiz");
+  /* F5 B-13: espelho do fecharNeg (B-08) — × e Esc confirmam antes de descartar passos/obs/FOTOS;
+     `forcar` pula a confirmação quando o fluxo já concluiu (PDF/laudo gerado). */
+  if(!forcar&&laudoTemDados()&&!confirm("Descartar o documento em edição?"))return;
+  wiz.hidden=true;LZ=null;
   untrapFocus(wiz);} /* Fase 19 (19-03, A11Y-01): substitui o restore manual de WIZRET.
   WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #wiz for o dono do trap ativo */
 /* Fase 10 CAPT-01 (10-03): Modo Captação — sheet .wiz sem steps, populado pelos 4 templates puros
@@ -7357,7 +7375,7 @@ function montarLaudo(){
       <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}${comCnai?" — CNAI "+esc(p.cnai):""}${comPtam?`<div class="lass-resp">Responsável técnico pela avaliação, nos termos da Res. COFECI nº 1.066/2007.</div>`:""}</div></div>
 
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
-  fecharLaudo();
+  fecharLaudo(true); /* F5 B-13: laudo já gerado — fecha sem reconfirmar descarte */
   /* NÃO imprime automático: o navegador bloqueia o print sem clique do usuário
      e acaba imprimindo a página errada (o mapa). Mostramos o laudo NA TELA; o PDF
      sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
@@ -7418,7 +7436,7 @@ function renderFichaRapida(a,data,fr){
     <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">${esc(fr.ressalva)}</p></div>
     ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
-  fecharLaudo();
+  fecharLaudo(true); /* F5 B-13: ficha já gerada — fecha sem reconfirmar descarte */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView"); if(lv.hidden){lv.hidden=false;trapFocus(lv);} lv.scrollTop=0;/*B-07/D-07(20); F5 AT-03: trap só quando estava fechado — reabrir por cima não empilha trap duplicado*/
 }
