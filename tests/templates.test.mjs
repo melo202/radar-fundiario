@@ -120,6 +120,24 @@ test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
   }
 });
 
+// --- zapArgumento: coerencia direcional (C-03) -------------------------------------------------
+
+test("zapArgumento com score baixo (acima da mediana) NAO afirma 'reforça o valor pedido'", () => {
+  const caro = {
+    ...FIXTURES.zapComData,
+    scoreOp: { score: 18, rotulo: "Preço alto", porque: ["Está 22% acima da mediana da vizinhança — entre os mais caros da região."] },
+  };
+  const result = P.zapArgumento(caro);
+  assert.ok(!result.includes("reforça o valor pedido"), `imóvel caro NAO deveria conter "reforça o valor pedido", obteve: ${JSON.stringify(result)}`);
+  assert.ok(result.includes("negociar o valor"), `imóvel caro deveria abrir margem para negociar, obteve: ${JSON.stringify(result)}`);
+});
+
+test("zapArgumento com score alto (abaixo da mediana) reforça o valor pedido", () => {
+  const result = P.zapArgumento(FIXTURES.zapComData); // score 78, "8% abaixo"
+  assert.ok(result.includes("reforça o valor pedido"), `imóvel barato deveria reforçar o valor pedido, obteve: ${JSON.stringify(result)}`);
+  assert.ok(!result.includes("negociar o valor"), `imóvel barato NAO deveria abrir margem para negociar, obteve: ${JSON.stringify(result)}`);
+});
+
 // --- Captacao: 4 funcoes ------------------------------------------------------------------------
 
 test("captAbordagem/captScript/captChecklist/captFollowup retornam string nao vazia", () => {

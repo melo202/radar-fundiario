@@ -1800,7 +1800,11 @@ function zapArgumento(data){
   const base=(d.scoreOp.porque&&d.scoreOp.porque[0])
     ? d.scoreOp.porque[0]
     : `Está na faixa "${d.scoreOp.rotulo}" em relação aos comparáveis da região.`;
-  return `Sobre o valor: este imóvel ${base.charAt(0).toLowerCase()+base.slice(1)} Isso reforça o valor pedido.`+
+  // Fecho coerente com a DIREÇÃO do preço: abaixo da mediana (score alto) reforça o valor pedido;
+  // acima da mediana (score baixo) abre margem para negociar. Nunca contradiz o `porque`.
+  const favoravel=Number(d.scoreOp.score)>=66||/abaixo/i.test(base);
+  const fecho=favoravel?"Isso reforça o valor pedido.":"Isso abre margem para negociar o valor.";
+  return `Sobre o valor: este imóvel ${base.charAt(0).toLowerCase()+base.slice(1)} ${fecho}`+
     assinatura(d.perfil);
 }
 
