@@ -501,9 +501,7 @@
   .urb-retry:hover{background:var(--ink);color:var(--paper-2)}
   /* comparáveis da vizinhança */
   .dcomps{margin:0 0 12px}
-  .cmpbtn{width:100%;border:1.5px solid var(--lot);background:var(--paper);color:var(--lot);
-    font:700 12px/1 "Archivo";padding:11px;border-radius:2px;cursor:pointer;min-height:44px}
-  .cmpbtn:hover{background:var(--lot);color:var(--paper-2)}
+  /* F5 B-12: .cmpbtn (botão duplicado de #dComps) removido — o único "Ver comparáveis" vive em #dActsPrim */
   .cmp{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:11px 12px}
   /* Fase 9 CMP-01: conclusão-primeiro — frase antes da estatística, que recolhe em <details> */
   .cmp-conclusao{font:600 13.5px/1.5 "Archivo";color:var(--ink);margin-bottom:8px}
@@ -5828,8 +5826,8 @@ function showDetail(a,ll){
   DCUR=a;
   histPush(a); /* Fase 10 SALV-01: auto-add ao radar_historico a cada abertura de ficha (dedupe+FIFO 30) */
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
-  else compsBox.innerHTML=
-    (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Ver comparáveis</button>':""; /* B-05: rótulo unificado com o botão de #dActsPrim */
+  else compsBox.innerHTML=""; /* F5 B-12: o único "Ver comparáveis" vive em #dActsPrim (carrega E rola);
+    o .cmpbtn duplicado que morava aqui saiu — nunca 2 botões idênticos simultâneos */
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
   let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
   if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
@@ -5843,7 +5841,7 @@ function showDetail(a,ll){
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Gerar documento</button>
-    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>`:""}
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">📊 Ver comparáveis</button>`:""}
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar oportunidade</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
