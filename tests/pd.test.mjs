@@ -28,11 +28,16 @@ function loadPureBlock() {
   assert.ok(src.includes("function potencialConstrutivo"), "potencialConstrutivo ausente do bloco RADAR_PURE (Task 2)");
   assert.ok(src.includes("function criterioDetectorPD"), "criterioDetectorPD ausente do bloco RADAR_PURE (Task 2)");
   assert.ok(src.includes("function resolverZonaUI"), "resolverZonaUI ausente do bloco RADAR_PURE (Task 3)");
-  const sandbox = {};
+  assert.ok(src.includes("function montarUrbBodyHTML"), "montarUrbBodyHTML ausente do bloco RADAR_PURE (18-02 Task 2)");
+  // esc()/clean() (18-02 Task 2): montarUrbBodyHTML usa esc() para todo campo textual de layer —
+  // esc() vive FORA de RADAR_PURE (é usado por praticamente todo o app, definido antes do bloco),
+  // então é stubado aqui como identidade (mesmo padrão já sugerido pelo 18-02-PLAN.md); clean() já
+  // vem incluído no slice de RADAR_PURE (não precisa stub).
+  const sandbox = { esc: (v) => (v == null ? "" : String(v)) };
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI};",
+      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA};",
     { filename: "radar-pure-pd.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -200,6 +205,129 @@ test("resolverZonaUI é pura (mesmo array de entrada, mesmo resultado, sem rede)
   const r1 = P.resolverZonaUI(PF.respostas.aaResolvido);
   const r2 = P.resolverZonaUI(PF.respostas.aaResolvido);
   assert.deepEqual(JSON.parse(JSON.stringify(r1)), JSON.parse(JSON.stringify(r2)));
+});
+
+// --- 18-02 Task 2: montarUrbBodyHTML (REGRA DE OURO no RENDER — assert de string, mesmo padrão
+// de CADERNO_ALLOW) + fmtCA -----------------------------------------------------------------------
+
+const BADGES_OFF = { aeis: false, apac: false, add: false, eixo: false, corredor: false };
+const CA_REGEX = /\d+(?:,\d+)?x/; // "6,0x"/"1,0x" — dígito de CA seguido de "x"
+
+test("fmtCA: formata em pt-BR (vírgula, 1 casa) — 1.0 -> '1,0', 6 -> '6,0'; null -> null", () => {
+  assert.equal(P.fmtCA(1.0), "1,0");
+  assert.equal(P.fmtCA(6), "6,0");
+  assert.equal(P.fmtCA(null), null);
+});
+
+test("montarUrbBodyHTML: resolvido com regra conferido:false (APAC) — REGRA DE OURO: nenhum dígito de CA, contém nota de não-conferência e o disclaimer", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "APAC", nome: P.PD_TABELA_CA.APAC.nome },
+    regra: P.PD_TABELA_CA.APAC,
+    badges: { ...BADGES_OFF, apac: true },
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!CA_REGEX.test(html), "conferido:false NUNCA deveria produzir um número de CA no HTML");
+  assert.ok(html.includes("ainda não foram conferidos"), "deveria conter a nota de conferência pendente");
+  assert.ok(html.includes(P.PD_DISCLAIMER), "deveria conter o disclaimer fixo do SEPLANH");
+});
+
+test("montarUrbBodyHTML: resolvido com AA (conferido:true) — CA básico+máximo, linha Usos com 'qualquer uso', disclaimer", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AA", nome: P.PD_TABELA_CA.AA.nome },
+    regra: P.PD_TABELA_CA.AA,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(html.includes("CA básico 1,0x · CA máximo 6,0x"), "deveria conter o rótulo verbatim de CA (18-UI-SPEC Copywriting Contract)");
+  assert.ok(html.includes(">Usos<") || html.includes("Usos"), "deveria conter a linha Usos");
+  assert.ok(html.includes("qualquer uso"), "AA tem usos_conferido:true e usos:'qualquer uso'");
+  assert.ok(html.includes(P.PD_DISCLAIMER), "deveria conter o disclaimer fixo do SEPLANH");
+});
+
+test("montarUrbBodyHTML: REGRA DE OURO de usos — regra com usos_conferido:false (AOS) NUNCA renderiza a linha Usos", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AOS", nome: P.PD_TABELA_CA.AOS.nome },
+    regra: P.PD_TABELA_CA.AOS,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!html.includes('<div class="k">Usos</div>'), "usos_conferido:false NUNCA deveria renderizar a linha Usos (omissão honesta)");
+});
+
+test("montarUrbBodyHTML: resolvido_sem_unidade (BLOCKER 2, regra===PD_MZC_BASICO, unidade:null) — só CA básico universal, nunca máximo, nunca 'undefined'", () => {
+  const estado = {
+    estado: "resolvido_sem_unidade",
+    macrozona: "Macrozona Construída",
+    unidade: null,
+    regra: P.PD_MZC_BASICO,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(html.includes("CA básico 1,0x"), "deveria conter o CA básico universal (Art. 242, VII)");
+  assert.ok(!html.includes("CA máximo"), "NUNCA deveria mostrar CA máximo (nenhuma unidade territorial identificada que o defina)");
+  assert.ok(!html.includes("undefined"), "guarda anti-crash — nunca 'undefined — undefined' (BLOCKER 2)");
+  assert.ok(html.includes("sem unidade territorial específica"), "deveria conter a nota de macrozona sem unidade");
+  assert.ok(html.includes(P.PD_DISCLAIMER), "deveria conter o disclaimer fixo do SEPLANH");
+});
+
+test("montarUrbBodyHTML: rural — sem badges nem CA, contém a copy da macrozona rural", () => {
+  const estado = {
+    estado: "rural",
+    macrozona: "Macrozona Rural do Alto Anicuns",
+    unidade: null,
+    regra: null,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!html.includes("urb-badge"), "estado rural nunca renderiza badges");
+  assert.ok(!CA_REGEX.test(html), "estado rural nunca renderiza CA");
+  assert.ok(html.includes("zona rural do Plano Diretor"), "deveria conter a copy verbatim do estado rural");
+});
+
+test("montarUrbBodyHTML: PD_DISCLAIMER aparece exatamente 1x em resolvido/resolvido_sem_unidade/parcial/rural", () => {
+  const base = {
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AA", nome: P.PD_TABELA_CA.AA.nome },
+    regra: P.PD_TABELA_CA.AA,
+    badges: BADGES_OFF,
+  };
+  const estados = [
+    { ...base, estado: "resolvido" },
+    { estado: "resolvido_sem_unidade", macrozona: "Macrozona Construída", unidade: null, regra: P.PD_MZC_BASICO, badges: BADGES_OFF },
+    { ...base, estado: "parcial" },
+    { estado: "rural", macrozona: "Macrozona Rural do Alto Anicuns", unidade: null, regra: null, badges: BADGES_OFF },
+  ];
+  estados.forEach((e) => {
+    const html = P.montarUrbBodyHTML(e);
+    const count = html.split(P.PD_DISCLAIMER).length - 1;
+    assert.equal(count, 1, `estado '${e.estado}' deveria conter PD_DISCLAIMER exatamente 1x (achou ${count})`);
+  });
+});
+
+test("montarUrbBodyHTML: parcial mostra o que resolveu + nota de aviso + botão de retry, antes do disclaimer", () => {
+  const estado = {
+    estado: "parcial",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AA", nome: P.PD_TABELA_CA.AA.nome },
+    regra: P.PD_TABELA_CA.AA,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(html.includes("não carregaram"), "deveria conter o aviso de dados parciais");
+  assert.ok(html.includes('id="urbRetry"'), "deveria conter o botão de retry (#urbRetry)");
+  assert.ok(html.includes("CA básico 1,0x · CA máximo 6,0x"), "deveria manter o que já resolveu (CA da AA)");
+});
+
+test("montarUrbBodyHTML: estado erro é só a nota de erro, SEM disclaimer (nada foi resolvido)", () => {
+  const html = P.montarUrbBodyHTML({ estado: "erro", macrozona: null, unidade: null, regra: null, badges: BADGES_OFF });
+  assert.ok(html.includes("Não foi possível consultar o Plano Diretor"));
+  assert.ok(!html.includes(P.PD_DISCLAIMER), "nada foi resolvido — o disclaimer de 'informação indicativa' não se aplica");
 });
 
 // --- Task 3: pdConsultarLote/PDCACHE (bloco PD_NET, I/O deduplicada) ----------------------------
