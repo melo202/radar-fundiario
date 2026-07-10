@@ -6436,23 +6436,32 @@ function caixaPopup(i,noTerr){
    Caderno ANTES da 1ª construção dos pinos — caixaLayer só é montado 1x por sessão e bindPopup
    recebe string ESTÁTICA; se o cruzamento fosse calculado DEPOIS, os pinos já construídos nunca
    ganhariam a linha de território no popup. Idempotente (no-op se já construído). Compartilhada
-   por toggleCaixa()/abrirCaixaNoMapaUI() — nunca duplica a construção. */
+   por toggleCaixa()/abrirCaixaNoMapaUI() — nunca duplica a construção. Dedupe de chamada em voo
+   via caixaLayerBuilding (17-REVIEW.md WR-01, mesmo padrão de territorioScan/TERRCACHE): sem isso,
+   2 chamadas concorrentes (ex.: toggle rápido + badge/linha Caixa quase simultâneos) passam ambas
+   pelo guard síncrono ANTES do único await, e a última a resolver "vence" a atribuição de
+   caixaLayer/caixaAnelLayer, deixando a outra camada presa no mapa sem forma de removê-la. */
+let caixaLayerBuilding=null;
 async function garantirCaixaLayer(){
   if(caixaLayer||!window.CAIXA||!CAIXA.imoveis)return;
-  const [nomeMap,itens]=await Promise.all([garantirNomeParaCdbairro(),cadernoListar({}).catch(()=>[])]);
-  const cdbairrosSalvos=new Set((itens||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
-  caixaLayer=L.layerGroup();
-  caixaAnelLayer=L.layerGroup();
-  CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
-    const noTerr=cdbairroDoImovelCaixa(i,nomeMap).some(cd=>cdbairrosSalvos.has(cd));
-    L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
-      .bindPopup(caixaPopup(i,noTerr)).addTo(caixaLayer);
-    if(noTerr){
-      /* anel extra — mesmo latlng, NUNCA dashArray (PIN-01: tracejado é ilegível em círculo de
-         8px); layerGroup próprio que sobe/desce junto com caixaLayer. */
-      L.circleMarker(toWGS(i.x,i.y),{radius:10,color:"#141a1f",weight:2,fillOpacity:0,bubblingMouseEvents:false}).addTo(caixaAnelLayer);
-    }
-  });
+  if(caixaLayerBuilding)return caixaLayerBuilding;
+  caixaLayerBuilding=(async()=>{
+    const [nomeMap,itens]=await Promise.all([garantirNomeParaCdbairro(),cadernoListar({}).catch(()=>[])]);
+    const cdbairrosSalvos=new Set((itens||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
+    const layer=L.layerGroup(),anel=L.layerGroup();
+    CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
+      const noTerr=cdbairroDoImovelCaixa(i,nomeMap).some(cd=>cdbairrosSalvos.has(cd));
+      L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
+        .bindPopup(caixaPopup(i,noTerr)).addTo(layer);
+      if(noTerr){
+        /* anel extra — mesmo latlng, NUNCA dashArray (PIN-01: tracejado é ilegível em círculo de
+           8px); layerGroup próprio que sobe/desce junto com caixaLayer. */
+        L.circleMarker(toWGS(i.x,i.y),{radius:10,color:"#141a1f",weight:2,fillOpacity:0,bubblingMouseEvents:false}).addTo(anel);
+      }
+    });
+    caixaLayer=layer;caixaAnelLayer=anel;
+  })();
+  try{await caixaLayerBuilding;}finally{caixaLayerBuilding=null;}
 }
 async function toggleCaixa(){
   if(!window.CAIXA)return;
