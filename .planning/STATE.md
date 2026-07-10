@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: executing
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-07-10T00:53:50.280Z"
+status: verifying
+stopped_at: Completed 16-03-PLAN.md
+last_updated: "2026-07-10T01:15:32.742Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 36
-  completed_plans: 35
-  percent: 97
+  completed_plans: 36
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 16 (Detector de Lote Subutilizado & Farming/Caderno) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
 Progress: [░░░░░░░░░░] 0%
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 15 P03 | 20min | 2 tasks | 1 files |
 | Phase 16 P01 | 20min | 3 tasks | 3 files |
 | Phase 16 P02 | 35min | 3 tasks | 1 files |
+| Phase 16 P03 | ~45min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 16]: [16-01]: fix Rule 1 - cross-realm assert.deepEqual em caderno.test.mjs (medianasPorQuadra/detectarSubutilizados) normalizado via JSON round-trip / length, mesmo padrao ja usado por mixUso em territorio.test.mjs
 - [Phase 16]: [16-02]: botao Salvar no caderno fica em #dActsMore (nunca #dActsPrim, teto da lei da tela preservado); filtro de setor do caderno usa cdbairro numerico (allowlist nao inclui nmbairro)
 - [Phase 16]: [16-02]: fix Rule 3 - .dnote (scoped a .detail) estendido com #cadernoBlock .dnote e regra de visibilidade :has() analoga a #savedBlocks, para o bloco Caderno renderizar corretamente fora de .detail
+- [Phase 16]: [16-03]: verificacao do checkpoint humano executada pelo orquestrador em navegador real (Chromium/preview) em vez de simulacao - zero-requisicao/persistencia/ausencia de PII/export-import/XSS confirmados ao vivo com instrumentacao de rede e dump direto do IndexedDB
+- [Phase 16]: [16-03]: item 4 do checkpoint (falha visivel/degradacao) ficou verificado por leitura de codigo, nao simulado ao vivo, porque o ambiente de teste tinha IndexedDB disponivel - tratado como campo opcional do checkpoint
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T00:53:50.277Z
-Stopped at: Completed 16-02-PLAN.md
+Last session: 2026-07-10T01:15:32.738Z
+Stopped at: Completed 16-03-PLAN.md
 Resume file: None

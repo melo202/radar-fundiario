@@ -42,7 +42,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela (completed 2026-07-07)
 - [x] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26 (completed 2026-07-09)
 - [x] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor (completed 2026-07-09)
-- [ ] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
+- [x] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII (completed 2026-07-10)
 - [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
 - [ ] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial
 
@@ -208,7 +208,7 @@ Plans:
 Plans:
 - [x] 16-01-PLAN.md — Funções puras TDD: detector (medianasPorQuadra/limiarQuadraValorizada/razaoOcupacao/detectarSubutilizados/leituraDetector, DETECTOR_RATIO_MAX=0.15) + decisão do caderno (sanitizeCaderno allowlist, enum de status, validarImportCaderno)
 - [x] 16-02-PLAN.md — Camada IndexedDB (radar_territorio v1) + bloco "Caderno de território" no painel Consulta + salvar da ficha (#dActsMore) + export/import JSON
-- [ ] 16-03-PLAN.md — Detector UI (#terrDetectorView view-swap em #terrPanel) + salvar do detector + destaque no mapa (pino 🏗️) + verificação manual (persistência/PII, checkpoint)
+- [x] 16-03-PLAN.md — Detector UI (#terrDetectorView view-swap em #terrPanel) + salvar do detector + destaque no mapa (pino 🏗️) + verificação manual (persistência/PII, checkpoint)
 
 ### Phase 17: Diff de Cadastro & Cruzamento Caixa
 **Goal**: O corretor vê o que mudou num lote desde a última visita e onde os imóveis Caixa cruzam com o território salvo.
@@ -255,7 +255,7 @@ Plans:
 | 13. Visual + Pinos + Motion + Descoberta | v2.1 | 3/3 | Complete   | 2026-07-07 |
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
-| 16. Detector + Farming/Caderno | v2.1 | 2/3 | In Progress|  |
+| 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete   | 2026-07-10 |
 | 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
