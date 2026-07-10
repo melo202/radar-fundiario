@@ -50,7 +50,10 @@ const P = loadPureBlock();
 // --- Detector de Lote Subutilizado (TERR-04) ----------------------------------------------
 
 test("medianasPorQuadra: agrupa por nrquadra, ignora nrquadra null e pm2 invalido; quadra sem pm2 valido nao aparece", () => {
-  const out = P.medianasPorQuadra(DF.medianasPorQuadra.lotes);
+  // Round-trip via JSON (mesmo motivo de mixUso em territorio.test.mjs): o objeto devolvido roda
+  // no realm do vm sandbox — nao e reference-equal ao Object.prototype deste realm mesmo com
+  // conteudo identico (assert.deepEqual cross-realm). Normaliza antes do assert.
+  const out = JSON.parse(JSON.stringify(P.medianasPorQuadra(DF.medianasPorQuadra.lotes)));
   assert.deepEqual(out, DF.medianasPorQuadra.expect);
   assert.ok(!("30" in out), "quadra sem nenhum pm2 valido nao deveria aparecer no resultado");
   assert.ok(!("null" in out) && !("undefined" in out), "lote sem nrquadra nunca cria uma quadra fantasma");
@@ -104,7 +107,7 @@ test("detectarSubutilizados: opts.limite trunca a lista (mais subutilizado prime
 
 test("detectarSubutilizados: <4 quadras distintas -> limiar null -> retorna [] (honestidade de amostra, nunca inventa oportunidade)", () => {
   const { lotes } = DF.detectarSubutilizadosAmostraInsuficiente;
-  assert.deepEqual(P.detectarSubutilizados(lotes), []);
+  assert.equal(P.detectarSubutilizados(lotes).length, 0);
 });
 
 test("leituraDetector: 'Terreno vago...' quando areaedif===0, senao 'Baixo aproveitamento...'", () => {
