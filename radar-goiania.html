@@ -237,13 +237,13 @@
   .card:active{transform:scale(.98);filter:brightness(.97)}
   .card .addr{font:700 15px/1.25 "Archivo";color:var(--ink);margin:0 0 3px} /* endereço = manchete do card */
   .card .ql-tag{font:600 11px/1 "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.03em;margin-bottom:8px} /* referência técnica = sublinha */
-  .card .matchapprox{color:var(--accent);font-weight:600} /* selo "match aproximado" — reusa fonte/cor do ql-tag, sem hex/transition novo (08-UI-SPEC) */
+  .card .matchapprox{color:var(--accent-ink);font-weight:600} /* selo "match aproximado" — D-09 (20): --accent-ink p/ contraste do texto pequeno sobre --paper */
   .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--muted)}
   .card .grid2 b{color:var(--ink);font-weight:600}
   .card .vals{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
   /* mercado estimado = número-âncora da decisão (grande, accent); venal = legenda secundária */
-  .card .vals .ref .lbl{display:block;font:700 10px/1 "Archivo";letter-spacing:.02em;color:var(--accent)}
-  .card .vals .ref b{display:block;font:800 17px/1.1 "Archivo";color:var(--accent);margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .card .vals .ref .lbl{display:block;font:700 10px/1 "Archivo";letter-spacing:.02em;color:var(--accent-ink)}/* D-09 (20): contraste do texto pequeno sobre --paper */
+  .card .vals .ref b{display:block;font:800 17px/1.1 "Archivo";color:var(--accent-ink);margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}/* D-09 (20) */
   .card .vals .venal{text-align:right;font:600 10px/1.2 "Archivo";color:var(--muted)}
   .card .vals .venal b{display:block;font:600 12px/1 "JetBrains Mono";color:var(--muted);margin-top:3px;white-space:nowrap}
 
