@@ -522,13 +522,17 @@ test("detectorRotuloPD: quadra sem zona resolvida (fora do mapa/consulta falhou)
   assert.equal(info.rotulo, "Critério: área construída ÷ área do terreno (Plano Diretor não disponível para este candidato)");
 });
 
-test("detectorRotuloPD: quadra resolvida mas zona não conferida (ex. APAC) -> ainda cai no fallback 'terreno', nunca quebra", () => {
+test("detectorRotuloPD: quadra resolvida mas zona não conferida (ex. APAC) -> fallback 'terreno' rotulado como 'não conferido' (C-09), nunca 'não disponível'", () => {
   const candidato = { cdbairro: "1", nrquadra: "10", areaedif: 150, areaterr: 300 };
   const porQuadraMap = {
     "1-10": { estado: "resolvido", unidade: { sigla: "APAC", nome: P.PD_TABELA_CA.APAC.nome }, regra: P.PD_TABELA_CA.APAC, badges: {} },
   };
   const info = P.detectorRotuloPD(candidato, porQuadraMap);
   assert.equal(info.criterio, "terreno");
+  // C-09: zona identificada mas CA não conferido é diferente de PD indisponível — o rótulo deve dizê-lo.
+  assert.ok(/não conferido/i.test(info.rotulo), `rótulo deveria distinguir "não conferido", obteve: ${info.rotulo}`);
+  assert.ok(info.rotulo.includes("APAC"), `rótulo deveria citar a zona identificada (APAC), obteve: ${info.rotulo}`);
+  assert.ok(!/não disponível/i.test(info.rotulo), `zona identificada NÃO deveria ser rotulada como "não disponível", obteve: ${info.rotulo}`);
 });
 
 // --- 18-03 Task 2: proximoEstadoCamada (tri-state PURO, exclusividade do seletor de camada) -----

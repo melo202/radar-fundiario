@@ -24,19 +24,31 @@ function loadPureBlock() {
     "function pendenciasDocumento",
     "function fichaRapidaTexto",
     "function scoreConfianca",
+    "function habilitaPtam",
   ]) {
     assert.ok(src.includes(fn), `${fn} ausente do bloco RADAR_PURE (dependencia da Task 2 nao cumprida)`);
   }
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {recomendaDocumento,pendenciasDocumento,fichaRapidaTexto,scoreConfianca};",
+    src + "\n;globalThis.__exports = {recomendaDocumento,pendenciasDocumento,fichaRapidaTexto,scoreConfianca,habilitaPtam};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
 }
 
 const P = loadPureBlock();
+
+// --- habilitaPtam: CRECI E CNAI (nunca CNAI sozinho) — C-07 --------------------------------
+
+test("habilitaPtam exige CRECI E CNAI preenchidos (CNAI sozinho NÃO habilita)", () => {
+  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "6789" }), true, "CRECI + CNAI habilita");
+  assert.equal(P.habilitaPtam({ creci: "", cnai: "6789" }), false, "CNAI sozinho NÃO habilita");
+  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "" }), false, "CRECI sozinho NÃO habilita");
+  assert.equal(P.habilitaPtam({ creci: "  ", cnai: "  " }), false, "só espaços NÃO habilita (trim)");
+  assert.equal(P.habilitaPtam({}), false, "perfil vazio NÃO habilita");
+  assert.equal(P.habilitaPtam(null), false, "perfil ausente NÃO habilita (nunca lança)");
+});
 
 // --- recomendaDocumento: matriz 4 finalidades x 2 estados de CNAI (8 combinacoes) -----------
 

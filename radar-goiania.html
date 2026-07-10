@@ -1269,7 +1269,7 @@
           <button type="button" id="terrChipZonas" aria-pressed="false" onclick="toggleCamadaTematica('zonas')">Colorir por zonas do Plano Diretor</button>
         </div>
         <button type="button" onclick="buscarNoSetor()">Buscar lote no setor</button>
-        <button type="button" id="terrDetectBtn" onclick="detectarOportunidadesUI()">Detectar oportunidades</button>
+        <button type="button" id="terrDetectBtn" onclick="detectarOportunidadesUI()">Detectar lotes subutilizados</button>
       </div>
       <details class="maisopcoes">
         <summary>Ver metodologia</summary>
@@ -1917,6 +1917,14 @@ function recomendaDocumento(finalidadeUso, cnai){
   }
   // "justificar" e fallback (finalidadeUso desconhecido/ausente) compartilham o mesmo resultado.
   return {doc:"relatorio", porque:"Você quer justificar o preço com dados — o Relatório traz comparáveis e metodologia, sem o peso formal do PTAM."};
+}
+
+/* habilitaPtam(prof): PTAM exige CRECI E CNAI preenchidos (Res. COFECI 1.066/2007 — corretor
+   inscrito no CRECI com registro no CNAI). CNAI sozinho NÃO habilita. Regra única, antes duplicada
+   em 3 pontos do fluxo do laudo (C-07). */
+function habilitaPtam(prof){
+  const p=prof||{};
+  return !!String(p.creci||"").trim() && !!String(p.cnai||"").trim();
 }
 
 /* pendenciasDocumento(inputs): chama scoreConfianca({areaOk,nComps,atipico,venalOk}) internamente
@@ -2915,9 +2923,20 @@ function detectorRotuloPD(a,porQuadraMap){
   const potencial=(regra&&regra.conferido===true&&sigla)?potencialConstrutivo(a.areaterr,sigla):null;
   const crit=criterioDetectorPD(a.areaedif,a.areaterr,potencial);
   if(!crit)return null;
+  /* C-09: no fallback (razão construído÷terreno), distinguir por que o PD não entrou — honestidade:
+     "não disponível" (não consultado/erro) é diferente de "parâmetro ainda não conferido" (zona
+     identificada, mas CA não validado contra o Anexo). Nunca afirma valorização/aproveitamento do PD. */
+  let motivoFallback;
+  if(!estadoPD||estadoPD.estado==="erro"){
+    motivoFallback="Plano Diretor não disponível para este candidato";
+  }else if(sigla){
+    motivoFallback="parâmetro do Plano Diretor (CA) ainda não conferido para a zona "+sigla;
+  }else{
+    motivoFallback="unidade territorial do Plano Diretor não identificada para este candidato";
+  }
   const rotulo=(crit.criterio==="pd")
     ? "Critério: área construída ÷ potencial do Plano Diretor (zona "+sigla+", CA básico "+fmtCA(regra.ca_basico)+"x)"
-    : "Critério: área construída ÷ área do terreno (Plano Diretor não disponível para este candidato)";
+    : "Critério: área construída ÷ área do terreno ("+motivoFallback+")";
   return Object.assign({rotulo},crit);
 }
 /* proximoEstadoCamada(atual,modo) (Fase 18, 18-03, PD-05): transição PURA do seletor tri-state de
@@ -4512,7 +4531,7 @@ function renderDetectorLista(cand,scan){
   document.getElementById("terrDetectorHon").textContent=rotuloAmostra(scan.lotes.length,scan.total);
   const list=document.getElementById("terrDetectorList");
   if(!TERR_DETECTOR_CAND.length){
-    list.innerHTML='<div class="terrdet-empty"><strong>Nenhuma oportunidade encontrada</strong>Não há lotes com baixo aproveitamento em quadra de alto valor nesta amostra do setor. Isso é raro, mas pode acontecer em setores pequenos ou já bem ocupados.</div>';
+    list.innerHTML='<div class="terrdet-empty"><strong>Nenhum lote subutilizado encontrado</strong>Não há lotes com baixo aproveitamento em quadra de alto valor nesta amostra do setor. Isso é raro, mas pode acontecer em setores pequenos ou já bem ocupados.</div>';
     return;
   }
   /* medianas recomputadas aqui só p/ exibir o chip "R$/m² quadra" — mesma função pura do Plano 01
@@ -6848,8 +6867,8 @@ function renderSeletorFinalidade(){
   ];
   let recHtml="";
   if(LZ.finalidadeUso){
-    /* WR-01 (11-REVIEW): habilitação p/ PTAM = CRECI E CNAI (não CNAI sozinho) — mesma regra do montarLaudo */
-    const cnai=!!(LZ.prof.cnai||"").trim()&&!!(LZ.prof.creci||"").trim();
+    /* C-07: habilitação p/ PTAM = CRECI E CNAI (não CNAI sozinho) — regra única habilitaPtam() */
+    const cnai=habilitaPtam(LZ.prof);
     const rec=recomendaDocumento(LZ.finalidadeUso,cnai);
     const ORDEM=["relatorio","ficha","ptam"];
     const DESCS={
@@ -6981,7 +7000,7 @@ function wizRender(){
         ${(()=>{ /* WR-02 (11-REVIEW): mostrar o documento EFETIVO — se escolheu PTAM mas o perfil
            foi editado e perdeu CRECI/CNAI, o render sai como Relatório; o preview tem que dizer isso
            em vez de prometer PTAM. */
-          const hab=!!(LZ.prof.creci||"").trim()&&!!(LZ.prof.cnai||"").trim();
+          const hab=habilitaPtam(LZ.prof); /* C-07: regra única */
           const downgrade=LZ.tipoDoc==="ptam"&&!hab;
           const efetivo=downgrade?"relatorio":LZ.tipoDoc;
           return `<div class="revsec-val">${esc(NOMES_DOC[efetivo]||"Relatório de avaliação")}</div>`+
@@ -7018,9 +7037,8 @@ function montarLaudo(){
   const addr=addrDe(a);
   const comCreci=!!(p.creci||"").trim();
   const comCnai=!!(p.cnai||"").trim();
-  /* WR-01 (11-REVIEW): PTAM exige CRECI E CNAI (Res. COFECI 1.066/2007 pressupõe corretor
-     inscrito no CRECI com registro no CNAI) — CNAI sozinho gerava PTAM sem número de CRECI. */
-  const comPtam=comCnai&&comCreci;
+  /* C-07: PTAM exige CRECI E CNAI (Res. COFECI 1.066/2007) — regra única habilitaPtam(). */
+  const comPtam=habilitaPtam(p);
   const titulo=comPtam?"Parecer Técnico de Avaliação Mercadológica (PTAM)":"Relatório de Referência de Mercado";
   const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
   const vist=LZ.vistoria?("Vistoria realizada pelo subscritor em "+(fmtDt((LZ.dataVist||"").replace(/-/g,""))||hoje)):"Sem vistoria presencial (avaliação com base em dados cadastrais, fotos e informações do interessado)";
