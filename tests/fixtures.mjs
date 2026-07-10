@@ -795,4 +795,166 @@ export const FIXTURES = {
       { n: 1842, total: 1842, out: "Amostra de 1.842 de 1.842 lotes" },
     ],
   },
+
+  // Fase 16 (16-01, TERR-04): fixtures do Detector de Lote Subutilizado. Contrato de HONESTIDADE
+  // (Pitfall 1, 16-RESEARCH.md): areaedif===0 (terreno vago REAL) INCLUI no detector;
+  // areaedif==null/undefined (registro incompleto) EXCLUI SEMPRE — nunca `?:`/`||0` na guarda.
+  DETECTOR_FIX: {
+    medianasPorQuadra: {
+      lotes: [
+        // quadra "10": 2 lotes com pm2 valido -> mediana = (1000+1400)/2 = 1200
+        { nrquadra: "10", vlvenal: 100000, areaedif: 100, areaterr: 100 }, // pm2=1000
+        { nrquadra: "10", vlvenal: 140000, areaedif: 100, areaterr: 100 }, // pm2=1400
+        // quadra "20": 1 lote valido + 1 lote SEM pm2 valido (vlvenal=0) -> ignorado, mediana=2000
+        { nrquadra: "20", vlvenal: 200000, areaedif: 100, areaterr: 100 }, // pm2=2000
+        { nrquadra: "20", vlvenal: 0, areaedif: 100, areaterr: 100 }, // pm2 null -> ignorado
+        // lote sem nrquadra (null) -> nunca agrupado, nunca cria quadra "null"/"undefined"
+        { nrquadra: null, vlvenal: 500000, areaedif: 100, areaterr: 100 },
+        // quadra "30": nenhum lote com pm2 valido -> a quadra NAO aparece no resultado
+        { nrquadra: "30", vlvenal: 0, areaterr: 100 },
+      ],
+      expect: { "10": 1200, "20": 2000 },
+    },
+
+    limiarQuadraValorizada: {
+      // <4 quadras distintas nao sustenta um quartil informativo -> null, nunca inventa limiar
+      menosDe4: {
+        medianas: { "10": 1000, "20": 2000, "30": 3000 },
+        expect: null,
+      },
+      // >=4 quadras distintas -> Q3 da distribuicao de MEDIANOS (nao dos pm2 individuais)
+      quatroOuMais: {
+        medianas: { A: 1000, B: 1200, C: 1300, D: 9000, E: 9500 },
+        expect: 9000, // quantilAmostra([1000,1200,1300,9000,9500],.75) -> i=3 exato, sem interpolacao
+      },
+    },
+
+    // razaoOcupacao: borda 0-vs-null (Pitfall 1) — mesma areaterr, resultado OPOSTO conforme
+    // areaedif seja 0 real (terreno vago, INCLUI) ou null/undefined (dado incompleto, EXCLUI).
+    razaoOcupacao: [
+      { a: { areaedif: 0, areaterr: 400 }, out: 0 }, // terreno vago REAL -> 0 (candidato)
+      { a: { areaedif: null, areaterr: 400 }, out: null }, // registro incompleto -> excluido
+      { a: { areaedif: undefined, areaterr: 400 }, out: null }, // idem, ausente
+      { a: { areaterr: 400 }, out: null }, // areaedif nem presente no objeto -> ausente -> null
+      { a: { areaedif: 380, areaterr: 400 }, out: 0.95 }, // ocupacao alta -> nao candidato
+      { a: { areaedif: 30, areaterr: 400 }, out: 0.075 }, // ocupacao baixa -> candidato
+      { a: { areaedif: 100, areaterr: 0 }, out: null }, // terreno ausente/zero -> sem razao calculavel
+      { a: { areaedif: 100, areaterr: null }, out: null },
+    ],
+
+    // detectarSubutilizados: cenario completo com 5 quadras distintas (Q3 existe). B1/B2/B3 =
+    // baixo valor (fora do quartil superior); V1/V2 = valorizadas (mediana >= limiar). Cada
+    // quadra valorizada tem lotes "background" (ocupacao alta, define a mediana) + candidatos
+    // (vago/baixo-aproveitamento/incompleto) — a quantidade de background e alta o suficiente
+    // para a mediana da quadra nao ser arrastada pelos candidatos de pm2 baixo (fallback p/
+    // areaterr quando areaedif e 0/ausente).
+    detectarSubutilizados: {
+      lotes: [
+        // B1 (baixo valor, mediana=1000): 3 background + 1 "vago" (nao muda a mediana, n=4)
+        { ci: "b1a", nrquadra: "B1", vlvenal: 100000, areaedif: 100, areaterr: 100 },
+        { ci: "b1b", nrquadra: "B1", vlvenal: 100000, areaedif: 100, areaterr: 100 },
+        { ci: "b1c", nrquadra: "B1", vlvenal: 100000, areaedif: 100, areaterr: 100 },
+        // terreno vago numa quadra de BAIXO valor -> NUNCA candidato (fora do quartil superior)
+        { ci: "b1-vago", nrquadra: "B1", vlvenal: 100000, areaedif: 0, areaterr: 400 },
+        // B2 (baixo valor, mediana=1200)
+        { ci: "b2a", nrquadra: "B2", vlvenal: 120000, areaedif: 100, areaterr: 100 },
+        { ci: "b2b", nrquadra: "B2", vlvenal: 120000, areaedif: 100, areaterr: 100 },
+        { ci: "b2c", nrquadra: "B2", vlvenal: 120000, areaedif: 100, areaterr: 100 },
+        // B3 (baixo valor, mediana=1300)
+        { ci: "b3a", nrquadra: "B3", vlvenal: 130000, areaedif: 100, areaterr: 100 },
+        { ci: "b3b", nrquadra: "B3", vlvenal: 130000, areaedif: 100, areaterr: 100 },
+        { ci: "b3c", nrquadra: "B3", vlvenal: 130000, areaedif: 100, areaterr: 100 },
+        // V1 (valorizada, mediana=9000): 5 background + 3 candidatos/guarda de qualidade
+        { ci: "v1a", nrquadra: "V1", vlvenal: 900000, areaedif: 100, areaterr: 100 },
+        { ci: "v1b", nrquadra: "V1", vlvenal: 900000, areaedif: 100, areaterr: 100 },
+        { ci: "v1c", nrquadra: "V1", vlvenal: 900000, areaedif: 100, areaterr: 100 },
+        { ci: "v1d", nrquadra: "V1", vlvenal: 900000, areaedif: 100, areaterr: 100 },
+        { ci: "v1e", nrquadra: "V1", vlvenal: 900000, areaedif: 100, areaterr: 100 },
+        // terreno vago REAL em quadra valorizada -> candidato, razao=0 (mais subutilizado)
+        { ci: "v1-vago", nrquadra: "V1", vlvenal: 300000, areaedif: 0, areaterr: 400 },
+        // ocupacao alta (razao 0.95) -> NAO candidato (razao > razaoMax)
+        { ci: "v1-alto", nrquadra: "V1", vlvenal: 300000, areaedif: 380, areaterr: 400 },
+        // areaedif ausente (undefined, nem a chave existe) -> registro incompleto -> NUNCA candidato
+        { ci: "v1-undefined", nrquadra: "V1", vlvenal: 300000, areaterr: 400 },
+        // V2 (valorizada, mediana=9500): 5 background + 2 candidatos/guarda de qualidade
+        { ci: "v2a", nrquadra: "V2", vlvenal: 950000, areaedif: 100, areaterr: 100 },
+        { ci: "v2b", nrquadra: "V2", vlvenal: 950000, areaedif: 100, areaterr: 100 },
+        { ci: "v2c", nrquadra: "V2", vlvenal: 950000, areaedif: 100, areaterr: 100 },
+        { ci: "v2d", nrquadra: "V2", vlvenal: 950000, areaedif: 100, areaterr: 100 },
+        { ci: "v2e", nrquadra: "V2", vlvenal: 950000, areaedif: 100, areaterr: 100 },
+        // baixo aproveitamento (razao 0.075) -> candidato
+        { ci: "v2-baixo", nrquadra: "V2", vlvenal: 300000, areaedif: 30, areaterr: 400 },
+        // areaedif===null (registro incompleto explicito) -> NUNCA candidato
+        { ci: "v2-incompleto", nrquadra: "V2", vlvenal: 300000, areaedif: null, areaterr: 400 },
+      ],
+      expectLimiar: 9000,
+      // ordenado por razao crescente: v1-vago (0) primeiro, depois v2-baixo (0.075)
+      expectOrdemCi: ["v1-vago", "v2-baixo"],
+    },
+
+    // <4 quadras distintas -> limiarQuadraValorizada null -> detectarSubutilizados retorna [],
+    // mesmo com candidatos de razao 0 aparentemente fortes (amostra insuficiente = honestidade)
+    detectarSubutilizadosAmostraInsuficiente: {
+      lotes: [
+        { ci: "x1", nrquadra: "X", vlvenal: 900000, areaedif: 0, areaterr: 400 },
+        { ci: "x2", nrquadra: "Y", vlvenal: 800000, areaedif: 0, areaterr: 400 },
+        { ci: "x3", nrquadra: "Z", vlvenal: 700000, areaedif: 0, areaterr: 400 },
+      ],
+    },
+
+    leituraDetector: [
+      { item: { areaedif: 0 }, out: "🏗️ Terreno vago em quadra valorizada" },
+      { item: { areaedif: 50 }, out: "🏗️ Baixo aproveitamento em quadra valorizada" },
+    ],
+  },
+
+  // Fase 16 (16-01, TERR-05): fixtures das funcoes puras de decisao do Caderno. Contrato de
+  // LGPD (Pitfall 2, 16-RESEARCH.md): sanitizeCaderno e uma ALLOWLIST POSITIVA — so os campos
+  // de CADERNO_ALLOW sobrevivem; dtnascimen/cpf/nome/campo-desconhecido NUNCA passam, mesmo
+  // presentes no objeto de entrada.
+  CADERNO_FIX: {
+    itemValido: {
+      ci: "123456",
+      cdbairro: 16,
+      nrquadra: "10",
+      nrlote: "5",
+      vlvenal: 200000,
+      areaedif: 100,
+      areaterr: 200,
+      uso: 1,
+      endereco: "Rua Teste, 123",
+    },
+    itemComPII: {
+      ci: "123456",
+      cdbairro: 16,
+      nrquadra: "10",
+      nrlote: "5",
+      vlvenal: 200000,
+      areaedif: 100,
+      areaterr: 200,
+      uso: 1,
+      endereco: "Rua Teste, 123",
+      dtnascimen: "1980-01-01",
+      cpf: "00000000000",
+      nmproprie: "Fulano de Tal",
+      campoInventado: "x",
+    },
+    importValido: [
+      { ci: "111", cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100, uso: 1 },
+      { ci: "222", cdbairro: 16, vlvenal: 200000, areaedif: 100, areaterr: 100, uso: 1 },
+    ],
+    importMalformado: "{isso nao e json valido",
+    importItemSemCi: [{ cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 }], // sem `ci` -> descartado
+    importItemComPII: [
+      {
+        ci: "333",
+        cdbairro: 16,
+        vlvenal: 300000,
+        areaedif: 100,
+        areaterr: 100,
+        dtnascimen: "1990-05-05",
+        cpf: "11111111111",
+      },
+    ],
+  },
 };
