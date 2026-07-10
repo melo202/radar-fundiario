@@ -39,10 +39,14 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 11: Documentos em 3 Níveis** — ficha rápida / relatório / laudo-PTAM; finalidade → recomenda doc; confiança+pendências antes de gerar; revisão antes do PDF (completed 2026-07-07)
 - [x] **Phase 11.1: Documentos da Negociação** — minutas de Proposta de C&V, Termo de Exclusividade/Autorização e Contrato de C&V, pré-preenchidas com o imóvel, editáveis, em PDF pt-BR com ressalvas; OCR da escritura (Tesseract.js, best-effort/opcional). Reusa a infra da Fase 11 (completed 2026-07-07)
 - [x] **Phase 12: Prédio como Objeto Comercial** — resumo do edifício antes da lista; ordenação (oportunidade/valor/área) e filtros; marcar unidades p/ comparar (completed 2026-07-07)
-- [x] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela (completed 2026-07-07)
-- [x] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26 (completed 2026-07-09)
-- [x] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor (completed 2026-07-09)
-- [x] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII (completed 2026-07-10)
+- [x] **Phase 13: Refino Visual, Pinos Semânticos, Motion & Descoberta Progressiva** — refino clean (respiro, cor só p/ status) mantendo identidade cartográfica; pinos semânticos; motion de busca em etapas + skeleton; onboarding ≤3 telas + "O que o Radar faz"; lei da tela
+ (completed 2026-07-07)
+- [x] **Phase 14: Linguagem Impecável (pt-BR)** — gate de release: toda microcopy (botões/placeholders/erros/tooltips/PDFs/WhatsApp) pelo checklist §26
+ (completed 2026-07-09)
+- [x] **Phase 15: Setor-Scan Compartilhado, Choropleth & Painel do Território** — varredura com orçamento de requisições; choropleth de R$/m² legível sobre satélite; painel do setor
+ (completed 2026-07-09)
+- [x] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
+ (completed 2026-07-10)
 - [ ] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo
 - [ ] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial
 
@@ -217,7 +221,9 @@ Plans:
 **Success Criteria**:
   1. Revisitar um lote salvo mostra o que mudou desde o snapshot (diff enxuto, nunca PII; mesma allowlist da Fase 16)
   2. Imóveis Caixa plotados são cruzados com o território salvo, destacando quando um imóvel Caixa cai num setor/lote já farmado
-**Plans**: TBD
+**Plans**: 2 plans (waves sequenciais)
+- [ ] 17-01-PLAN.md — Núcleo de dados: diffLote/formatarDiff/matching Caixa (RADAR_PURE, TDD) + snapshot LGPD recursivo + cadernoBuscar + 1º save
+- [ ] 17-02-PLAN.md — UI: bloco de diff na ficha + badge/linha/anel/popup Caixa + ação 1 toque + verificação
 
 ### Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)
 **Goal**: A ficha responde "o que este lote PODE SER" — zona/unidade territorial do Modelo Espacial, coeficiente de aproveitamento, usos — e essa inteligência alimenta o score de oportunidade e o detector de subutilizado. Tudo dado oficial determinístico (lei + GIS da prefeitura), zero IA.
