@@ -4139,11 +4139,12 @@ function cadernoListar(opts){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readonly");
     const store=tx.objectStore("caderno");
-    const req=(o.cdbairro!=null&&o.cdbairro!=="")
-      ? store.index("cdbairro").getAll(o.cdbairro)
-      : store.getAll();
+    /* A-02 (20): getAll() completo + filtro em memória por cdbairro, robusto a itens gravados como
+       string OU number (o índice getAll(valor) casa por tipo exato e perdia itens do outro tipo). */
+    const req=store.getAll();
     req.onsuccess=()=>{
       let out=req.result||[];
+      if(o.cdbairro!=null&&o.cdbairro!=="")out=out.filter(it=>String(it.cdbairro)===String(o.cdbairro));
       if(o.status)out=out.filter(it=>it.status===o.status);
       db.close();
       resolve(out);
