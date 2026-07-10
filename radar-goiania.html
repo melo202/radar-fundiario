@@ -7045,7 +7045,7 @@ function montarNeg(){
     <div class="foot">RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA · EMITIDO EM ${hoje}</div>`;
   fecharNeg(true); /* B-08: PDF já gerado — fecha sem reconfirmar descarte */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
+  const lv=document.getElementById("laudoView"); if(lv.hidden){lv.hidden=false;trapFocus(lv);} lv.scrollTop=0;/*B-07/D-07(20); F5 AT-03: trap só quando estava fechado — reabrir por cima não empilha trap duplicado*/
 }
 /* copyCapt(tipo): recalcula dadosFicha() (barato, garante consistência se os scores atualizaram
    com o sheet aberto) e copia o template correspondente com toast especifico. */
@@ -7363,7 +7363,7 @@ function montarLaudo(){
      sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
      é ele que vai para o PDF — e só é limpo ao fechar (fecharLaudoView). */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
+  const lv=document.getElementById("laudoView"); if(lv.hidden){lv.hidden=false;trapFocus(lv);} lv.scrollTop=0;/*B-07/D-07(20); F5 AT-03: trap só quando estava fechado — reabrir por cima não empilha trap duplicado*/
 }
 /* montarFichaRapida(): monta o objeto `data` a partir de LZ (nunca DCUR — dentro do wizard a fonte
    de verdade é LZ, mesma regra "DCUR fechado" do Estado Transversal) e chama fichaRapidaTexto()
@@ -7420,7 +7420,7 @@ function renderFichaRapida(a,data,fr){
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo();
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
-  const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
+  const lv=document.getElementById("laudoView"); if(lv.hidden){lv.hidden=false;trapFocus(lv);} lv.scrollTop=0;/*B-07/D-07(20); F5 AT-03: trap só quando estava fechado — reabrir por cima não empilha trap duplicado*/
 }
 /* dispara o PDF a partir do CLIQUE do usuário (gesto real → não é bloqueado) */
 function imprimirLaudo(){
@@ -7734,6 +7734,14 @@ function trapFocus(container){
   }};
   TRAPS.push(entry);
   container.addEventListener("keydown", entry.handler);
+  /* F5 D-11: semeia o foco — o handler de Tab vive NO container; sem foco dentro dele o trap era
+     inerte (#calc/#laudoView/#terrPanel). Sheets que já semeiam manualmente re-focam o mesmo alvo
+     logo depois (inofensivo); container ainda oculto (ex.: onboarding pré-.show) tem
+     trapFocaveis()=[] e o seed vira no-op — o seed manual desses fluxos continua valendo. */
+  if(!container.contains(document.activeElement)){
+    const f=trapFocaveis(container);
+    if(f.length)f[0].focus();
+  }
 }
 function untrapFocus(container){
   /* WR-01 (19-REVIEW.md) preservado na pilha: COM container, remove a entrada desse container onde
