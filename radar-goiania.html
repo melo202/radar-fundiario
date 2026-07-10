@@ -2793,6 +2793,26 @@ function montarUrbBodyHTML(estado){
     + notaParcial
     + `<div class="dnote">${PD_DISCLAIMER}</div>`;
 }
+/* detectorRotuloPD(a,porQuadraMap) (Fase 18, 18-02, PD-04 detector): dado 1 candidato do detector
+   e o mapa {chaveQuadra: estadoPD|null} já resolvido por consultarPDPorQuadra (I/O, PD_NET) —
+   PURA, monta o rótulo do critério (PD ou fallback) usado no render de #terrDetectorList. Zona não
+   resolvida/não conferida cai no fallback rotulado de criterioDetectorPD (T-18-04) — NUNCA quebra
+   nem esconde o candidato. Retorna null só quando nem o fallback tem denominador real (mesmo
+   critério de criterioDetectorPD). */
+function detectorRotuloPD(a,porQuadraMap){
+  const chave=clean(a.cdbairro)+"-"+clean(a.nrquadra);
+  const estadoPD=(porQuadraMap&&porQuadraMap[chave])||null;
+  const unidade=estadoPD&&estadoPD.unidade;
+  const regra=estadoPD&&estadoPD.regra;
+  const sigla=unidade&&unidade.sigla;
+  const potencial=(regra&&regra.conferido===true&&sigla)?potencialConstrutivo(a.areaterr,sigla):null;
+  const crit=criterioDetectorPD(a.areaedif,a.areaterr,potencial);
+  if(!crit)return null;
+  const rotulo=(crit.criterio==="pd")
+    ? "Critério: área construída ÷ potencial do Plano Diretor (zona "+sigla+", CA básico "+fmtCA(regra.ca_basico)+"x)"
+    : "Critério: área construída ÷ área do terreno (Plano Diretor não disponível para este candidato)";
+  return Object.assign({rotulo},crit);
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -3667,20 +3687,17 @@ async function territorioScan(cdbairroRaw){
 }
 // TERR_NET_END
 
-// PD_NET_START — consulta point-in-polygon do Plano Diretor por lote (Fase 18, 18-01, PD-01):
+// PD_NET_START — consulta point-in-polygon do Plano Diretor (Fase 18, 18-01/18-02, PD-01/PD-04):
 // bateria de 9 queries em paralelo contra o Modelo Espacial (produção), Promise.allSettled +
-// resolverZonaUI (RADAR_PURE), cache de sessão por `ci` (dedupe, nunca avalanche no endpoint
-// frágil). LAZY — só é chamada pela UI do plano 02 (nunca em varredura de setor).
-// Testado por tests/pd.test.mjs (loadNetBlock, slice isolado via node:vm com jsonp stubado).
-const PDCACHE={}; /* cache de sessão por ci/coordenada — zona não muda na sessão (CONTEXT) */
+// resolverZonaUI (RADAR_PURE). LAZY — só é chamada pela UI do plano 02 (nunca em varredura de
+// setor). Testado por tests/pd.test.mjs (loadNetBlock, slice isolado via node:vm com jsonp
+// stubado). pdBateriaConsulta(x,y) é a bateria CRUA, sem cache — pdConsultarLote (cache por `ci`
+// do LOTE, PDCACHE) e pdConsultarQuadra (Fase 18, 18-02, T-18-02 — cache por `chaveQuadra` do
+// DETECTOR, PDQUADRACACHE) são CACHES DEDICADOS e NUNCA compartilhados entre si (W3 do
+// 18-02-PLAN.md: misturar chaves `ci` de lote e `chaveQuadra` de quadra no MESMO mapa causaria
+// colisão/cache-poisoning).
 const PD_SVC_BASE="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Mapa_ModeloEspacial/MapServer"; // PRODUÇÃO — NUNCA "_teste" (numeração de layers diferente)
-/* pdConsultarLote(x,y,ci): PDCACHE[ci] existe -> devolve do cache (dedupe de sessão, sem 2ª
-   bateria). Senão dispara em PARALELO 1 jsonp por entrada de PD_LAYERS, coleta via
-   Promise.allSettled (falha parcial nunca derruba as que resolveram), monta o resultado via
-   resolverZonaUI e grava em PDCACHE[ci]. */
-async function pdConsultarLote(x,y,ci){
-  capCache(PDCACHE,60);
-  if(PDCACHE[ci])return PDCACHE[ci];
+async function pdBateriaConsulta(x,y){
   const chaves=Object.keys(PD_LAYERS);
   const promessas=chaves.map(key=>
     jsonp({geometry:x+","+y,geometryType:"esriGeometryPoint",inSR:31982,spatialRel:"esriSpatialRelIntersects",
@@ -3688,9 +3705,49 @@ async function pdConsultarLote(x,y,ci){
   );
   const settled=await Promise.allSettled(promessas);
   const respostas=settled.map((s,i)=>({layer:chaves[i],status:s.status,value:s.status==="fulfilled"?s.value:null}));
-  const resultado=resolverZonaUI(respostas);
+  return resolverZonaUI(respostas);
+}
+const PDCACHE={}; /* cache de sessão por ci/coordenada de LOTE — zona não muda na sessão (CONTEXT) */
+/* pdConsultarLote(x,y,ci): PDCACHE[ci] existe -> devolve do cache (dedupe de sessão, sem 2ª
+   bateria). Senão dispara pdBateriaConsulta e grava em PDCACHE[ci]. */
+async function pdConsultarLote(x,y,ci){
+  capCache(PDCACHE,60);
+  if(PDCACHE[ci])return PDCACHE[ci];
+  const resultado=await pdBateriaConsulta(x,y);
   PDCACHE[ci]=resultado;
   return resultado;
+}
+/* PDQUADRACACHE (Fase 18, 18-02, T-18-02): cache DEDICADO do detector, chaveado por `chaveQuadra`
+   ("cdbairro-nrquadra") — lotes da mesma quadra compartilham unidade territorial, então 1
+   consulta por quadra (nunca por lote) já cobre todos os candidatos daquela quadra. */
+const PDQUADRACACHE={};
+async function pdConsultarQuadra(x,y,chaveQuadra){
+  capCache(PDQUADRACACHE,DETECTOR_LIMITE);
+  if(PDQUADRACACHE[chaveQuadra])return PDQUADRACACHE[chaveQuadra];
+  const resultado=await pdBateriaConsulta(x,y);
+  PDQUADRACACHE[chaveQuadra]=resultado;
+  return resultado;
+}
+/* consultarPDPorQuadra(candidatos) (Fase 18, 18-02, T-18-02): para até DETECTOR_LIMITE candidatos
+   do detector, agrupa por chaveQuadra e consulta o PD UMA VEZ por quadra DISTINTA (nunca por
+   lote) — usa o 1º lote com coordenada válida de cada quadra como representante/centroide.
+   Promise.allSettled: falha de 1 quadra nunca derruba as outras (T-18-04). Retorna
+   {chaveQuadra: estadoPD|null} — null quando a consulta falhou/sem coordenada, o chamador
+   (detectorRotuloPD) sabe cair no fallback rotulado. */
+async function consultarPDPorQuadra(candidatos){
+  const porQuadra={};
+  (candidatos||[]).forEach(a=>{
+    const chave=clean(a.cdbairro)+"-"+clean(a.nrquadra);
+    if(!porQuadra[chave]&&a.x_coord&&a.y_coord)porQuadra[chave]=a; // 1º lote com coordenada representa a quadra inteira
+  });
+  const chaves=Object.keys(porQuadra);
+  const settled=await Promise.allSettled(chaves.map(chave=>{
+    const rep=porQuadra[chave];
+    return pdConsultarQuadra(rep.x_coord,rep.y_coord,chave);
+  }));
+  const out={};
+  chaves.forEach((chave,i)=>{out[chave]=settled[i].status==="fulfilled"?settled[i].value:null;});
+  return out;
 }
 // PD_NET_END
 
@@ -4148,6 +4205,7 @@ function renderDetectorLista(cand,scan){
         <span class="terrdet-chip">Terreno ${a.areaterr!=null?Math.round(a.areaterr)+" m²":"—"}</span>
         <span class="terrdet-chip">R$/m² quadra ${pm2q!=null?brl(pm2q):"—"}</span>
       </div>
+      <div class="terr-metric-sub" id="terrdetCrit${i}"></div>
       <div class="acts">
         <button type="button" onclick="abrirFichaDetector(${i})">Ver ficha</button>
         <button type="button" class="acts-save" aria-pressed="false" onclick="salvarDetectorNoCadernoUI(${i},this)">📓 Salvar no caderno</button>
@@ -4169,6 +4227,28 @@ function renderDetectorLista(cand,scan){
       }).catch(()=>{});
     });
   }
+  renderDetectorCriterioPD(); /* Fase 18 (18-02, PD-04): IRMÃ ASSÍNCRONA — rotula o critério (PD ou fallback) por candidato, nunca trava a lista já visível */
+}
+
+/* renderDetectorCriterioPD() (Fase 18, 18-02, PD-04): IRMÃ ASSÍNCRONA de renderDetectorLista —
+   consulta o PD por CENTROIDE DE QUADRA (consultarPDPorQuadra, dedupe ≤ quadras distintas, T-18-02)
+   e rotula cada candidato JÁ VISÍVEL na lista com o critério usado (PD ou fallback rotulado,
+   T-18-04) — o rótulo é SEMPRE mostrado, nunca omitido, para o corretor saber qual critério
+   fundamentou o candidato. Falha de rede numa quadra nunca esconde as demais (Promise.allSettled
+   já dentro de consultarPDPorQuadra); falha total (catch) deixa os rótulos vazios, silenciosa —
+   a lista já renderizada continua 100% utilizável sem o rótulo (degradação graciosa). */
+async function renderDetectorCriterioPD(){
+  const cand=TERR_DETECTOR_CAND;
+  if(!cand||!cand.length)return;
+  try{
+    const porQuadra=await consultarPDPorQuadra(cand);
+    cand.forEach((a,i)=>{
+      const el=document.getElementById("terrdetCrit"+i);
+      if(!el)return; // lista pode ter sido re-renderizada (novo scan) enquanto a Promise resolvia
+      const info=detectorRotuloPD(a,porQuadra);
+      el.textContent=info?info.rotulo:"";
+    });
+  }catch(e){/* degradação graciosa — lista já visível continua utilizável sem o rótulo */}
 }
 
 /* abrirFichaDetector(i): reusa showDetail(a,ll) — mesmo caminho de pick()/verNoMapa(). showDetail

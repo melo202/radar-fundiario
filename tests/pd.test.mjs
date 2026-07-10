@@ -29,6 +29,7 @@ function loadPureBlock() {
   assert.ok(src.includes("function criterioDetectorPD"), "criterioDetectorPD ausente do bloco RADAR_PURE (Task 2)");
   assert.ok(src.includes("function resolverZonaUI"), "resolverZonaUI ausente do bloco RADAR_PURE (Task 3)");
   assert.ok(src.includes("function montarUrbBodyHTML"), "montarUrbBodyHTML ausente do bloco RADAR_PURE (18-02 Task 2)");
+  assert.ok(src.includes("function detectorRotuloPD"), "detectorRotuloPD ausente do bloco RADAR_PURE (18-02 Task 3)");
   // esc()/clean() (18-02 Task 2): montarUrbBodyHTML usa esc() para todo campo textual de layer —
   // esc() vive FORA de RADAR_PURE (é usado por praticamente todo o app, definido antes do bloco),
   // então é stubado aqui como identidade (mesmo padrão já sugerido pelo 18-02-PLAN.md); clean() já
@@ -37,7 +38,7 @@ function loadPureBlock() {
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA};",
+      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA,detectorRotuloPD};",
     { filename: "radar-pure-pd.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -343,8 +344,15 @@ function loadNetBlock(stubs) {
   assert.ok(src.includes("function pdConsultarLote"), "pdConsultarLote ausente do bloco PD_NET");
   assert.ok(src.includes("PDCACHE"), "PDCACHE ausente do bloco PD_NET");
   assert.ok(src.includes("Mapa_ModeloEspacial"), "PD_SVC_BASE (produção) ausente do bloco PD_NET");
+  assert.ok(src.includes("PDQUADRACACHE"), "PDQUADRACACHE ausente do bloco PD_NET (18-02 Task 3, T-18-02)");
+  assert.ok(src.includes("function pdConsultarQuadra"), "pdConsultarQuadra ausente do bloco PD_NET (18-02 Task 3)");
+  assert.ok(src.includes("function consultarPDPorQuadra"), "consultarPDPorQuadra ausente do bloco PD_NET (18-02 Task 3)");
+  // W3 (18-02-PLAN.md): PDQUADRACACHE (cache do detector, por chaveQuadra) NUNCA pode ser o MESMO
+  // objeto que PDCACHE (cache do lote, por ci) — guarda estrutural contra cache-poisoning.
+  assert.ok(!/const PDQUADRACACHE=PDCACHE\b/.test(src), "PDQUADRACACHE nunca deveria ser um alias de PDCACHE");
   // resolverZonaUI vem do bloco RADAR_PURE — injetado no sandbox (mesmo padrão de capCache/jsonp
-  // stubados) já que PD_NET chama a função pura para montar o resultado combinado.
+  // stubados) já que PD_NET chama a função pura para montar o resultado combinado; clean()/
+  // DETECTOR_LIMITE também vêm de lá (usados por consultarPDPorQuadra/pdConsultarQuadra).
   const pureHtml = html;
   const pStart = pureHtml.indexOf("RADAR_PURE_START");
   const pEnd = pureHtml.indexOf("RADAR_PURE_END");
@@ -359,9 +367,13 @@ function loadNetBlock(stubs) {
       }),
   };
   vm.createContext(sandbox);
-  new vm.Script(pureSrc + "\n" + src + "\n;globalThis.__exports = {pdConsultarLote,PDCACHE,PD_SVC_BASE};", {
-    filename: "pd-net.js",
-  }).runInContext(sandbox);
+  new vm.Script(
+    pureSrc +
+      "\n" +
+      src +
+      "\n;globalThis.__exports = {pdConsultarLote,PDCACHE,PD_SVC_BASE,pdConsultarQuadra,PDQUADRACACHE,consultarPDPorQuadra};",
+    { filename: "pd-net.js" }
+  ).runInContext(sandbox);
   return sandbox.__exports;
 }
 
@@ -389,4 +401,86 @@ test("pdConsultarLote: segunda chamada com o MESMO ci NÃO dispara jsonp de novo
   const callsAfterFirst = calls;
   await NET.pdConsultarLote(686000, 8153000, "ci-2");
   assert.equal(calls, callsAfterFirst, "2ª chamada com o mesmo ci não deveria disparar jsonp novamente");
+});
+
+// --- 18-02 Task 3: upgrade do detector — critério PD por centroide de quadra (T-18-02/T-18-04) --
+
+test("consultarPDPorQuadra: candidatos de 3 quadras (2 lotes cada) -> NO MÁXIMO 3 baterias (27 jsonp, nunca 1 por lote)", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [{ attributes: { sigla: "AA", nm_des: "ÁREA ADENSÁVEL", nm_mzo: "Macrozona Construída" } }] };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const cand = [
+    { cdbairro: "1", nrquadra: "10", x_coord: 1, y_coord: 1 },
+    { cdbairro: "1", nrquadra: "10", x_coord: 2, y_coord: 2 },
+    { cdbairro: "1", nrquadra: "20", x_coord: 3, y_coord: 3 },
+    { cdbairro: "1", nrquadra: "20", x_coord: 4, y_coord: 4 },
+    { cdbairro: "2", nrquadra: "30", x_coord: 5, y_coord: 5 },
+    { cdbairro: "2", nrquadra: "30", x_coord: 6, y_coord: 6 },
+  ];
+  const porQuadra = await NET.consultarPDPorQuadra(cand);
+  assert.equal(calls, 27, "3 quadras distintas × 9 layers = 27 jsonp — NUNCA 6 lotes × 9 = 54");
+  assert.equal(Object.keys(porQuadra).length, 3, "3 quadras distintas no resultado");
+  assert.ok(porQuadra["1-10"] && porQuadra["1-20"] && porQuadra["2-30"], "chaveQuadra = cdbairro-nrquadra");
+});
+
+test("consultarPDPorQuadra: mesma quadra consultada 2x (chamadas separadas) NÃO dispara jsonp de novo — PDQUADRACACHE dedupe", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [{ attributes: { sigla: "AA", nm_des: "ÁREA ADENSÁVEL", nm_mzo: "Macrozona Construída" } }] };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const cand1 = [{ cdbairro: "1", nrquadra: "10", x_coord: 1, y_coord: 1 }];
+  await NET.consultarPDPorQuadra(cand1);
+  const callsAfterFirst = calls;
+  await NET.consultarPDPorQuadra(cand1);
+  assert.equal(calls, callsAfterFirst, "2ª varredura com a mesma quadra não deveria re-disparar jsonp (PDQUADRACACHE)");
+});
+
+test("PDQUADRACACHE nunca compartilha entrada com PDCACHE (W3) — mesma coordenada/chave em cada cache dispara sua PRÓPRIA bateria", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    return { features: [{ attributes: { sigla: "AA", nm_des: "ÁREA ADENSÁVEL", nm_mzo: "Macrozona Construída" } }] };
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  await NET.pdConsultarLote(1, 1, "1-10"); // ci do LOTE coincide textualmente com uma chaveQuadra possível
+  const callsAfterLote = calls;
+  assert.equal(callsAfterLote, 9);
+  await NET.pdConsultarQuadra(1, 1, "1-10"); // MESMA chave, cache DIFERENTE — deveria disparar sua própria bateria
+  assert.equal(calls, callsAfterLote + 9, "PDQUADRACACHE não deveria reaproveitar o resultado já cacheado em PDCACHE (nem vice-versa)");
+  assert.ok(NET.PDCACHE["1-10"] && NET.PDQUADRACACHE["1-10"], "os DOIS caches têm a entrada, mas são objetos DIFERENTES");
+  assert.notEqual(NET.PDCACHE, NET.PDQUADRACACHE, "PDCACHE e PDQUADRACACHE nunca podem ser o MESMO objeto");
+});
+
+test("detectorRotuloPD: zona conferida (AA) -> criterio 'pd' + rótulo verbatim citando a zona e o CA básico", () => {
+  const candidato = { cdbairro: "1", nrquadra: "10", areaedif: 300, areaterr: 600 };
+  const porQuadraMap = {
+    "1-10": { estado: "resolvido", unidade: { sigla: "AA", nome: P.PD_TABELA_CA.AA.nome }, regra: P.PD_TABELA_CA.AA, badges: {} },
+  };
+  const info = P.detectorRotuloPD(candidato, porQuadraMap);
+  assert.equal(info.criterio, "pd");
+  assert.equal(info.razao, 300 / 600); // potencial = 600*1.0 = 600
+  assert.equal(info.rotulo, "Critério: área construída ÷ potencial do Plano Diretor (zona AA, CA básico 1,0x)");
+});
+
+test("detectorRotuloPD: quadra sem zona resolvida (fora do mapa/consulta falhou) -> fallback 'terreno' rotulado, candidato continua na lista", () => {
+  const candidato = { cdbairro: "9", nrquadra: "99", areaedif: 100, areaterr: 500 };
+  const info = P.detectorRotuloPD(candidato, {}); // porQuadraMap vazio — nenhuma quadra resolvida
+  assert.ok(info, "NUNCA deveria retornar null/omitir o candidato quando há terreno válido");
+  assert.equal(info.criterio, "terreno");
+  assert.equal(info.razao, 100 / 500);
+  assert.equal(info.rotulo, "Critério: área construída ÷ área do terreno (Plano Diretor não disponível para este candidato)");
+});
+
+test("detectorRotuloPD: quadra resolvida mas zona não conferida (ex. APAC) -> ainda cai no fallback 'terreno', nunca quebra", () => {
+  const candidato = { cdbairro: "1", nrquadra: "10", areaedif: 150, areaterr: 300 };
+  const porQuadraMap = {
+    "1-10": { estado: "resolvido", unidade: { sigla: "APAC", nome: P.PD_TABELA_CA.APAC.nome }, regra: P.PD_TABELA_CA.APAC, badges: {} },
+  };
+  const info = P.detectorRotuloPD(candidato, porQuadraMap);
+  assert.equal(info.criterio, "terreno");
 });
