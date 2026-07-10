@@ -436,3 +436,54 @@ Verificação final percorrida categoria a categoria (11 seções, ver acima) + 
 - Documentos: `propostaTexto` (Cláusulas 1ª-5ª + disclaimer), `termoExclusividadeTexto` (exclusiva=true, com cláusula de divulgação) e `contratoTexto` (Cláusulas 1ª-7ª) lidos em voz alta com dados de fixture completos — linguagem formal, juridicamente cuidadosa, sem soar robótica; `DISCLAIMER_NEG` lê-se como uma ressalva de advogado real, não como aviso genérico de sistema.
 
 **Gate LING-01: FECHADO.** `npm test` 107/107 verde. Nenhum disclaimer/ressalva jurídica enfraquecido — todos preservados literalmente ou fortalecidos (correção gramatical em `zapRiscos`, Plano 04).
+
+---
+
+## Re-varredura pós-Território/PD (2026-07-10)
+
+Mini-gate §26 sobre TODA a superfície de UI criada **depois** desta auditoria original (Fase 14): Fase 15 (Setor Scan/Choropleth/Painel do Território), Fase 16 (Detector de Lote Subutilizado + Caderno de território), Fase 17 (Diff de Cadastro + cruzamento Caixa), Fase 18 (Inteligência Urbanística/Plano Diretor) e os fixes retroativos já registrados na Fase 13 (onboarding/"O que o Radar faz", já cobertos acima — nenhuma mudança nova). Fecha o gap de sequenciamento apontado pelo integration checker do milestone v2.1 (as Fases 15-18 rodaram depois do gate original, sem revisão de linguagem própria).
+
+Método: mesmo checklist §26 (8 critérios, topo deste documento) + mesmo glossário canônico, aplicado por categoria (botões, toasts/erros, aria-label/title, placeholders, títulos/corpo de texto/legendas) sobre os IDs/funções novos: `terrPanel`/`terrLegenda`/`terrDetectorView`/`terrCaixaLine`, `cadernoBlock`/`cadbook-*`, `dDiff`/`dDiffList`, `cxp-terr`/`cadbook-caixabadge`, `dUrbanistico`/`urb-*`/`zone-*`, `MOTION_MSG.varrendo|faixas|procurando`.
+
+### Alteradas (mudança mínima)
+
+| String original | Âncora (linha) | Veredito | String final | Critério §26 |
+|---|---|---|---|---|
+| `Cor por valor` / `Cor por zonas do Plano Diretor` (`#terrToggle`, cabeçalho da legenda do choropleth — botão real, desliga a camada ativa ao tocar) | radar-goiania.html:1126 (HTML) + 3295/3300/3304 (`sincCamadaChips`) | alterada | `Colorir por valor` / `Colorir por zonas do Plano Diretor` | §26.2 (botão real de mutação, não um seletor de valor puro — faltava verbo) + §26.7 (alinha com os chips gêmeos `#terrChipValor`/`#terrChipZonas`, que já usavam "Colorir por…" para a MESMA ação) |
+| `🏦 {n} imóvel(is) Caixa no seu território` (`#cadernoCaixaBadge`, badge do Caderno) | radar-goiania.html:5973 | alterada | `🏦 {n} imóvel(is) Caixa no seu território — toque para ver no mapa` | §26.2/§26.7 (botão real, mesma ação/mesmo destino de `#terrCaixaLine`, que já trazia "— toque para ver no mapa"; os dois botões compartilham `abrirCaixaNoMapaUI()` e deviam ter o mesmo padrão de rótulo) |
+| `Arquivo inválido — não é um backup do caderno. Nada foi importado.` (`cadernoImportarJSON`, toast de import) | radar-goiania.html:5846 | alterada | `Arquivo inválido — não é um backup do caderno. Nada foi importado. Escolha outro arquivo.` | §26.3 (explicava o que houve, mas não oferecia saída) |
+| `Unidade Territorial` (rótulo `.k` do accordion Urbanístico, `montarUrbBodyHTML`) | radar-goiania.html:2831 | alterada | `Unidade territorial` | §26.7 (case sentence — 1ª palavra maiúscula só — é o padrão de TODOS os demais rótulos `.k` de `dGrid` no app: "Valor venal", "Mercado (estimado)", "R$/m² mediano", "Índice de aproveitamento (CA)"; "Unidade Territorial" era o único rótulo com as duas palavras capitalizadas) |
+
+### Avaliado-mantido (decisões registradas, sem mudança)
+
+| Item | Âncora | Justificativa §26 |
+|---|---|---|
+| `Este setor não tem dado fiscal para o território.` (toast, `abrirTerritorio`) | 4207 | guarda defensiva — o botão "Ver território" só existe quando o setor JÁ tem cdbairro fiscal (`mostrarVerTerr`), então este toast é praticamente inalcançável pelo fluxo normal de UI; mesmo raciocínio de "Encontrado, mas sem coordenada cadastrada." (limitação de dado, nenhuma ação corretiva disponível) |
+| `Nenhum setor aberto no momento.` (toast, `buscarNoSetor`/`detectarOportunidadesUI`) | 4351, 4394 | guarda defensiva — os 2 botões que disparam esta checagem vivem DENTRO do `#terrPanel`, só visíveis/clicáveis com um setor já aberto; inalcançável no fluxo normal, mesmo padrão acima |
+| `CADERNO_INDISPONIVEL` ("Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.") | 5939 | limitação de ambiente (IndexedDB indisponível), não erro do usuário — nenhuma ação corretiva possível; já reforça que o resto do app segue funcionando |
+| `Não foi possível consultar o Plano Diretor para este imóvel agora.` (toast, `renderUrbanisticoUI`, 2 ramos) | 5758, 5767 | a saída ("Tente de novo") já está no corpo do accordion Urbanístico, sempre renderizado junto (`montarUrbBodyHTML` estado "erro" / catch), mesmo precedente já registrado nesta auditoria para o toast de offline (linha 215, "a saída é reforçada pelo botão irmão") |
+| `detectorRotuloPD` — `Critério: área construída ÷ potencial do Plano Diretor (zona {sigla}, CA básico {x}x)` / `Critério: área construída ÷ área do terreno (Plano Diretor não disponível…)` | 2888-2890 | jargão técnico (CA, Plano Diretor) na 1ª camada do card do Detector — aceito pelo mesmo raciocínio já usado para "Inscrição" no chip técnico de confirmação (§26.4 nota): o Detector é uma ferramenta de poder para o corretor, os chips vizinhos do mesmo card já usam "R$/m² quadra"/"Constr."/"Terreno" (termos cadastrais), e o rótulo existe para dar rastreabilidade ao critério (T-18-04) — reescrever em linguagem leiga destruiria a auditabilidade que é o propósito do rótulo |
+| `Nenhuma oportunidade encontrada` (estado vazio do Detector) + `Detectar oportunidades` (botão) | 4438, 1257 | extensão do Achado A4 (glossário, já ratificado): "oportunidade" ganha um 3º sentido (lote subutilizado detectado), além de "Minhas oportunidades" (salvas) e "Oportunidades Caixa" (Caixa); mantido pela mesma razão de A4 — cada uso está claramente contextualizado por frase completa/ícone (🏗️), nenhuma colisão prática de UI |
+| Badges do accordion Urbanístico (`Interesse Social (AEIS)`, `Patrimônio Cultural (APAC)`, `Desaceleração de Densidade (ADD)`, `Eixo de Desenvolvimento`, `Corredor de Transporte`) e rótulos `.k` (`Macrozona`, `Índice de aproveitamento (CA)`, `Usos`, `Altura máxima`, `Ocupação por altura`) | 2820-2862 | jargão técnico-jurídico do Plano Diretor dentro do accordion "Urbanístico" (camada profunda, atrás de `<details>`) — §26.4 satisfeito por construção; nomenclatura oficial da LC 349/2022, não pode ser simplificada sem perder precisão legal |
+| `PD_DISCLAIMER` ("Informação urbanística indicativa… Não substitui a Certidão de Uso do Solo da SEPLANH.") | 2696 | **PRESERVADO LITERALMENTE** — mitigação de threat model (T-18-01/T-18-05), mesmo padrão de `DISCLAIMER_NEG` |
+
+### Demais categorias (sem achado adicional)
+
+Toasts de confirmação (`Salvo no caderno.`, `Removido do caderno.`, `{n} lotes exportados/importados`), toasts com saída já presente (`ERRO_ESCRITA_CADERNO`, `Não foi possível varrer o setor…`, `Mostrando N imóveis Caixa no mapa — toque num pino com anel.`), os 6 `aria-label` novos (`Legenda de valor por m² no mapa`, `Recolher legenda`/`Expandir legenda` dinâmico, `Painel do território`, `Fechar painel do território`, `Camada temática do mapa`, `Status do lote`), os 2 `placeholder` novos (`Tag (ex.: dono mora fora)`, `Nota de campo — ex.: dono não atende, tentar de novo em 30 dias`), os textos de `formatarDiff`/`diffLote` (Valor venal/IPTU subiu/desceu %, Área construída, Uso mudou de X para Y), a legenda de zonas do Plano Diretor (`AA`/`ADD`/`AOS`/`AEIS`/`APAC`/`OOAU`/`Sem classificação específica`), as 2 novas entradas do `#pinoLegenda` (`🏗️ Lote subutilizado`, `🏦📓 Caixa no seu território`), `leituraDetector` (`🏗️ Terreno vago em quadra valorizada` / `🏗️ Baixo aproveitamento em quadra valorizada` — Achado A3, emoji de corretor real mantido), o accordion "Ver metodologia" do Território e "Como funciona?" do Detector, e os 3 `MOTION_MSG` novos (`varrendo`/`faixas`/`procurando`, mesma gramática maiúscula+gerúndio+reticências) — todos avaliados **OK**, já em conformidade com §26.
+
+### Contagem
+
+| Categoria | N revisadas | M alteradas |
+|---|---|---|
+| Botões (novos F15-18) | 19 | 2 |
+| Toasts/Erros (novos F15-18) | 12 | 1 |
+| aria-label (novos F15-18) | 6 | 0 |
+| Placeholders (novos F15-18) | 2 | 0 |
+| Títulos/corpo/legendas/MOTION_MSG (Território/Detector/Caderno/Diff/Urbanístico) | 34 | 1 |
+| **Total** | **≈73** | **4** |
+
+### Sign-off
+
+`npm test` 239/239 verde após as 4 correções (commit `fix(14): mini-gate §26 sobre superfícies F15-18`). Nenhum disclaimer jurídico/técnico tocado (`PD_DISCLAIMER`/`DISCLAIMER_NEG` preservados literalmente). Nenhum id/classe/key/`SEARCHTOKEN` alterado — só texto visível/rótulo. Nenhum teste precisou de atualização acoplada (confirmado por grep em `tests/` antes de cada edição).
+
+**Gate LING-01: escopo completo do v2.1 (Fases 10-18) FECHADO.**
