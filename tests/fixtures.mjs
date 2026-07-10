@@ -981,4 +981,147 @@ export const FIXTURES = {
       },
     ],
   },
+
+  // Fase 17 (17-01, TERR-06): fixtures de diffLote/formatarDiff — pares snapshot/atual cobrindo
+  // pct (vlvenal/vlimp98, threshold 1%), area (areaedif, 0->N/N->0/N->M/ruido <1m2), categorico
+  // (uso/dtinclusao) e o caso honesto "sem mudanca relevante -> []" (nunca lanca, campo
+  // ausente/null tratado como sem mudanca). formatarDiff usa dataFmt fixo "10/05" (UI-SPEC).
+  DIFF_FIX: {
+    vlvenalSubiu12: {
+      snap: { vlvenal: 200000 },
+      atual: { vlvenal: 224000 },
+      expect: [{ campo: "vlvenal", tipo: "pct", direcao: "subiu", pct: 12 }],
+    },
+    vlvenalRuido: {
+      snap: { vlvenal: 200000 },
+      atual: { vlvenal: 201000 }, // +0.5%, abaixo de DIFF_THRESH_PCT=1 -> ignora
+      expect: [],
+    },
+    vlvenalDesceu10: {
+      snap: { vlvenal: 200000 },
+      atual: { vlvenal: 180000 },
+      expect: [{ campo: "vlvenal", tipo: "pct", direcao: "desceu", pct: 10 }],
+    },
+    vlimp98Subiu: {
+      snap: { vlimp98: 1000 },
+      atual: { vlimp98: 1200 },
+      expect: [{ campo: "vlimp98", tipo: "pct", direcao: "subiu", pct: 20 }],
+    },
+    vlimp98Desceu: {
+      snap: { vlimp98: 1000 },
+      atual: { vlimp98: 800 },
+      expect: [{ campo: "vlimp98", tipo: "pct", direcao: "desceu", pct: 20 }],
+    },
+    areaedifNova: {
+      snap: { areaedif: 0 },
+      atual: { areaedif: 85 },
+      expect: [{ campo: "areaedif", tipo: "area", subtipo: "nova", delta: 85 }],
+    },
+    areaedifDemolicao: {
+      snap: { areaedif: 120 },
+      atual: { areaedif: 0 },
+      expect: [{ campo: "areaedif", tipo: "area", subtipo: "demolicao", delta: 120 }],
+    },
+    areaedifAumentou: {
+      snap: { areaedif: 100 },
+      atual: { areaedif: 160 }, // nao cruza zero
+      expect: [{ campo: "areaedif", tipo: "area", subtipo: "aumentou", delta: 60 }],
+    },
+    areaedifDiminuiu: {
+      snap: { areaedif: 160 },
+      atual: { areaedif: 100 },
+      expect: [{ campo: "areaedif", tipo: "area", subtipo: "diminuiu", delta: 60 }],
+    },
+    areaedifRuido: {
+      snap: { areaedif: 100 },
+      atual: { areaedif: 100.5 }, // <1m2 -> ruido de arredondamento, nunca entra na lista
+      expect: [],
+    },
+    usoMudou: {
+      snap: { uso: 1 },
+      atual: { uso: 2 },
+      expect: [{ campo: "uso", tipo: "categorico", de: 1, para: 2 }],
+    },
+    dtinclusaoMudou: {
+      snap: { dtinclusao: "20100101" },
+      atual: { dtinclusao: "20200101" },
+      expect: [{ campo: "dtinclusao", tipo: "categorico" }],
+    },
+    semMudancaRelevante: {
+      // todos os 5 campos identicos entre snap/atual (reabrir a mesma ficha na mesma sessao)
+      snap: { vlvenal: 200000, areaedif: 100, vlimp98: 1000, uso: 1, dtinclusao: "20100101" },
+      atual: { vlvenal: 200000, areaedif: 100, vlimp98: 1000, uso: 1, dtinclusao: "20100101" },
+      expect: [],
+    },
+    campoAusenteNumLado: {
+      // vlvenal so existe no snapshot; atual nao tem o campo -> tratado como "sem mudanca",
+      // NUNCA como queda de 100% (diffLote nunca lanca, nunca inventa mudanca de dado incompleto).
+      snap: { vlvenal: 200000, uso: 1 },
+      atual: { uso: 1 },
+      expect: [],
+    },
+  },
+
+  // formatarDiff: mudancas (shape de diffLote) -> frases comerciais EXATAS do UI-SPEC §Copywriting.
+  FORMATAR_DIFF_FIX: {
+    dataFmt: "10/05",
+    venalSubiu: {
+      mudancas: [{ campo: "vlvenal", tipo: "pct", direcao: "subiu", pct: 12 }],
+      expect: ["Valor venal subiu 12% desde 10/05"],
+    },
+    venalDesceu: {
+      mudancas: [{ campo: "vlvenal", tipo: "pct", direcao: "desceu", pct: 10 }],
+      expect: ["Valor venal desceu 10% desde 10/05"],
+    },
+    areaedifNova: {
+      mudancas: [{ campo: "areaedif", tipo: "area", subtipo: "nova", delta: 85 }],
+      expect: ["Área construída: +85 m² — construção nova?"],
+    },
+    areaedifDemolicao: {
+      mudancas: [{ campo: "areaedif", tipo: "area", subtipo: "demolicao", delta: 120 }],
+      expect: ["Área construída: -120 m² — demolição?"],
+    },
+    areaedifAumentou: {
+      mudancas: [{ campo: "areaedif", tipo: "area", subtipo: "aumentou", delta: 60 }],
+      expect: ["Área construída aumentou 60 m²"],
+    },
+    areaedifDiminuiu: {
+      mudancas: [{ campo: "areaedif", tipo: "area", subtipo: "diminuiu", delta: 60 }],
+      expect: ["Área construída diminuiu 60 m²"],
+    },
+    iptuSubiu: {
+      mudancas: [{ campo: "vlimp98", tipo: "pct", direcao: "subiu", pct: 20 }],
+      expect: ["IPTU subiu 20% desde 10/05"],
+    },
+    usoMudou: {
+      mudancas: [{ campo: "uso", tipo: "categorico", de: 1, para: 2 }],
+      expect: ["Uso mudou de Residencial para Comercial/Serviço"],
+    },
+    dtinclusaoMudou: {
+      mudancas: [{ campo: "dtinclusao", tipo: "categorico" }],
+      expect: ["Data de cadastro atualizada"],
+    },
+  },
+
+  // Fase 17 (17-01, TERR-07): fixtures de matching Caixa->cdbairro + cruzamento, com NOMES REAIS
+  // extraidos de caixa-goiania.js ("SETOR BUENO", "JARDIM ATLANTICO", "RESIDENCIAL JARDINS DO
+  // CERRADO 7"). idParaCd simula bairro-cdbairro.json (id->cd); features simulam bairros-goiania.json
+  // (nm_bai/nm_disp). Um nome normalizado pode ter >1 cdbairro (colisao, Pitfall 4) — nunca reduzir
+  // a um valor unico.
+  CAIXA_MATCH_FIX: {
+    idParaCd: { "1": 52, "2": 60, "12": 12, "13": 13 }, // "12"/"13" = colisao de nome (mesmo bairro, 2 zonas)
+    features: [
+      { properties: { id: "1", nm_bai: "SETOR BUENO", nm_disp: "Setor Bueno" } },
+      { properties: { id: "2", nm_bai: "JD ATLANTICO", nm_disp: "Jardim Atlântico" } },
+      { properties: { id: "12", nm_bai: "SANTA GENOVEVA", nm_disp: "Santa Genoveva" } }, // colisao
+      { properties: { id: "13", nm_bai: "SANTA GENOVEVA", nm_disp: "Santa Genoveva" } }, // colisao
+      { properties: { id: "99", nm_bai: "SEM CD", nm_disp: "Sem Cd" } }, // sem cd em idParaCd -> nunca entra no map
+    ],
+    imoveisCaixa: {
+      setorBuenoComXY: { id: "c1", b: "SETOR BUENO", x: 690000, y: 8150000 },
+      setorBuenoSemXY: { id: "c2", b: "SETOR BUENO" }, // sem x/y -> nunca cruzavel
+      jardinsCerrado7SemMatch: { id: "c3", b: "RESIDENCIAL JARDINS DO CERRADO 7", x: 691000, y: 8151000 },
+      santaGenovevaColisao: { id: "c4", b: "SANTA GENOVEVA", x: 692000, y: 8152000 },
+    },
+  },
 };

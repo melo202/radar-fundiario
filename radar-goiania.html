@@ -2411,6 +2411,70 @@ function validarImportCaderno(json){
   const itens=arr.filter(o=>o&&o.ci!=null).map(sanitizeCaderno).filter(o=>o.ci!=null);
   return {ok:true,itens};
 }
+
+/* Fase 17 (17-01, TERR-06): diff de cadastro entre visitas — compara o snapshot salvo com o dado
+   FRESCO da ficha, campo a campo de DIFF_ALLOW (mesma allowlist de sanitizeCaderno/CADERNO_ALLOW,
+   sem PII). Constantes nomeadas (nunca hardcoded inline), mesmo padrão de DETECTOR_RATIO_MAX
+   (16-01). */
+const DIFF_ALLOW=["vlvenal","areaedif","vlimp98","uso","dtinclusao"];
+const DIFF_THRESH_PCT=1; // variação de venal/IPTU abaixo de 1% não conta (ruído)
+const DIFF_THRESH_AREA_M2=1; // variação de área construída abaixo de 1 m² é ruído de arredondamento
+
+/* diffLote(snap,atual,opts): NUNCA lança — campo ausente/null em qualquer lado (snap ou atual
+   inteiros incluídos) é tratado como "sem mudança" para aquele campo (honesto: dado incompleto
+   nunca vira alarme de queda/subida). Comparação de pct usa o valor BRUTO (antes de arredondar)
+   contra o threshold — só arredonda (Math.round) para exibição, senão 0,5% seria promovido a 1%
+   e passaria o limiar por erro de arredondamento. */
+function diffLote(snap,atual,opts){
+  const o=Object.assign({DIFF_THRESH_PCT,DIFF_THRESH_AREA_M2},opts||{});
+  const s=snap||{}, a=atual||{};
+  const out=[];
+  ["vlvenal","vlimp98"].forEach(campo=>{
+    const de=s[campo], para=a[campo];
+    if(de==null||para==null||!isFinite(de)||!isFinite(para)||+de===0)return;
+    const pctBruto=Math.abs((para-de)/de*100);
+    if(pctBruto<o.DIFF_THRESH_PCT)return;
+    out.push({campo,tipo:"pct",direcao:para>de?"subiu":"desceu",pct:Math.round(pctBruto)});
+  });
+  {
+    const de=s.areaedif, para=a.areaedif;
+    if(de!=null&&para!=null&&isFinite(de)&&isFinite(para)){
+      const delta=Math.abs(para-de);
+      if(delta>=o.DIFF_THRESH_AREA_M2){
+        let subtipo;
+        if(+de===0&&para>0)subtipo="nova";
+        else if(de>0&&+para===0)subtipo="demolicao";
+        else if(para>de)subtipo="aumentou";
+        else subtipo="diminuiu";
+        out.push({campo:"areaedif",tipo:"area",subtipo,delta:Math.round(delta)});
+      }
+    }
+  }
+  const de1=s.uso, para1=a.uso;
+  if(de1!=null&&para1!=null&&de1!==para1)out.push({campo:"uso",tipo:"categorico",de:de1,para:para1});
+  const de2=s.dtinclusao, para2=a.dtinclusao;
+  if(de2!=null&&para2!=null&&de2!==para2)out.push({campo:"dtinclusao",tipo:"categorico"});
+  return out;
+}
+
+/* formatarDiff(mudancas,dataFmt): pura, sem Date — dataFmt ("dd/mm") vem de fora (snapshotAt
+   anterior já formatado). Frases comerciais EXATAS do UI-SPEC §Copywriting; rótulo de uso via
+   USO[...] (nunca código cru). NUNCA lança — mudanças de campo desconhecido são ignoradas. */
+function formatarDiff(mudancas,dataFmt){
+  return (mudancas||[]).map(m=>{
+    if(m.campo==="vlvenal")return `Valor venal ${m.direcao} ${m.pct}% desde ${dataFmt}`;
+    if(m.campo==="vlimp98")return `IPTU ${m.direcao} ${m.pct}% desde ${dataFmt}`;
+    if(m.campo==="areaedif"){
+      if(m.subtipo==="nova")return `Área construída: +${m.delta} m² — construção nova?`;
+      if(m.subtipo==="demolicao")return `Área construída: -${m.delta} m² — demolição?`;
+      if(m.subtipo==="aumentou")return `Área construída aumentou ${m.delta} m²`;
+      return `Área construída diminuiu ${m.delta} m²`;
+    }
+    if(m.campo==="uso")return `Uso mudou de ${USO[m.de]||"—"} para ${USO[m.para]||"—"}`;
+    if(m.campo==="dtinclusao")return "Data de cadastro atualizada";
+    return "";
+  }).filter(Boolean);
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
