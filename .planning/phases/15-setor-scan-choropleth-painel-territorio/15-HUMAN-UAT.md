@@ -14,7 +14,7 @@ updated: 2026-07-09T23:30:00.000Z
 
 ### 1. Contagem de requisições ao vivo no Bueno
 expected: Abrir o painel/choropleth do Setor Bueno (cdbairro=16, ~57k lotes) com DevTools Network aberto — no máximo 3 requisições paginadas ao MapServer/3/query + 1 returnCountOnly. Reabrir o painel do mesmo setor não dispara nenhuma nova requisição (cache de sessão).
-result: [pending]
+result: passed — verificado ao vivo em Chromium (2026-07-09, checkpoint da Fase 16): territorioScan(16) = 4 requisições (3 paginadas + 1 returnCountOnly), 6.000 lotes de amostra / 57.225 total, 2.558ms; chamada subsequente via cache = 0 requisições novas
 
 ### 2. Timing do scan em 4G real (campo)
 expected: Varredura de setor grande completa em tempo aceitável no 4G (com loading em etapas visível); phase flag não-bloqueante do ROADMAP.
@@ -31,9 +31,9 @@ result: [pending]
 ## Summary
 
 total: 4
-passed: 0
+passed: 1
 issues: 0
-pending: 4
+pending: 3
 skipped: 0
 blocked: 0
 
