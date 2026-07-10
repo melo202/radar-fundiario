@@ -258,6 +258,24 @@ test("cruzarCaixaTerritorio: nenhum item do caderno bate -> matches=[],bairros=[
   assert.equal(r.n, 0);
 });
 
+// F5 CAD-01: cdbairro do caderno salvo como STRING (import de outro aparelho preserva o tipo do
+// JSON; itens legados no store) x cd NUMERO do lookup — o cruzamento deve coagir tipo nas duas
+// pontas (mesma familia do fix A-02 em cadernoListar). Antes do fix, n=0 silencioso.
+test("cruzarCaixaTerritorio (F5 CAD-01): itensCaderno com cdbairro STRING '52' cruza com cd numero 52 -> n=1, nunca 0 silencioso", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const itensCaderno = [{ ci: "1", cdbairro: "52" }]; // string, exatamente o que validarImportCaderno preserva
+  const r = P.cruzarCaixaTerritorio([CX.imoveisCaixa.setorBuenoComXY], itensCaderno, map);
+  assert.equal(r.n, 1, "cdbairro string do caderno deveria cruzar com o cd numérico do lookup (coerção de tipo)");
+  assert.equal(r.matches[0].id, CX.imoveisCaixa.setorBuenoComXY.id);
+});
+
+test("cruzarCaixaSetor (F5 CAD-01): cdbairro STRING '52' casa com cd numero 52 do lookup (coerção nas duas pontas)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const r = P.cruzarCaixaSetor([CX.imoveisCaixa.setorBuenoComXY], "52", map);
+  assert.equal(r.length, 1, "setor passado como string deveria cruzar com o cd numérico resolvido");
+  assert.equal(r[0].id, CX.imoveisCaixa.setorBuenoComXY.id);
+});
+
 test("cruzarCaixaSetor: retorna imoveis com x/y cujo cdbairroDoImovelCaixa inclui o cdbairro dado", () => {
   const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
   const imoveis = [CX.imoveisCaixa.setorBuenoComXY, CX.imoveisCaixa.setorBuenoSemXY, CX.imoveisCaixa.jardinsCerrado7SemMatch];

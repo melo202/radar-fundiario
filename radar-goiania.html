@@ -2797,21 +2797,28 @@ function cdbairroDoImovelCaixa(imovelCaixa,nomeParaCdbairro){
    candidato presente nos itens salvos do caderno (some(), nunca reduz a um único código).
    cdbairroDoImovelCaixa(i,...) é chamado 1x por imóvel (17-REVIEW.md IN-01) — o resultado já
    filtrado por cdbairrosSalvos.has() alimenta matches/bairros na mesma passagem. */
+/* F5 CAD-01: o cdbairro do caderno pode ser STRING (import de outro aparelho preserva o tipo do
+   JSON; itens legados já persistidos no store) enquanto o cd resolvido do lookup é NÚMERO —
+   Set.has() é estrito e o cruzamento sumia silenciosamente (badge/anel/popup, n=0). Coerção
+   String() nas DUAS pontas da comparação — MESMA família do fix A-02 em cadernoListar. O ponto de
+   comparação (e não sanitizeCaderno) é o único que também cobre o que JÁ está gravado no
+   IndexedDB e eventual drift de tipo do endpoint. */
 function cruzarCaixaTerritorio(imoveisCaixa,itensCaderno,nomeParaCdbairro){
-  const cdbairrosSalvos=new Set((itensCaderno||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
+  const cdbairrosSalvos=new Set((itensCaderno||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null).map(String));
   const matches=[],bairrosSet=new Set();
   (imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).forEach(i=>{
-    const cds=cdbairroDoImovelCaixa(i,nomeParaCdbairro).filter(cd=>cdbairrosSalvos.has(cd));
+    const cds=cdbairroDoImovelCaixa(i,nomeParaCdbairro).filter(cd=>cdbairrosSalvos.has(String(cd)));
     if(cds.length){matches.push(i);cds.forEach(cd=>bairrosSet.add(cd));}
   });
   return {matches,bairros:Array.from(bairrosSet),n:matches.length};
 }
 
 /* cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro): mesma lógica de cruzarCaixaTerritorio,
-   mas para UM único cdbairro (o setor em foco no painel/pino). */
+   mas para UM único cdbairro (o setor em foco no painel/pino). F5 CAD-01: mesma coerção String()
+   do cruzamento do território — includes() estrito perdia o match número×string. */
 function cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro){
   return (imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).filter(i=>
-    cdbairroDoImovelCaixa(i,nomeParaCdbairro).includes(cdbairro)
+    cdbairroDoImovelCaixa(i,nomeParaCdbairro).some(cd=>String(cd)===String(cdbairro))
   );
 }
 
@@ -4127,7 +4134,10 @@ async function pdConsultarQuadra(x,y,chaveQuadra){
   capCache(PDQUADRACACHE,DETECTOR_LIMITE);
   if(PDQUADRACACHE[chaveQuadra])return PDQUADRACACHE[chaveQuadra];
   const resultado=await pdBateriaConsulta(x,y);
-  PDQUADRACACHE[chaveQuadra]=resultado;
+  /* F5 AQ-01: espelho do fix B-01 de pdConsultarLote — NUNCA cachear {estado:"erro"}. Diferente
+     da ficha, o detector NÃO tem botão de retry que limpe o cache: um erro de rede cacheado
+     cravaria "Plano Diretor não disponível" pela sessão inteira, sem auto-cura. */
+  if(!resultado||resultado.estado!=="erro")PDQUADRACACHE[chaveQuadra]=resultado;
   return resultado;
 }
 /* consultarPDPorQuadra(candidatos) (Fase 18, 18-02, T-18-02): para até DETECTOR_LIMITE candidatos
@@ -7465,10 +7475,12 @@ async function garantirCaixaLayer(){
   if(caixaLayerBuilding)return caixaLayerBuilding;
   caixaLayerBuilding=(async()=>{
     const [nomeMap,itens]=await Promise.all([garantirNomeParaCdbairro(),cadernoListar({}).catch(()=>[])]);
-    const cdbairrosSalvos=new Set((itens||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
+    /* F5 CAD-01: coerção String() nas duas pontas — item importado/legado pode ter cdbairro
+       string e o lookup devolve número (mesmo fix de cruzarCaixaTerritorio/cruzarCaixaSetor). */
+    const cdbairrosSalvos=new Set((itens||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null).map(String));
     const layer=L.layerGroup(),anel=L.layerGroup();
     CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
-      const noTerr=cdbairroDoImovelCaixa(i,nomeMap).some(cd=>cdbairrosSalvos.has(cd));
+      const noTerr=cdbairroDoImovelCaixa(i,nomeMap).some(cd=>cdbairrosSalvos.has(String(cd)));
       L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
         .bindPopup(caixaPopup(i,noTerr)).addTo(layer);
       if(noTerr){

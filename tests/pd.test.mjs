@@ -486,6 +486,21 @@ test("consultarPDPorQuadra: mesma quadra consultada 2x (chamadas separadas) NÃO
   assert.equal(calls, callsAfterFirst, "2ª varredura com a mesma quadra não deveria re-disparar jsonp (PDQUADRACACHE)");
 });
 
+test("pdConsultarQuadra: estado 'erro' NÃO é cacheado — re-rodar o detector reconsulta (F5 AQ-01, espelho do fix B-01)", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    throw new Error("rede caiu");
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const r = await NET.pdConsultarQuadra(1, 1, "9-99");
+  assert.equal(r.estado, "erro", "todas as layers falharam -> estado erro");
+  assert.ok(!NET.PDQUADRACACHE["9-99"], "estado erro NUNCA deveria ficar em PDQUADRACACHE (o detector não tem retry que limpe o cache — o erro duraria a sessão inteira)");
+  const callsAfterFirst = calls;
+  await NET.pdConsultarQuadra(1, 1, "9-99");
+  assert.ok(calls > callsAfterFirst, "2ª varredura após erro deveria reconsultar (cache não reteve o erro)");
+});
+
 test("PDQUADRACACHE nunca compartilha entrada com PDCACHE (W3) — mesma coordenada/chave em cada cache dispara sua PRÓPRIA bateria", async () => {
   let calls = 0;
   const jsonpStub = async () => {
