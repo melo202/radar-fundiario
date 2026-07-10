@@ -980,6 +980,52 @@ export const FIXTURES = {
         cpf: "11111111111",
       },
     ],
+
+    // Fase 17 (17-01, TERR-06): fixtures de snapshot LGPD — sanitizeCaderno agora reconstroi
+    // out.snapshot campo-a-campo por DIFF_ALLOW (allowlist RECURSIVA, Pitfall 5/T-17-01
+    // 17-RESEARCH.md); snapshot.dtnascimen/cpf NUNCA sobrevivem mesmo com a chave "snapshot" na
+    // allowlist de topo (CADERNO_ALLOW so filtra a CHAVE, nao o CONTEUDO aninhado).
+    itemComSnapshot: {
+      ci: "666",
+      cdbairro: 16,
+      snapshot: { vlvenal: 200000, areaedif: 100, vlimp98: 1000, uso: 1, dtinclusao: "20100101" },
+      snapshotAt: "2026-07-09T12:00:00.000Z",
+    },
+    itemSnapshotComPII: {
+      ci: "777",
+      cdbairro: 16,
+      snapshot: { vlvenal: 1, dtnascimen: "1980-01-01", cpf: "00000000000" },
+    },
+    itemSnapshotMalformado: {
+      ci: "888",
+      cdbairro: 16,
+      snapshot: "x", // string, nao objeto plano -> out.snapshot deve ficar ausente
+    },
+    itemSnapshotArray: {
+      ci: "889",
+      cdbairro: 16,
+      snapshot: [1, 2, 3], // array -> mesmo tratamento de malformado (ausente)
+    },
+    itemSnapshotAtInvalido: {
+      ci: "890",
+      cdbairro: 16,
+      snapshot: { vlvenal: 1 },
+      snapshotAt: 12345, // nao-string -> descartado, snapshot em si sobrevive
+    },
+    itemSemSnapshot: {
+      // formato antigo (pre-Fase 17) — continua valido, retrocompativel.
+      ci: "891",
+      cdbairro: 16,
+      vlvenal: 100000,
+    },
+    importComSnapshotPII: [
+      {
+        ci: "999",
+        cdbairro: 16,
+        vlvenal: 300000,
+        snapshot: { vlvenal: 300000, dtnascimen: "1990-05-05", cpf: "11111111111" },
+      },
+    ],
   },
 
   // Fase 17 (17-01, TERR-06): fixtures de diffLote/formatarDiff — pares snapshot/atual cobrindo

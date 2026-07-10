@@ -35,6 +35,8 @@ function loadPureBlock() {
   assert.ok(src.includes("function sanitizeCaderno"), "sanitizeCaderno ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
   assert.ok(src.includes("function statusValido"), "statusValido ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
   assert.ok(src.includes("function validarImportCaderno"), "validarImportCaderno ausente do bloco RADAR_PURE (Task 3 nao cumprida)");
+  // Fase 17 (17-01, Task 3): allowlist recursiva do snapshot — ausente em RED, presente apos GREEN.
+  assert.ok(src.includes('"snapshot"'), "CADERNO_ALLOW ainda nao inclui \"snapshot\" (17-01 Task 3 nao cumprida)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
@@ -225,4 +227,71 @@ test("validarImportCaderno: item importado com tag/nota gigantes chega truncado 
   assert.equal(r.itens.length, 1);
   assert.equal(r.itens[0].tag.length, 40);
   assert.equal(r.itens[0].nota.length, 500);
+});
+
+// Fase 17 (17-01, TERR-06, T-17-01/Pitfall 5): sanitizeCaderno reconstroi out.snapshot
+// RECURSIVAMENTE por DIFF_ALLOW — CADERNO_ALLOW so filtra a CHAVE de topo ("snapshot" sobrevive
+// inteiro se nao houver esse passo extra), nunca o CONTEUDO aninhado. dtnascimen/cpf dentro do
+// snapshot NUNCA sobrevivem, mesmo que o item de topo continue valido.
+
+test("sanitizeCaderno: snapshot valido (5 campos DIFF_ALLOW) sobrevive integralmente", () => {
+  const out = P.sanitizeCaderno(CF.itemComSnapshot);
+  assert.ok(out.snapshot, "snapshot deveria sobreviver");
+  assert.equal(out.snapshot.vlvenal, 200000);
+  assert.equal(out.snapshot.areaedif, 100);
+  assert.equal(out.snapshot.vlimp98, 1000);
+  assert.equal(out.snapshot.uso, 1);
+  assert.equal(out.snapshot.dtinclusao, "20100101");
+  assert.equal(out.snapshotAt, "2026-07-09T12:00:00.000Z");
+});
+
+test("sanitizeCaderno: snapshot.dtnascimen/cpf NUNCA sobrevivem (PII dentro do sub-objeto)", () => {
+  const out = P.sanitizeCaderno(CF.itemSnapshotComPII);
+  assert.ok(out.snapshot, "snapshot deveria sobreviver (tem vlvenal, campo permitido)");
+  assert.ok(!("dtnascimen" in out.snapshot), "snapshot.dtnascimen nunca deveria sobreviver a sanitizeCaderno");
+  assert.ok(!("cpf" in out.snapshot), "snapshot.cpf nunca deveria sobreviver a sanitizeCaderno");
+  assert.equal(out.snapshot.vlvenal, 1);
+});
+
+test("sanitizeCaderno: snapshot como string (malformado) -> out.snapshot ausente, item de topo continua valido", () => {
+  const out = P.sanitizeCaderno(CF.itemSnapshotMalformado);
+  assert.ok(!("snapshot" in out) || out.snapshot == null, "snapshot malformado (string) nunca deveria sobreviver como esta");
+  assert.equal(out.ci, "888");
+  assert.equal(out.cdbairro, 16);
+});
+
+test("sanitizeCaderno: snapshot como array (malformado) -> out.snapshot ausente, item de topo continua valido", () => {
+  const out = P.sanitizeCaderno(CF.itemSnapshotArray);
+  assert.ok(!("snapshot" in out) || out.snapshot == null, "snapshot malformado (array) nunca deveria sobreviver como esta");
+  assert.equal(out.ci, "889");
+});
+
+test("sanitizeCaderno: snapshotAt nao-string e descartado; snapshot em si sobrevive", () => {
+  const out = P.sanitizeCaderno(CF.itemSnapshotAtInvalido);
+  assert.ok(!("snapshotAt" in out) || out.snapshotAt == null, "snapshotAt nao-string nunca deveria sobreviver");
+  assert.ok(out.snapshot, "snapshot em si (independente de snapshotAt) deveria sobreviver");
+  assert.equal(out.snapshot.vlvenal, 1);
+});
+
+test("sanitizeCaderno: item SEM snapshot (formato antigo, pre-Fase 17) continua valido — retrocompatibilidade", () => {
+  const out = P.sanitizeCaderno(CF.itemSemSnapshot);
+  assert.equal(out.ci, "891");
+  assert.equal(out.vlvenal, 100000);
+  assert.ok(!("snapshot" in out));
+});
+
+test("validarImportCaderno: import de item com snapshot valido -> aceito com snapshot limpo", () => {
+  const r = P.validarImportCaderno([CF.itemComSnapshot]);
+  assert.equal(r.ok, true);
+  assert.equal(r.itens.length, 1);
+  assert.equal(r.itens[0].snapshot.vlvenal, 200000);
+});
+
+test("validarImportCaderno: import de item com snapshot.dtnascimen -> aceito SEM o campo PII, nunca quebra o import inteiro", () => {
+  const r = P.validarImportCaderno(CF.importComSnapshotPII);
+  assert.equal(r.ok, true);
+  assert.equal(r.itens.length, 1);
+  assert.ok(!("dtnascimen" in r.itens[0].snapshot), "snapshot.dtnascimen nunca deveria sobreviver ao import");
+  assert.equal(r.itens[0].snapshot.vlvenal, 300000);
+  assert.equal(r.itens[0].ci, "999");
 });

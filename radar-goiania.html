@@ -2364,7 +2364,7 @@ function leituraDetector(item){
 /* Fase 16 (16-01, TERR-05): funções puras de decisão do Caderno/Farming — allowlist anti-PII,
    enum de status e validação de import. A camada de I/O real (IndexedDB) mora FORA de
    RADAR_PURE (Planos 02/03) — aqui só a lógica de decisão, 100% testável via node:vm. */
-const CADERNO_ALLOW=["ci","nrinscr","cdbairro","nrquadra","nrlote","vlvenal","areaedif","areaterr","vlimp98","dtinclusao","uso","endereco","tag","nota","status","savedAt","updatedAt"];
+const CADERNO_ALLOW=["ci","nrinscr","cdbairro","nrquadra","nrlote","vlvenal","areaedif","areaterr","vlimp98","dtinclusao","uso","endereco","tag","nota","status","savedAt","updatedAt","snapshot","snapshotAt"];
 const CADERNO_STATUS=["nao_visitado","visitei","conversei","recusou","fechou"]; /* enum fixo, ordem = ciclo de campo */
 /* CADERNO_CI_RE (CR-01, 16-REVIEW.md): forma esperada de `ci`/`nrinscr` do cadastro — dígitos/
    letras/pontuação cadastral, até 40 chars. Defesa em profundidade: mesmo que o render (Task 2)
@@ -2390,6 +2390,23 @@ function sanitizeCaderno(obj){
   if(out.tag!=null)out.tag=String(out.tag).slice(0,40);
   if(out.nota!=null)out.nota=String(out.nota).slice(0,500);
   if(out.status!==undefined&&!CADERNO_STATUS.includes(out.status))out.status="nao_visitado";
+  /* Fase 17 (17-01, T-17-01/Pitfall 5, 17-RESEARCH.md): allowlist RECURSIVA do sub-objeto
+     `snapshot` — a allowlist de CADERNO_ALLOW acima só filtra a CHAVE de topo ("snapshot"
+     sobreviveria inteiro, sem look-inside); reconstrói campo-a-campo por DIFF_ALLOW em vez de
+     copiar o objeto bruto, então `dtnascimen`/`cpf`/qualquer campo fora de DIFF_ALLOW dentro do
+     snapshot NUNCA sobrevive. `snapshot` que não seja um objeto plano (string/array/null) é
+     descartado por completo — nunca "meio aceito". */
+  if(out.snapshot!==undefined){
+    const s=out.snapshot;
+    if(s&&typeof s==="object"&&!Array.isArray(s)){
+      const snap={};
+      DIFF_ALLOW.forEach(k=>{if(s[k]!==undefined)snap[k]=s[k];});
+      out.snapshot=snap;
+    }else{
+      delete out.snapshot;
+    }
+  }
+  if(out.snapshotAt!==undefined&&typeof out.snapshotAt!=="string")delete out.snapshotAt;
   return out;
 }
 
@@ -3396,7 +3413,7 @@ async function territorioScan(cdbairroRaw){
 // quem chama estas funções da UI (Tasks 2/3) SEMPRE encadeia .catch(()=>toast(...)) — falha de
 // escrita nunca é silenciosa (T-16-04).
 const CADERNO_DB="radar_territorio";
-const CADERNO_VERSION=1; // Fase 17 sobe para 2 e adiciona o store "snapshots" via onupgradeneeded (reservado abaixo)
+const CADERNO_VERSION=1; // Fase 17 NÃO subiu esta versão — ver nota em onupgradeneeded abaixo
 
 /* cadernoDisponivel(): feature-detect estático — cobre browsers/webviews muito antigos sem
    indexedDB. A maioria das falhas reais (quota/sandboxed) acontece em onerror, tratado em cada
@@ -3407,9 +3424,11 @@ function cadernoDisponivel(){
 
 /* cadernoAbrirDB(): abre (ou cria, via onupgradeneeded) o banco radar_territorio v1 — stores
    "caderno" (keyPath ci, índices cdbairro/status) e "setores" (keyPath cdbairro, reservado).
-   WR-02 (16-REVIEW.md): `onblocked` cobre o caso de uma aba antiga ainda com o DB aberto quando a
-   Fase 17 subir CADERNO_VERSION — sem isso, o `open()` fica travado esperando indefinidamente, sem
-   nunca resolver/rejeitar (falha silenciosa). Cada chamador desta função agora fecha a conexão
+   WR-02 (16-REVIEW.md): `onblocked` cobre o caso de uma aba antiga ainda com o DB aberto durante um
+   bump de versão futuro — sem isso, o `open()` fica travado esperando indefinidamente, sem nunca
+   resolver/rejeitar (falha silenciosa); a Fase 17 (17-01) não precisou bumpar CADERNO_VERSION (ver
+   nota em onupgradeneeded abaixo), mas a defesa continua de pé para qualquer fase futura que
+   precise. Cada chamador desta função agora fecha a conexão
    (db.close()) ao final da própria operação (oncomplete/onerror) — nunca mantém conexões vivas
    entre chamadas, então uma aba deste app nunca é ela mesma a causa de um `blocked` futuro. */
 function cadernoAbrirDB(){
@@ -3426,8 +3445,12 @@ function cadernoAbrirDB(){
       if(!db.objectStoreNames.contains("setores")){
         db.createObjectStore("setores",{keyPath:"cdbairro"});
       }
-      /* Fase 17 (v2): if(e.oldVersion<2){ const snap=db.createObjectStore("snapshots",
-         {keyPath:["cdbairro","data"]}); snap.createIndex("cdbairro","cdbairro"); } */
+      /* Fase 17 (17-01, 17-RESEARCH.md "IndexedDB version bump"): NÃO subiu CADERNO_VERSION nem
+         criou o store "snapshots" reservado aqui. O snapshot da Fase 17 é um campo EMBUTIDO no
+         item do store "caderno" já existente (item.snapshot+item.snapshotAt) — IndexedDB não tem
+         schema de VALOR fixo (só keyPath/índices são schema), então put() aceita os campos novos
+         sem onupgradeneeded. Bump só seria necessário para um NOVO object store/índice, nenhum dos
+         dois necessário aqui — isso também evita o caminho onblocked/multi-aba (WR-02) sem motivo. */
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error||new Error("Não foi possível abrir o caderno"));
@@ -3519,6 +3542,19 @@ function cadernoTem(ci){
     const tx=db.transaction("caderno","readonly");
     const req=tx.objectStore("caderno").get(ci);
     req.onsuccess=()=>{db.close();resolve(req.result!==undefined);};
+    req.onerror=()=>{db.close();reject(req.error);};
+  }));
+}
+
+/* cadernoBuscar(ci) (Fase 17, 17-01, TERR-06): irmã EXATA de cadernoTem(ci) — mesma tx/store/
+   close (WR-02) — mas resolve com o ITEM completo (ou undefined), não um boolean. Usada por
+   renderDiffUI (Plano 02) para ler .snapshot/.snapshotAt do item salvo e comparar com o dado
+   fresco da ficha. */
+function cadernoBuscar(ci){
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readonly");
+    const req=tx.objectStore("caderno").get(ci);
+    req.onsuccess=()=>{db.close();resolve(req.result);};
     req.onerror=()=>{db.close();reject(req.error);};
   }));
 }
@@ -4902,7 +4938,12 @@ function salvarNoCadernoUI(){
     const item={
       ci,nrinscr:clean(a.nrinscr),cdbairro:a.cdbairro,nrquadra:a.nrquadra,nrlote:a.nrlote,
       vlvenal:a.vlvenal,areaedif:a.areaedif,areaterr:a.areaterr,vlimp98:a.vlimp98,
-      dtinclusao:a.dtinclusao,uso:a.uso,endereco:addrDe(a)
+      dtinclusao:a.dtinclusao,uso:a.uso,endereco:addrDe(a),
+      /* Fase 17 (17-01, TERR-06): snapshot inicial no 1º save — subconjunto DIFF_ALLOW (5 campos,
+         SEM areaterr, que fica fora do escopo do diff). snapshotAt marca o momento da captura;
+         a cada revisita (Plano 02), o diff compara este snapshot com o dado fresco e o atualiza. */
+      snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},
+      snapshotAt:new Date().toISOString()
     };
     cadernoSalvar(item).then(()=>{
       toast("Salvo no caderno.");
