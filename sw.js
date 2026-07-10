@@ -57,7 +57,22 @@ self.addEventListener("fetch", e => {
   };
 
   if (sameOrigin && (e.request.mode === "navigate" || NETWORK_FIRST.test(url.pathname))) {
-    e.respondWith(fetch(e.request).then(putCache).catch(() => caches.match(e.request)));
+    const isNav = e.request.mode === "navigate";
+    /* A-07 (20): no fallback de navegação, ignoreSearch — deep-link ?insc=… casa a cópia cacheada
+       de ./radar-goiania.html (sem querystring) em vez de dar miss e cair pra rede offline. */
+    const fallback = () => caches.match(e.request, isNav ? { ignoreSearch: true } : undefined);
+    const net = fetch(e.request).then(putCache); // putCache continua em background mesmo se o cache vencer o race
+    if (isNav) {
+      /* D-10 (20): navegação corre a rede contra um timeout ~4s; estourou -> serve o cache (net
+         segue em background). Se a rede falhar antes disso, cai no cache imediatamente. */
+      const timeout = new Promise(res => setTimeout(res, 4000, "__t"));
+      e.respondWith(
+        Promise.race([net.catch(() => "__t"), timeout])
+          .then(r => r === "__t" ? fallback().then(hit => hit || net) : r)
+      );
+    } else {
+      e.respondWith(net.catch(() => fallback()));
+    }
     return;
   }
   e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(putCache)));

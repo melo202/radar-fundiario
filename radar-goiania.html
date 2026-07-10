@@ -3413,7 +3413,20 @@ function montarLegendaZonas(){
 }
 let bairroLayer=null,baiHi=null;
 /* teto simples nos caches de sessão: apaga a entrada mais antiga acima do limite */
-function capCache(o,max){const k=Object.keys(o);if(k.length>max)delete o[k[0]];}
+/* A-06 (20): teto de cache com despejo pela ORDEM DE INSERÇÃO (FIFO real). Object.keys() reordena
+   chaves numéricas (ci/cdbairro) em ordem crescente, então `delete o[k[0]]` apagava a MENOR chave,
+   não a mais antiga. Aqui uma lista de ordem por cache (WeakMap) é reconciliada a cada chamada —
+   capCache() sempre roda ANTES de cada inserção (1 chave nova por ciclo), então a ordem é fiel; e
+   chaves removidas por fora (delete o[k]) somem da lista na reconciliação. Toca só esta função. */
+const _capOrder=new WeakMap();
+function capCache(o,max){
+  let ord=_capOrder.get(o);if(!ord){ord=[];_capOrder.set(o,ord);}
+  const cur=Object.keys(o),curSet=new Set(cur),known=new Set(ord);
+  ord=ord.filter(k=>curSet.has(k));            // some quem foi deletado por fora
+  for(const k of cur)if(!known.has(k))ord.push(k); // acrescenta chaves novas (fim da fila)
+  while(ord.length>max)delete o[ord.shift()];  // despeja a mais antiga
+  _capOrder.set(o,ord);
+}
 let LOTDEB=null,LOTLAST=null;
 function initLots(){
   map.createPane("lots").style.zIndex=380; /* abaixo do overlayPane (400): pinos de resultado ficam por cima */
@@ -6341,7 +6354,7 @@ async function compsStats(a,areaField,myArea,radius,isU){
   /* teto 400: acima disso o download (~85 campos/registro) pesa demais no 4G — usa contagens */
   if(n<=400){
     const d=await jsonp(Object.assign({},base,{outFields:"*",resultRecordCount:500}));
-    let vals=(d.features||[]).map(f=>f.attributes)
+    let vals=sanitiza((d.features||[]).map(f=>f.attributes)) /* A-08 (20): sanitiza na entrada, como os demais caminhos de consulta */
       .map(x=>x[areaField]>0?x.vlvenal/x[areaField]:null)
       .filter(v=>v&&isFinite(v)).sort((p,q)=>p-q);
     if(vals.length<3)return {n:vals.length};
@@ -7329,7 +7342,9 @@ async function abrirCaixaNoMapaUI(el){
 }
 
 /* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */
-const csvCell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+/* A-10 (20): anti CSV/formula-injection — prefixa aspa simples quando o 1º char é =,+,-,@ (Excel/
+   Sheets senão interpretam a célula como fórmula). Mantém o quoting/escape de aspas existente. */
+const csvCell=v=>{let s=String(v==null?"":v);if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
 const csvNum=v=>v?String(Math.round(v*100)/100).replace(".",","):"";
 function exportCSV(){
   if(!LAST.length)return;
