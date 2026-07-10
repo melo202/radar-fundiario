@@ -7309,8 +7309,11 @@ function onbRender(){
 }
 function onbAbrir(idx){
   onbIdx=idx||0;
-  onbLastFocus=document.activeElement;
   const ov=document.getElementById("onbOverlay");
+  /* IN-02 (13-REVIEW.md): só captura o foco de origem se o overlay AINDA não está aberto —
+     reentrância (hoje inalcançável pela UI) não sobrescreveria onbLastFocus com o .onb-skip que o
+     próprio onbAbrir foca, preservando o contrato "devolve o foco a quem abriu". */
+  if(!ov.classList.contains("show"))onbLastFocus=document.activeElement;
   /* o CSS é .onb{display:none} + .onb.show{display:flex} — toggle SÓ do atributo hidden NUNCA
      revelaria o overlay (a regra de classe vence). Toggle dos DOIS em par. */
   ov.hidden=false; ov.classList.add("show");
