@@ -90,6 +90,24 @@ test("leituraPratica", () => {
   }
 });
 
+// --- F5 Onda 3 (FICHA-03 / FICHA-06) --------------------------------------------------------
+
+test("scoreOportunidade (F5 FICHA-03): imóvel exatamente na mediana — porquê diz 'Na mediana', nunca 'Está 0% abaixo'", () => {
+  const r = P.scoreOportunidade(100, { q1: 80, med: 100, q3: 120, n: 10, min: 60, max: 140 });
+  assert.ok(r, "deveria calcular (base completa)");
+  assert.equal(r.rotulo, "Oportunidade média");
+  const why = r.porque.join(" ");
+  assert.ok(why.includes("Na mediana"), `porque="${why}" deveria dizer "Na mediana" (paridade com renderComps)`);
+  assert.ok(!why.includes("0%"), `porque="${why}" NAO deveria conter "0%"`);
+});
+
+test("scoreOportunidade (F5 FICHA-06): âncoras fora de ordem (med>q3, busca binária inexata) são reordenadas defensivamente", () => {
+  const desordenado = P.scoreOportunidade(110, { q1: 80, med: 130, q3: 120, n: 400, min: 60, max: 150 });
+  const ordenado = P.scoreOportunidade(110, { q1: 80, med: 120, q3: 130, n: 400, min: 60, max: 150 });
+  assert.deepEqual(desordenado, ordenado, "âncoras {80,130,120} devem produzir o MESMO resultado de {80,120,130}");
+  assert.ok(desordenado.score >= 0 && desordenado.score <= 100, "score deve permanecer no intervalo 0-100");
+});
+
 // --- statusDeUnidade (Fase 13, 13-01, VIS-01/PIN-01) ---------------------------------------
 // Mapeia score (ou {op:{score}}) -> 'bom'|'atencao'|'risco'|'semdado' usando as MESMAS bandas
 // 66/33 de scoreOportunidade — nunca reimplementa os limiares, nunca lanca excecao, nunca

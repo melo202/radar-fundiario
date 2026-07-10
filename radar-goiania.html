@@ -454,6 +454,7 @@
   .conf-alta{border-left:4px solid var(--lot)}
   .conf-media{border-left:4px solid var(--gold)}
   .conf-baixa{border-left:4px solid var(--accent)}
+  .conf-pre{border-left:4px solid var(--line)}/* F5 FICHA-04: pré-consulta — neutro, nunca cor de status */
   .score-num{font:800 20px/1 "Archivo";color:var(--ink);font-variant-numeric:tabular-nums}
   .score-op.alta .score-num{color:var(--lot)}
   .score-op.media .score-num{color:#7d621f}
@@ -1648,8 +1649,13 @@ function detectMode(textoBruto,combo){
    de confianca em scoreConfianca (nao aqui) -- score de oportunidade eh so posicao de preco. */
 function scoreOportunidade(myPm2, stats, flags){
   if(!stats || !(stats.n>=3) || !(myPm2>0) || !isFinite(myPm2)) return null;
-  const {q1,med,q3} = stats;
+  let {q1,med,q3} = stats;
   if(!(q1>0 && med>0 && q3>0) || !(q3>=q1)) return null;
+  /* F5 FICHA-06: âncoras defensivas — no caminho de vizinhança grande (compsStats inexato),
+     q1/med/q3 vêm de 3 buscas binárias de contagem INDEPENDENTES e nada garantia q1<=med<=q3;
+     âncoras fora de ordem deixavam um segmento morto e quebravam a monotonicidade do percentil.
+     Reordena antes de usar (premissa verificada, núcleo determinístico). */
+  if(!(q1<=med && med<=q3)){ const s=[q1,med,q3].sort((a,b)=>a-b); q1=s[0]; med=s[1]; q3=s[2]; }
   const iqr = q3-q1;
   /* F5 FICHA-01: dispersão ~zero (q1===med===q3 — vizinhança homogênea, ex.: unidades de mesma
      planta com venal idêntico) DEGENERA o percentil: as âncoras colapsam e qualquer valor <=min
@@ -1681,16 +1687,20 @@ function scoreOportunidade(myPm2, stats, flags){
   else pct=lerp(myPm2,q3,max,75,100);
   const score=Math.round(100-pct);
   const diffPct=Math.round(Math.abs(myPm2-med)/med*100);
-  const abaixo=myPm2<=med; /* IN-01: mesmo comparador (<=) da conclusao de renderComps — diffPct=0 vira "na mediana" na frase de qualquer forma */
+  const abaixo=myPm2<=med; /* IN-01: mesmo comparador (<=) da conclusao de renderComps */
   let rotulo, porque;
   if(score>=66){
     rotulo="Boa oportunidade";
     porque=[`Está ${diffPct}% abaixo da mediana da vizinhança (comparáveis em até ${(flags&&flags.radius)||400} m).`];
   } else if(score>=33){
     rotulo="Oportunidade média";
-    porque=[abaixo
-      ? `Está ${diffPct}% abaixo da mediana da vizinhança.`
-      : `Está ${diffPct}% acima da mediana da vizinhança.`];
+    /* F5 FICHA-03: diffPct=0 dizia "Está 0% abaixo da mediana" — agora tem a MESMA frase da
+       conclusão de renderComps ("Na mediana...") p/ as 2 superfícies da ficha não divergirem. */
+    porque=[diffPct===0
+      ? "Na mediana da vizinhança — alinhado à região."
+      : abaixo
+        ? `Está ${diffPct}% abaixo da mediana da vizinhança.`
+        : `Está ${diffPct}% acima da mediana da vizinhança.`];
   } else {
     rotulo="Oportunidade baixa";
     porque=[`Está ${diffPct}% acima da mediana da vizinhança — entre os mais caros da região.`];
@@ -5718,7 +5728,7 @@ function pick(i){
 
 /* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()
    e (Wave 3, 09-03) por atualizarScores() ao concluir compare(). op=retorno de scoreOportunidade
-   (ou null), conf=retorno de scoreConfianca (sempre objeto, nunca null). */
+   (ou null), conf=retorno de scoreConfianca (ou null PRÉ-CONSULTA — F5 FICHA-04). */
 function renderScoresInto(op,conf){
   const box=document.getElementById("dScores");
   let opCls="score-op",opBody;
@@ -5734,9 +5744,19 @@ function renderScoresInto(op,conf){
      o preenche de forma assíncrona/idempotente quando a zona do PD estiver conferida. W1: o
      NÚMERO 0-100 de scoreOportunidade permanece INTOCADO — isto é só texto explicativo no render. */
   const opWhyPD=op?'<span id="scoreOpWhyPD"></span>':"";
-  const confCls="score conf-"+conf.nivel;
-  const confLbl={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
-  const confWhy=esc(conf.porque.join(" "));
+  /* F5 FICHA-04: conf null = PRÉ-CONSULTA (mesmo padrão do op null acima) — antes a ficha nascia
+     "Confiança: baixa · poucos comparáveis (0)", que soava defeito do imóvel quando a vizinhança
+     simplesmente ainda não tinha sido consultada. Estado neutro até compare()/atualizarScores. */
+  let confCls,confLbl,confWhy;
+  if(!conf){
+    confCls="score conf-pre";
+    confLbl="a calcular";
+    confWhy="Ainda não consultei a vizinhança — toque em “📊 Ver comparáveis” para calcular.";
+  }else{
+    confCls="score conf-"+conf.nivel;
+    confLbl={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
+    confWhy=esc(conf.porque.join(" "));
+  }
   box.innerHTML=`
     <button type="button" class="score ${opCls}" aria-expanded="false" aria-controls="scoreOpWhy" onclick="toggleScoreWhy(this)">${opBody}<span class="score-chev" aria-hidden="true">▸</span></button>
     <div id="scoreOpWhy" class="score-why" hidden>${opWhy}${opWhyPD}</div>
@@ -5790,6 +5810,7 @@ function atualizarScores(a, statsR){
   const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk,amp});
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
+  histAtualizarUltimo(a); /* F5 FICHA-05: rótulo do histórico independente de timing — re-grava o item desta visita com o score real */
   recolorPinoCi(clean(a.ci)); /* CR-01 parte (a): pino do lote no mapa ganha a cor do score real (compare() concluído) */
   renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
   /* Fase 18 (18-02, PD-04): compare() pode terminar ANTES ou DEPOIS do Plano Diretor resolver
@@ -5831,12 +5852,11 @@ function showDetail(a,ll){
   }
 
   /* 3. #dScores — scoreOportunidade fica null até compare() popular stats (Wave 3 chama
-     atualizarScores() depois); scoreConfianca já roda com o que há disponível sem rede (nComps=0). */
+     atualizarScores() depois). F5 FICHA-04: conf também fica null PRÉ-CONSULTA — rodar
+     scoreConfianca com nComps=0 aqui rotulava toda ficha recém-aberta de "baixa · poucos
+     comparáveis (0)", lido como defeito do imóvel; compare()/atualizarScores resolve o real. */
   const myPm2=isU?pm2:pm2t;
-  const areaOk=!!(isU?a.areaedif:a.areaterr);
-  const venalOk=(a.vlvenal||0)>0;
-  const atipico=isGarage(a);
-  const conf=scoreConfianca({areaOk,nComps:0,atipico,venalOk});
+  const conf=null;
   const op=scoreOportunidade(myPm2,null,{});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
   renderScoresInto(op,conf);
@@ -6545,6 +6565,19 @@ function histPush(a){
   histSave(next);
   renderSavedBlocks();
 }
+/* F5 FICHA-05: o item de histórico desta visita nasce SEM rótulo de oportunidade (histPush roda no
+   showDetail, antes de compare() concluir — op ainda null). Quando o score REAL chega
+   (atualizarScores), o ÚLTIMO item é re-gravado se for este imóvel: o rótulo persistido deixa de
+   depender do timing de "Ver comparáveis". Nunca toca itens antigos (só o topo, mesma regra de
+   dedupe do histPush); visitedAt original preservado. */
+function histAtualizarUltimo(a){
+  const insc=clean(a.nrinscr||a.ci);
+  const lista=histLoad();
+  const ultimo=lista.length?lista[lista.length-1]:null;
+  if(!ultimo||ultimo.insc!==insc)return;
+  lista[lista.length-1]=Object.assign(oportunidadeItem(a,oppExtras(a)),{visitedAt:ultimo.visitedAt});
+  if(histSave(lista))renderSavedBlocks();
+}
 /* A-04 (20): aceita o elemento clicado (this) e lê a inscrição do data-attribute do container
    [data-insc] via closest — nunca mais recebe dado do endpoint interpolado em string JS de on*.
    Mantém o ramo string para chamadas legadas/programáticas. */
@@ -6654,8 +6687,10 @@ async function compare(){
   try{
     const g=await getComps(a);
     if(DCUR!==a)return; /* usuário já trocou de imóvel — descarta */
-    if(!g){box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
-    if(!g.res||g.res.n<3){box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(g.res?g.res.n:0)+' em '+g.radius+' m).</div>';return;}
+    /* F5 FICHA-04: mesmo nos desfechos curtos (sem base / poucos comparáveis) a consulta FOI
+       feita — resolve a confiança real (nComps verdadeiro) em vez de deixar "a calcular" preso. */
+    if(!g){atualizarScores(a,null);box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
+    if(!g.res||g.res.n<3){atualizarScores(a,g.res||null);box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(g.res?g.res.n:0)+' em '+g.radius+' m).</div>';return;}
     await renderComps(box,g.res,g.myPm2,g.radius,g.isU,a);
   }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
 }
