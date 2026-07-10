@@ -3862,7 +3862,9 @@ async function pdBateriaConsulta(x,y){
   const chaves=Object.keys(PD_LAYERS);
   const promessas=chaves.map(key=>
     jsonp({geometry:x+","+y,geometryType:"esriGeometryPoint",inSR:31982,spatialRel:"esriSpatialRelIntersects",
-      outFields:"sigla,nm_des,nm_mzo",returnGeometry:false,f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[key]+"/query")
+      /* Mapa_ModeloEspacial SÓ aceita outFields=* (verificado ao vivo 2026-07-10 — restrito lança
+         "Failed to execute query"; payload por ponto é ~0-1 feature, custo irrisório) */
+      outFields:"*",returnGeometry:false,f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[key]+"/query")
   );
   const settled=await Promise.allSettled(promessas);
   const respostas=settled.map((s,i)=>({layer:chaves[i],status:s.status,value:s.status==="fulfilled"?s.value:null}));
@@ -3936,7 +3938,8 @@ async function carregarZonasViewport(bounds){
   const chaves=["aa","add","aos","aeis","apac","ooau"];
   const promessas=chaves.map(k=>
     jsonp({geometry,geometryType:"esriGeometryEnvelope",inSR:"31982",spatialRel:"esriSpatialRelIntersects",
-      outFields:"sigla",returnGeometry:"true",f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[k]+"/query")
+      /* Mapa_ModeloEspacial SÓ aceita outFields=* (verificado ao vivo 2026-07-10) */
+      outFields:"*",returnGeometry:"true",f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[k]+"/query")
   );
   const settled=await Promise.allSettled(promessas);
   const porZona={};
