@@ -2,25 +2,19 @@
 
 ## What This Is
 
-Ferramenta web (arquivo único `radar-goiania.html`, sem backend) que localiza imóveis de Goiânia por quadra/lote, endereço, inscrição ou clique no mapa, usando o ArcGIS público da Prefeitura. Mostra dados cadastrais oficiais (inscrição, área, uso, valor venal, IPTU) e uma estimativa de mercado estatística, plotando o lote no mapa. Público-alvo: corretores e investidores de Goiânia — está evoluindo de "localizador de imóvel" para uma **ferramenta de trabalho do corretor**.
+Ferramenta web (arquivo único `radar-goiania.html`, sem backend) que localiza imóveis de Goiânia por quadra/lote, endereço, inscrição ou clique no mapa, usando o ArcGIS público da Prefeitura. Mostra dados cadastrais oficiais (inscrição, área, uso, valor venal, IPTU) e uma estimativa de mercado estatística, plotando o lote no mapa. Público-alvo: corretores e investidores de Goiânia. Com o v2.1 (Cockpit Comercial), é uma **ferramenta de trabalho completa do corretor**: busca única inteligente, ficha conclusão-primeiro com scores explicáveis, ações prontas (WhatsApp/captação/salvos), documentos em 3 níveis + minutas de negociação, análise de prédios, Território (choropleth de valor, painel do setor, detector de lote subutilizado, caderno de farming em IndexedDB, diff de cadastro, cruzamento Caixa) e Inteligência Urbanística do Plano Diretor 2022 — tudo determinístico e client-side.
 
 ## Core Value
 
 O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado cadastral oficial e análise estatística **auditável linha a linha**, sem depender de servidor próprio.
 
-## Current Milestone: v2.1 Busca, Bairros & Território
+## Current State
 
-**Goal:** Elevar a qualidade de dados e a UX core e dar ao corretor as primeiras ferramentas de captação: corrigir os nomes de bairro, refinar a malha de bairros no mobile, reconstruir a busca como campo único inteligente ("de todos os jeitos possíveis"), e entregar a primeira leva de Território/captação.
+**v2.1 Cockpit Comercial shipped 2026-07-10** — 13 fases (7-18, incl. 11.1), 41 planos, 96 tasks, 53/53 requisitos verificados, 239/239 testes. `radar-goiania.html` ~7.400 linhas + sw.js radar-v7 + datasets versionados (bairros, logradouros CNEFE, bairro-cdbairro). Auditoria do milestone: 16/16 seams de integração, 0 blockers; tech debt = HUMAN-UAT diferidos (~36 itens de percepção/campo/jurídico — ver milestones/v2.1-MILESTONE-AUDIT.md).
 
-**Target features:**
-- Auditoria e correção dos nomes de bairro (reconciliar `nm_bai` contra fonte confiável)
-- UX da malha de bairros no mobile (hierarquia por interação, densidade por zoom, toque na área; choropleth como ponte pro heatmap)
-- Busca campo-único inteligente: detecção de intenção, chip de confirmação, setor na frase, lembrar setor, desambiguação, fix do fuzzy/falso-positivo, estados de erro/vazio úteis, exemplos tocáveis, CNEFE p/ logradouros, deep-link `?insc=`
-- Ferramentas de Território/captação: painel do setor (mediana R$/m², IPTU, idade), heatmap R$/m² por quadra, detector de lote subutilizado, farming com memória (localStorage), diff de cadastro entre visitas, cruzamento com imóveis Caixa
+## Next Milestone Goals (a definir via /gsd-new-milestone)
 
-**Deferido → v2.2:** ativação da pesquisa de mercado por IA (seam dormant já existe), ortofoto própria de Goiânia.
-
-**Contexto/constraints:** núcleo cadastral segue 100% determinístico; a busca foi mexida recentemente (o campo-único pode substituir parte disso — checar estado atual); numeração de fases continua a partir da 7.
+Candidatos v2.2+: ativação da pesquisa de mercado por IA (seam dormant, proxy Worker/BYO-key, opt-in); upzoning PD 2022×2007; contrapartida de outorga (LC 373/2024); vazios urbanos (layer 16); histórico de snapshots; ortofoto própria; passe de a11y (focus-trap nas 6 superfícies modais).
 
 ## Requirements
 
@@ -50,7 +44,15 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 
 <!-- Próximo milestone (v2.1) — definir via /gsd-new-milestone. Candidatos priorizados: -->
 
-- [ ] **Auditoria de nomes de bairro** (data quality): os nomes exibidos no hover/toque vêm de `nm_bai` (layer 2, 1.206 polígonos, 466 sem nome, unidade administrativa diferente da busca) e têm **muitos nomes errados/inconsistentes**. Reconciliar o nome exibido contra a fonte confiável (`nmbairro`/`cdbairro` da layer 3 que a busca já usa, ou a lista oficial da Prefeitura) e corrigir no `bairros-goiania.json` (regenerar via `gerar-bairros.py` com o join de nomes). Tratar as 466 glebas sem nome.
+- ✓ v2.1 COMPLETO (53 requisitos — busca única BUSCA-01..14, ficha/scores, ações/WhatsApp/captação/salvos, documentos DOC+NEG, prédio, visual/pinos/motion/onboarding, linguagem §26, Território TERR-01..07, Plano Diretor PD-01..05) — detalhes em milestones/v2.1-REQUIREMENTS.md
+
+### Active
+
+- [ ] (v2.2 — definir via /gsd-new-milestone)
+
+### Superseded (histórico do rascunho pré-v2.1)
+
+- [x] **Auditoria de nomes de bairro** (data quality): os nomes exibidos no hover/toque vêm de `nm_bai` (layer 2, 1.206 polígonos, 466 sem nome, unidade administrativa diferente da busca) e têm **muitos nomes errados/inconsistentes**. Reconciliar o nome exibido contra a fonte confiável (`nmbairro`/`cdbairro` da layer 3 que a busca já usa, ou a lista oficial da Prefeitura) e corrigir no `bairros-goiania.json` (regenerar via `gerar-bairros.py` com o join de nomes). Tratar as 466 glebas sem nome.
 - [ ] **UX da malha de bairros no mobile** (feedback do usuário: fica "estranho/emaranhado" no celular): malha ociosa vira contexto (traço fino + baixa opacidade, "sussurra"), destaque no toque é que "grita" (accent+nome — reforçar contraste idle vs highlight); densidade/peso das linhas emerge com o zoom (calmo na cidade, detalhado ao aproximar); garantir toque na ÁREA do bairro (fill), não só na linha. Evolução futura: trocar a malha neutra por **choropleth** (pintar por R$/m² etc.) — encaixa no heatmap de Território/captação abaixo.
 - [ ] Ferramentas do corretor — **Território/captação** (prioridade do usuário): painel do setor (mediana R$/m², IPTU, idade), heatmap R$/m² por quadra, detector de lote subutilizado, farming com memória (localStorage), diff de cadastro, cruzamento com imóveis Caixa
 - [ ] Ativação da pesquisa de mercado por IA sobre o seam dormant (proxy Cloudflare Worker ou BYO-key; `glm-4.5-air:online`/`qwen3-14b`; opt-in, rotulada "não é dado oficial")
@@ -103,6 +105,13 @@ O corretor acha o imóvel certo em segundos e enxerga o território no mapa — 
 | **v2.0: `returnGeometry=true` funciona no endpoint (verificado ao vivo 04/07)** | Reverteu a premissa: geometria de bairro/lote já existia, era só expor | ✓ Good — docs corrigidos |
 | **v2.0: diferenciais premium incluídos** (breadcrumb, crossfade, stagger) | Esforço baixo, ganho de percepção alto | ✓ Good |
 
+| **v2.1: outFields restrito FUNCIONA no cadastro (~80% menos payload) mas Mapa_ModeloEspacial exige outFields=*** | Verificado ao vivo 2x (2026-07-09/10); fallback automático nos dois blocos | ✓ Good — docs corrigidos |
+| **v2.1: setor-scan compartilhado com orçamento HARD ≤3 páginas + amostra rotulada** | Endpoint frágil (502); honestidade estatística | ✓ Good — verificado ao vivo (Bueno: 4 req, cache 0) |
+| **v2.1: IndexedDB (radar_territorio) com allowlist positiva anti-PII para caderno/snapshots** | localStorage não escala; LGPD por construção | ✓ Good — dump verificado sem PII |
+| **v2.1: números do Plano Diretor SÓ da fonte primária (REGRA DE OURO)** | Divergência 6x/7,5x nas fontes secundárias; credibilidade jurídica | ✓ Good — AA 6,0x confirmado no Art. 196 II (7,5x = exceção TDC) |
+| **v2.1: score 0-100 intocado; PD entra via porquê[] explicável** | Preserva determinismo já verificado + 184 testes | ✓ Good |
+| **v2.1: paleta de zonas/choropleth SEMPRE fora do vocabulário --status-*** | "Caro" nunca pode parecer "risco" (VIS-01) | ✓ Good |
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
@@ -121,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 after Phase 18 — ÚLTIMA do v2.1 (Inteligência Urbanística PD 2022: bateria point-in-polygon nas 9 layers do Modelo Espacial verificada ao vivo (568ms, hotfix outFields=*); PD_TABELA_CA com CA conferidos na fonte primária (AA 6,0x Art.196 II, ADD 5,0x, básico 1,0x universal — divergência 6x/7,5x RESOLVIDA: 7,5x é exceção TDC); accordion Urbanístico com REGRA DE OURO; detector com potencial-do-PD + fallback; choropleth de zonas viewport-limited; suíte 238/238; TODAS as 13 fases do v2.1 completas)*
+*Last updated: 2026-07-10 after v2.1 milestone (Cockpit Comercial) — shipped, audited (tech_debt aceito: HUMAN-UAT diferidos), archived*
