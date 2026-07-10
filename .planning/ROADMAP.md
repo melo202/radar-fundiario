@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP + Inteligência + Mobile** — pré-GSD (shipped 2026-07-03)
 - ✅ **v2.0 Mapa-first + Motion + Satélite** — Fases 1-6 (shipped 2026-07-05) · [detalhes](milestones/v2.0-ROADMAP.md) · [requisitos](milestones/v2.0-REQUIREMENTS.md) · [auditoria](milestones/v2.0-MILESTONE-AUDIT.md)
 - ✅ **v2.1 Cockpit Comercial** — Fases 7-18, incl. 11.1 (shipped 2026-07-10) · [detalhes](milestones/v2.1-ROADMAP.md) · [requisitos](milestones/v2.1-REQUIREMENTS.md) · [auditoria](milestones/v2.1-MILESTONE-AUDIT.md)
-- 🚧 **v2.2 Polimento Premium** — Fases 19-20 (em andamento)
+- ✅ **v2.2 Polimento Premium** — Fases 19-20 (shipped 2026-07-10) · [detalhes](milestones/v2.2-ROADMAP.md) · [requisitos](milestones/v2.2-REQUIREMENTS.md) · [auditoria](milestones/v2.2-MILESTONE-AUDIT.md)
 
 ## Phases
 
@@ -44,48 +44,16 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.1-*.md`.
 
 </details>
 
-### 🚧 v2.2 Polimento Premium (Fases 19-20)
+<details>
+<summary>✅ v2.2 Polimento Premium (Fases 19-20) — SHIPPED 2026-07-10</summary>
 
-**Milestone Goal:** O app GANHA cara de produto premium — tipografia bonita e profissional em todo o app, estética refinada (o usuário achou a letra atual "muito feia" e o app sem cara premium) — e fecha com uma auditoria completa executada e corrigida pelo **Fable 5** (pedido explícito do usuário, 2026-07-10). Sem IA no produto, sem CRM/Hub (limite de parada mantido).
+- [x] **Phase 19: Estética Premium — Tipografia & Refinamento Visual** — Archivo + JetBrains Mono embutidas (a fonte declarada nunca era carregada); elevação/acabamento; focus-trap nas 6 superfícies modais
+- [x] **Phase 20: Auditoria Fable 5 (gate final)** — 4 auditores + 2 verificadores adversariais + 2 fixers, todos Fable 5; 41 findings, 0 refutados, 37 corrigidos (1 crítico: busca travava permanentemente); suíte 239→252
 
-- [x] **Phase 19: Estética Premium — Tipografia & Refinamento Visual** — nova tipografia em todo o app (substituir a atual, considerada feia), refinamento estético premium (profundidade, microdetalhes, polish) mantendo a identidade cartográfica e a lei "cor só onde significa status"; inclui o passe de a11y focus-trap nas 6 superfícies modais (IN-03 diferido da Fase 13) (completed 2026-07-10)
-- [x] **Phase 20: Auditoria Fable 5 (gate final)** — auditoria completa de TUDO (código, segurança, UX, consistência, PDFs, mobile) executada por agentes rodando **Fable 5**, com as correções também aplicadas pelo Fable 5; é a última fase do milestone (completed 2026-07-10)
+Detalhes completos e auditoria em `milestones/v2.2-*.md`.
 
-## Phase Details
+</details>
 
-### Phase 19: Estética Premium — Tipografia & Refinamento Visual
-**Goal**: O app parece um produto premium: tipografia bonita, hierarquia elegante, acabamento fino — sem perder identidade cartográfica, performance mobile nem offline/PWA.
-**Depends on**: v2.1 completo (o polish aplica-se sobre o cockpit inteiro)
-**Requirements**: TYPO-01, PREM-01, A11Y-01
-**Success Criteria**:
-  1. Nova família tipográfica aplicada em TODO o app (UI, mapa, sheets, PDFs/documentos impressos) — escolhida por critério premium/legibilidade, com fallback de sistema robusto; zero texto na fonte antiga
-  2. Funciona offline/PWA e não quebra o arquivo único (fonte embutida via @font-face/base64 no HTML OU stack de sistema premium — decidir na fase medindo o custo de payload)
-  3. Refinamento estético: profundidade/elevação consistente (sombras/bordas), acabamento dos cards/sheets/botões, densidade e alinhamento revisados — mantendo papel/óxido cartográfico e cor-só-status (VIS-01)
-  4. Focus-trap nas 6 superfícies modais (onboarding, wizard, negSheet, captSheet, cmpSheet, chooser/detail) — Tab/Shift+Tab circulam dentro do modal, Esc fecha, foco retorna ao gatilho (fecha o IN-03 da Fase 13)
-  5. Legibilidade AA preservada em CARTO e satélite; motion/reduced-motion intactos; 239+ testes verdes; PDFs continuam profissionais na fonte nova
-**Plans**: 3 plans (sequenciais, mesmo arquivo) · **UI hint**: yes
+## Próximo milestone
 
-Plans:
-- [x] 19-01-PLAN.md — Fundação tipográfica: @font-face Archivo+JetBrains Mono (base64) + CSP font-src + migração das 196 declarações (TYPO-01)
-- [x] 19-02-PLAN.md — Refinamento estético: tokens --elev-0/1/2/3 + acabamento hover/active/focus/divisores (PREM-01)
-- [x] 19-03-PLAN.md — Focus-trap único nas 6 superfícies modais + gate final/UAT (A11Y-01)
-
-### Phase 20: Auditoria Fable 5 (gate final)
-**Goal**: Tudo que foi construído (v2.0-v2.2) passa por uma auditoria profunda executada por agentes **Fable 5** (modelo mais capaz disponível), e as correções são aplicadas também pelo Fable 5 — o gate de qualidade final antes de considerar o app "produto".
-**Depends on**: Fase 19 (audita o estado final, incluindo a estética nova)
-**Requirements**: FABLE-01
-**Success Criteria**:
-  1. Auditoria multi-dimensão executada por agentes Fable 5 (SEM override de modelo — herdam o modelo da sessão): correção/bugs, segurança (XSS/LGPD/PII), consistência de UX e linguagem, qualidade dos PDFs/documentos, mobile/responsivo, performance percebida, integridade dos dados oficiais
-  2. Todo finding é adversarialmente verificado antes de virar correção (sem falso positivo barato); correções aplicadas pelo Fable 5 com commits atômicos e suíte verde após cada uma
-  3. Relatório final da auditoria versionado (achados → veredito → correção → evidência), com o que ficou aceito como limitação documentado
-  4. Suíte de testes 100% verde ao fim; verificação ao vivo (preview) dos fluxos principais pós-correções
-**Plans**: TBD
-
-## Progress
-
-| Fase | Milestone | Planos | Status | Concluída |
-|------|-----------|--------|--------|-----------|
-| 19. Estética Premium | v2.2 | 3/3 | Complete    | 2026-07-10 |
-| 20. Auditoria Fable 5 | v2.2 | 1/1 | Complete    | 2026-07-10 |
-
-**Backlog (v2.3+):** ativação da pesquisa de mercado por IA sobre o seam dormant; upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria.
+A definir via `/gsd-new-milestone`. Candidatos v2.3+: ativação da pesquisa de mercado por IA sobre o seam dormant (exige autorização explícita do usuário); upzoning PD 2022×2007; outorga onerosa LC 373; vazios urbanos; ortofoto própria; teste automatizado do `montarNeg` (dívida C-08).

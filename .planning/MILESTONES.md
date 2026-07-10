@@ -1,5 +1,18 @@
 # Project Milestones: Radar Fundiário Goiânia
 
+## v2.2 Polimento Premium (Shipped: 2026-07-10)
+
+**Phases completed:** 2 phases, 4 plans, 8 tasks
+
+**Key accomplishments:**
+
+- Archivo + JetBrains Mono embutidas de verdade via 2 blocos @font-face variáveis em base64 (86,4KB), CSP corrigido com font-src, e as 196 declarações de família (IBM Plex + Open Sans) migradas por papel — a causa raiz da "letra feia" (zero fonte carregada, fallback sempre Segoe UI) está corrigida.
+- 14 box-shadow ad hoc consolidados em 3 níveis nomeados (--elev-1/2/3 + repouso --elev-0), todos derivados de --ink, e acabamento de hover/active/focus refinado em cards/botões/inputs/divisores sem introduzir nenhuma cor nova.
+- Utilitário trapFocus/untrapFocus/trapFocaveis (1 definição, 21 call-sites de trapFocus/12 de untrapFocus) aplicado às 6 superfícies modais, fechando o IN-03 diferido da Fase 13; gate completo da fase 19 (fontes+elevação+focus-trap+239 testes) verde, com o julgamento estético premium diferido para HUMAN-UAT do usuário.
+- A-01 (crítico):
+
+---
+
 ## v2.1 Cockpit Comercial (Shipped: 2026-07-10)
 
 **Phases completed:** 13 phases, 41 plans, 96 tasks
