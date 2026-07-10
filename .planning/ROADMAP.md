@@ -267,7 +267,7 @@ Plans:
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
 | 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete    | 2026-07-10 |
-| 18. Inteligência Urbanística (PD 2022) | v2.1 | 3/3 | Complete   | 2026-07-10 |
+| 18. Inteligência Urbanística (PD 2022) | v2.1 | 3/3 | Complete    | 2026-07-10 |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**
 **v2.1 (Cockpit Comercial): 13 fases (7-18, incl. 11.1). Fase 7 ✅ (2 HUMAN-UAT diferidos). Requisitos: NOMES ✅ + ~47 pendentes.**
