@@ -1105,12 +1105,16 @@
          removido/adicionado por atualizarLegenda(), chamada ao fim de plot(). Diferenciador entre
          Atenção/Caixa (mesmo hex --gold) é o RÓTULO+ÍCONE, nunca border-style na bolinha (plan-check:
          tracejado é ilegível em círculo de 8px entre browsers). -->
+    <!-- IN-01 (13-REVIEW.md): os 4 pontos de STATUS levam data-status e têm a cor PINTADA a partir
+         de PINO_STYLE em atualizarLegenda() (fonte única de verdade dos pinos) — o style inline é só
+         o valor inicial/fallback, nunca dessincroniza de PINO_STYLE. Linhas de Caixa/subutilizado/
+         território reusam o dourado de propósito (camadas próprias, fora de PINO_STYLE): sem data-status. -->
     <div id="pinoLegenda" class="pino-legenda" hidden aria-label="Legenda dos pinos no mapa">
-      <span><i class="pl-dot" style="background:#2c5545"></i>Boa oportunidade</span>
-      <span><i class="pl-dot" style="background:#a8842c"></i>Atenção</span>
-      <span><i class="pl-dot" style="background:#b5451f"></i>Oportunidade baixa</span>
+      <span><i class="pl-dot" data-status="bom" style="background:#2c5545"></i>Boa oportunidade</span>
+      <span><i class="pl-dot" data-status="atencao" style="background:#a8842c"></i>Atenção</span>
+      <span><i class="pl-dot" data-status="risco" style="background:#b5451f"></i>Oportunidade baixa</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
-      <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
+      <span><i class="pl-dot" data-status="semdado" style="background:#57503f"></i>Sem dado ainda</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏗️ Lote subutilizado</span>
       <span><i class="pl-dot" style="background:#a8842c;box-shadow:0 0 0 2px var(--ink)"></i>🏦📓 Caixa no seu território</span>
     </div>
@@ -5192,7 +5196,15 @@ function bestStatusPorCi(list){
   return out;
 }
 function atualizarLegenda(temPinos){
-  const el=document.getElementById("pinoLegenda");if(el)el.hidden=!temPinos;
+  const el=document.getElementById("pinoLegenda");if(!el)return;
+  /* IN-01 (13-REVIEW.md): pinta os 4 pontos de STATUS a partir de PINO_STYLE (fonte única de
+     verdade dos pinos) — um ajuste de hex em PINO_STYLE passa a refletir na legenda sem edição
+     manual do HTML, eliminando a dessincronização silenciosa. Idempotente (valores iguais aos
+     inline hoje: nenhuma mudança visual). */
+  el.querySelectorAll(".pl-dot[data-status]").forEach(d=>{
+    const st=PINO_STYLE[d.dataset.status];if(st)d.style.background=st.fillColor;
+  });
+  el.hidden=!temPinos;
 }
 
 /* CR-01 (13-REVIEW.md) parte (b): se o setor dos lotes JÁ foi escaneado (TERRSTAT, Fase 15),
