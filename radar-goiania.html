@@ -3278,7 +3278,12 @@ function cadernoDisponivel(){
 }
 
 /* cadernoAbrirDB(): abre (ou cria, via onupgradeneeded) o banco radar_territorio v1 — stores
-   "caderno" (keyPath ci, índices cdbairro/status) e "setores" (keyPath cdbairro, reservado). */
+   "caderno" (keyPath ci, índices cdbairro/status) e "setores" (keyPath cdbairro, reservado).
+   WR-02 (16-REVIEW.md): `onblocked` cobre o caso de uma aba antiga ainda com o DB aberto quando a
+   Fase 17 subir CADERNO_VERSION — sem isso, o `open()` fica travado esperando indefinidamente, sem
+   nunca resolver/rejeitar (falha silenciosa). Cada chamador desta função agora fecha a conexão
+   (db.close()) ao final da própria operação (oncomplete/onerror) — nunca mantém conexões vivas
+   entre chamadas, então uma aba deste app nunca é ela mesma a causa de um `blocked` futuro. */
 function cadernoAbrirDB(){
   return new Promise((resolve,reject)=>{
     if(!cadernoDisponivel()){reject(new Error("IndexedDB indisponível"));return;}
@@ -3298,11 +3303,14 @@ function cadernoAbrirDB(){
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error||new Error("Não foi possível abrir o caderno"));
+    req.onblocked=()=>reject(new Error("Outra aba está usando o caderno — feche as outras abas do Radar e tente de novo."));
   });
 }
 
 /* cadernoSalvar(itemBruto): sanitiza (allowlist positiva CADERNO_ALLOW) ANTES de gravar — nunca
-   confia no chamador. status default "nao_visitado" se ausente; savedAt sempre setado no save. */
+   confia no chamador. status default "nao_visitado" se ausente; savedAt sempre setado no save.
+   WR-02 (16-REVIEW.md): db.close() em oncomplete/onerror — a conexão desta operação nunca fica
+   aberta além do necessário. */
 function cadernoSalvar(itemBruto){
   const item=sanitizeCaderno(Object.assign({},itemBruto,{
     status:(itemBruto&&itemBruto.status)||"nao_visitado",
@@ -3311,14 +3319,15 @@ function cadernoSalvar(itemBruto){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readwrite");
     tx.objectStore("caderno").put(item);
-    tx.oncomplete=()=>resolve(item);
-    tx.onerror=()=>reject(tx.error);
+    tx.oncomplete=()=>{db.close();resolve(item);};
+    tx.onerror=()=>{db.close();reject(tx.error);};
   }));
 }
 
 /* cadernoAtualizar(ci,patch): lê o item existente, aplica o patch (status só se statusValido —
    status inválido é ignorado, nunca grava enum fora do ciclo), sanitiza de novo (defesa em
-   profundidade) e grava com updatedAt. Item inexistente -> rejeita (nunca cria implicitamente). */
+   profundidade) e grava com updatedAt. Item inexistente -> rejeita (nunca cria implicitamente).
+   WR-02 (16-REVIEW.md): db.close() em oncomplete/onerror. */
 function cadernoAtualizar(ci,patch){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readwrite");
@@ -3333,24 +3342,28 @@ function cadernoAtualizar(ci,patch){
       store.put(merged);
     };
     getReq.onerror=()=>reject(getReq.error);
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
+    tx.oncomplete=()=>{db.close();resolve();};
+    tx.onerror=()=>{db.close();reject(tx.error);};
   }));
 }
 
-/* cadernoRemover(ci): delete direto (duplo-toque de confirmação vive na UI, Task 2). */
+/* cadernoRemover(ci): delete direto (duplo-toque de confirmação vive na UI, Task 2). WR-02
+   (16-REVIEW.md): db.close() em oncomplete/onerror. */
 function cadernoRemover(ci){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readwrite");
     tx.objectStore("caderno").delete(ci);
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
+    tx.oncomplete=()=>{db.close();resolve();};
+    tx.onerror=()=>{db.close();reject(tx.error);};
   }));
 }
 
 /* cadernoListar(opts): opts={cdbairro,status}. cdbairro via índice (getAll(valor)) quando
    presente; senão getAll() completo. status filtrado em memória se ambos os filtros ativos
-   (volume esperado: centenas de itens, não milhares — 16-RESEARCH.md A3, sem cursor paginado). */
+   (volume esperado: centenas de itens, não milhares — 16-RESEARCH.md A3, sem cursor paginado).
+   WR-02 (16-REVIEW.md): db.close() no sucesso/erro do req (readonly não tem tx.oncomplete
+   disparado antes do req.onsuccess de forma confiável entre browsers — fecha direto no callback do
+   request, já com o resultado/erro em mãos). */
 function cadernoListar(opts){
   const o=opts||{};
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
@@ -3362,29 +3375,34 @@ function cadernoListar(opts){
     req.onsuccess=()=>{
       let out=req.result||[];
       if(o.status)out=out.filter(it=>it.status===o.status);
+      db.close();
       resolve(out);
     };
-    req.onerror=()=>reject(req.error);
+    req.onerror=()=>{db.close();reject(req.error);};
   }));
 }
 
 /* cadernoTem(ci): boolean — usado por renderCadernoBtn()/salvarNoCadernoUI() (Task 3) p/ alternar
-   "📓 Salvar no caderno" ↔ "✓ No caderno" sem duplicar item já salvo. */
+   "📓 Salvar no caderno" ↔ "✓ No caderno" sem duplicar item já salvo. WR-02 (16-REVIEW.md):
+   db.close() no sucesso/erro do req — chamada em até ~50 iterações por render (renderDetectorLista),
+   é a função mais exposta ao risco de acúmulo de conexões descrito no WR-02. */
 function cadernoTem(ci){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readonly");
     const req=tx.objectStore("caderno").get(ci);
-    req.onsuccess=()=>resolve(req.result!==undefined);
-    req.onerror=()=>reject(req.error);
+    req.onsuccess=()=>{db.close();resolve(req.result!==undefined);};
+    req.onerror=()=>{db.close();reject(req.error);};
   }));
 }
 
+/* WR-02 (16-REVIEW.md): db.close() no sucesso/erro do req, mesmo padrão das demais funções de I/O
+   acima — nenhuma conexão fica aberta além do necessário. */
 function cadernoContar(){
   return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
     const tx=db.transaction("caderno","readonly");
     const req=tx.objectStore("caderno").count();
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
+    req.onsuccess=()=>{db.close();resolve(req.result);};
+    req.onerror=()=>{db.close();reject(req.error);};
   }));
 }
 // CADERNO_IO_END
