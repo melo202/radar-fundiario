@@ -5594,7 +5594,7 @@ function showDetail(a,ll){
   histPush(a); /* Fase 10 SALV-01: auto-add ao radar_historico a cada abertura de ficha (dedupe+FIFO 30) */
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
   else compsBox.innerHTML=
-    (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Analisar vizinhança — faixa de preços</button>':"";
+    (a.x_coord&&a.y_coord)?'<button class="cmpbtn" onclick="compare()">📊 Ver comparáveis</button>':""; /* B-05: rótulo unificado com o botão de #dActsPrim */
   const dtCad=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao);
   let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
   if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
@@ -5608,7 +5608,7 @@ function showDetail(a,ll){
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Gerar documento</button>
-    <button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="document.getElementById('dComps').scrollIntoView({behavior:REDUCE?'auto':'smooth'})">📊 Ver comparáveis</button>`:""}
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar oportunidade</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
