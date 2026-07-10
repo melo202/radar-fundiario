@@ -120,6 +120,24 @@ test('contratoTexto(data com matricula=null, cartorio=null): clausula "Do Objeto
   assert.ok(!/undefined/i.test(texto), `contratoTexto nunca deveria conter "undefined", obteve:\n${texto}`);
 });
 
+// --- C-06: 2 testemunhas no Contrato e no Termo (CPC 784, III); Proposta NÃO tem testemunhas -----
+
+test("contratoTexto e termoExclusividadeTexto contêm Testemunha 1 e Testemunha 2 (C-06)", () => {
+  for (const gerar of [
+    () => P.contratoTexto(FIXTURES.contratoCasos.completo),
+    () => P.termoExclusividadeTexto(FIXTURES.termoCasos.exclusivaSimComAnuncio),
+  ]) {
+    const texto = gerar();
+    assert.ok(texto.includes("Testemunha 1"), `deveria conter "Testemunha 1", obteve:\n${texto}`);
+    assert.ok(texto.includes("Testemunha 2"), `deveria conter "Testemunha 2", obteve:\n${texto}`);
+  }
+});
+
+test("propostaTexto NÃO contém testemunhas (não é título executivo — C-06)", () => {
+  const texto = P.propostaTexto(FIXTURES.propostaCasos.completo);
+  assert.ok(!/Testemunha/i.test(texto), `propostaTexto NÃO deveria conter testemunhas, obteve:\n${texto}`);
+});
+
 // --- assert negativo global: as 3 funcoes de minuta NUNCA retornam "undefined"/"NaN" -------
 
 test('as 3 funcoes de minuta, para qualquer data de fixture, NUNCA retornam "undefined" ou "NaN"', () => {

@@ -2174,6 +2174,10 @@ function termoExclusividadeTexto(data){
   texto+="\n"+DISCLAIMER_NEG+"\n";
   texto+=blocoAssinatura(proprietario.nome, "Proprietário");
   texto+=blocoAssinatura(corretor.nome, "Corretor");
+  /* C-06: 2 testemunhas (CPC art. 784, III — requisito do título executivo extrajudicial). No
+     impresso, o filtro /^_{5,}/ de montarNeg dropa estes blocos (o HTML usa .lass-testemunhas próprio). */
+  texto+=blocoAssinatura(null, "Testemunha 1");
+  texto+=blocoAssinatura(null, "Testemunha 2");
   return texto;
 }
 
@@ -2218,6 +2222,10 @@ function contratoTexto(data){
   texto+="\n"+DISCLAIMER_NEG+"\n";
   texto+=blocoAssinatura(vendedor.nome, "Vendedor");
   texto+=blocoAssinatura(comprador.nome, "Comprador");
+  /* C-06: 2 testemunhas (CPC art. 784, III — requisito do título executivo extrajudicial). No
+     impresso, o filtro /^_{5,}/ de montarNeg dropa estes blocos (o HTML usa .lass-testemunhas próprio). */
+  texto+=blocoAssinatura(null, "Testemunha 1");
+  texto+=blocoAssinatura(null, "Testemunha 2");
   return texto;
 }
 
@@ -6669,7 +6677,7 @@ function negRender(){
       <textarea class="winput negminuta" oninput="NEG.minutaEditada=this.value">${esc(NEG.minutaTexto)}</textarea>
       <div class="negdisclaimer">
         <div class="negdisclaimer-eyebrow">Atenção</div>
-        <div class="negdisclaimer-txt">Minuta para conferência das partes — recomenda-se revisão por advogado; a transmissão da propriedade exige escritura pública (quando aplicável) e registro na matrícula do imóvel no cartório de registro de imóveis competente.</div>
+        <div class="negdisclaimer-txt">${esc(DISCLAIMER_NEG)}</div>
       </div>`;
   }
   /* leitor de tela: anuncia a troca de passo focando o título (mesmo padrão de wizRender/stepMudou) */
@@ -7068,9 +7076,11 @@ function montarLaudo(){
 
     <div class="lcard preco"><h3>Precificação final</h3>
       ${(()=>{const vs=LZ.valor||0;
-        const gmin=est?Math.min(est.lo,vs*0.96):vs*0.96, gmax=est?Math.max(est.hi,vs*1.08):vs*1.10;
+        /* C-04: a banda de liquidez só é honesta quando ancorada na faixa estatística (est). Sem est,
+           os valores min/max seriam fabricados (vs*0,96 / vs*1,10) — omitimos os subcards (nunca fabrica). */
+        const gmin=est?Math.min(est.lo,vs*0.96):null, gmax=est?Math.max(est.hi,vs*1.08):null;
         return `<div class="prow"><div class="hero">${vs?brl(vs):"—"}</div>
-        ${vs?`<div class="subs">
+        ${(vs&&est)?`<div class="subs">
           <div class="subcard up"><div class="st"><span class="ar">↑</span> Maior liquidez</div><div class="sl">Valor mínimo</div><div class="sv">${brl(gmin)}</div></div>
           <div class="subcard down"><div class="st"><span class="ar">↓</span> Menor liquidez</div><div class="sl">Valor máximo</div><div class="sv">${brl(gmax)}</div></div>
         </div>`:""}</div>`;})()}
