@@ -659,6 +659,23 @@ test("carregarZonasViewport: 2ª chamada com o MESMO viewport (arredondado) usa 
   assert.equal(Object.keys(NET.ZONACACHE).length, 1, "ZONACACHE deveria ter exatamente 1 entrada (mesma chave reusada)");
 });
 
+test("carregarZonasViewport: TODAS as 6 layers falharam -> {__erro:true}, NÃO cacheia e reconsulta (B-06)", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    throw new Error("rede caiu");
+  };
+  const NET = loadZonaNetBlock({ jsonp: jsonpStub });
+  const b = mockBounds(-49.3, -16.7, -49.2, -16.6);
+  const r = await NET.carregarZonasViewport(b);
+  // objeto criado no realm do vm — deepEqual estrito falha por protótipo cross-realm; checa a prop.
+  assert.equal(r && r.__erro, true, "todas as layers rejeitadas deveria sinalizar falha (__erro:true), nunca um resultado todo-vazio");
+  assert.equal(Object.keys(NET.ZONACACHE).length, 0, "falha total NUNCA deveria ser cacheada (senão o all-vazio fica preso)");
+  const callsAfterFirst = calls;
+  await NET.carregarZonasViewport(b);
+  assert.equal(calls, callsAfterFirst + 6, "2ª chamada após falha total deveria reconsultar (cache não reteve a falha)");
+});
+
 test("carregarZonasViewport: viewport bem DIFERENTE dispara sua PRÓPRIA bateria (cache é por chave de viewport, nunca global)", async () => {
   let calls = 0;
   const jsonpStub = async () => {

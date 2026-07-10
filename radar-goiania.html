@@ -3391,6 +3391,10 @@ async function desenharZonas(){
   catch(e){porZona=null;}
   if(tk!==ZONASTOKEN||!ZONAS_ON)return;
   const am=document.getElementById("terrAmostra");
+  if(porZona&&porZona.__erro){ /* B-06: falha de rede em todas as layers — avisa em vez de limpar silenciosamente */
+    if(am){am.textContent="Não foi possível carregar as zonas — afaste e aproxime o mapa para tentar de novo.";am.title=am.textContent;}
+    return; /* não memoriza ZONALAST — mover o mapa dispara nova tentativa */
+  }
   if(am)am.textContent="";
   if(!porZona)return;
   ZONALAST=qb; /* memoriza a vista (com padding) coberta pela consulta bem-sucedida */
@@ -4050,6 +4054,10 @@ async function carregarZonasViewport(bounds){
       outFields:"*",returnGeometry:"true",f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[k]+"/query")
   );
   const settled=await Promise.allSettled(promessas);
+  // B-06: se TODAS as 6 layers falharam (rede caiu), é falha real — NÃO cachear (senão o all-vazio
+  // fica preso no cache) e sinalizar ao chamador (desenharZonas) com marcador, em vez de devolver
+  // um resultado "todo vazio" indistinguível de uma viewport legitimamente sem zonas.
+  if(settled.every(s=>s.status==="rejected"))return {__erro:true};
   const porZona={};
   chaves.forEach((k,i)=>{porZona[k]=settled[i].status==="fulfilled"?settled[i].value:{features:[]};});
   ZONACACHE[key]=porZona;
