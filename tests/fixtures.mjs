@@ -794,6 +794,35 @@ export const FIXTURES = {
       { n: 6000, total: 57225, out: "Amostra de 6.000 de 57.225 lotes" },
       { n: 1842, total: 1842, out: "Amostra de 1.842 de 1.842 lotes" },
     ],
+
+    // scoresDePlot (Fase 13, fix CR-01 13-REVIEW.md): score "de plot" p/ colorir o pino no fluxo
+    // ficha-FECHADA, SEM rede — reusa a amostra do território já em memória. Contrato: 1 entrada
+    // por ci; lote barato (pm2 < mediana) -> score alto (bom); lote caro -> score baixo (risco);
+    // lote sem pm2 -> op null; amostra <3 -> {} (nunca inventa cor).
+    scoresDePlotCasos: {
+      // scan cru: 3 lotes -> estatTerritorio interno (pm2s 3000/4000/5000; med=4000, q1=3500, q3=4500)
+      scanOk: {
+        lotes: [
+          { vlvenal: 300000, areaedif: 100 },
+          { vlvenal: 400000, areaedif: 100 },
+          { vlvenal: 500000, areaedif: 100 },
+        ],
+        total: 3,
+      },
+      lotesParaColorir: [
+        { ci: "barato", vlvenal: 300000, areaedif: 100 }, // pm2=3000, abaixo da mediana -> bom
+        { ci: "caro", vlvenal: 500000, areaedif: 100 }, // pm2=5000, acima da mediana -> risco
+        { ci: "semdado", vlvenal: 0, areaterr: 100 }, // pm2 null -> op null (nunca inventa)
+      ],
+      // amostra de 2 lotes (n<3) -> scoresDePlot devolve {} mesmo com lotes válidos (honestidade)
+      scanCurto: {
+        lotes: [
+          { vlvenal: 300000, areaedif: 100 },
+          { vlvenal: 500000, areaedif: 100 },
+        ],
+        total: 2,
+      },
+    },
   },
 
   // Fase 16 (16-01, TERR-04): fixtures do Detector de Lote Subutilizado. Contrato de HONESTIDADE

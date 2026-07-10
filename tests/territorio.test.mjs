@@ -30,11 +30,12 @@ function loadPureBlock() {
   assert.ok(src.includes("function mixUso"), "mixUso ausente do bloco RADAR_PURE");
   assert.ok(src.includes("function estatTerritorio"), "estatTerritorio ausente do bloco RADAR_PURE");
   assert.ok(src.includes("function rotuloAmostra"), "rotuloAmostra ausente do bloco RADAR_PURE");
+  assert.ok(src.includes("function scoresDePlot"), "scoresDePlot ausente do bloco RADAR_PURE (fix CR-01 13-REVIEW.md)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {pm2Lote,quantilAmostra,breaksQuantil,binQuantil,anoMedianoCadastro,mixUso,estatTerritorio,rotuloAmostra};",
+      "\n;globalThis.__exports = {pm2Lote,quantilAmostra,breaksQuantil,binQuantil,anoMedianoCadastro,mixUso,estatTerritorio,rotuloAmostra,scoresDePlot};",
     { filename: "radar-pure-territorio.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -119,6 +120,24 @@ test("rotuloAmostra: 'Amostra de {N} de {M} lotes' — nunca omitido, mesmo com 
   for (const fx of TF.rotuloAmostraCasos) {
     assert.equal(P.rotuloAmostra(fx.n, fx.total), fx.out);
   }
+});
+
+// --- scoresDePlot (Fase 13, fix CR-01 13-REVIEW.md) --------------------------------------------
+// Score "de plot" p/ colorir o pino no fluxo ficha-FECHADA, SEM rede — reusa a amostra do
+// território já em memória. Contrato: 1 entrada por ci; barato -> score alto (bom); caro -> baixo
+// (risco); sem pm2 -> op null; amostra <3 -> {} (nunca inventa cor).
+test("scoresDePlot: colore por ci contra a mediana do setor (barato=alto, caro=baixo, sem pm2=null); amostra <3 -> {} (nunca inventa)", () => {
+  const c = TF.scoresDePlotCasos;
+  const mapa = P.scoresDePlot(c.lotesParaColorir, c.scanOk);
+  assert.ok(mapa.barato && mapa.barato.score >= 66, `lote barato (pm2 < mediana) -> score alto/bom, obteve ${JSON.stringify(mapa.barato)}`);
+  assert.ok(mapa.caro && mapa.caro.score < 33, `lote caro (pm2 > mediana) -> score baixo/risco, obteve ${JSON.stringify(mapa.caro)}`);
+  assert.equal(mapa.semdado, null, "lote sem pm2 válido -> op null (nunca inventa cor)");
+  // amostra curta (n<3) não sustenta referência estatística -> {} mesmo com lotes válidos.
+  // (checa por Object.keys — deepEqual falha entre realms do node:vm; ver nota de mixUso acima)
+  assert.equal(Object.keys(P.scoresDePlot(c.lotesParaColorir, c.scanCurto)).length, 0, "amostra <3 -> {} (honestidade)");
+  // entradas ausentes nunca lançam
+  assert.equal(Object.keys(P.scoresDePlot(null, c.scanOk)).length, 0, "lotes null -> {} sem lançar");
+  assert.equal(Object.keys(P.scoresDePlot(c.lotesParaColorir, null)).length, 0, "scan null -> {} sem lançar");
 });
 
 // --- territorioScan / territorioScanRun / fetchWhereRestrito (bloco TERR_NET, 15-02) -----------

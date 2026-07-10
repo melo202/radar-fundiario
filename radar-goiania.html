@@ -2400,6 +2400,27 @@ function rotuloAmostra(n,total){
   return "Amostra de "+(n).toLocaleString("pt-BR")+" de "+(total).toLocaleString("pt-BR")+" lotes";
 }
 
+/* scoresDePlot(lotes,scan): CR-01 (13-REVIEW.md) — score "de plot" p/ colorir o pino no fluxo
+   ficha-FECHADA, SEM nenhuma requisição nova. Reusa a amostra do território (Fase 15, já em
+   memória): `scan` é o resultado de estatTerritorio OU o objeto cru do scan ({lotes,total}) —
+   calcula scoreOportunidade de cada lote contra a mediana/Q1/Q3 do PRÓPRIO setor (a MESMA
+   matemática relativa da ficha, só que com a referência estatística que já está em memória).
+   Retorna { [ci]: op|null } (1 entrada por lote, chave ci). Amostra <3 -> {} (nunca inventa
+   cor — honestidade). NUNCA dispara varredura: o chamador (plot) só passa scan já resolvido. */
+function scoresDePlot(lotes,scan){
+  const out={};
+  if(!lotes||!lotes.length||!scan)return out;
+  const estat=(scan.medianaPm2!==undefined)?scan:estatTerritorio(scan.lotes||[],scan.total||0);
+  if(!estat||!(estat.n>=3))return out;
+  const stats={q1:estat.q1Pm2,med:estat.medianaPm2,q3:estat.q3Pm2,n:estat.n};
+  lotes.forEach(a=>{
+    const ci=clean(a.ci);
+    if(out[ci]!==undefined)return; /* 1 score por lote — 1ª unidade decide (mesma lógica de plot) */
+    out[ci]=scoreOportunidade(pm2Lote(a),stats,{});
+  });
+  return out;
+}
+
 /* Fase 16 (16-01, TERR-04): Detector de Lote Subutilizado — filtro puro client-side sobre o
    MESMO array do territorioScan (Fase 15), zero requisição própria. Reusa pm2Lote/quantilAmostra
    já existentes; NENHUMA fórmula nova de mediana. */
@@ -3814,6 +3835,10 @@ async function fetchWhere(where,maxPages=30){
 const TERR_FIELDS="vlvenal,areaedif,areaterr,vlimp98,dtinclusao,uso,cdbairro,nrquadra,nrlote,ci,nrinscr,x_coord,y_coord";
 let __terrReq=0; /* contador de requisições paginadas do scan em curso — reset a cada territorioScanRun */
 const TERRCACHE={}; /* cache de sessão por cdbairro — mesmo padrão de CMPCACHE (3757), teto menor (território é mais pesado por entrada) */
+/* TERRSTAT (CR-01 13-REVIEW.md): espelho SÍNCRONO do scan RESOLVIDO por cdbairro (TERRCACHE guarda
+   uma PROMISE, ilegível de forma síncrona) — plot()/aplicarScoresDePlot() lê daqui p/ colorir os
+   pinos com o score relativo ao setor SEM disparar rede, e SÓ quando o setor já foi escaneado. */
+const TERRSTAT={};
 /* fetchWhereRestrito(where,fields,maxPages): clone de fetchWhere com outFields restrito (15-RESEARCH.md,
    verificado ao vivo: funciona, ~80% menos payload) — se qualquer página falhar (d.error OU exceção do
    jsonp/servidor), reinicia automaticamente UMA vez com outFields:"*" (nunca trava o scan, Pitfall 1).
@@ -3869,8 +3894,10 @@ async function territorioScan(cdbairroRaw){
   const cdbairro=+cdbairroRaw;
   if(!Number.isFinite(cdbairro))throw new Error("cdbairro inválido");
   const key=String(cdbairro);
-  capCache(TERRCACHE,30);
-  if(!TERRCACHE[key])TERRCACHE[key]=territorioScanRun(cdbairro).catch(err=>{delete TERRCACHE[key];throw err;});
+  capCache(TERRCACHE,30);capCache(TERRSTAT,30);
+  if(!TERRCACHE[key])TERRCACHE[key]=territorioScanRun(cdbairro)
+    .then(scan=>{TERRSTAT[key]=scan;return scan;}) /* CR-01: espelha o resultado resolvido p/ leitura síncrona em plot() */
+    .catch(err=>{delete TERRCACHE[key];throw err;});
   return TERRCACHE[key];
 }
 // TERR_NET_END
@@ -5148,10 +5175,29 @@ function atualizarLegenda(temPinos){
   const el=document.getElementById("pinoLegenda");if(el)el.hidden=!temPinos;
 }
 
+/* CR-01 (13-REVIEW.md) parte (b): se o setor dos lotes JÁ foi escaneado (TERRSTAT, Fase 15),
+   preenche a.__scores SINCRONAMENTE com o score relativo ao próprio setor — pinos ganham cor real
+   no fluxo "buscar → ver pinos no mapa" sem NENHUMA requisição nova. Só toca lotes ainda sem
+   score (__scores===undefined); NUNCA dispara varredura (não chama territorioScan). */
+function aplicarScoresDePlot(list){
+  const semScore=(list||[]).filter(a=>a.__scores===undefined);
+  if(!semScore.length)return;
+  const porBairro={};
+  semScore.forEach(a=>{const k=String(a.cdbairro);(porBairro[k]=porBairro[k]||[]).push(a);});
+  Object.keys(porBairro).forEach(k=>{
+    const scan=TERRSTAT[k];if(!scan)return; /* setor não escaneado ainda -> pino fica "semdado" (honesto) */
+    const mapa=scoresDePlot(porBairro[k],scan); /* ci -> op|null */
+    porBairro[k].forEach(a=>{
+      const ci=clean(a.ci);
+      if(a.__scores===undefined&&mapa[ci]!==undefined)a.__scores={op:mapa[ci],conf:null};
+    });
+  });
+}
 /* ---------------- plotar no mapa (1 pino por lote) ---------------- */
 function plot(list){
   layerGroup.clearLayers();
   if(bairroOutline){map.removeLayer(bairroOutline);bairroOutline=null;} /* tira a divisa do setor ao plotar resultados */
+  aplicarScoresDePlot(list); /* CR-01: colore os pinos com o score do setor já escaneado (sem rede) */
   const byCi={},pts=[],cntCi={};
   list.forEach(a=>{const k=clean(a.ci);cntCi[k]=(cntCi[k]||0)+1;});
   const bestStatusByCi=bestStatusPorCi(list);
@@ -5163,7 +5209,10 @@ function plot(list){
       const idx=i, predio=cntCi[ci]>1;
       const status=predio?bestStatusByCi[ci]:statusPino(a);
       const style=PINO_STYLE[status];
-      const tip=`${STATUS_LABEL[status]} · ${esc(unitLabel(a)||addrDe(a)||"Imóvel")}`;
+      /* CR-01 (13-REVIEW.md) parte (c): honestidade — pino "semdado" avisa que a cor só vem com a
+         avaliação da ficha; nenhum texto promete cor antes de haver dado. */
+      const hint=status==="semdado"?" · abra a ficha para avaliar":"";
+      const tip=`${STATUS_LABEL[status]} · ${esc(unitLabel(a)||addrDe(a)||"Imóvel")}${hint}`;
       /* bubblingMouseEvents:false — sem isso o clique no pino também dispara o
          clique do mapa (identificar lote), que apagava a lista de resultados */
       const mk=L.circleMarker(ll,{radius:style.radius,color:"#141a1f",weight:2,fillColor:style.fillColor,fillOpacity:.9,bubblingMouseEvents:false})
@@ -5303,6 +5352,25 @@ function toggleScoreWhy(btn){
    compare()/renderComps() — chamada ao final de renderComps(), sem re-abrir a ficha nem re-fetch.
    statsR = mesmo objeto 'r' de compsStats()/getComps() ({n,min,max,q1,med,q3,...}); null antes de
    compare() concluir (showDetail() já chama com stats implicitamente nulas via op=null). */
+/* CR-01 (13-REVIEW.md) parte (a): re-estiliza no mapa o(s) pino(s) de um lote depois que o score
+   REAL chega (atualizarScores após compare()) — o pino deixa de ficar preso no "semdado" cinza do
+   momento do plot(). Mantém o pino SELECIONADO com o destaque laranja (a seleção é ortogonal ao
+   status). Fonte de verdade idêntica a plot()/pick() (bestStatusPorCi sobre LAST). */
+function recolorPinoCi(ci){
+  if(!markers||!LAST||!markers.length)return;
+  ci=clean(ci);
+  const selMk=(sel!=null)?markers[sel]:null;
+  const cnt={};LAST.forEach(x=>{const k=clean(x.ci);cnt[k]=(cnt[k]||0)+1;});
+  const bestStatusByCi=cnt[ci]>1?bestStatusPorCi(LAST):null;
+  const done=new Set();
+  markers.forEach((m,mi)=>{
+    if(!m||done.has(m))return;const unit=LAST[mi];if(clean(unit.ci)!==ci)return;done.add(m);
+    if(m===selMk)return; /* pino selecionado mantém o destaque de seleção */
+    const status=bestStatusByCi?bestStatusByCi[ci]:statusPino(unit);
+    const style=PINO_STYLE[status];
+    m.setStyle({radius:style.radius,fillColor:style.fillColor});
+  });
+}
 function atualizarScores(a, statsR){
   if(DCUR!==a)return; /* imóvel mudou durante a consulta — não escreve painel alheio (mesmo guard de renderComps) */
   const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
@@ -5314,6 +5382,7 @@ function atualizarScores(a, statsR){
   const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk});
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
+  recolorPinoCi(clean(a.ci)); /* CR-01 parte (a): pino do lote no mapa ganha a cor do score real (compare() concluído) */
   renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
   /* Fase 18 (18-02, PD-04): compare() pode terminar ANTES ou DEPOIS do Plano Diretor resolver
      (2 consultas assíncronas independentes) — renderScoresInto acima reconstrói #dScores do zero,
