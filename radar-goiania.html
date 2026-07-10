@@ -1042,6 +1042,7 @@
       <span><i class="pl-dot" style="background:#b5451f"></i>Oportunidade baixa</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
       <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
+      <span><i class="pl-dot" style="background:#a8842c"></i>🏗️ Lote subutilizado</span>
     </div>
     <!-- Fase 15 TERR-02: legenda do choropleth de R$/m² — hidden até o 1º setor ser escaneado
          (mesma regra de #pinoLegenda: não é decorativo por padrão, só aparece com dado real).
@@ -2603,6 +2604,11 @@ let TERR_BREAKS=null;
    aplicarChoropleth() — guardada para toggleChoropleth() poder rechamar montarLegenda() ao
    religar o choropleth sem precisar de um novo scan (o toggle não recebe `st` no escopo). */
 let TERR_LAST_ST=null;
+/* TERR_DETECTOR_HILITE (Fase 16, 16-03, TERR-04): Set de `ci` (limpos) dos lotes detectados como
+   subutilizados — consumido por lotStyle() abaixo. Reforça (nunca bloqueia) a lista do detector:
+   só re-estiliza polígonos que a camada de lotes (lotLayer, zoom>=17) JÁ carregou por conta própria
+   (refreshLots) — nenhuma requisição nova é disparada por este destaque (T-16-05). */
+let TERR_DETECTOR_HILITE=new Set();
 
 /* função de resolução de estilo (não objeto cru) — deixa a extensão v2.1 (styling por território) barata.
    Fase 4 SAT-01: branch por satelliteOn — sobre imagem escura, solta o wash de fillColor e reforça o traço
@@ -2630,7 +2636,17 @@ function baiStyle(feature){
    retorno neutro de sempre. `ci` vem já limpo/em escopo de refreshLots/setSatelite/desenharChoropleth
    — NENHUMA chamada a esta função pode ficar sem argumento (senão a guarda `ci!=null` cai e o lote
    volta ao neutro mesmo já escaneado). */
+/* Fase 16 (16-03, TERR-04): mesmo hex --gold já usado por Atenção/Caixa (#pinoLegenda) — 3ª
+   categoria semântica sobre o mesmo tom, diferenciada só por ícone+rótulo (nunca cor/borda nova,
+   PIN-01). */
+const TERR_GOLD="#a8842c";
 function lotStyle(ci){
+  /* destaque do detector tem PRIORIDADE sobre o choropleth — enquanto #terrDetectorView está
+     aberto, os lotes candidatos ficam --gold mesmo com o choropleth ligado; limparDestaqueDetector()
+     esvazia o Set ao fechar, e a próxima chamada volta ao branch normal abaixo. */
+  if(ci!=null&&TERR_DETECTOR_HILITE.has(ci)){
+    return {pane:"lots",color:TERR_GOLD,weight:2,fillColor:TERR_GOLD,fillOpacity:.45,bubblingMouseEvents:false};
+  }
   if(CHOROPLETH_ON&&ci!=null&&TERR_LOTE_BIN.has(ci)){
     const b=TERR_LOTE_BIN.get(ci);
     return {pane:"lots",fillColor:TERR_COLORS[b],fillOpacity:satelliteOn?TERR_FILLOP_SAT[b]:TERR_FILLOP_CARTO[b],color:satelliteOn?_TERR_SAT_LINE:TERR_INK[b],weight:satelliteOn?1.5:1,bubblingMouseEvents:false};
@@ -2785,7 +2801,11 @@ async function refreshLots(){
     poly.bindTooltip("carregando…",{sticky:true,direction:"top",opacity:.96});
     let hv=null;
     poly.on("mouseover",()=>{poly.setStyle(LOT_HOVER);
-      hv=setTimeout(async()=>{const h=await lotInfo(ci);poly.setTooltipContent(h);},140);});
+      hv=setTimeout(async()=>{const h=await lotInfo(ci);
+        /* Fase 16 (16-03): destaque nunca só cor (PIN-01) — tooltip ganha ícone+rótulo p/ lotes
+           detectados, sem disparar nenhuma requisição extra (lotInfo já era chamado no hover). */
+        poly.setTooltipContent((TERR_DETECTOR_HILITE.has(ci)?"🏗️ <b>Lote subutilizado</b><br>":"")+h);
+      },140);});
     poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(lotStyle(ci));});
     poly.on("click",()=>loadCi(ci)); /* direto pelo ci: mais rápido que a consulta espacial */
     poly.addTo(lotLayer);
@@ -3560,6 +3580,7 @@ async function detectarOportunidadesUI(){
     const cand=detectarSubutilizados(scan.lotes);
     renderDetectorLista(cand,scan);
     mostrarDetectorView();
+    destacarDetectorNoMapa(cand); /* reforça, nunca bloqueia — Task 2 */
   }catch(e){
     toast("Não foi possível varrer o setor. Verifique a conexão e tente de novo.");
   }finally{
@@ -3583,6 +3604,7 @@ function fecharDetector(){
   document.getElementById("terrGrid").hidden=false;
   const mo=document.querySelector("#terrPanel>.maisopcoes");
   if(mo)mo.hidden=false;
+  limparDestaqueDetector();
 }
 
 /* renderDetectorLista(cand,scan): rótulo de honestidade OBRIGATÓRIO (rotuloAmostra, herdado da
@@ -3686,6 +3708,22 @@ function salvarDetectorNoCadernoUI(i,btn){
       renderCadernoBlock();
     }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
   }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+
+/* destacarDetectorNoMapa(cand)/limparDestaqueDetector() (Fase 16, 16-03): reforçam a lista com o
+   pino 🏗️ Lote subutilizado (--gold) nos polígonos que a camada de lotes (lotLayer, zoom>=17,
+   Fase 15 TERR-02) JÁ tem renderizados — nunca disparam requisição nova (T-16-05); se a camada não
+   está no zoom atual ou não cobre os lotes detectados, simplesmente não há nada para re-estilizar
+   (o detector funciona só pela lista, sem erro). lotStyle() (2595+) dá prioridade ao Set sobre o
+   choropleth enquanto ele não está vazio. */
+function destacarDetectorNoMapa(cand){
+  TERR_DETECTOR_HILITE=new Set((cand||[]).map(a=>clean(a.ci||a.nrinscr)).filter(Boolean));
+  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
+}
+function limparDestaqueDetector(){
+  if(!TERR_DETECTOR_HILITE.size)return;
+  TERR_DETECTOR_HILITE=new Set();
+  if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
 }
 
 /* VERIFICAÇÃO AO VIVO ORÇAMENTO: abrir painel/choropleth do Bueno (cdbairro=16) com DevTools
