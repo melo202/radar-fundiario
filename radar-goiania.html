@@ -3402,16 +3402,11 @@ function cadernoTem(ci){
   }));
 }
 
-/* WR-02 (16-REVIEW.md): db.close() no sucesso/erro do req, mesmo padrão das demais funções de I/O
-   acima — nenhuma conexão fica aberta além do necessário. */
-function cadernoContar(){
-  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
-    const tx=db.transaction("caderno","readonly");
-    const req=tx.objectStore("caderno").count();
-    req.onsuccess=()=>{db.close();resolve(req.result);};
-    req.onerror=()=>{db.close();reject(req.error);};
-  }));
-}
+// IN-01 (16-REVIEW.md): cadernoContar() era código morto — o contador de #cadernoCount
+// (renderCadernoBlock) usa itens.length do resultado de cadernoListar({}), nunca esta função.
+// Removida em vez de mantida "pra Fase 17" (nenhuma decisão registrada de reserva-la como API
+// pública) — se uma contagem O(1) via store.count() vier a ser necessária, é 5 linhas simples de
+// reintroduzir no mesmo padrão das funções acima.
 // CADERNO_IO_END
 
 /* ---------------- Painel do Meu Território (Fase 15, 15-03, TERR-03) ----------------
