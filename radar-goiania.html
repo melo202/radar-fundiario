@@ -5632,7 +5632,11 @@ function renderDiffUI(a){
 function renderUrbanisticoUI(a,isRetry){
   const acc=document.getElementById("dUrbanistico"),body=document.getElementById("dUrbBody");
   if(!acc||!body)return;
-  if(!a||!a.x_coord||!a.y_coord){body.hidden=true;return;}
+  /* IN-01 18-REVIEW.md: sem coordenada, esconde o accordion INTEIRO (details+summary), não só o
+     corpo — senão o usuário toca em "Urbanístico" e vê um corpo vazio sem explicação (beco sem
+     saída de UX). Ausência de coordenada já é tratada em outros pontos do app (compare()/#dActsPrim). */
+  if(!a||!a.x_coord||!a.y_coord){acc.hidden=true;body.hidden=true;return;}
+  acc.hidden=false; /* restaura visibilidade caso o lote anterior tivesse escondido o accordion inteiro */
   body.hidden=false;
   body.innerHTML='<div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w80"></div><div class="skel-line w40"></div></div>';
   const ci=clean(a.ci||a.nrinscr);
