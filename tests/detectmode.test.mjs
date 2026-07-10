@@ -230,4 +230,27 @@ test("detectMode — '128/5abc' (bare com texto extra colado) NAO deveria casar 
   assert.notEqual(r.mode, "ql");
 });
 
+// F5 BUSCA-03 — ruas de letra unica ("Rua Q", "Rua T", padrao real de loteamentos de Goiania):
+// um "Q" SOLTO precedido de tipo de via NAO e quadra — a regra 2 e desarmada e a regra 3
+// (endereco) decide. "QD"/"QUADRA" explicitos continuam vencendo, e "Q" solto SEM via tambem.
+test("detectMode (F5 BUSCA-03) — 'Rua Q 15' e ENDERECO (rua de letra), nunca Quadra 15", () => {
+  const r = P.detectMode("Rua Q 15", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "15");
+  assert.equal(r.confidence, "alta");
+});
+
+test("detectMode (F5 BUSCA-03) — 'rua x quadra 15' mantem Quadra (QD/QUADRA explicito vence a via)", () => {
+  const r = P.detectMode("rua x quadra 15", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "15");
+});
+
+test("detectMode (F5 BUSCA-03) — 'bueno q 15' sem tipo de via segue Quadra 15 (com setor extraido)", () => {
+  const r = P.detectMode("bueno q 15", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "15");
+  assert.equal(r.bairroCode, "106");
+});
+
 export { loadPureBlock, COMBO_FIXTURE };
