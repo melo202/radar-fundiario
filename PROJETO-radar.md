@@ -33,7 +33,7 @@ Ferramenta de uso próprio para localizar imóveis em Goiânia por **quadra e lo
 - **Fonte de dados:** ArcGIS Server público da Prefeitura de Goiânia (ver §4).
 - **Chamadas:** JSONP (`callback=`), porque o endpoint não expõe CORS; isso contorna o bloqueio do navegador em arquivo local.
 - **Conversão de coordenada:** proj4js, de EPSG:31982 (SIRGAS 2000 / UTM 22S) para WGS84 (lat-long).
-- **Filtragem no cliente:** o servidor só responde de forma estável com `outFields=*`; por isso o app baixa o setor inteiro e filtra quadra/lote/endereço/apto no navegador (ver §4, "manhas").
+- **Filtragem no cliente:** o app baixa o recorte do setor e refina quadra/lote/endereço/apto no navegador (ver §4, "manhas"). *Nota (verificado 2026-07-09/10):* o cadastro (Feature_Base) **aceita** `outFields` restrito — usado em produção desde a Fase 15 (~80% menos payload, fallback p/ `*` em erro); a afirmação antiga de "só responde estável com `outFields=*`" vale para o serviço `Mapa_ModeloEspacial` (Plano Diretor).
 - **Estado:** tudo em memória (sem localStorage, sem backend).
 
 ---
@@ -45,7 +45,7 @@ Ferramenta de uso próprio para localizar imóveis em Goiânia por **quadra e lo
 **Projeção:** EPSG:31982 = SIRGAS 2000 / **UTM 22S** (meridiano central −51°). *Cuidado:* o número "31982" engana — é zona 22, não 23. Definição proj4 correta: `+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`. (O bug inicial de pino "na Bahia" foi exatamente zona 23 em vez de 22 → 6° de erro.)
 
 **Comportamentos não óbvios do servidor:**
-- Aceita `outFields=*`, mas **rejeita** pedir campos específicos como `x_coord`, `y_coord`, `nrquadra` em `outFields` (erro 400). Solução: sempre `outFields=*`.
+- O cadastro (Feature_Base) **aceita** `outFields` restrito (ex.: `x_coord,y_coord,nrquadra`) — verificado ao vivo em 2026-07-09/10 e usado em produção como caminho primário (`fetchWhereRestrito`, ~80% menos payload), com fallback para `*` só em erro. Quem **rejeita** campos específicos (Erro 400, só aceita `outFields=*`) é o serviço `Mapa_ModeloEspacial` (Plano Diretor) — a versão anterior desta doc atribuía o quirk ao serviço errado.
 - **Aceita** `returnGeometry=true` nesse endpoint (verificado ao vivo em 2026-07-04): retorna a geometria real do polígono do lote (wkid 31982), com ~+19% de payload. Corrige a "manha" antiga que afirmava rejeição. Os campos `x_coord`/`y_coord` continuam disponíveis como fonte alternativa de coordenada. Obs.: servidor de terceiro, não documentado e sem SLA — reconfirmar antes de depender dele.
 - **Aceita consulta espacial** por ponto (`geometryType=esriGeometryPoint`, `spatialRel=esriSpatialRelIntersects`) — é o que viabiliza o "clique no mapa".
 - **Suporta JSONP** (`callback=`) e paginação (`resultOffset`/`resultRecordCount`); `maxRecordCount` alto.

@@ -11,7 +11,7 @@ Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
 
 | Fato | Resultado | Consequência |
 |---|---|---|
-| `outFields` com campos específicos | **Erro 400** — só `outFields=*` funciona | Confirma a "manha" do §4 do briefing; não dá para reduzir payload por campo |
+| `outFields` com campos específicos | **Aceito no cadastro (Feature_Base)** — usado em produção desde a Fase 15 (`fetchWhereRestrito`, ~80% menos payload, fallback p/ `*` em erro); reverificado ao vivo em 2026-07-09/10. O quirk "Erro 400 — só `outFields=*`" vale para o serviço `Mapa_ModeloEspacial` (Plano Diretor), não para o cadastro | Corrigido em 2026-07-10 — a doc registrava o quirk no serviço errado; dá SIM para reduzir payload por campo no cadastro |
 | `returnGeometry=true` (camada 3) | **Aceita** — retorna polígono real (~+19% payload); reconfirmado 2026-07-04 | Corrige a suposição antiga de rejeição; v2.0 orquestra geometria existente, não faz sourcing novo |
 | Filtro server-side `nrquadra LIKE '%128%'` (Bueno) | **Funciona: 630 registros** (vs 57.225 do setor todo) | É a alavanca certa para o bug crítico |
 | `UPPER(...)` em where | Funciona (`useStandardizedQueries: true`) | Busca case-insensitive server-side ok |
