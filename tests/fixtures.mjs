@@ -496,8 +496,10 @@ export const FIXTURES = {
     doisMilhoesEMeio: { valor: 2500000, expectContains: ["dois milhões e quinhentos mil reais"], expectNotContains: ["de reais"] }, // centena exata: "e" obrigatório; não é múltiplo de 1e6 → sem "de"
     // DOC-02: arredondamento a 2 casas ANTES de separar inteiro — numeral e extenso derivam do MESMO valor-base.
     arredondaCoerente: { valor: 999995.999, expectContains: ["R$ 999.996,00", "novecentos e noventa e nove mil novecentos e noventa e seis reais"], expectNotContains: ["noventa e cinco reais"] },
-    // C-11: "de reais" afirma quantia redonda — nunca quando há centavos.
-    milhaoComCentavos: { valor: 1000000.5, expectContains: ["R$ 1.000.000,50", "um milhão"], expectNotContains: ["de reais"] },
+    // C-11 (revisado na verificação ao vivo F5): extenso terminado em -lhão/-lhões EXIGE "de"
+    // em pt-BR ("um milhão reais" é agramatical); o numeral já exibe os centavos, sem afirmação
+    // de quantia redonda. O caso é inalcançável pela UI (inputs usam parseInt) — guarda gramatical.
+    milhaoComCentavos: { valor: 1000000.5, expectContains: ["R$ 1.000.000,50", "um milhão de reais"], expectNotContains: ["milhão reais"] },
     // guard honesto: fora da escala representável (>= 1e15), "" — nunca parêntese quebrado.
     foraDeEscala: { valor: 1e15, expectEmpty: true },
   },

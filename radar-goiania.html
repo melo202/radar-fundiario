@@ -2128,9 +2128,10 @@ function extensoInteiro(n){
    (Math.round(valor*100)) e numeral e extenso derivam AMBOS dessa mesma base — o numeral
    formatado nunca diverge do extenso (o bug era Math.floor no extenso vs toLocaleString
    arredondando o numeral: "R$ 1.000,00 (novecentos e noventa e nove reais)").
-   Regra (c) + C-11/F5: "de reais" somente quando o inteiro e multiplo exato de milhao E nao ha
-   centavos ("um milhão DE reais", mas "R$ 1.000.000,50 (um milhão reais)" — o "de reais" afirma
-   quantia redonda e nunca acompanha centavos).
+   Regra (c) + C-11/F5 (revisada na verificacao ao vivo): extenso terminado em -lhão/-lhões
+   EXIGE "de" em pt-BR ("um milhão DE reais" — "um milhão reais" e agramatical), independente
+   de centavos; o numeral formatado ja exibe os centavos, entao nao ha afirmacao de quantia
+   redonda. Para valores que nao terminam em -lhão ("um milhão e quinhentos mil reais"), sem "de".
    Guard honesto (C-10/F5): extenso vazio (fora de escala) retorna "" — nunca parentese quebrado. */
 function numeroPorExtenso(valor){
   if(valor==null||isNaN(valor)) return "";
@@ -2144,8 +2145,8 @@ function numeroPorExtenso(valor){
   const valorFmt="R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const ext=extensoInteiro(inteiro);
   if(!ext) return ""; // fora de escala (>= 1e15): mesmo caminho honesto do null/negativo
-  const somenteMilhoes=inteiro>=1000000 && (inteiro%1000000===0) && !temCentavos;
-  const reaisTxt=somenteMilhoes ? "de reais" : "reais";
+  const terminaEmLhao=/lh(ão|ões)$/.test(ext); // "um milhão", "dois bilhões" → exige "de reais"
+  const reaisTxt=terminaEmLhao ? "de reais" : "reais";
   return valorFmt+" ("+ext+" "+reaisTxt+")";
 }
 
