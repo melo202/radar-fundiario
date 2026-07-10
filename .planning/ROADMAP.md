@@ -222,7 +222,7 @@ Plans:
   1. Revisitar um lote salvo mostra o que mudou desde o snapshot (diff enxuto, nunca PII; mesma allowlist da Fase 16)
   2. Imóveis Caixa plotados são cruzados com o território salvo, destacando quando um imóvel Caixa cai num setor/lote já farmado
 **Plans**: 2 plans (waves sequenciais)
-- [ ] 17-01-PLAN.md — Núcleo de dados: diffLote/formatarDiff/matching Caixa (RADAR_PURE, TDD) + snapshot LGPD recursivo + cadernoBuscar + 1º save
+- [x] 17-01-PLAN.md — Núcleo de dados: diffLote/formatarDiff/matching Caixa (RADAR_PURE, TDD) + snapshot LGPD recursivo + cadernoBuscar + 1º save
 - [ ] 17-02-PLAN.md — UI: bloco de diff na ficha + badge/linha/anel/popup Caixa + ação 1 toque + verificação
 
 ### Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)
@@ -262,7 +262,7 @@ Plans:
 | 14. Linguagem Impecável (gate) | v2.1 | 5/5 | Complete    | 2026-07-09 |
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
-| 17. Diff de Cadastro + Caixa | v2.1 | 0/TBD | Not started | - |
+| 17. Diff de Cadastro + Caixa | v2.1 | 1/2 | In Progress|  |
 | 18. Inteligência Urbanística (PD 2022) | v2.1 | 0/TBD | Not started | - |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**

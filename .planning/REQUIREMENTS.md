@@ -87,8 +87,8 @@
 - [x] **TERR-03**: Painel do Meu Território (mediana + Q1–Q3 de R$/m², IPTU mediano, idade do cadastro, mix de uso por setor)
 - [x] **TERR-04**: Detector de lote subutilizado (razão construído/terreno baixa em quadra de venal alto) sobre o scan compartilhado
 - [x] **TERR-05**: Farming/Caderno de território em **IndexedDB** — salvar setor/lotes, tags, notas, status (allowlist anti-PII, nunca `dtnascimen`)
-- [ ] **TERR-06**: Diff de cadastro entre visitas (snapshot enxuto por lote; nunca dado pessoal)
-- [ ] **TERR-07**: Cruzamento dos imóveis Caixa (já plotados) com o território salvo do corretor
+- [x] **TERR-06**: Diff de cadastro entre visitas (snapshot enxuto por lote; nunca dado pessoal)
+- [x] **TERR-07**: Cruzamento dos imóveis Caixa (já plotados) com o território salvo do corretor
 
 ### Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)
 

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
-status: verifying
-stopped_at: Completed 16-03-PLAN.md
-last_updated: "2026-07-10T01:39:12.854Z"
+status: executing
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-07-10T02:29:32.061Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
   completed_phases: 11
-  total_plans: 36
-  completed_plans: 36
-  percent: 100
+  total_plans: 38
+  completed_plans: 37
+  percent: 97
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** O corretor acha o imóvel certo em segundos e enxerga o território no mapa — dado oficial + análise auditável, sem servidor.
-**Current focus:** Phase 16 — Detector de Lote Subutilizado & Farming/Caderno
+**Current focus:** Phase 17 — Diff de Cadastro & Cruzamento Caixa
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 17 (Diff de Cadastro & Cruzamento Caixa) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-10
 
 Progress: [░░░░░░░░░░] 0%
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 16 P01 | 20min | 3 tasks | 3 files |
 | Phase 16 P02 | 35min | 3 tasks | 1 files |
 | Phase 16 P03 | ~45min | 3 tasks | 1 files |
+| Phase 17 P01 | 10min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 16]: [16-02]: fix Rule 3 - .dnote (scoped a .detail) estendido com #cadernoBlock .dnote e regra de visibilidade :has() analoga a #savedBlocks, para o bloco Caderno renderizar corretamente fora de .detail
 - [Phase 16]: [16-03]: verificacao do checkpoint humano executada pelo orquestrador em navegador real (Chromium/preview) em vez de simulacao - zero-requisicao/persistencia/ausencia de PII/export-import/XSS confirmados ao vivo com instrumentacao de rede e dump direto do IndexedDB
 - [Phase 16]: [16-03]: item 4 do checkpoint (falha visivel/degradacao) ficou verificado por leitura de codigo, nao simulado ao vivo, porque o ambiente de teste tinha IndexedDB disponivel - tratado como campo opcional do checkpoint
+- [Phase 17]: [17-01]: sem bump de CADERNO_VERSION - snapshot embutido no item (item.snapshot+item.snapshotAt), IndexedDB nao tem schema de valor fixo
+- [Phase 17]: [17-01]: match de bairro Caixa so exato-normalizado (norm()), nunca fuzzy - honestidade sobre recall (74% medido); colisao nome->multiplos cdbairro resolvida via Set, match se QUALQUER candidato bater
+- [Phase 17]: [17-01]: sanitizeCaderno ganhou allowlist RECURSIVA para snapshot (dtnascimen/cpf dentro do sub-objeto nunca sobrevivem, mesmo com a chave de topo liberada)
 
 ### Pending Todos
 
@@ -121,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T01:15:32.738Z
-Stopped at: Completed 16-03-PLAN.md
+Last session: 2026-07-10T02:29:32.057Z
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
