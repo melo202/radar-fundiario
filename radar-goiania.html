@@ -1569,6 +1569,12 @@ function getLastBairroCode(){
    4. Predio — prefixo textual tipico (ED/EDF/EDIFICIO/RES/RESIDENCIAL/COND/CONDOMINIO). Confianca ALTA.
    5. Numero curto isolado (1-4 digitos, sem contexto) — AMBIGUO, confianca BAIXA, NAO decide modo
       (mode:null) — e o gancho da desambiguacao por chips (SEARCH.md secao 3.4), nunca dispara busca so.
+   5b. Endereco SEM prefixo de via (F5 BUSCA-06) — a frase TERMINA em numero, tem miolo alfabetico
+      (nome de logradouro) e NAO contem palavra-chave de predio → assume ENDERECO com confianca MEDIA
+      (o chip mostra "(?)" e o menu de correcao cobre o resto). Cobre o jeito natural de digitar
+      ("quintino bocaiuva 210", "jamel cecilio 2496", "c-206 45") que antes caia em Predio (regra 6)
+      e nunca achava o imovel. Se contem palavra-chave de predio (ed/edif/residencial/torre/bloco/apto…)
+      → NAO vira addr, segue para a regra 6 (predio). Sem numero no fim → tambem segue a regra 6.
    6. Texto sem numero nem tipo de via — ja tentou setor no passo 0; aqui so resta assumir PREDIO
       com confianca MEDIA (nome proprio, sem sinal de contexto).
    Calibrada com amostra SINTETICA nesta plan (08-03) — validar contra amostra real (COMBO+CNEFE)
@@ -1637,6 +1643,21 @@ function detectMode(textoBruto,combo){
   // 5. Numero curto isolado, sem contexto — AMBIGUO (nunca decide modo, gancho da desambiguacao)
   if(/^\d{1,4}$/.test(digitsOnly) && digitsOnly===raw.replace(/\s/g,"")){
     return attachSetor({mode:null,confidence:"baixa",raw,label:"Ambíguo",digits:digitsOnly});
+  }
+
+  /* 5b. Endereco SEM prefixo de via (F5 BUSCA-06). A pessoa digita o jeito mais natural —
+     "nome de logradouro + numero" ("quintino bocaiuva 210", "jamel cecilio 2496", "c-206 45") —
+     e ate aqui caia na regra 6 (predio) e nunca achava o imovel. Regra (menor diff seguro): se a
+     frase TERMINA em numero, TEM miolo alfabetico (nome de rua) e NAO contem palavra-chave de
+     predio -> ENDERECO, confianca MEDIA (o label leva "(?)" e a classe .media pinta o chip; o Enter
+     ainda dispara — so "baixa" e bloqueado — e o menu de correcao cobre engano). Com palavra-chave
+     de predio (ED/EDF/EDIF/EDIFICIO/RES/RESID/RESIDENCIAL/COND/CONDOMINIO/TORRE/BLOCO/APTO/
+     APARTAMENTO) NAO vira addr: cai na regra 6 e segue Predio. Espelha os campos da regra 3
+     (rua=raw completo, numero=numero final) para applyDetectAndSearch/buscar no MODE addr. */
+  const _predioKW=/\b(ED|EDF|EDIF|EDIFICIO|RES|RESID|RESIDENCIAL|COND|CONDOMINIO|TORRE|BLOCO|APTO|APARTAMENTO)\b/;
+  const _numFim=raw.match(/\b(\d{1,5})\b\s*$/);
+  if(_numFim && /[A-Za-z]/.test(raw) && !_predioKW.test(n)){
+    return attachSetor({mode:"addr",rua:raw,numero:_numFim[1],confidence:"media",label:`Endereço (?) · ${raw}`});
   }
 
   // 6. Texto sem numero nem tipo de via — setor ja tentado no passo 0; resta assumir predio (media)

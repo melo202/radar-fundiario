@@ -253,4 +253,62 @@ test("detectMode (F5 BUSCA-03) — 'bueno q 15' sem tipo de via segue Quadra 15 
   assert.equal(r.bairroCode, "106");
 });
 
+// F5 BUSCA-06 — endereco SEM prefixo de via ("nome de logradouro + numero", o jeito mais natural de
+// digitar). Ate este fix caia em Predio (regra 6) e nunca achava o imovel. Regra: termina em numero
+// + miolo alfabetico + sem palavra-chave de predio -> addr, confianca MEDIA (chip com "(?)").
+test("detectMode (F5 BUSCA-06) — 'quintino bocaiuva 210' sem prefixo -> addr (media)", () => {
+  const r = P.detectMode("quintino bocaiuva 210", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "210");
+  assert.equal(r.confidence, "media");
+});
+
+test("detectMode (F5 BUSCA-06) — 'quintino bocaiuva, 210' (com virgula) -> addr", () => {
+  const r = P.detectMode("quintino bocaiuva, 210", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "210");
+});
+
+test("detectMode (F5 BUSCA-06) — 'jamel cecilio 2496' sem prefixo -> addr", () => {
+  const r = P.detectMode("jamel cecilio 2496", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "2496");
+});
+
+test("detectMode (F5 BUSCA-06) — 'c-206 45' (rua de codigo) -> addr", () => {
+  const r = P.detectMode("c-206 45", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "45");
+});
+
+test("detectMode (F5 BUSCA-06) — 't-63 1500' (rua de codigo) -> addr", () => {
+  const r = P.detectMode("t-63 1500", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.numero, "1500");
+});
+
+// Controles que NAO podem regredir com a regra 5b nova:
+test("detectMode (F5 BUSCA-06) — palavra-chave de predio + numero NAO vira addr (segue bd)", () => {
+  // 'edificio' cai na regra 4 (predio, alta); 'torre'/'bloco' (nao cobertas pela regra 4) sao
+  // barradas pelo guard _predioKW da regra 5b e caem na regra 6 (predio, media) — nunca addr.
+  assert.equal(P.detectMode("edificio mirante 210", COMBO_FIXTURE).mode, "bd");
+  assert.equal(P.detectMode("torre azul 500", COMBO_FIXTURE).mode, "bd");
+  assert.equal(P.detectMode("bloco b 12", COMBO_FIXTURE).mode, "bd");
+});
+
+test("detectMode (F5 BUSCA-06) — controles pre-existentes intactos (via/insc/ql/predio-sem-numero)", () => {
+  assert.equal(P.detectMode("rua 85 300", COMBO_FIXTURE).mode, "addr");   // regra 3 (via explicita)
+  assert.equal(P.detectMode("av t63 1500", COMBO_FIXTURE).mode, "addr");  // regra 3
+  assert.equal(P.detectMode("ed jardins", COMBO_FIXTURE).mode, "bd");     // regra 4
+  assert.equal(P.detectMode("edificio mirante", COMBO_FIXTURE).mode, "bd"); // regra 4
+  assert.equal(P.detectMode("sumer park", COMBO_FIXTURE).mode, "bd");     // regra 6 (sem numero no fim)
+  assert.equal(P.detectMode("3040200451", COMBO_FIXTURE).mode, "insc");   // regra 1 (10 dig)
+  assert.equal(P.detectMode("30402004510014", COMBO_FIXTURE).mode, "insc"); // regra 1 (14 dig)
+  assert.equal(P.detectMode("160/9", COMBO_FIXTURE).mode, "ql");          // regra 2b (bare)
+  // 'bueno' sozinho: extractSetor consome tudo -> setor isolado (mode ql bairroOnly), nunca addr
+  const b = P.detectMode("bueno", COMBO_FIXTURE);
+  assert.equal(b.bairroCode, "106");
+  assert.notEqual(b.mode, "addr");
+});
+
 export { loadPureBlock, COMBO_FIXTURE };
