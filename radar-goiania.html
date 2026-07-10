@@ -2592,6 +2592,29 @@ function cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro){
     cdbairroDoImovelCaixa(i,nomeParaCdbairro).includes(cdbairro)
   );
 }
+
+/* Fase 18 (18-01, PD-01/02/04): núcleo de dados urbanísticos do Plano Diretor 2022 (LC 349/2022).
+   PD_TABELA_CA é curada por leitura DIRETA dos artigos da lei primária (18-RESEARCH.md §Gate de
+   Verdade) — NUNCA "Anexo" (Anexo XXI/XXII regem afastamentos/altura por monumento, não CA).
+   REGRA DE OURO: sigla com conferido:false NUNCA tem ca_basico/ca_maximo numérico (testado). */
+const PD_DISCLAIMER="Informação urbanística indicativa, extraída do Plano Diretor (LC 349/2022 e alterações). Não substitui a Certidão de Uso do Solo da SEPLANH.";
+/* PD_LAYERS: bateria travada do CONTEXT — 9 layers do Mapa_ModeloEspacial/MapServer (produção),
+   IDs exatos verificados ao vivo (18-RESEARCH.md §Code Examples). Nunca reordenar/renumerar. */
+const PD_LAYERS={macrozona:33,aa:31,add:30,aos:29,aeis:7,apac:28,ooau:32,eixo:4,corredor:1};
+const PD_TABELA_CA={
+  AA:{nome:"Área Adensável",ca_basico:1.0,ca_maximo:6.0,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"qualquer uso",usos_conferido:true,nota_ca:null,nota_altura:"100% do terreno até 11 m; 50% acima (sem altura máxima definida)",fonte:"Art. 242, VII; Art. 196, II; Art. 190, II e III, LC 349/2022",conferido:true},
+  ADD:{nome:"Área de Desaceleração de Densidade",ca_basico:1.0,ca_maximo:5.0,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"qualquer uso",usos_conferido:true,nota_ca:null,nota_altura:"100% do terreno até 11 m; 50% acima (sem altura máxima definida)",fonte:"Art. 242, VII; Art. 196, I; Art. 190, II e III, LC 349/2022",conferido:true},
+  AOS:{nome:"Área de Ocupação Sustentável",ca_basico:1.0,ca_maximo:null,altura_max:12,taxa_ocupacao:40,vi_outorga:null,usos:"",usos_conferido:false,nota_ca:"A lei não define teto de índice de aproveitamento para esta zona (Art. 196 regula só AA e ADD); o parâmetro limitante é a altura (12 m; 7,5 m nos Setores Jaó e Sul) e a taxa de ocupação (40%).",nota_altura:null,fonte:"Art. 242, VII; Art. 186; Art. 190, §3º, LC 349/2022",conferido:true},
+  AEIS:{nome:"Área Especial de Interesse Social",ca_basico:null,ca_maximo:null,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"",usos_conferido:false,nota_ca:null,nota_altura:null,fonte:"",conferido:false},
+  APAC:{nome:"Área de Preservação do Ambiente Cultural",ca_basico:null,ca_maximo:null,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"",usos_conferido:false,nota_ca:null,nota_altura:null,fonte:"",conferido:false},
+  _meta:{checado_em:"2026-07-10",emendas_verificadas:["LC 358/2022 (não é do PD)","LC 379/2024 (não altera Art. 196/242/252)"],pendente:["LC 363/364/371/373 — leitura integral: HUMAN-UAT advogado"]}
+};
+/* PD_MZC_BASICO: CA básico não-oneroso 1,0x, universal em TODA a Macrozona Construída (Art. 242,
+   VII) — usado pelo estado "resolvido_sem_unidade" (lote urbano fora de AA/ADD/AOS). Nunca expõe
+   um ca_maximo (o índice máximo depende da unidade territorial específica, não identificada). */
+const PD_MZC_BASICO={nome:"Macrozona Construída",ca_basico:1.0,ca_maximo:null,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"",usos_conferido:false,nota_ca:"Coeficiente de Aproveitamento Básico não oneroso de 1,0x é universal em toda a Macrozona Construída; o índice máximo (5x ADD / 6x AA) depende da unidade territorial específica, não identificada aqui.",nota_altura:null,fonte:"Art. 242, VII, LC 349/2022",conferido:true};
+/* pdRegrasDaZona(sigla): lookup puro, nunca lança — sigla ausente/desconhecida -> null. */
+function pdRegrasDaZona(sigla){return (sigla&&PD_TABELA_CA[String(sigla).toUpperCase()])||null;}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
