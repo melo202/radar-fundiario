@@ -1,9 +1,9 @@
 ---
 phase: 16
 slug: detector-subutilizado-farming-caderno
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-09
 ---
 
@@ -67,11 +67,11 @@ created: 2026-07-09
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (wave 3: 2/3 automatizadas + checkpoint)
+- [x] Wave 0 covers all MISSING references (tests/caderno.test.mjs + fixtures no plano 16-01)
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-07-09 (plan-check: dimensão 8 PASS; checkpoint humano válido no 16-03)

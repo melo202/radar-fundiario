@@ -388,7 +388,12 @@ Não aplicável no sentido usual (não há "versão antiga de biblioteca" a atua
 
 **Se esta tabela estivesse vazia:** não está — A1 em particular precisa de confirmação explícita do usuário/planner antes de travar como decisão final (ou aceitar como "Claude's Discretion", que é exatamente o que o CONTEXT já autoriza).
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Todas resolvidas no planejamento (plan-check 2026-07-09):
+> **Q1 RESOLVED:** botão entra em `#dActsMore` (teto da lei da tela preservado) — 16-02/16-03-PLAN.md; UI-SPEC §2 atualizado.
+> **Q2 RESOLVED:** threshold fixo `DETECTOR_RATIO_MAX=0.15` (constante nomeada) + quadra valorizada relativa (quartil superior) — 16-01-PLAN.md.
+> **Q3 RESOLVED:** sincronização multi-aba fora de escopo (mesma limitação já aceita do localStorage).
 
 1. **Onde exatamente entra o botão "📓 Salvar no caderno" na ficha — `#dActsPrim` ou `#dActsMore`?**
    - What we know: `#dActsPrim` já tem 1 primária + 2 secundárias (teto da lei da tela, Fase 10). O UI-SPEC (linha 157) descreve "mesma linha .acts, ao lado do ⭐" sem mencionar esse teto.

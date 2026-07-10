@@ -154,7 +154,7 @@ Todo texto acima segue o gate §26 (Fase 14): verbo de ação nos botões, erro 
 
 ### 2. Componente: Ação "Salvar no caderno" (ficha + detector)
 
-- **Na ficha (`#detail .acts`):** novo botão secundário "📓 Salvar no caderno", ao lado do ⭐ "Salvar oportunidade" já existente (mesma linha `.acts`, mesmo estilo de botão sem `.primary`) — nunca substitui/renomeia o botão ⭐ existente (Oportunidades e Caderno são conceitos distintos e coexistem, per CONTEXT).
+- **Na ficha:** novo botão "📓 Salvar no caderno" entra em **`#dActsMore`** (o grupo "Mais opções", mesmo destino dos documentos da negociação da Fase 11.1) — NÃO em `#dActsPrim`, que já está no teto "1 primária + 2 secundárias" da lei da tela (Fase 10) [corrigido pós plan-check]. Nunca substitui/renomeia o botão ⭐ existente (Oportunidades e Caderno são conceitos distintos e coexistem, per CONTEXT).
 - **No detector:** mesmo botão, mesmo texto, dentro de cada `.terrdet-item` (ver seção 1).
 - **Comportamento:** clique grava no IndexedDB com status default `"nao_visitado"`, sem abrir nenhum editor — ação rápida de 1 toque (mesma filosofia do ⭐ existente). Toast de sucesso "Salvo no caderno."; toast de falha usa a cópia padrão de erro de escrita (ver Copywriting). Se o item já existir no caderno (mesmo `ci`), o botão mostra estado "✓ No caderno" (mesmo padrão visual de `.acts-save.is-saved`, reuso de classe) e o clique **não** duplica — abre direto o item no bloco Caderno (rolagem/scroll-into-view) para edição de status/tag/nota.
 
