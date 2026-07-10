@@ -799,6 +799,24 @@
   .cadbook-export-row button{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
     background:var(--paper);color:var(--ink);font:600 12px/1 "IBM Plex Sans";cursor:pointer}
 
+  /* Fase 16 (16-03, TERR-04): Detector de Lote Subutilizado — CSS novo, escala 4px (16-UI-SPEC.md
+     §Spacing). Item reusa o visual de .dgrid .cell (fundo --paper, borda --line, radius 2px);
+     ações reusam .detail .acts button LITERALMENTE (zero CSS novo pros botões "Ver ficha"/
+     "📓 Salvar no caderno" — inclusive o estado .acts-save.is-saved já existente). #terrGrid
+     precisa do override [hidden] porque .dgrid já fixa display:grid (mesmo padrão de
+     .pino-legenda[hidden]/.terr-legenda[hidden] acima). */
+  #terrGrid[hidden]{display:none}
+  .terrdet-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .terrdet-item{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:8px 16px}
+  .terrdet-addr{font:500 13px/1.3 "IBM Plex Sans";color:var(--ink);margin-bottom:4px}
+  .terrdet-leitura{font:500 13px/1.3 "IBM Plex Sans";color:var(--ink);margin-bottom:8px}
+  .terrdet-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .terrdet-chip{font:700 10.5px/1.3 "IBM Plex Mono";color:var(--ink);background:var(--paper-2);
+    border:1px solid var(--line);border-radius:20px;padding:6px 12px}
+  .terrdet-empty{font:500 12.5px/1.5 "IBM Plex Sans";color:var(--muted);padding:6px 2px}
+  .terrdet-empty strong{display:block;font:700 15px/1.3 "IBM Plex Sans";color:var(--ink);margin-bottom:4px}
+  .terrdet-trunc{font:500 11px/1.4 "IBM Plex Sans";color:var(--muted);margin-bottom:8px}
+
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
   .toast.show{display:block}
@@ -1095,12 +1113,32 @@
       <span class="dtag" id="terrSetorNome"></span>
       <div class="dnote" id="terrAviso" hidden></div>
       <div class="dgrid" id="terrGrid"></div>
+      <!-- Fase 16 (16-03, TERR-04): Detector de Lote Subutilizado — view-swap DENTRO do MESMO
+           #terrPanel (nunca abre sheet nova, "1 sheet por vez"); zero requisição própria — reusa o
+           scan já cacheado em TERRCACHE via territorioScan (T-16-05). hidden por padrão;
+           mostrarDetectorView()/fecharDetector() alternam a visibilidade com #terrGrid+.maisopcoes
+           (metodologia do choropleth) sem fechar o painel nem entrar na cadeia de Esc (herdada de
+           #terrPanel — 5491-5520). -->
+      <div id="terrDetectorView" hidden>
+        <button type="button" class="backlist" onclick="fecharDetector()">‹ Território</button>
+        <h3 id="terrDetectorHeading">Lotes subutilizados</h3>
+        <div class="terr-honesto" id="terrDetectorHon"></div>
+        <div class="terrdet-list" id="terrDetectorList"></div>
+        <details class="maisopcoes">
+          <summary>Como funciona?</summary>
+          <div class="footbody">
+            <p>Lotes com pouca área construída em relação ao terreno — ou terreno vago — dentro de quadras com R$/m² mediano nas mais altas do setor. Registro sem área informada no cadastro nunca entra na lista; só terreno realmente vago (0 m² construído, dado presente) conta como oportunidade.</p>
+          </div>
+        </details>
+      </div>
       <!-- Fase 15 TERR-03: rodapé de ação (lei da Fase 10) — 1 primária (liga/desliga choropleth,
-           estado espelhado com a legenda via sincTerrPanelToggle/toggleChoropleth) + 1 secundária
-           ("Buscar lote no setor", reusa o fluxo de busca por setor já existente). -->
+           estado espelhado com a legenda via sincTerrPanelToggle/toggleChoropleth) + 2 secundárias
+           ("Buscar lote no setor" + "Detectar oportunidades", 16-03 — teto "1 primária + 2
+           secundárias" preservado). -->
       <div class="acts" id="terrActions">
         <button type="button" id="terrPanelToggle" class="primary" aria-pressed="false" onclick="toggleChoropleth();sincTerrPanelToggle()">Colorir mapa por valor</button>
         <button type="button" onclick="buscarNoSetor()">Buscar lote no setor</button>
+        <button type="button" id="terrDetectBtn" onclick="detectarOportunidadesUI()">Detectar oportunidades</button>
       </div>
       <details class="maisopcoes">
         <summary>Ver metodologia</summary>
@@ -3074,6 +3112,9 @@ const MOTION_MSG={
      client-side de quantis/mediana/mix logo depois. */
   varrendo:     "Varrendo setor…",
   faixas:       "Calculando faixas de valor…",
+  /* Fase 16 (16-03, TERR-04): compute local do detector sobre o scan já cacheado — nunca uma nova
+     etapa de rede, só o cálculo puro (detectarSubutilizados) rodando sobre o array em memória. */
+  procurando:   "Procurando lotes subutilizados…",
 };
 /* Fase 13 MOT-01: skeleton shimmer injetado em #results no início de buscar(), sempre
    substituído por render() real ou pelo bloco de erro do catch — nunca "pendurado". */
@@ -3371,6 +3412,10 @@ async function abrirTerritorio(layer){
    uso via chips estáticos com textContent. Rótulo de honestidade (rotuloAmostra) OBRIGATÓRIO
    abaixo de CADA métrica — nunca omitido, mesmo quando a amostra é completa (n===total). */
 function montarPainel(scan,st,layer){
+  /* Fase 16 (16-03): toda vez que o painel é remontado (novo setor OU reabertura do mesmo), a
+     view volta a mostrar as métricas — nunca reabre já em cima de um #terrDetectorView de uma
+     sessão anterior do painel (fecharDetector() também limpa o destaque no mapa, se havia). */
+  fecharDetector();
   const nomeEl=document.getElementById("terrSetorNome");
   const grid=document.getElementById("terrGrid");
   TERR_PANEL_CD=scan?scan.cdbairro:null;
@@ -3495,6 +3540,152 @@ function checarVarreduraParcial(scan,layer){
     av.hidden=true;
     av.onclick=null;
   }
+}
+
+/* ---------------- Detector de Lote Subutilizado (Fase 16, 16-03, TERR-04) ----------------
+   View-swap DENTRO do mesmo #terrPanel (nunca abre sheet nova) sobre o MESMO scan compartilhado
+   do painel (territorioScan, dedupe via TERRCACHE) — zero requisição própria (T-16-05). As 5
+   funções puras (medianasPorQuadra/limiarQuadraValorizada/razaoOcupacao/detectarSubutilizados/
+   leituraDetector) já vêm do Plano 01 (RADAR_PURE); aqui só a UI/DOM. */
+let TERR_DETECTOR_CAND=[]; /* candidatos da última renderização — usado por abrirFichaDetector(i)/salvarDetectorNoCadernoUI(i) por índice, evitando seletor CSS por `ci` */
+
+/* detectarOportunidadesUI(): onclick de #terrDetectBtn. NÃO chama territorioScanRun nem fetch
+   nenhum — só territorioScan(TERR_PANEL_CD), que dedupe via TERRCACHE (reusa o scan que o painel
+   já fez ao abrir, ou faz UMA varredura compartilhada se o painel abriu sem escanear ainda). */
+async function detectarOportunidadesUI(){
+  if(TERR_PANEL_CD==null){toast("Nenhum setor aberto no momento.");return;}
+  loading(true,MOTION_MSG.procurando);
+  try{
+    const scan=await territorioScan(TERR_PANEL_CD); /* dedupe via TERRCACHE — nunca dispara scan próprio (T-16-05) */
+    const cand=detectarSubutilizados(scan.lotes);
+    renderDetectorLista(cand,scan);
+    mostrarDetectorView();
+  }catch(e){
+    toast("Não foi possível varrer o setor. Verifique a conexão e tente de novo.");
+  }finally{
+    loading(false);
+  }
+}
+
+/* mostrarDetectorView()/fecharDetector(): alternam #terrGrid+.maisopcoes (metodologia do
+   choropleth) <-> #terrDetectorView SEM fechar o #terrPanel — não entra na cadeia de Esc (o
+   handler de Esc já trata #terrPanel como o sheet mais recente, 5997-6001; fechar o painel
+   inteiro com Esc/× continua funcionando normalmente, só não há um 2º nível de Esc específico
+   pro detector, por decisão do CONTEXT/UI-SPEC). */
+function mostrarDetectorView(){
+  document.getElementById("terrGrid").hidden=true;
+  const mo=document.querySelector("#terrPanel>.maisopcoes"); /* metodologia do choropleth (terrMetodologia) — filho DIRETO de #terrPanel; a do detector vive DENTRO de #terrDetectorView, não colide */
+  if(mo)mo.hidden=true;
+  document.getElementById("terrDetectorView").hidden=false;
+}
+function fecharDetector(){
+  document.getElementById("terrDetectorView").hidden=true;
+  document.getElementById("terrGrid").hidden=false;
+  const mo=document.querySelector("#terrPanel>.maisopcoes");
+  if(mo)mo.hidden=false;
+}
+
+/* renderDetectorLista(cand,scan): rótulo de honestidade OBRIGATÓRIO (rotuloAmostra, herdado da
+   Fase 15) + nota de truncamento quando a lista bateu no teto (DETECTOR_LIMITE) + empty state +
+   até 50 itens com leitura comercial/chips/ações. TODO texto de origem do endpoint (quadra/lote)
+   passa por esc(); a leitura comercial é template determinístico (leituraDetector), nunca texto
+   cru interpolado. */
+function renderDetectorLista(cand,scan){
+  TERR_DETECTOR_CAND=cand||[];
+  document.getElementById("terrDetectorHon").textContent=rotuloAmostra(scan.lotes.length,scan.total);
+  const list=document.getElementById("terrDetectorList");
+  if(!TERR_DETECTOR_CAND.length){
+    list.innerHTML='<div class="terrdet-empty"><strong>Nenhuma oportunidade encontrada</strong>Não há lotes com baixo aproveitamento em quadra de alto valor nesta amostra do setor. Isso é raro, mas pode acontecer em setores pequenos ou já bem ocupados.</div>';
+    return;
+  }
+  /* medianas recomputadas aqui só p/ exibir o chip "R$/m² quadra" — mesma função pura do Plano 01
+     (medianasPorQuadra), nenhuma fórmula nova; detectarSubutilizados já garante que toda quadra de
+     um candidato tem mediana != null (guarda de qualidade), então o fallback "—" é só defensivo. */
+  const medianas=medianasPorQuadra(scan.lotes);
+  /* nota de truncamento: heurística auditável — DETECTOR_LIMITE já é o teto aplicado dentro de
+     detectarSubutilizados (slice), então bater exatamente nele é o sinal disponível de que a
+     lista real de candidatos pode ser maior (16-RESEARCH.md Q2/Discretion). */
+  const trunc=TERR_DETECTOR_CAND.length>=DETECTOR_LIMITE
+    ? '<div class="terrdet-trunc">Mostrando os 50 lotes mais subutilizados desta amostra.</div>' : "";
+  const rows=TERR_DETECTOR_CAND.map((a,i)=>{
+    const q=clean(a.nrquadra),l=clean(a.nrlote);
+    const addr=(q||l)?("Quadra "+esc(q||"—")+" · Lote "+esc(l||"—")):"—";
+    const pm2q=medianas[a.nrquadra];
+    return `<div class="terrdet-item">
+      <div class="terrdet-addr">${addr}</div>
+      <div class="terrdet-leitura">${esc(leituraDetector(a))}</div>
+      <div class="terrdet-chips">
+        <span class="terrdet-chip">Constr. ${a.areaedif!=null?Math.round(a.areaedif)+" m²":"—"}</span>
+        <span class="terrdet-chip">Terreno ${a.areaterr!=null?Math.round(a.areaterr)+" m²":"—"}</span>
+        <span class="terrdet-chip">R$/m² quadra ${pm2q!=null?brl(pm2q):"—"}</span>
+      </div>
+      <div class="acts">
+        <button type="button" onclick="abrirFichaDetector(${i})">Ver ficha</button>
+        <button type="button" class="acts-save" aria-pressed="false" onclick="salvarDetectorNoCadernoUI(${i},this)">📓 Salvar no caderno</button>
+      </div>
+    </div>`;
+  }).join("");
+  list.innerHTML=trunc+rows;
+  /* sincroniza "✓ No caderno" por item — IRMÃ ASSÍNCRONA do render (Pitfall 4, 16-RESEARCH.md):
+     cadernoTem() bate no IndexedDB, nunca trava a lista já visível; falha de LEITURA é silenciosa
+     (não é falha de escrita — o botão só fica no rótulo default). */
+  if(cadernoDisponivel()){
+    const els=list.querySelectorAll(".terrdet-item");
+    TERR_DETECTOR_CAND.forEach((a,i)=>{
+      const ci=clean(a.ci||a.nrinscr);if(!ci)return;
+      cadernoTem(ci).then(salvo=>{
+        if(!salvo)return;
+        const btn=els[i]&&els[i].querySelector(".acts-save");
+        if(btn){btn.classList.add("is-saved");btn.setAttribute("aria-pressed","true");btn.textContent="✓ No caderno";}
+      }).catch(()=>{});
+    });
+  }
+}
+
+/* abrirFichaDetector(i): reusa showDetail(a,ll) — mesmo caminho de pick()/verNoMapa(). showDetail
+   já chama fecharTerrPanel() no início (WR-03, "1 sheet por vez"), então o painel/detector fecham
+   sozinhos ao abrir a ficha. */
+function abrirFichaDetector(i){
+  const a=TERR_DETECTOR_CAND[i];if(!a)return;
+  setView("mapa");
+  if(a.x_coord&&a.y_coord){
+    const ll=toWGS(a.x_coord,a.y_coord);
+    map.setView(ll,18);
+    showDetail(a,ll);
+  }else{
+    showDetail(a);
+  }
+}
+
+/* salvarDetectorNoCadernoUI(i,btn): mesma filosofia de salvarNoCadernoUI() (ficha, 16-02) — ação
+   rápida de 1 toque, status default "nao_visitado", nunca duplica (item já existente abre/rola até
+   ele no #cadernoBlock). Falha de escrita SEMPRE visível (ERRO_ESCRITA_CADERNO, T-16-04). */
+function salvarDetectorNoCadernoUI(i,btn){
+  const a=TERR_DETECTOR_CAND[i];if(!a)return;
+  if(!cadernoDisponivel()){
+    toast("Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.");
+    return;
+  }
+  const ci=clean(a.ci||a.nrinscr);
+  cadernoTem(ci).then(existe=>{
+    if(existe){
+      renderCadernoBlock().then(()=>{
+        const item=Array.from(document.querySelectorAll(".cadbook-item")).find(el=>el.dataset.ci===ci);
+        if(item){item.open=true;item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
+      });
+      return;
+    }
+    const item={
+      ci,nrinscr:clean(a.nrinscr),cdbairro:a.cdbairro,nrquadra:a.nrquadra,nrlote:a.nrlote,
+      vlvenal:a.vlvenal,areaedif:a.areaedif,areaterr:a.areaterr,vlimp98:a.vlimp98,
+      dtinclusao:a.dtinclusao,uso:a.uso
+    };
+    cadernoSalvar(item).then(()=>{
+      toast("Salvo no caderno.");
+      if(btn){btn.classList.add("is-saved");btn.setAttribute("aria-pressed","true");btn.textContent="✓ No caderno";}
+      renderCadernoBlock();
+    }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+  }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
 }
 
 /* VERIFICAÇÃO AO VIVO ORÇAMENTO: abrir painel/choropleth do Bueno (cdbairro=16) com DevTools
