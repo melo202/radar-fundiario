@@ -4611,9 +4611,12 @@ function salvarDetectorNoCadernoUI(i,btn){
   const ci=clean(a.ci||a.nrinscr);
   cadernoTem(ci).then(existe=>{
     if(existe){
+      /* B-03: feedback garantido — scrollIntoView num #cadernoBlock oculto é no-op silencioso;
+         o toast sempre avisa, e só rolamos quando o bloco está de fato visível (offsetParent!=null). */
+      toast("Já está no caderno.");
       renderCadernoBlock().then(()=>{
         const item=Array.from(document.querySelectorAll(".cadbook-item")).find(el=>el.dataset.ci===ci);
-        if(item){item.open=true;item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
+        if(item){item.open=true;if(item.offsetParent!==null)item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
       });
       return;
     }
@@ -5904,9 +5907,12 @@ function salvarNoCadernoUI(){
   const ci=clean(a.ci||a.nrinscr);
   cadernoTem(ci).then(existe=>{
     if(existe){
+      /* B-03: feedback garantido — scrollIntoView num #cadernoBlock oculto é no-op silencioso;
+         o toast sempre avisa, e só rolamos quando o bloco está de fato visível (offsetParent!=null). */
+      toast("Já está no caderno.");
       renderCadernoBlock().then(()=>{
         const item=Array.from(document.querySelectorAll(".cadbook-item")).find(el=>el.dataset.ci===ci);
-        if(item){item.open=true;item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
+        if(item){item.open=true;if(item.offsetParent!==null)item.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"center"});}
       });
       return;
     }
