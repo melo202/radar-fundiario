@@ -2844,7 +2844,9 @@ function montarUrbBodyHTML(estado){
   const r=e.regra||null;
   const linhas=[];
   if(e.macrozona){
-    linhas.push('<div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">Macrozona Construída</div></div>');
+    // No estado "parcial" a macrozona resolvida pode ser RURAL — não rotular como "Construída" (C-01).
+    const mzLabel=String(e.macrozona).toUpperCase().includes("CONSTRU")?"Macrozona Construída":esc(e.macrozona);
+    linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">${mzLabel}</div></div>`);
   }
   if(e.unidade){
     linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Unidade territorial</div><div class="v">${esc(e.unidade.sigla)} — ${esc(e.unidade.nome)}</div></div>`);

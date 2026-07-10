@@ -341,6 +341,19 @@ test("montarUrbBodyHTML: parcial mostra o que resolveu + nota de aviso + botão 
   assert.ok(html.includes("CA básico 1,0x · CA máximo 6,0x"), "deveria manter o que já resolveu (CA da AA)");
 });
 
+test("montarUrbBodyHTML: parcial com macrozona RURAL resolvida NÃO rotula 'Macrozona Construída' (C-01)", () => {
+  const estado = {
+    estado: "parcial",
+    macrozona: "Macrozona Rural do Alto Anicuns",
+    unidade: null,
+    regra: null,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!html.includes("Macrozona Construída"), "parcial com macrozona rural NÃO deveria imprimir 'Macrozona Construída'");
+  assert.ok(html.includes("Macrozona Rural do Alto Anicuns"), "deveria imprimir a macrozona rural resolvida verbatim");
+});
+
 test("montarUrbBodyHTML: estado erro é só a nota de erro, SEM disclaimer (nada foi resolvido)", () => {
   const html = P.montarUrbBodyHTML({ estado: "erro", macrozona: null, unidade: null, regra: null, badges: BADGES_OFF });
   assert.ok(html.includes("Não foi possível consultar o Plano Diretor"));
