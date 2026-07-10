@@ -236,7 +236,11 @@ Plans:
   3. Seção "Urbanístico" na ficha (accordion, padrão Fase 9): macrozona/unidade, CA, usos, eixo/adensamento — com disclaimer fixo: "informação urbanística indicativa — a consulta oficial é a Certidão de Uso do Solo (SEPLANH)"; linguagem passa o gate da Fase 14
   4. Inteligência integrada: score de oportunidade ganha o fator potencial-construtivo (construído atual ÷ potencial do PD), e o detector da Fase 16 passa a usar construído/POTENCIAL-do-PD (não só construído/terreno) — ambos explicáveis ("por quê" cita a zona)
   5. Camada de zonas disponível como toggle no Território (choropleth por zona), legível sobre CARTO e satélite
-**Plans**: TBD · **UI hint**: yes
+**Plans**: 3 plans (ondas sequenciais — todas editam radar-goiania.html) · **UI hint**: yes
+Plans:
+- [ ] 18-01-PLAN.md — Núcleo TDD: PD_TABELA_CA (números conferidos por Art.) + pdRegrasDaZona/potencialConstrutivo/criterioDetectorPD/resolverZonaUI (RADAR_PURE) + pdConsultarLote/PDCACHE (PD_NET, bateria lazy)
+- [ ] 18-02-PLAN.md — Seção Urbanístico na ficha (accordion, 5 estados, disclaimer, REGRA DE OURO) + integração visível de score/detector com o PD
+- [ ] 18-03-PLAN.md — Choropleth de zonas no Território (chips exclusivos, viewport-limited, paleta oficial) + verificação final da fase
 **Phase flags**: a conferência dos números de CA contra o Anexo oficial (PDF ~10MB) é tarefa da fase (baixar + ler); se algum número não puder ser confirmado na fonte primária, a UI mostra a ZONA sem o número (nunca exibe valor não-conferido). Usuário é advogado — revisão final dos valores/disclaimer é um HUMAN-UAT natural.
 
 ## Progress
