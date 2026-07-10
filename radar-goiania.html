@@ -958,6 +958,9 @@
     <!-- Fase 10 SALV-01: container ESTATICO, irmao de #results — nenhuma rota de busca o toca.
          renderSavedBlocks() so preenche o innerHTML; visibilidade 100% via CSS :has (ver <style>). -->
     <div id="savedBlocks"></div>
+    <!-- Fase 16 (16-02, TERR-05): container ESTATICO, análogo a #savedBlocks — renderCadernoBlock()
+         (assíncrona, IndexedDB) só preenche o innerHTML; NUNCA reescreve renderSavedBlocks(). -->
+    <div id="cadernoBlock"></div>
     <div class="results" id="results">
       <div class="empty" id="emptyState">
         <div class="big">Encontre qualquer imóvel de Goiânia</div>
@@ -4541,6 +4544,145 @@ function renderSavedBlocks(){
   }
   box.innerHTML=oppBlock+histBlock;
 }
+/* ---- Fase 16 (16-02, TERR-05): Caderno de território — bloco #cadernoBlock, painel Consulta ----
+   renderCadernoBlock() é IRMÃ ASSÍNCRONA de renderSavedBlocks() (IndexedDB é sempre async) — NUNCA
+   reescreve o contrato síncrono de renderSavedBlocks()/Oportunidades/Histórico (decisão locked,
+   16-RESEARCH.md). Chamada 1x no boot (ao lado de renderSavedBlocks()) e depois de toda escrita
+   local. CADERNO_FILTRO/CADERNO_PAGINA preservam filtro/paginação entre re-renders. */
+const ERRO_ESCRITA_CADERNO="Não foi possível salvar no caderno. Verifique o espaço do navegador e tente de novo.";
+const CADERNO_STATUS_LBL={nao_visitado:"Não visitado",visitei:"Visitei",conversei:"Conversei",recusou:"Recusou",fechou:"Fechou"};
+let CADERNO_FILTRO={cdbairro:"",status:""};
+let CADERNO_PAGINA=30;
+async function renderCadernoBlock(){
+  const box=document.getElementById("cadernoBlock");
+  if(!box)return;
+  if(!cadernoDisponivel()){
+    box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
+      <div class="savedblock-head"><span class="savedblock-tt">📓 Caderno de território</span></div>
+      <div class="dnote">Seu navegador não permite salvar itens no caderno neste dispositivo. Suas consultas continuam funcionando normalmente.</div>
+    </div>`;
+    return;
+  }
+  let itens;
+  try{
+    itens=await cadernoListar({cdbairro:CADERNO_FILTRO.cdbairro||undefined,status:CADERNO_FILTRO.status||undefined});
+  }catch(e){
+    box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
+      <div class="savedblock-head"><span class="savedblock-tt">📓 Caderno de território</span></div>
+      <div class="dnote">Não foi possível abrir o caderno. Tente recarregar a página.</div>
+    </div>`;
+    return;
+  }
+  itens=itens.slice().sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
+  const setores=Array.from(new Set(itens.map(it=>it.cdbairro).filter(v=>v!=null))).sort((a,b)=>a-b);
+  const total=itens.length;
+  const visiveis=itens.slice(0,CADERNO_PAGINA);
+  const rows=visiveis.map(it=>{
+    const fechou=it.status==="fechou";
+    const meta="Q "+esc(it.nrquadra||"—")+" · L "+esc(it.nrlote||"—")+" · Setor "+esc(it.cdbairro||"—");
+    const notaPrevTxt=it.nota?String(it.nota).slice(0,60):"";
+    const statusChips=CADERNO_STATUS.map(s=>{
+      const ativo=it.status===s;
+      return `<button type="button" class="${s==='fechou'?'is-fechou':''}" aria-pressed="${ativo}" onclick="cadernoStatusUI(this,'${esc(it.ci)}','${s}')">${CADERNO_STATUS_LBL[s]}</button>`;
+    }).join("");
+    return `<details class="cadbook-item" data-ci="${esc(it.ci)}">
+      <summary>
+        <span class="cadbook-dot${fechou?' is-fechou':''}" aria-hidden="true"></span>
+        <span class="cadbook-addr">${esc(it.endereco||"Endereço não cadastrado")}</span>
+        <span class="cadbook-meta">${meta}</span>
+        ${notaPrevTxt?`<span class="cadbook-nota-prev">${esc(notaPrevTxt)}</span>`:""}
+      </summary>
+      <div class="cadbook-editor">
+        <div class="cadbook-statuschips" role="group" aria-label="Status do lote">${statusChips}</div>
+        <input type="text" class="cadbook-tag" maxlength="40" placeholder="Tag (ex.: dono mora fora)" value="${esc(it.tag||"")}" onblur="cadernoTagUI(this,'${esc(it.ci)}')">
+        <textarea class="cadbook-nota" maxlength="500" rows="3" placeholder="Nota de campo — ex.: dono não atende, tentar de novo em 30 dias" onblur="cadernoNotaUI(this,'${esc(it.ci)}')">${esc(it.nota||"")}</textarea>
+        <button type="button" class="cadbook-rm" onclick="cadernoRemoverUI(this,'${esc(it.ci)}')">Remover do caderno</button>
+      </div>
+    </details>`;
+  }).join("");
+  const filtroSetorOpts=`<option value="">Todos os setores</option>`+setores.map(cd=>
+    `<option value="${esc(cd)}"${String(cd)===String(CADERNO_FILTRO.cdbairro)?" selected":""}>Setor ${esc(cd)}</option>`).join("");
+  const filtroStatusOpts=`<option value="">Todos os status</option>`+CADERNO_STATUS.map(s=>
+    `<option value="${s}"${s===CADERNO_FILTRO.status?" selected":""}>${CADERNO_STATUS_LBL[s]}</option>`).join("");
+  box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
+    <div class="savedblock-head">
+      <span class="savedblock-tt">📓 Caderno de território</span>
+      <span class="savedblock-count" id="cadernoCount">${total}</span>
+    </div>
+    <div class="dnote">Suas notas ficam só no seu aparelho — nada é enviado a servidor algum.</div>
+    <div class="cadbook-filtros">
+      <label for="cadernoFiltroSetor" style="position:absolute;left:-9999px">Filtrar por setor</label>
+      <select id="cadernoFiltroSetor" onchange="cadernoFiltrarUI()">${filtroSetorOpts}</select>
+      <label for="cadernoFiltroStatus" style="position:absolute;left:-9999px">Filtrar por status</label>
+      <select id="cadernoFiltroStatus" onchange="cadernoFiltrarUI()">${filtroStatusOpts}</select>
+    </div>
+    ${total?`<div class="savedlist" id="cadernoList">${rows}</div>`
+      :`<div class="savedempty">Nenhum lote no caderno ainda — toque '📓 Salvar no caderno' na ficha ou no detector.</div>`}
+    ${total>CADERNO_PAGINA?`<button type="button" class="savedblock-clear" onclick="cadernoMaisUI()">Mostrar mais 30</button>`:""}
+    <div class="cadbook-export-row">
+      <button type="button" id="cadernoExport" onclick="cadernoExportarJSON()">⬇ Exportar caderno (JSON)</button>
+      <button type="button" id="cadernoImportBtn" onclick="document.getElementById('cadernoImportFile').click()">⬆ Importar caderno</button>
+      <input type="file" accept="application/json" hidden id="cadernoImportFile" onchange="cadernoImportarJSON(this)">
+    </div>
+  </div>`;
+}
+/* cadernoFiltrarUI/cadernoMaisUI: troca de filtro reinicia a paginação (UI-SPEC §3 Paginação). */
+function cadernoFiltrarUI(){
+  CADERNO_FILTRO={cdbairro:document.getElementById("cadernoFiltroSetor").value,status:document.getElementById("cadernoFiltroStatus").value};
+  CADERNO_PAGINA=30;
+  renderCadernoBlock();
+}
+function cadernoMaisUI(){
+  CADERNO_PAGINA+=30;
+  renderCadernoBlock();
+}
+/* cadernoStatusUI(btn,ci,status): autosave imediato ao clicar — atualiza SÓ o item aberto (chip +
+   dot), sem full re-render (preserva o <details> aberto/scroll — mesma razão de cadernoNotaUI).
+   Sucesso é SILENCIOSO (sem toast, UI-SPEC §Copywriting); falha SEMPRE mostra toast (T-16-04). */
+function cadernoStatusUI(btn,ci,status){
+  cadernoAtualizar(ci,{status}).then(()=>{
+    const item=btn.closest(".cadbook-item");if(!item)return;
+    item.querySelectorAll(".cadbook-statuschips button").forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));
+    const dot=item.querySelector(".cadbook-dot");
+    if(dot)dot.classList.toggle("is-fechou",status==="fechou");
+  }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+/* cadernoTagUI(el,ci): autosave no blur — tag não aparece na prévia do <summary>, sem update de DOM. */
+function cadernoTagUI(el,ci){
+  cadernoAtualizar(ci,{tag:el.value}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+/* cadernoNotaUI(el,ci): autosave no blur — atualiza a prévia da nota no <summary> sem full
+   re-render (evita fechar o <details> que o corretor acabou de editar). */
+function cadernoNotaUI(el,ci){
+  const nota=el.value;
+  cadernoAtualizar(ci,{nota}).then(()=>{
+    const item=el.closest(".cadbook-item");if(!item)return;
+    const summary=item.querySelector("summary");if(!summary)return;
+    let prev=summary.querySelector(".cadbook-nota-prev");
+    const txt=nota?String(nota).slice(0,60):"";
+    if(txt){
+      if(!prev){prev=document.createElement("span");prev.className="cadbook-nota-prev";summary.appendChild(prev);}
+      prev.textContent=txt;
+    }else if(prev)prev.remove();
+  }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+}
+/* cadernoRemoverUI(btn,ci): duplo-toque de confirmação (UI-SPEC §Copywriting) — 1º toque muda o
+   texto do botão por 3s; 2º toque dentro da janela remove de fato. Sem modal (mesmo espírito leve
+   do app). Remoção É uma ação discreta -> toast de sucesso + re-render completo (item some). */
+function cadernoRemoverUI(btn,ci){
+  if(btn.dataset.confirm==="1"){
+    cadernoRemover(ci).then(()=>{
+      toast("Removido do caderno.");
+      renderCadernoBlock();
+      renderCadernoBtn();
+    }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+    return;
+  }
+  btn.dataset.confirm="1";
+  const original=btn.textContent;
+  btn.textContent="Toque de novo para remover — a nota se perde";
+  setTimeout(()=>{if(btn.dataset.confirm==="1"){btn.dataset.confirm="";btn.textContent=original;}},3000);
+}
 /* abrirOportunidade(el): aceita elemento (le data-insc do .saveditem-row mais proximo) OU string
    (compat programatica, mesmo padrao dual de verNoMapa). Reusa LITERALMENTE o caminho do deep-link
    ?insc= do init — zero logica de busca nova; buscar() cuida de SEARCHTOKEN/loading/erro. */
@@ -5729,6 +5871,7 @@ function onbAbrirDireto(idx){ onbAbrir(idx); }
 document.body.dataset.view="mapa";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 renderSavedBlocks(); /* Fase 10 SALV-01: estado persistido (oportunidades/historico) aparece ao abrir o app */
+renderCadernoBlock(); /* Fase 16 (16-02, TERR-05): assíncrona (IndexedDB) — nunca bloqueia o boot */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{
