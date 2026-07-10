@@ -211,6 +211,13 @@ test("resolverZonaUI: WR-02 18-REVIEW.md — unidade resolvida É a ADD -> badge
   assert.equal(r.badges.add, false, "badges.add deveria ser suprimido quando a própria Unidade Territorial já é ADD");
 });
 
+test("resolverZonaUI: WR-03 18-REVIEW.md — AA+ADD sobrepostos -> precedência FIXA AA vence, badges.add continua true (a layer intersectou de fato, unidade NÃO é ADD)", () => {
+  const r = P.resolverZonaUI(PF.respostas.aaAddSobreposto);
+  assert.equal(r.estado, "resolvido");
+  assert.equal(r.unidade.sigla, "AA", "AA tem precedência sobre ADD em caso de sobreposição (contrato explícito, não acidente de ordem de array)");
+  assert.equal(r.badges.add, true, "a layer `add` de fato intersectou e a unidade resolvida é AA (não ADD) — badge não deveria ser suprimido aqui");
+});
+
 test("resolverZonaUI é pura (mesmo array de entrada, mesmo resultado, sem rede)", () => {
   const r1 = P.resolverZonaUI(PF.respostas.aaResolvido);
   const r2 = P.resolverZonaUI(PF.respostas.aaResolvido);

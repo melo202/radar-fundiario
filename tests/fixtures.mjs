@@ -1228,6 +1228,14 @@ export const FIXTURES = {
           macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
           add: comFeature({ sigla: "ADD", nm_des: "AREA DE DESACELERACAO DE DENSIDADE" }),
         }),
+        // WR-03 (18-REVIEW.md): AA e ADD AMBOS presentes (sobreposição de borda/imprecisão de
+        // snapping) -> precedência FIXA AA > ADD > AOS deveria vencer com unidade AA, e o badge
+        // `add` continua true (a layer `add` de fato intersectou, e a unidade NÃO é ADD).
+        aaAddSobreposto: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+          aa: comFeature({ sigla: "AA", nm_des: "AREA ADENSAVEL" }),
+          add: comFeature({ sigla: "ADD", nm_des: "AREA DE DESACELERACAO DE DENSIDADE" }),
+        }),
       },
     };
   })(),

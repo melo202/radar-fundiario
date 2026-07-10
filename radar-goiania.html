@@ -2745,6 +2745,12 @@ function resolverZonaUI(respostas){
     corredor:temFeature("corredor"),
   }; // OOAU (layer 32) é consultada mas NUNCA vira badge (18-UI-SPEC)
   let unidade=null,regra=null;
+  /* Precedência FIXA AA > ADD > AOS (18-REVIEW WR-03): a PRIMEIRA layer que intersecta o ponto,
+     nesta ordem, vence — não é acidente de ordem de array, é o contrato desta função. As 3 unidades
+     territoriais são desenhadas pela SEPLANH como disjuntas (não deveria haver sobreposição real);
+     em caso de imprecisão de snapping na borda entre 2 geometrias, o lote é classificado como AA
+     (regime mais permissivo, CA máx 6,0x) antes de ADD (CA máx 5,0x) antes de AOS — nunca o
+     inverso. Ver WR-03 18-REVIEW.md + teste "resolverZonaUI: sobreposição AA+ADD" abaixo. */
   for(const key of ["aa","add","aos"]){
     if(temFeature(key)){
       const attrs=primeiraFeature(key);
