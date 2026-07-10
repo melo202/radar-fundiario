@@ -2475,6 +2475,63 @@ function formatarDiff(mudancas,dataFmt){
     return "";
   }).filter(Boolean);
 }
+
+/* Fase 17 (17-01, TERR-07): matching de nome de bairro Caixa -> cdbairro fiscal + cruzamento com
+   o território salvo. Reusa norm() (linha 1318) — NUNCA uma 2ª função de normalização. Match só
+   EXATO pós-norm(), nunca fuzzy (74% medido no RESEARCH; sem risco de falso positivo). Pitfall 2:
+   CAIXA.imoveis[i].cb é código interno da Caixa, NÃO é cdbairro fiscal — sempre ignorado aqui,
+   resolvemos por norm(i.b) (texto livre) contra nm_disp/nm_bai. Pitfall 4: um nome normalizado
+   pode resolver para >1 cdbairro (bairro dividido em zonas cadastrais) — candidatos guardados
+   como Set, nunca reduzidos a um valor único. */
+
+/* construirNomeParaCdbairro(features,idParaCd): features = FeatureCollection.features de
+   bairros-goiania.json ({properties:{id,nm_bai,nm_disp}}); idParaCd = Map OU objeto id->cd (aceita
+   os dois formatos para funcionar tanto no teste quanto com o idParaCdbairro real, que é um Map).
+   Retorna Map<nomeNormalizado,Set<cdbairro>>. Feature sem cd resolvido nunca entra no map (nunca
+   inventa correspondência). */
+function construirNomeParaCdbairro(features,idParaCd){
+  const map=new Map();
+  (features||[]).forEach(f=>{
+    const props=f&&f.properties;
+    if(!props)return;
+    const cd=idParaCd&&idParaCd.get?idParaCd.get(props.id):(idParaCd&&idParaCd[props.id]);
+    if(cd==null)return;
+    [props.nm_disp,props.nm_bai].forEach(nome=>{
+      if(!nome)return;
+      const k=norm(nome);
+      if(!map.has(k))map.set(k,new Set());
+      map.get(k).add(cd);
+    });
+  });
+  return map;
+}
+
+/* cdbairroDoImovelCaixa(imovelCaixa,nomeParaCdbairro): resolve b (texto livre, ex.: "SETOR BUENO")
+   para os cdbairro candidatos via norm(). [] = sem match, honesto (nunca inventa). */
+function cdbairroDoImovelCaixa(imovelCaixa,nomeParaCdbairro){
+  const codigos=nomeParaCdbairro&&nomeParaCdbairro.get(norm(imovelCaixa&&imovelCaixa.b));
+  return codigos?Array.from(codigos):[];
+}
+
+/* cruzarCaixaTerritorio(imoveisCaixa,itensCaderno,nomeParaCdbairro): filtra por i.x&&i.y SEMPRE
+   (mesmo guard de toggleCaixa — imóvel sem coordenada nunca é cruzável) e por QUALQUER cdbairro
+   candidato presente nos itens salvos do caderno (some(), nunca reduz a um único código). */
+function cruzarCaixaTerritorio(imoveisCaixa,itensCaderno,nomeParaCdbairro){
+  const cdbairrosSalvos=new Set((itensCaderno||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
+  const matches=(imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).filter(i=>
+    cdbairroDoImovelCaixa(i,nomeParaCdbairro).some(cd=>cdbairrosSalvos.has(cd))
+  );
+  const bairros=Array.from(new Set(matches.flatMap(i=>cdbairroDoImovelCaixa(i,nomeParaCdbairro).filter(cd=>cdbairrosSalvos.has(cd)))));
+  return {matches,bairros,n:matches.length};
+}
+
+/* cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro): mesma lógica de cruzarCaixaTerritorio,
+   mas para UM único cdbairro (o setor em foco no painel/pino). */
+function cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro){
+  return (imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).filter(i=>
+    cdbairroDoImovelCaixa(i,nomeParaCdbairro).includes(cdbairro)
+  );
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;

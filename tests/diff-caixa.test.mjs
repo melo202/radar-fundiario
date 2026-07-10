@@ -12,6 +12,7 @@ import { FIXTURES } from "./fixtures.mjs";
 
 const DF = FIXTURES.DIFF_FIX;
 const FD = FIXTURES.FORMATAR_DIFF_FIX;
+const CX = FIXTURES.CAIXA_MATCH_FIX;
 
 function loadPureBlock() {
   const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
@@ -29,17 +30,33 @@ function loadPureBlock() {
   // Funcoes novas desta plan (17-01, Task 1) — ausentes em RED, presentes apos GREEN.
   assert.ok(src.includes("function diffLote"), "diffLote ausente do bloco RADAR_PURE (Task 1 nao cumprida)");
   assert.ok(src.includes("function formatarDiff"), "formatarDiff ausente do bloco RADAR_PURE (Task 1 nao cumprida)");
+  // Funcoes novas desta plan (17-01, Task 2) — ausentes em RED, presentes apos GREEN.
+  assert.ok(src.includes("function construirNomeParaCdbairro"), "construirNomeParaCdbairro ausente do bloco RADAR_PURE (Task 2 nao cumprida)");
+  assert.ok(src.includes("function cdbairroDoImovelCaixa"), "cdbairroDoImovelCaixa ausente do bloco RADAR_PURE (Task 2 nao cumprida)");
+  assert.ok(src.includes("function cruzarCaixaTerritorio"), "cruzarCaixaTerritorio ausente do bloco RADAR_PURE (Task 2 nao cumprida)");
+  assert.ok(src.includes("function cruzarCaixaSetor"), "cruzarCaixaSetor ausente do bloco RADAR_PURE (Task 2 nao cumprida)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {diffLote,formatarDiff,DIFF_ALLOW,DIFF_THRESH_PCT,DIFF_THRESH_AREA_M2};",
+      "\n;globalThis.__exports = {diffLote,formatarDiff,DIFF_ALLOW,DIFF_THRESH_PCT,DIFF_THRESH_AREA_M2,construirNomeParaCdbairro,cdbairroDoImovelCaixa,cruzarCaixaTerritorio,cruzarCaixaSetor};",
     { filename: "radar-pure-diff-caixa.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
 }
 
 const P = loadPureBlock();
+
+// norm() equivalente (mesma logica de radar-goiania.html:1318) usado só para localizar a chave do
+// Map dentro dos testes — NUNCA uma 2ª implementação de produção, só um espelho local de teste.
+function norm_(s) {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 // --- diffLote (TERR-06) ---------------------------------------------------------------------
 
@@ -159,4 +176,92 @@ test("formatarDiff: mudancas vazio/null -> [] (nunca lanca)", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(P.formatarDiff([], FD.dataFmt))), []);
   assert.doesNotThrow(() => P.formatarDiff(null, FD.dataFmt));
   assert.deepEqual(JSON.parse(JSON.stringify(P.formatarDiff(null, FD.dataFmt))), []);
+});
+
+// --- Matching Caixa -> cdbairro (TERR-07) -----------------------------------------------------
+
+test("construirNomeParaCdbairro: nm_disp 'Setor Bueno'/nm_bai 'SETOR BUENO' com cd=52 -> map contem 52", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const codigos = map.get(norm_("SETOR BUENO"));
+  assert.ok(codigos, "SETOR BUENO deveria ter entrada no map");
+  assert.ok(codigos.has(52), "cd 52 deveria estar no conjunto de SETOR BUENO");
+});
+
+test("construirNomeParaCdbairro: dois features com mesmo nome normalizado e cd diferentes -> Set{12,13} (nunca descarta colisao)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const codigos = map.get(norm_("SANTA GENOVEVA"));
+  // instanceof falha cross-realm (Set do sandbox vm != Set deste realm) — verifica pelo shape.
+  assert.equal(Object.prototype.toString.call(codigos), "[object Set]", "candidatos deveriam ser um Set, nunca um valor unico");
+  assert.equal(codigos.size, 2);
+  assert.ok(codigos.has(12) && codigos.has(13));
+});
+
+test("construirNomeParaCdbairro: feature sem cd em idParaCd -> nao entra no map (nunca inventa)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  assert.equal(map.has(norm_("SEM CD")), false);
+});
+
+test("cdbairroDoImovelCaixa: b 'SETOR BUENO' com match -> array contendo 52", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const out = P.cdbairroDoImovelCaixa(CX.imoveisCaixa.setorBuenoComXY, map);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), [52]);
+});
+
+test("cdbairroDoImovelCaixa: b 'RESIDENCIAL JARDINS DO CERRADO 7' sem match -> [] (honesto)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const out = P.cdbairroDoImovelCaixa(CX.imoveisCaixa.jardinsCerrado7SemMatch, map);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), []);
+});
+
+test("cdbairroDoImovelCaixa: b 'JARDIM ATLANTICO' casa nm_disp 'Jardim Atlântico' via norm() (acento/caixa)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const imovel = { id: "cX", b: "JARDIM ATLANTICO", x: 1, y: 1 };
+  const out = P.cdbairroDoImovelCaixa(imovel, map);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), [60]);
+});
+
+// --- Cruzamento Caixa (TERR-07) -----------------------------------------------------------------
+
+test("cruzarCaixaTerritorio: so inclui imoveis com i.x&&i.y (imovel sem coordenada nunca entra, mesmo com bairro batendo)", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const itensCaderno = [{ ci: "1", cdbairro: 52 }];
+  const imoveis = [CX.imoveisCaixa.setorBuenoComXY, CX.imoveisCaixa.setorBuenoSemXY];
+  const r = P.cruzarCaixaTerritorio(imoveis, itensCaderno, map);
+  assert.equal(r.matches.length, 1);
+  assert.equal(r.matches[0].id, CX.imoveisCaixa.setorBuenoComXY.id);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.bairros)), [52]);
+  assert.equal(r.n, 1);
+});
+
+test("cruzarCaixaTerritorio: itensCaderno cdbairro 52 + imovel Caixa SETOR BUENO(cd 52) com x/y -> matches inclui o imovel", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const itensCaderno = [{ ci: "1", cdbairro: 52 }];
+  const r = P.cruzarCaixaTerritorio([CX.imoveisCaixa.setorBuenoComXY], itensCaderno, map);
+  assert.equal(r.n, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.bairros)), [52]);
+});
+
+test("cruzarCaixaTerritorio: nome com >1 cd candidato (Set{12,13}), caderno tem 13 -> bate (some())", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const itensCaderno = [{ ci: "1", cdbairro: 13 }];
+  const r = P.cruzarCaixaTerritorio([CX.imoveisCaixa.santaGenovevaColisao], itensCaderno, map);
+  assert.equal(r.n, 1);
+  assert.equal(r.matches[0].id, CX.imoveisCaixa.santaGenovevaColisao.id);
+});
+
+test("cruzarCaixaTerritorio: nenhum item do caderno bate -> matches=[],bairros=[],n:0", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const itensCaderno = [{ ci: "1", cdbairro: 999 }];
+  const r = P.cruzarCaixaTerritorio([CX.imoveisCaixa.setorBuenoComXY], itensCaderno, map);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.matches)), []);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.bairros)), []);
+  assert.equal(r.n, 0);
+});
+
+test("cruzarCaixaSetor: retorna imoveis com x/y cujo cdbairroDoImovelCaixa inclui o cdbairro dado", () => {
+  const map = P.construirNomeParaCdbairro(CX.features, CX.idParaCd);
+  const imoveis = [CX.imoveisCaixa.setorBuenoComXY, CX.imoveisCaixa.setorBuenoSemXY, CX.imoveisCaixa.jardinsCerrado7SemMatch];
+  const r = P.cruzarCaixaSetor(imoveis, 52, map);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].id, CX.imoveisCaixa.setorBuenoComXY.id);
 });
