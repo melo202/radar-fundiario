@@ -239,7 +239,7 @@ Plans:
 **Plans**: 3 plans (ondas sequenciais — todas editam radar-goiania.html) · **UI hint**: yes
 Plans:
 - [x] 18-01-PLAN.md — Núcleo TDD: PD_TABELA_CA (números conferidos por Art.) + pdRegrasDaZona/potencialConstrutivo/criterioDetectorPD/resolverZonaUI (RADAR_PURE) + pdConsultarLote/PDCACHE (PD_NET, bateria lazy)
-- [ ] 18-02-PLAN.md — Seção Urbanístico na ficha (accordion, 5 estados, disclaimer, REGRA DE OURO) + integração visível de score/detector com o PD
+- [x] 18-02-PLAN.md — Seção Urbanístico na ficha (accordion, 5 estados, disclaimer, REGRA DE OURO) + integração visível de score/detector com o PD
 - [ ] 18-03-PLAN.md — Choropleth de zonas no Território (chips exclusivos, viewport-limited, paleta oficial) + verificação final da fase
 **Phase flags**: a conferência dos números de CA contra o Anexo oficial (PDF ~10MB) é tarefa da fase (baixar + ler); se algum número não puder ser confirmado na fonte primária, a UI mostra a ZONA sem o número (nunca exibe valor não-conferido). Usuário é advogado — revisão final dos valores/disclaimer é um HUMAN-UAT natural.
 
@@ -267,7 +267,7 @@ Plans:
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
 | 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete    | 2026-07-10 |
-| 18. Inteligência Urbanística (PD 2022) | v2.1 | 1/3 | In Progress|  |
+| 18. Inteligência Urbanística (PD 2022) | v2.1 | 2/3 | In Progress|  |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**
 **v2.1 (Cockpit Comercial): 13 fases (7-18, incl. 11.1). Fase 7 ✅ (2 HUMAN-UAT diferidos). Requisitos: NOMES ✅ + ~47 pendentes.**

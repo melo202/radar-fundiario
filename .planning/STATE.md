@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Cockpit Comercial
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-07-10T04:21:15.338Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-07-10T04:40:10.334Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 13
   completed_phases: 12
   total_plans: 41
-  completed_plans: 39
-  percent: 95
+  completed_plans: 40
+  percent: 98
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 18 (Inteligência Urbanística — Plano Diretor 2022) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-10
 
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 17 P01 | 10min | 3 tasks | 4 files |
 | Phase 17 P02 | 12min | 3 tasks | 1 files |
 | Phase 18 P01 | 20min | 3 tasks | 3 files |
+| Phase 18 P02 | 17min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 18]: [18-01]: 6x publicado como ca_maximo padrao da AA (Art. 196 II); 7,5x (TDC+fora-de-PDU, Art. 252 par.6) deliberadamente omitido da tabela padrao
 - [Phase 18]: [18-01]: fonte no PD_TABELA_CA cita sempre Art. X da LC 349/2022, nunca Anexo (Anexo XXI/XXII regem afastamentos/altura por monumento, nao CA) - reforcado por guarda de integridade automatizado
 - [Phase 18]: [18-01]: AOS/AAB com ca_maximo null e conferido true simultaneamente - achado negativo confirmado (Art. 196 so regula AA/ADD), nao lacuna de pesquisa
+- [Phase 18]: [18-02]: copy de CA renderizada como string contigua no .v (nao k/v separado do exemplo do UI-SPEC) - testes de guarda exigem substring literal contigua no HTML
+- [Phase 18]: [18-02]: PD_DISCLAIMER tambem no estado rural (contrato de teste do Task 2 prevalece sobre o exemplo ilustrativo do UI-SPEC que nao o mostra); estado erro nunca mostra o disclaimer
+- [Phase 18]: [18-02]: PDQUADRACACHE (detector, por chaveQuadra) nunca compartilha map com PDCACHE (lote, por ci) - W3, evita cache-poisoning; pdBateriaConsulta extraida para reuso sem duplicar a bateria de 9 queries
 
 ### Pending Todos
 
@@ -133,6 +137,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T04:21:15.335Z
-Stopped at: Completed 18-01-PLAN.md
+Last session: 2026-07-10T04:40:10.331Z
+Stopped at: Completed 18-02-PLAN.md
 Resume file: None
