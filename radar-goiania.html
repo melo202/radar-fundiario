@@ -2615,6 +2615,28 @@ const PD_TABELA_CA={
 const PD_MZC_BASICO={nome:"Macrozona Construída",ca_basico:1.0,ca_maximo:null,altura_max:null,taxa_ocupacao:null,vi_outorga:null,usos:"",usos_conferido:false,nota_ca:"Coeficiente de Aproveitamento Básico não oneroso de 1,0x é universal em toda a Macrozona Construída; o índice máximo (5x ADD / 6x AA) depende da unidade territorial específica, não identificada aqui.",nota_altura:null,fonte:"Art. 242, VII, LC 349/2022",conferido:true};
 /* pdRegrasDaZona(sigla): lookup puro, nunca lança — sigla ausente/desconhecida -> null. */
 function pdRegrasDaZona(sigla){return (sigla&&PD_TABELA_CA[String(sigla).toUpperCase()])||null;}
+/* potencialConstrutivo(areaterr,sigla): potencial = areaterr × ca_basico — SÓ com CA conferido
+   (REGRA DE OURO, T-18-01). Terreno ausente/0 ou zona sem regra conferida -> null, NUNCA um
+   número fabricado. */
+function potencialConstrutivo(areaterr,sigla){
+  const at=+areaterr;
+  if(!(at>0))return null;
+  const r=pdRegrasDaZona(sigla);
+  if(!r||r.conferido!==true||r.ca_basico==null)return null;
+  return at*r.ca_basico;
+}
+/* criterioDetectorPD(areaedif,areaterr,potencialPD): upgrade do detector (Fase 16) — usa
+   areaedif/potencialPD quando o potencial do PD está disponível (>0); senão cai no fallback
+   gracioso areaedif/areaterr (Fase 16), rotulado por `criterio` — NUNCA lança/bloqueia a lista
+   (T-18-04). Sem denominador real (nem PD nem terreno) -> null, nunca inventa razão. */
+function criterioDetectorPD(areaedif,areaterr,potencialPD){
+  const ae=+areaedif;
+  if(!(ae>=0))return null;
+  if(potencialPD>0)return {razao:ae/potencialPD,criterio:"pd"};
+  const at=+areaterr;
+  if(!(at>0))return null;
+  return {razao:ae/at,criterio:"terreno"};
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
