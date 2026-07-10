@@ -3068,7 +3068,7 @@ function montarUrbBodyHTML(estado){
   if(e.unidade){
     linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Unidade territorial</div><div class="v">${esc(e.unidade.sigla)} — ${esc(e.unidade.nome)}</div></div>`);
   }
-  let notaSemCA="";
+  let notaSemCA="",notaCA="";
   if(r&&r.conferido===true&&r.ca_basico!=null){
     const cb=fmtCA(r.ca_basico);
     const valorCA=(e.unidade&&r.ca_maximo!=null)?("CA básico "+cb+"x · CA máximo "+fmtCA(r.ca_maximo)+"x")
@@ -3080,15 +3080,30 @@ function montarUrbBodyHTML(estado){
     if(r.altura_max!=null){
       linhas.push(`<div class="cell"><div class="k">Altura máxima</div><div class="v">${r.altura_max} m</div></div>`);
     }
+    /* F5 PD-01: taxa de ocupação (ex.: 40% da AOS, Art. 190, §3º) é o parâmetro que MAIS limita o
+       aproveitamento onde o CA não é o limitante — curada e conferida, nunca mais omitida da ficha. */
+    if(r.taxa_ocupacao!=null){
+      linhas.push(`<div class="cell"><div class="k">Taxa de ocupação máxima</div><div class="v">${r.taxa_ocupacao}%</div></div>`);
+    }
     if(r.nota_altura){
       linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Ocupação por altura</div><div class="v">${esc(r.nota_altura)}</div></div>`);
+    }
+    /* F5 PD-02: nota_ca explica o REGIME da zona (ex.: AOS — "sem teto de CA" porque o limitante é
+       altura/ocupação) — era caminho morto no render; sem ela, "sem teto" lê como permissivo. */
+    if(r.nota_ca){
+      notaCA=`<div class="dnote">${esc(r.nota_ca)}</div>`;
     }
   } else if(e.unidade){
     notaSemCA=`<div class="dnote">CA e altura desta zona ainda não foram conferidos contra o Anexo oficial da LC 349/2022 — mostramos só a zona (${esc(e.unidade.sigla)}), que vem direto do mapa oficial da Prefeitura.</div>`;
   }
   if(e.estado==="resolvido_sem_unidade"){
-    notaSemCA=`<div class="dnote">Dentro da Macrozona Construída, sem unidade territorial específica identificada nas camadas consultadas. O Coeficiente de Aproveitamento Básico de 1,0x é universal na Macrozona Construída (Art. 242, VII, LC 349/2022); o índice máximo depende da unidade territorial, não identificada aqui.</div>`;
+    /* F5 PD-02: a explicação do CA universal saiu daqui — vem de PD_MZC_BASICO.nota_ca (fonte
+       única, renderizada acima), nunca mais uma 2ª cópia hardcoded que pudesse divergir do dado. */
+    notaSemCA=`<div class="dnote">Dentro da Macrozona Construída, sem unidade territorial específica identificada nas camadas consultadas.</div>`;
   }
+  /* F5 PD-03: a citação do artigo (`fonte`) é a PROVA da afirmação urbanística — exibida
+     discretamente quando a regra é conferida (zona não conferida tem fonte vazia e nunca a emite). */
+  const notaFonte=(r&&r.conferido===true&&r.fonte)?`<div class="dnote">Fonte: ${esc(r.fonte)}</div>`:"";
   const badges=e.badges||{};
   const badgeDefs=[
     {k:"aeis",cls:"is-atencao",txt:"Interesse Social (AEIS)"},
@@ -3103,7 +3118,9 @@ function montarUrbBodyHTML(estado){
     notaParcial='<div class="dnote">Algumas informações do Plano Diretor não carregaram — o que aparece acima já é confiável, só pode estar incompleto.</div><button type="button" class="urb-retry" id="urbRetry">Tentar de novo</button>';
   }
   return (linhas.length?`<div class="dgrid">${linhas.join("")}</div>`:"")
+    + notaCA
     + notaSemCA
+    + notaFonte
     + `<div class="urb-badges"${badgeHTML?"":" hidden"}>${badgeHTML}</div>`
     + notaParcial
     + `<div class="dnote">${PD_DISCLAIMER}</div>`;
@@ -3134,8 +3151,11 @@ function detectorRotuloPD(a,porQuadraMap){
   }else{
     motivoFallback="unidade territorial do Plano Diretor não identificada para este candidato";
   }
+  /* F5 PD-04: com CA básico 1,0x o denominador do critério PD é NUMERICAMENTE igual à razão por
+     terreno — o rótulo diz isso ("equivale à razão por terreno") em vez de sugerir um refinamento
+     que não muda o número. Só um CA básico ≠ 1,0x mudaria de fato o denominador. */
   const rotulo=(crit.criterio==="pd")
-    ? "Critério: área construída ÷ potencial do Plano Diretor (zona "+sigla+", CA básico "+fmtCA(regra.ca_basico)+"x)"
+    ? "Critério: área construída ÷ potencial do Plano Diretor (zona "+sigla+", CA básico "+fmtCA(regra.ca_basico)+"x"+(+regra.ca_basico===1?" — equivale à razão por terreno":"")+")"
     : "Critério: área construída ÷ área do terreno ("+motivoFallback+")";
   return Object.assign({rotulo},crit);
 }

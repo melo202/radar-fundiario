@@ -277,6 +277,60 @@ test("montarUrbBodyHTML: REGRA DE OURO de usos — regra com usos_conferido:fals
   assert.ok(!html.includes('<div class="k">Usos</div>'), "usos_conferido:false NUNCA deveria renderizar a linha Usos (omissão honesta)");
 });
 
+test("montarUrbBodyHTML (F5 PD-01/02/03): AOS resolvido — taxa de ocupação 40%, nota_ca do regime e citação de artigo (fonte) renderizadas", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AOS", nome: P.PD_TABELA_CA.AOS.nome },
+    regra: P.PD_TABELA_CA.AOS,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(html.includes("Taxa de ocupação máxima"), "PD-01: célula 'Taxa de ocupação máxima' deveria existir para a AOS");
+  assert.ok(html.includes(">40%<"), "PD-01: o valor 40% (Art. 190, §3º) deveria aparecer");
+  assert.ok(html.includes(P.PD_TABELA_CA.AOS.nota_ca), "PD-02: nota_ca (regime governado por altura/ocupação) deveria ser renderizada — era caminho morto");
+  assert.ok(html.includes("Fonte: " + P.PD_TABELA_CA.AOS.fonte), "PD-03: a citação do artigo (fonte) deveria aparecer — é a prova da afirmação urbanística");
+});
+
+test("montarUrbBodyHTML (F5 PD-01/02): zona sem taxa_ocupacao/nota_ca (AA) NUNCA renderiza a célula de taxa nem nota vazia; fonte da AA aparece", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "AA", nome: P.PD_TABELA_CA.AA.nome },
+    regra: P.PD_TABELA_CA.AA,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!html.includes("Taxa de ocupação máxima"), "AA tem taxa_ocupacao:null — a célula nunca deveria aparecer");
+  assert.ok(html.includes("Fonte: " + P.PD_TABELA_CA.AA.fonte), "PD-03: fonte conferida da AA deveria aparecer");
+});
+
+test("montarUrbBodyHTML (F5 PD-03): zona NÃO conferida (APAC) nunca emite linha 'Fonte:' (fonte vazia — nada a provar)", () => {
+  const estado = {
+    estado: "resolvido",
+    macrozona: "Macrozona Construída",
+    unidade: { sigla: "APAC", nome: P.PD_TABELA_CA.APAC.nome },
+    regra: P.PD_TABELA_CA.APAC,
+    badges: { ...BADGES_OFF, apac: true },
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(!html.includes("Fonte:"), "conferido:false tem fonte vazia — a linha 'Fonte:' nunca deveria aparecer");
+});
+
+test("montarUrbBodyHTML (F5 PD-02): resolvido_sem_unidade usa PD_MZC_BASICO.nota_ca (fonte única) — a explicação do CA universal vem do DADO, não de cópia hardcoded", () => {
+  const estado = {
+    estado: "resolvido_sem_unidade",
+    macrozona: "Macrozona Construída",
+    unidade: null,
+    regra: P.PD_MZC_BASICO,
+    badges: BADGES_OFF,
+  };
+  const html = P.montarUrbBodyHTML(estado);
+  assert.ok(html.includes(P.PD_MZC_BASICO.nota_ca), "nota_ca de PD_MZC_BASICO deveria ser renderizada (era caminho morto com string duplicada)");
+  assert.equal(html.split("universal").length - 1, 1, "a explicação do CA universal deveria aparecer exatamente 1x (sem drift entre dado e cópia)");
+  assert.ok(html.includes("Fonte: " + P.PD_MZC_BASICO.fonte), "PD-03: fonte do Art. 242, VII deveria aparecer");
+});
+
 test("montarUrbBodyHTML: resolvido_sem_unidade (BLOCKER 2, regra===PD_MZC_BASICO, unidade:null) — só CA básico universal, nunca máximo, nunca 'undefined'", () => {
   const estado = {
     estado: "resolvido_sem_unidade",
@@ -525,7 +579,21 @@ test("detectorRotuloPD: zona conferida (AA) -> criterio 'pd' + rótulo verbatim 
   const info = P.detectorRotuloPD(candidato, porQuadraMap);
   assert.equal(info.criterio, "pd");
   assert.equal(info.razao, 300 / 600); // potencial = 600*1.0 = 600
-  assert.equal(info.rotulo, "Critério: área construída ÷ potencial do Plano Diretor (zona AA, CA básico 1,0x)");
+  // F5 PD-04: CA básico 1,0x rende o MESMO número da razão por terreno — o rótulo anota isso.
+  assert.equal(info.rotulo, "Critério: área construída ÷ potencial do Plano Diretor (zona AA, CA básico 1,0x — equivale à razão por terreno)");
+});
+
+test("detectorRotuloPD (F5 PD-04): rótulo do critério PD com CA 1,0x anota a equivalência e continua DISTINTO do fallback sem PD", () => {
+  const candidato = { cdbairro: "1", nrquadra: "10", areaedif: 300, areaterr: 600 };
+  const porQuadraMap = {
+    "1-10": { estado: "resolvido", unidade: { sigla: "AOS", nome: P.PD_TABELA_CA.AOS.nome }, regra: P.PD_TABELA_CA.AOS, badges: {} },
+  };
+  const comPD = P.detectorRotuloPD(candidato, porQuadraMap);
+  const semPD = P.detectorRotuloPD(candidato, {}); // fallback: nenhuma quadra resolvida
+  assert.equal(comPD.criterio, "pd");
+  assert.equal(semPD.criterio, "terreno");
+  assert.ok(comPD.rotulo.includes("equivale à razão por terreno"), `rótulo PD com CA 1,0x deveria anotar a equivalência, obteve: ${comPD.rotulo}`);
+  assert.notEqual(comPD.rotulo, semPD.rotulo, "os dois rótulos nunca podem ser idênticos — um afirma critério do PD, o outro afirma ausência dele");
 });
 
 test("detectorRotuloPD: quadra sem zona resolvida (fora do mapa/consulta falhou) -> fallback 'terreno' rotulado, candidato continua na lista", () => {
