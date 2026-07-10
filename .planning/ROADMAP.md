@@ -48,7 +48,7 @@ Detalhes completos, critérios de sucesso e auditoria em `milestones/v2.0-*.md`.
 - [x] **Phase 16: Detector de Lote Subutilizado & Farming/Caderno** — detector sobre o scan da Fase 15; Farming com IndexedDB + allowlist anti-PII
  (completed 2026-07-10)
 - [x] **Phase 17: Diff de Cadastro & Cruzamento Caixa** — snapshot entre visitas + cruzamento com imóveis Caixa sobre o território salvo (completed 2026-07-10)
-- [ ] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial
+- [x] **Phase 18: Inteligência Urbanística — Plano Diretor 2022 (LC 349/2022)** — consulta por ponto ao Modelo Espacial já exposto no ArcGIS da prefeitura (verificado ao vivo); seção "Urbanístico" na ficha (zona, CA, usos + disclaimer); upgrade do detector (construído/potencial-do-PD) e boost do score; números de CA só entram conferidos contra o Anexo oficial (completed 2026-07-10)
 
 ## Phase Details
 
@@ -240,7 +240,7 @@ Plans:
 Plans:
 - [x] 18-01-PLAN.md — Núcleo TDD: PD_TABELA_CA (números conferidos por Art.) + pdRegrasDaZona/potencialConstrutivo/criterioDetectorPD/resolverZonaUI (RADAR_PURE) + pdConsultarLote/PDCACHE (PD_NET, bateria lazy)
 - [x] 18-02-PLAN.md — Seção Urbanístico na ficha (accordion, 5 estados, disclaimer, REGRA DE OURO) + integração visível de score/detector com o PD
-- [ ] 18-03-PLAN.md — Choropleth de zonas no Território (chips exclusivos, viewport-limited, paleta oficial) + verificação final da fase
+- [x] 18-03-PLAN.md — Choropleth de zonas no Território (chips exclusivos, viewport-limited, paleta oficial) + verificação final da fase
 **Phase flags**: a conferência dos números de CA contra o Anexo oficial (PDF ~10MB) é tarefa da fase (baixar + ler); se algum número não puder ser confirmado na fonte primária, a UI mostra a ZONA sem o número (nunca exibe valor não-conferido). Usuário é advogado — revisão final dos valores/disclaimer é um HUMAN-UAT natural.
 
 ## Progress
@@ -267,7 +267,7 @@ Plans:
 | 15. Setor-Scan + Choropleth + Painel | v2.1 | 3/3 | Complete    | 2026-07-09 |
 | 16. Detector + Farming/Caderno | v2.1 | 3/3 | Complete    | 2026-07-10 |
 | 17. Diff de Cadastro + Caixa | v2.1 | 2/2 | Complete    | 2026-07-10 |
-| 18. Inteligência Urbanística (PD 2022) | v2.1 | 2/3 | In Progress|  |
+| 18. Inteligência Urbanística (PD 2022) | v2.1 | 3/3 | Complete   | 2026-07-10 |
 
 **v2.0: 6/6 fases, 12/12 planos, 14/14 requisitos — 100% (shipped).**
 **v2.1 (Cockpit Comercial): 13 fases (7-18, incl. 11.1). Fase 7 ✅ (2 HUMAN-UAT diferidos). Requisitos: NOMES ✅ + ~47 pendentes.**
