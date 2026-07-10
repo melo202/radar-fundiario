@@ -191,7 +191,7 @@
   .bldg-metricas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
   @media(min-width:481px){.bldg-metricas{grid-template-columns:repeat(4,1fr)}}
   .bm{display:flex;flex-direction:column;gap:2px}
-  .bm b{font:700 15px/1.1 "Archivo";color:var(--paper-2)}
+  .bm b{font:700 15px/1.1 "Archivo";color:var(--paper-2);font-variant-numeric:tabular-nums}
   .bm span{font:600 10.5px/1.2 "Archivo";color:var(--line)}
   .bm-faixa b{color:var(--accent)}
   .bldg-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -217,7 +217,7 @@
 
 
   .results{flex:1;overflow-y:auto;padding:6px 0}
-  .count{padding:12px 22px 4px;font:600 11px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .count{padding:12px 22px 4px;font:600 11px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
   .count .csv{float:right;margin-top:-6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);
     font:600 10px/1 "JetBrains Mono",monospace;letter-spacing:.06em;padding:6px 9px;border-radius:2px;cursor:pointer}
   .count .csv:hover{border-color:var(--accent);color:var(--accent)}
@@ -237,7 +237,7 @@
   .card .vals{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
   /* mercado estimado = número-âncora da decisão (grande, accent); venal = legenda secundária */
   .card .vals .ref .lbl{display:block;font:700 10px/1 "Archivo";letter-spacing:.02em;color:var(--accent)}
-  .card .vals .ref b{display:block;font:800 17px/1.1 "Archivo";color:var(--accent);margin-top:3px;white-space:nowrap}
+  .card .vals .ref b{display:block;font:800 17px/1.1 "Archivo";color:var(--accent);margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
   .card .vals .venal{text-align:right;font:600 10px/1.2 "Archivo";color:var(--muted)}
   .card .vals .venal b{display:block;font:600 12px/1 "JetBrains Mono";color:var(--muted);margin-top:3px;white-space:nowrap}
 
@@ -277,7 +277,7 @@
   .cmp-table th{position:sticky;top:0;background:var(--paper-2);font:700 11px/1.2 "JetBrains Mono",monospace;
     text-transform:uppercase;letter-spacing:.04em;color:var(--ink);padding:10px 12px;border-bottom:2px solid var(--line);
     text-align:left;white-space:nowrap}
-  .cmp-table td{padding:10px 12px;font:600 13px/1.25 "Archivo";color:var(--ink);border-bottom:1px solid var(--line);white-space:nowrap}
+  .cmp-table td{padding:10px 12px;font:600 13px/1.25 "Archivo";color:var(--ink);border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
   .cmp-table tbody tr:nth-child(even){background:var(--paper)}
   .cmp-rowlbl{font:600 12px/1.3 "Archivo";color:var(--muted);position:sticky;left:0;background:var(--paper-2);
     white-space:nowrap;padding-right:16px}
@@ -423,13 +423,13 @@
   .detail .dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
   .detail .dgrid .cell{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:8px 10px}
   .detail .dgrid .cell .k{font:600 11px/1.2 "Archivo";letter-spacing:.01em;color:var(--muted);margin-bottom:4px}
-  .detail .dgrid .cell .v{font:700 15px/1 "Archivo"}
+  .detail .dgrid .cell .v{font:700 15px/1 "Archivo";font-variant-numeric:tabular-nums}
   .detail .dgrid .cell.hl .v{color:var(--accent)}
   .detail .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "Archivo";color:var(--muted)}
   /* Fase 9 FICHA-01: conclusão comercial primeiro — faixa de valor, scores, leitura prática */
   .dvalor{background:var(--paper);border:1.5px solid var(--ink);border-radius:2px;padding:18px 20px;margin-bottom:16px}
   .dvalor-k{font:600 11px/1.2 "Archivo";color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
-  .dvalor-v{font:800 22px/1.15 "Archivo";color:var(--ink);margin:4px 0 2px}
+  .dvalor-v{font:800 22px/1.15 "Archivo";color:var(--ink);margin:4px 0 2px;font-variant-numeric:tabular-nums}
   .dvalor-v.muted{color:var(--muted)}
   .dvalor-m{font:500 10.5px/1.45 "Archivo";color:var(--muted)}
 
@@ -443,7 +443,7 @@
   .conf-alta{border-left:4px solid var(--lot)}
   .conf-media{border-left:4px solid var(--gold)}
   .conf-baixa{border-left:4px solid var(--accent)}
-  .score-num{font:800 20px/1 "Archivo";color:var(--ink)}
+  .score-num{font:800 20px/1 "Archivo";color:var(--ink);font-variant-numeric:tabular-nums}
   .score-op.alta .score-num{color:var(--lot)}
   .score-op.media .score-num{color:#7d621f}
   .score-op.baixa .score-num{color:var(--accent)}
@@ -685,7 +685,7 @@
      novo (var(--l-accent) já existe, #fff já usado no bloco do laudo). */
   #laudo .negclausulas,#laudoView .negclausulas{margin:8px 0 16px}
   #laudo .negclausula-item,#laudoView .negclausula-item{margin-bottom:14px;page-break-inside:avoid}
-  #laudo .negclausula-item b,#laudoView .negclausula-item b{font:700 13px/1.3 "Open Sans","Segoe UI",sans-serif;color:var(--l-accent);display:block;margin-bottom:3px}
+  #laudo .negclausula-item b,#laudoView .negclausula-item b{font:700 13px/1.3 "Archivo","Segoe UI",sans-serif;color:var(--l-accent);display:block;margin-bottom:3px}
   #laudo .negclausula-item p,#laudoView .negclausula-item p{margin:0;white-space:pre-line}
   #laudo .negdisclaimer-print,#laudoView .negdisclaimer-print{border:1.5px solid var(--l-accent);border-radius:8px;padding:14px 16px;margin:18px 0;font-size:10.5px;line-height:1.5;background:#fff}
   #laudo .negdisclaimer-print b,#laudoView .negdisclaimer-print b{color:var(--l-accent)}
@@ -694,27 +694,27 @@
   /* ===== LAUDO — layout premium em cards; tela (#laudoView) e PDF (#laudo) compartilham as classes ===== */
   #laudo{display:none}
   #laudo .lbrand,#laudoView .lbrand{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 2px 20px}
-  #laudo .lbrand .t,#laudoView .lbrand .t{font:800 20px/1.1 "Open Sans","Segoe UI",sans-serif;color:#1c1e20}
-  #laudo .lbrand .t small,#laudoView .lbrand .t small{display:block;font:700 10.5px/1.3 "Open Sans",sans-serif;color:var(--l-accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+  #laudo .lbrand .t,#laudoView .lbrand .t{font:800 20px/1.1 "Archivo","Segoe UI",sans-serif;color:#1c1e20}
+  #laudo .lbrand .t small,#laudoView .lbrand .t small{display:block;font:700 10.5px/1.3 "JetBrains Mono",sans-serif;color:var(--l-accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
   #laudo .lbrand .m,#laudoView .lbrand .m{text-align:right;font-size:11px;color:var(--l-label);line-height:1.5;flex:none}
   #laudo .lcard,#laudoView .lcard{background:var(--l-card);border:1px solid var(--l-border);border-radius:16px;padding:21px 23px;margin-bottom:19px}
-  #laudo .lcard h3,#laudoView .lcard h3{margin:0 0 11px;color:var(--l-accent);font:700 15px/1.2 "Open Sans","Segoe UI",sans-serif}
+  #laudo .lcard h3,#laudoView .lcard h3{margin:0 0 11px;color:var(--l-accent);font:700 15px/1.2 "Archivo","Segoe UI",sans-serif}
   #laudo .lcard p,#laudoView .lcard p{margin:0 0 8px}
   #laudo .lcard p:last-child,#laudoView .lcard p:last-child{margin-bottom:0}
   #laudo .lrow,#laudoView .lrow{display:flex;gap:18px}
   #laudo .lrow>.lcard,#laudoView .lrow>.lcard{flex:1;margin-bottom:19px}
   #laudo .lrow>.lcard.foto,#laudoView .lrow>.lcard.foto{flex:0 0 44%;padding:0;overflow:hidden;position:relative}
-  #laudo .pill,#laudoView .pill{position:absolute;top:14px;left:14px;z-index:2;background:var(--l-ink);color:#fff;font:700 11px/1 "Open Sans",sans-serif;padding:8px 12px;border-radius:8px}
+  #laudo .pill,#laudoView .pill{position:absolute;top:14px;left:14px;z-index:2;background:var(--l-ink);color:#fff;font:700 11px/1 "Archivo",sans-serif;padding:8px 12px;border-radius:8px}
   #laudo .foto img,#laudoView .foto img{width:100%;height:100%;min-height:295px;object-fit:cover;display:block}
   #laudo .kv,#laudoView .kv{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--l-hair)}
   #laudo .kv:last-child,#laudoView .kv:last-child{border-bottom:0}
   #laudo .kv .k,#laudoView .kv .k{color:var(--l-label);flex:none;max-width:46%}
   #laudo .kv .v,#laudoView .kv .v{text-align:right;font-weight:700;color:#26282a}
   #laudo .preco .prow,#laudoView .preco .prow{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
-  #laudo .preco .hero,#laudoView .preco .hero{font:800 39px/1 "Open Sans","Segoe UI",sans-serif;color:#1c1e20;letter-spacing:-.01em;white-space:nowrap}
+  #laudo .preco .hero,#laudoView .preco .hero{font:800 39px/1 "Archivo","Segoe UI",sans-serif;color:#1c1e20;letter-spacing:-.01em;white-space:nowrap}
   #laudo .preco .subs,#laudoView .preco .subs{display:flex;gap:14px;flex:1;min-width:290px}
   #laudo .subcard,#laudoView .subcard{flex:1;border:1px solid var(--l-border);border-radius:12px;padding:14px 16px}
-  #laudo .subcard .st,#laudoView .subcard .st{display:flex;align-items:center;gap:7px;font:700 13px/1 "Open Sans",sans-serif;color:#26282a;margin-bottom:9px}
+  #laudo .subcard .st,#laudoView .subcard .st{display:flex;align-items:center;gap:7px;font:700 13px/1 "Archivo",sans-serif;color:#26282a;margin-bottom:9px}
   #laudo .subcard .ar,#laudoView .subcard .ar{font-size:15px;font-weight:800}
   #laudo .subcard.up .ar,#laudoView .subcard.up .ar{color:var(--l-accent)}
   #laudo .subcard.down .ar,#laudoView .subcard.down .ar{color:var(--l-blue)}
@@ -724,7 +724,7 @@
   #laudo .lbar .iqr,#laudoView .lbar .iqr{position:absolute;top:0;bottom:0;background:#cfe0d8;border-radius:7px}
   #laudo .lbar .med,#laudoView .lbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--l-ink)}
   #laudo .lbar .me,#laudoView .lbar .me{position:absolute;top:-8px;width:0;height:0;border:7px solid transparent;border-top-color:var(--l-accent);transform:translateX(-7px)}
-  #laudo .llbl,#laudoView .llbl{display:flex;justify-content:space-between;font:600 10.5px/1 "Open Sans",sans-serif;color:var(--l-label);margin:6px 6px 0}
+  #laudo .llbl,#laudoView .llbl{display:flex;justify-content:space-between;font:600 10.5px/1 "Archivo",sans-serif;font-variant-numeric:tabular-nums;color:var(--l-label);margin:6px 6px 0}
   #laudo .lfotos,#laudoView .lfotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
   #laudo .lfotos img,#laudoView .lfotos img{width:100%;height:120px;object-fit:cover;border-radius:8px}
   #laudo .lmiudo,#laudoView .lmiudo{font-size:10.5px;color:var(--l-label);text-align:justify;line-height:1.5}
@@ -737,32 +737,32 @@
   #laudo .fr-comps,#laudoView .fr-comps{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
   #laudo .fr-comps li,#laudoView .fr-comps li{font:500 13px/1.4 "Archivo"}
   #laudo .fr-contato,#laudoView .fr-contato{font:700 13px/1.3 "Archivo";color:var(--ink);margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
-  #laudo .foot,#laudoView .foot{margin-top:4px;text-align:right;font:600 9.5px/1 "Open Sans",sans-serif;color:var(--l-label);letter-spacing:.02em}
+  #laudo .foot,#laudoView .foot{margin-top:4px;text-align:right;font:600 9.5px/1 "JetBrains Mono",sans-serif;color:var(--l-label);letter-spacing:.02em}
   #laudoView .lrun{display:none}
   @media print{
     @page{margin:12mm 13mm 14mm}
     body.print-laudo>*{display:none!important}
     body.print-laudo #laudo{display:block!important}
-    #laudo{font:400 10.5px/1.55 "Open Sans","Segoe UI",sans-serif;color:var(--l-text);background:#fff;
+    #laudo{font:400 10.5px/1.55 "Archivo","Segoe UI",sans-serif;color:var(--l-text);background:#fff;
       -webkit-print-color-adjust:exact;print-color-adjust:exact}
     #laudo .lcard{box-shadow:none}
     #laudo h3{page-break-after:avoid}                                        /* título não fica órfão */
     #laudo .prow,#laudo .subs,#laudo .subcard,#laudo .lbar,#laudo .lass,#laudo .kv,#laudo .negclausula-item,#laudo .negdisclaimer-print{page-break-inside:avoid} /* blocos atômicos não partem */
     #laudo .foot{display:none}                                               /* no PDF o rodapé é o .lrun repetido */
     #laudo .lrun{position:fixed;bottom:-9mm;left:0;right:0;display:flex;justify-content:space-between;
-      font:600 7.5pt/1 "Open Sans",sans-serif;color:var(--l-label);border-top:.6pt solid var(--l-border);padding-top:4pt}
+      font:600 7.5pt/1 "JetBrains Mono",sans-serif;color:var(--l-label);border-top:.6pt solid var(--l-border);padding-top:4pt}
   }
   /* visão em tela do laudo (PWA standalone iOS) — mesma linguagem do PDF, em cards */
   #laudoView{position:fixed;inset:0;z-index:2100;background:var(--l-bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
   #laudoView[hidden]{display:none}
   #laudoView .lvbar{position:sticky;top:0;z-index:3;display:flex;gap:10px;align-items:center;justify-content:space-between;
     background:var(--l-ink);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
-    font:600 12px/1.4 "Open Sans","Segoe UI",sans-serif}
-  #laudoView .lvprint{border:0;background:var(--l-accent);color:#fff;font:700 14px/1 "Open Sans","Segoe UI",sans-serif;
+    font:600 12px/1.4 "Archivo","Segoe UI",sans-serif}
+  #laudoView .lvprint{border:0;background:var(--l-accent);color:#fff;font:700 14px/1 "Archivo","Segoe UI",sans-serif;
     padding:0 18px;min-height:44px;border-radius:9px;cursor:pointer}
   #laudoView .lvx{width:44px;height:44px;flex:none;border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}
   #laudoView .lvbody{max-width:780px;margin:0 auto;padding:22px 18px 48px;color:var(--l-text);background:var(--l-bg);
-    font:400 13.5px/1.55 "Open Sans","Segoe UI",system-ui,sans-serif}
+    font:400 13.5px/1.55 "Archivo","Segoe UI",system-ui,sans-serif}
   @media(max-width:640px){
     #laudoView .lrow{flex-direction:column}
     #laudoView .lrow>.lcard.foto{flex:auto}
