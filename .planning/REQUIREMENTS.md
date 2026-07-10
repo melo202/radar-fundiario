@@ -19,62 +19,62 @@
 
 ### Busca (campo-único inteligente)
 
-- [ ] **BUSCA-01**: Funções puras de matching/detecção com harness de teste (Node + fixtures) **antes** de qualquer mudança de comportamento
-- [ ] **BUSCA-02**: Caixa única `detectMode(texto)` detecta intenção (inscrição 14/10 díg · quadra+lote · endereço · prédio · setor) e dispara a busca certa
-- [ ] **BUSCA-03**: Chip de confirmação mostra o que foi entendido, tocável p/ corrigir (antes de disparar quando a confiança é baixa)
-- [ ] **BUSCA-04**: Setor embutido na frase ("marista quadra 128 lote 5")
-- [ ] **BUSCA-05**: Lembra o último setor usado e o assume quando a frase não traz setor
-- [ ] **BUSCA-06**: Desambiguação por chips na entrada ambígua ("135" = rua/quadra/inscrição)
-- [ ] **BUSCA-07**: Fuzzy corrigido — número por igualdade de dígitos antes de substring; rua por fronteira de palavra; ordenado por qualidade, selo "aproximado" no fallback (sem perder recall)
-- [ ] **BUSCA-08**: Estados de erro/vazio oferecem o próximo passo em 1 toque; placeholder com **exemplos tocáveis** (não texto explicativo longo)
-- [ ] **BUSCA-09**: Deep-link `?insc=` abre o imóvel no boot + botão "copiar link do imóvel"
-- [ ] **BUSCA-10**: Autocomplete de logradouro por dataset CNEFE destilado (~9,8k ruas, versionado offline)
-- [ ] **BUSCA-11**: Acessibilidade preservada — todo widget novo re-passa o checklist ARIA/teclado/iOS/`SEARCHTOKEN` da auditoria de 03/07 (gate de aceite)
-- [ ] **BUSCA-12**: Coordenação busca⇄ficha no desktop mapa-first não regride (guarda do hotfix `a7a4646`) + auditoria de correção dos dados da ficha em TODOS os modos contra o registro de origem
-- [ ] **BUSCA-13**: A caixa única aceita **coordenada ou link do Google Maps** colado (extrai lat/lon e cai no lote)
-- [ ] **BUSCA-14**: Busca por **voz** no mobile (Web Speech API; degrada silenciosamente onde não houver suporte) — P1
+- [x] **BUSCA-01**: Funções puras de matching/detecção com harness de teste (Node + fixtures) **antes** de qualquer mudança de comportamento
+- [x] **BUSCA-02**: Caixa única `detectMode(texto)` detecta intenção (inscrição 14/10 díg · quadra+lote · endereço · prédio · setor) e dispara a busca certa
+- [x] **BUSCA-03**: Chip de confirmação mostra o que foi entendido, tocável p/ corrigir (antes de disparar quando a confiança é baixa)
+- [x] **BUSCA-04**: Setor embutido na frase ("marista quadra 128 lote 5")
+- [x] **BUSCA-05**: Lembra o último setor usado e o assume quando a frase não traz setor
+- [x] **BUSCA-06**: Desambiguação por chips na entrada ambígua ("135" = rua/quadra/inscrição)
+- [x] **BUSCA-07**: Fuzzy corrigido — número por igualdade de dígitos antes de substring; rua por fronteira de palavra; ordenado por qualidade, selo "aproximado" no fallback (sem perder recall)
+- [x] **BUSCA-08**: Estados de erro/vazio oferecem o próximo passo em 1 toque; placeholder com **exemplos tocáveis** (não texto explicativo longo)
+- [x] **BUSCA-09**: Deep-link `?insc=` abre o imóvel no boot + botão "copiar link do imóvel"
+- [x] **BUSCA-10**: Autocomplete de logradouro por dataset CNEFE destilado (~9,8k ruas, versionado offline)
+- [x] **BUSCA-11**: Acessibilidade preservada — todo widget novo re-passa o checklist ARIA/teclado/iOS/`SEARCHTOKEN` da auditoria de 03/07 (gate de aceite)
+- [x] **BUSCA-12**: Coordenação busca⇄ficha no desktop mapa-first não regride (guarda do hotfix `a7a4646`) + auditoria de correção dos dados da ficha em TODOS os modos contra o registro de origem
+- [x] **BUSCA-13**: A caixa única aceita **coordenada ou link do Google Maps** colado (extrai lat/lon e cai no lote)
+- [x] **BUSCA-14**: Busca por **voz** no mobile (Web Speech API; degrada silenciosamente onde não houver suporte) — P1
 
 ### Ficha do imóvel = conclusão comercial (§6, §9, §17 do plano)
 
-- [ ] **FICHA-01**: A ficha reordena p/ conclusão-primeiro: identificação+localização → **faixa de valor em destaque** → score de oportunidade → score de confiança → leitura prática → ações → comparáveis+mapa → **dados técnicos em accordion** → metodologia/fontes no fim
-- [ ] **SCORE-01**: **Score de oportunidade** (0–100) determinístico e explicável, derivado da posição vs mediana da vizinhança / faixa estimada (mostra o "porquê", não só o número)
-- [ ] **SCORE-02**: **Score de confiança** (alta/média/baixa) determinístico pela completude dos dados (área, nº de comparáveis, imóvel atípico), com frase de "por quê"; o app **admite incerteza** — nada de falsa precisão
-- [ ] **LEIT-01**: **Leitura prática** em linguagem comercial (regra/template determinístico) — "alinhado à região, boa liquidez se área e conservação confirmarem", nunca jargão cru (mediana/percentil) na 1ª camada
-- [ ] **CMP-01**: Comparáveis com **conclusão primeiro** ("este imóvel está 8% abaixo da mediana da vizinhança"), estatística (mediana/Q1–Q3) recolhida em "ver metodologia"; cada comparação termina com ação (usar no relatório, copiar argumento, ver no mapa)
+- [x] **FICHA-01**: A ficha reordena p/ conclusão-primeiro: identificação+localização → **faixa de valor em destaque** → score de oportunidade → score de confiança → leitura prática → ações → comparáveis+mapa → **dados técnicos em accordion** → metodologia/fontes no fim
+- [x] **SCORE-01**: **Score de oportunidade** (0–100) determinístico e explicável, derivado da posição vs mediana da vizinhança / faixa estimada (mostra o "porquê", não só o número)
+- [x] **SCORE-02**: **Score de confiança** (alta/média/baixa) determinístico pela completude dos dados (área, nº de comparáveis, imóvel atípico), com frase de "por quê"; o app **admite incerteza** — nada de falsa precisão
+- [x] **LEIT-01**: **Leitura prática** em linguagem comercial (regra/template determinístico) — "alinhado à região, boa liquidez se área e conservação confirmarem", nunca jargão cru (mediana/percentil) na 1ª camada
+- [x] **CMP-01**: Comparáveis com **conclusão primeiro** ("este imóvel está 8% abaixo da mediana da vizinhança"), estatística (mediana/Q1–Q3) recolhida em "ver metodologia"; cada comparação termina com ação (usar no relatório, copiar argumento, ver no mapa)
 
 ### Camada de ação + WhatsApp + Captação (§11, §12, §13, §16)
 
-- [ ] **ACAO-01**: **Toda tela de resultado termina com uma ação útil** — aplica a "lei da tela": 1 ação principal em destaque, até 2 secundárias, resto em "Mais opções"
-- [ ] **ZAP-01**: Botões de **copiar p/ WhatsApp** em pt-BR impecável (soa como corretor, não robô): resumo, mensagem p/ proprietário, mensagem p/ comprador, argumento de preço, riscos/ressalvas
-- [ ] **SALV-01**: **Salvar oportunidade** + **histórico** de últimas consultas + **favoritos** em `localStorage` (allowlist de campos, sem PII de terceiros); reabrir o app mostra o mesmo
-- [ ] **CAPT-01**: **Modo captação** — a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up (tudo texto pronto p/ copiar)
+- [x] **ACAO-01**: **Toda tela de resultado termina com uma ação útil** — aplica a "lei da tela": 1 ação principal em destaque, até 2 secundárias, resto em "Mais opções"
+- [x] **ZAP-01**: Botões de **copiar p/ WhatsApp** em pt-BR impecável (soa como corretor, não robô): resumo, mensagem p/ proprietário, mensagem p/ comprador, argumento de preço, riscos/ressalvas
+- [x] **SALV-01**: **Salvar oportunidade** + **histórico** de últimas consultas + **favoritos** em `localStorage` (allowlist de campos, sem PII de terceiros); reabrir o app mostra o mesmo
+- [x] **CAPT-01**: **Modo captação** — a partir de um imóvel gera abordagem ao proprietário, script de ligação, checklist documental e tarefa de follow-up (tudo texto pronto p/ copiar)
 
 ### Documentos em 3 níveis (§10, §31)
 
-- [ ] **DOC-01**: Três saídas nomeadas corretamente — **Ficha rápida** (WhatsApp/apresentação), **Relatório de avaliação** (comercial, 10+ comparáveis), **Laudo/PTAM** (formal); a UI pergunta a **finalidade** primeiro e **recomenda** o documento adequado (reduz peso jurídico indevido)
-- [ ] **DOC-02**: Antes de gerar, um **painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) aparece; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
-- [ ] **DOC-03**: **Revisão/edição antes do PDF final** (dados sensíveis e textos principais editáveis); reusa o wizard atual, não recomeça do zero
+- [x] **DOC-01**: Três saídas nomeadas corretamente — **Ficha rápida** (WhatsApp/apresentação), **Relatório de avaliação** (comercial, 10+ comparáveis), **Laudo/PTAM** (formal); a UI pergunta a **finalidade** primeiro e **recomenda** o documento adequado (reduz peso jurídico indevido)
+- [x] **DOC-02**: Antes de gerar, um **painel de confiança + pendências** (área, conservação, documentação, nº de comparáveis) aparece; linguagem de responsabilidade ("faixa estimada", "recomenda-se confirmar")
+- [x] **DOC-03**: **Revisão/edição antes do PDF final** (dados sensíveis e textos principais editáveis); reusa o wizard atual, não recomeça do zero
 
 ### Documentos da negociação — minutas do negócio (extensão do plano)
 
 > Papelada real do corretor. Templates DETERMINÍSTICOS preenchidos com o imóvel (cadastro) + partes/valores digitados → minuta EDITÁVEL → PDF pt-BR com ressalvas. Reusa a infra de documento da Fase 11. Sempre "minuta" (nunca promete validade automática; registro em cartório/RGI é do usuário).
 
-- [ ] **NEG-01**: Gerar **Proposta de Compra e Venda** (intenção de compra) — pré-preenchida com o imóvel + partes/valor/condições/prazo de validade; minuta editável → PDF
-- [ ] **NEG-02**: Gerar **Termo de Autorização/Exclusividade de Venda** (proprietário ↔ corretor) — imóvel + proprietário + corretor (CRECI) + prazo + % de comissão; liga ao Modo Captação (NEG ← CAPT-01); minuta editável → PDF
-- [ ] **NEG-03**: Gerar **Contrato de Compra e Venda** (minuta) — vendedor/comprador, descrição do imóvel + matrícula/RGI, preço/forma de pagamento, cláusulas padrão; disclaimer forte (revisão jurídica + registro em cartório); minuta editável → PDF
-- [ ] **NEG-04** (opcional/best-effort): **OCR da escritura/matrícula** client-side (Tesseract.js WASM — determinístico, NÃO LLM) para pré-preencher matrícula/partes/descrição do contrato; o corretor SEMPRE revisa/corrige; fallback = digitar/colar texto; degrada silenciosamente onde o OCR não estiver disponível
+- [x] **NEG-01**: Gerar **Proposta de Compra e Venda** (intenção de compra) — pré-preenchida com o imóvel + partes/valor/condições/prazo de validade; minuta editável → PDF
+- [x] **NEG-02**: Gerar **Termo de Autorização/Exclusividade de Venda** (proprietário ↔ corretor) — imóvel + proprietário + corretor (CRECI) + prazo + % de comissão; liga ao Modo Captação (NEG ← CAPT-01); minuta editável → PDF
+- [x] **NEG-03**: Gerar **Contrato de Compra e Venda** (minuta) — vendedor/comprador, descrição do imóvel + matrícula/RGI, preço/forma de pagamento, cláusulas padrão; disclaimer forte (revisão jurídica + registro em cartório); minuta editável → PDF
+- [x] **NEG-04** (opcional/best-effort): **OCR da escritura/matrícula** client-side (Tesseract.js WASM — determinístico, NÃO LLM) para pré-preencher matrícula/partes/descrição do contrato; o corretor SEMPRE revisa/corrige; fallback = digitar/colar texto; degrada silenciosamente onde o OCR não estiver disponível
 
 ### Prédio como objeto comercial (§7)
 
-- [ ] **PRED-01**: **Resumo do prédio** antes da lista — nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio)
-- [ ] **PRED-02**: Ordenação (maior oportunidade / menor valor / maior área) e filtros (ocultar garagem/box, aptos prováveis, buscar unidade), com marcar unidades p/ comparação
+- [x] **PRED-01**: **Resumo do prédio** antes da lista — nº de unidades, área média, venal médio, valor estimado médio e **faixa** do edifício, com ações (ver unidades, gerar análise do prédio)
+- [x] **PRED-02**: Ordenação (maior oportunidade / menor valor / maior área) e filtros (ocultar garagem/box, aptos prováveis, buscar unidade), com marcar unidades p/ comparação
 
 ### Direção visual, pinos, motion & descoberta progressiva (§8, §14, §15, §19, §28, §29, §30)
 
-- [ ] **VIS-01**: **Refino visual clean** mantendo a identidade cartográfica — mais respiro entre blocos, menos textura/borda/caixa, hierarquia por tamanho/contraste/espaço; **cor reservada a status** (verde=oportunidade, amarelo=atenção, vermelho=risco), sem óxido parecendo alerta constante
-- [ ] **PIN-01**: **Pinos semânticos** no mapa — verde (oportunidade/abaixo da média), amarelo (dados incompletos/incerto), vermelho (risco/acima da média), dourado (Caixa), cinza (sem dados); clicar abre painel com valor+score+próximas ações
-- [ ] **MOT-01**: **Motion de busca em etapas** (Localizando → Consultando cadastro → Calculando estimativa → Buscando comparáveis → Preparando mapa) + **skeleton** em listas/cards — performance percebida, não spinner genérico (respeita `prefers-reduced-motion`)
-- [ ] **DESC-01**: **Descoberta progressiva** — tela inicial mostra a promessa + busca única + 3 benefícios (avaliar / achar oportunidade / gerar ficha); funções aparecem conforme o resultado; onboarding ≤3 telas; área discreta "O que o Radar faz"
+- [x] **VIS-01**: **Refino visual clean** mantendo a identidade cartográfica — mais respiro entre blocos, menos textura/borda/caixa, hierarquia por tamanho/contraste/espaço; **cor reservada a status** (verde=oportunidade, amarelo=atenção, vermelho=risco), sem óxido parecendo alerta constante
+- [x] **PIN-01**: **Pinos semânticos** no mapa — verde (oportunidade/abaixo da média), amarelo (dados incompletos/incerto), vermelho (risco/acima da média), dourado (Caixa), cinza (sem dados); clicar abre painel com valor+score+próximas ações
+- [x] **MOT-01**: **Motion de busca em etapas** (Localizando → Consultando cadastro → Calculando estimativa → Buscando comparáveis → Preparando mapa) + **skeleton** em listas/cards — performance percebida, não spinner genérico (respeita `prefers-reduced-motion`)
+- [x] **DESC-01**: **Descoberta progressiva** — tela inicial mostra a promessa + busca única + 3 benefícios (avaliar / achar oportunidade / gerar ficha); funções aparecem conforme o resultado; onboarding ≤3 telas; área discreta "O que o Radar faz"
 
 ### Linguagem — português impecável (§2, §26) — gate de release
 
@@ -126,19 +126,19 @@
 | Requirement | Fase | Status |
 |-------------|------|--------|
 | NOMES-01/02/03/04 | 7 | ✅ Done |
-| MALHA-01 | 7 | Pending (07-03) |
-| BUSCA-01..14 | 8 | Pending |
-| FICHA-01, SCORE-01/02, LEIT-01, CMP-01 | 9 | Pending |
-| ACAO-01, ZAP-01, SALV-01, CAPT-01 | 10 | Pending |
-| DOC-01/02/03 | 11 | Pending |
-| NEG-01/02/03/04 | 11.1 | Pending |
-| PRED-01/02 | 12 | Pending |
-| VIS-01, PIN-01, MOT-01, DESC-01 | 13 | Pending |
-| LING-01 | 14 | Complete |
-| TERR-01/02/03 | 15 | Pending |
-| TERR-04/05 | 16 | Pending |
-| TERR-06/07 | 17 | Pending |
-| PD-01/02/03/04/05 | 18 | Pending |
+| MALHA-01 | 7 | ✅ Done |
+| BUSCA-01..14 | 8 | ✅ Done |
+| FICHA-01, SCORE-01/02, LEIT-01, CMP-01 | 9 | ✅ Done |
+| ACAO-01, ZAP-01, SALV-01, CAPT-01 | 10 | ✅ Done |
+| DOC-01/02/03 | 11 | ✅ Done |
+| NEG-01/02/03/04 | 11.1 | ✅ Done |
+| PRED-01/02 | 12 | ✅ Done |
+| VIS-01, PIN-01, MOT-01, DESC-01 | 13 | ✅ Done |
+| LING-01 | 14 | ✅ Done (re-varredura F15-18 em 2026-07-10) |
+| TERR-01/02/03 | 15 | ✅ Done |
+| TERR-04/05 | 16 | ✅ Done |
+| TERR-06/07 | 17 | ✅ Done |
+| PD-01/02/03/04/05 | 18 | ✅ Done |
 
 **Coverage:**
 - Fase 7 (Fundação de Dados): NOMES-01/02/03/04 ✅, MALHA-01 (07-03 pendente)
