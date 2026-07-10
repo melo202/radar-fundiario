@@ -462,6 +462,26 @@ export const FIXTURES = {
     mil: { valor: 1000, expectContains: ["mil reais"], expectNotContains: ["um mil"] },
     nulo: { valor: null, expectEmpty: true },
     negativo: { valor: -500, expectEmpty: true }, // WR-01 (11.1-REVIEW): preço negativo não é válido — "" honesto, nunca Math.abs silencioso
+
+    // F5 (auditoria Fable 5) — família do extenso: C-10 (escala bilhão), DOC-01 (gramática do "e"
+    // entre grupos de escala), DOC-02 (coerência numeral↔extenso no arredondamento) e C-11
+    // ("de reais" nunca com centavos). São os casos que teriam pego os 4 defeitos.
+    // C-10: >= 1 bilhão — antes saía "R$ 1.000.000.000,00 ( milhões de reais)" (extenso vazio).
+    umBilhao: { valor: 1000000000, expectContains: ["R$ 1.000.000.000,00", "um bilhão de reais"], expectNotContains: ["( milhões", "( reais"] },
+    doisBilhoesEMeio: { valor: 2500000000, expectContains: ["R$ 2.500.000.000,00", "dois bilhões e quinhentos milhões de reais"], expectNotContains: ["( milhões"] },
+    // borda imediatamente abaixo do bilhão: grupos justapostos, sem "e" entre milhões/mil/centenas.
+    bordaBilhao: { valor: 999999999, expectContains: ["R$ 999.999.999,00", "novecentos e noventa e nove milhões novecentos e noventa e nove mil novecentos e noventa e nove reais"], expectNotContains: ["milhões e", "mil e novecentos"] },
+    // DOC-01: "e" liga APENAS o último grupo e só quando ele é <100 ou centena exata.
+    umMilhaoQuebrado: { valor: 1234567, expectContains: ["R$ 1.234.567,00", "um milhão duzentos e trinta e quatro mil quinhentos e sessenta e sete reais"], expectNotContains: ["milhão e", "mil e quinhentos"] },
+    milQuebrado: { valor: 1234, expectContains: ["mil duzentos e trinta e quatro reais"], expectNotContains: ["mil e duzentos"] },
+    milEUm: { valor: 1001, expectContains: ["mil e um reais"] }, // <100: o "e" é obrigatório
+    doisMilhoesEMeio: { valor: 2500000, expectContains: ["dois milhões e quinhentos mil reais"], expectNotContains: ["de reais"] }, // centena exata: "e" obrigatório; não é múltiplo de 1e6 → sem "de"
+    // DOC-02: arredondamento a 2 casas ANTES de separar inteiro — numeral e extenso derivam do MESMO valor-base.
+    arredondaCoerente: { valor: 999995.999, expectContains: ["R$ 999.996,00", "novecentos e noventa e nove mil novecentos e noventa e seis reais"], expectNotContains: ["noventa e cinco reais"] },
+    // C-11: "de reais" afirma quantia redonda — nunca quando há centavos.
+    milhaoComCentavos: { valor: 1000000.5, expectContains: ["R$ 1.000.000,50", "um milhão"], expectNotContains: ["de reais"] },
+    // guard honesto: fora da escala representável (>= 1e15), "" — nunca parêntese quebrado.
+    foraDeEscala: { valor: 1e15, expectEmpty: true },
   },
 
   // resumoPredio (Fase 12, 12-01, PRED-01): amostra vazia/parcial/completa — honesto, nunca NaN.

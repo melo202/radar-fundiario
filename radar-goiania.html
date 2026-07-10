@@ -1969,17 +1969,25 @@ const CAMPO_VAZIO="________";
 const DISCLAIMER_NEG="Minuta para conferência das partes — recomenda-se revisão por advogado; a transmissão da propriedade exige escritura pública (quando aplicável) e registro na matrícula do imóvel no cartório de registro de imóveis competente.";
 
 /* extensoInteiro(n): escreve por extenso (pt-BR) a parte INTEIRA de um numero >=0, sem casas
-   decimais — tabela de unidades/dezenas/centenas + escala (mil/milhao), cobrindo valores de
-   imovel (ate centenas de milhoes). Fronteiras travadas por fixture (11.1-01-PLAN.md fix
-   plan-check): 100="cem" (nunca "cento"), 1000="mil" (nunca "um mil"), 1000000="um milhão"
-   (singular), 2000000+="N milhões" (plural). Funcao auxiliar interna, nao exportada. */
+   decimais — tabela de unidades/dezenas/centenas + escalas mil/milhao/bilhao/trilhao (C-10/F5:
+   a versao anterior parava em milhoes e indexava CEM fora do range >= 1 bilhao, devolvendo
+   extenso vazio). Fronteiras travadas por fixture (11.1-01-PLAN.md fix plan-check + F5):
+   100="cem" (nunca "cento"), 1000="mil" (nunca "um mil"), 1000000="um milhão" (singular),
+   2000000+="N milhões" (plural). Gramatica do conector "e" entre grupos de escala (DOC-01/F5):
+   o "e" liga APENAS o ultimo grupo, e somente quando ele e <100 ou centena exata ("mil e um",
+   "dois milhões e quinhentos mil"); nos demais casos os grupos sao justapostos ("um milhão
+   duzentos e trinta e quatro mil quinhentos e sessenta e sete"). Fora da escala representavel
+   (>= 1e15) retorna "" — o chamador trata como caminho honesto (nunca extenso parcial).
+   Funcao auxiliar interna, nao exportada. */
 function extensoInteiro(n){
   if(n===0) return "zero";
+  if(n>=1e15) return ""; // acima de 999 trilhoes: fora do dominio — "" honesto, nunca extenso parcial
   const UNI=["","um","dois","três","quatro","cinco","seis","sete","oito","nove"];
   const DEZ10_19=["dez","onze","doze","treze","catorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
   const DEZ=["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
   const CEM=["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
   // ate 999 -> string (sem conector de escala; "e" interno entre centena/dezena/unidade, regra (d)).
+  // So recebe 0-999 (garantido pela decomposicao abaixo) — CEM nunca e indexado fora do range.
   function ate999(n){
     if(n===0) return "";
     if(n===100) return "cem"; // regra (a): 100 = "cem", nunca "cento".
@@ -1996,45 +2004,51 @@ function extensoInteiro(n){
     }
     return partes.join(" e "); // regra (d): conector "e" entre centena e dezena/unidade.
   }
-  const milhoes=Math.floor(n/1000000);
-  const milhares=Math.floor((n%1000000)/1000);
-  const resto=n%1000;
-  const blocos=[];
-  if(milhoes>0){
-    // regra (c): 1.000.000 = "um milhão" (singular); 2.000.000+ = "N milhões" (plural).
-    blocos.push(milhoes===1 ? "um milhão" : ate999(milhoes)+" milhões");
+  /* decomposicao em grupos de escala; cada grupo guarda a QUANTIDADE (1-999) para a regra do "e". */
+  const grupos=[];
+  const ESCALAS=[[1e12,"trilhão","trilhões"],[1e9,"bilhão","bilhões"],[1e6,"milhão","milhões"]];
+  let resto=n;
+  for(const [base,sing,plur] of ESCALAS){
+    const q=Math.floor(resto/base); resto%=base;
+    // regra (c): quantidade 1 = singular ("um milhão"); 2+ = plural ("N milhões").
+    if(q>0) grupos.push({q, txt: q===1 ? "um "+sing : ate999(q)+" "+plur});
   }
-  if(milhares>0){
-    // regra (b): 1000 = "mil" (NUNCA "um mil") — só escreve o numeral quando milhares!==1.
-    blocos.push(milhares===1 ? "mil" : ate999(milhares)+" mil");
-  }
-  if(resto>0 || blocos.length===0){
-    blocos.push(ate999(resto));
-  }
-  // conector "e" final entre o ultimo bloco de escala e o resto (quando resto<100 e ha bloco anterior).
-  if(blocos.length>1 && resto>0 && resto<100){
-    const ultimo=blocos.pop();
-    return blocos.join(" e ")+" e "+ultimo;
-  }
-  return blocos.join(" e ");
+  const milhares=Math.floor(resto/1000);
+  const centenas=resto%1000;
+  // regra (b): 1000 = "mil" (NUNCA "um mil") — só escreve o numeral quando milhares!==1.
+  if(milhares>0) grupos.push({q:milhares, txt: milhares===1 ? "mil" : ate999(milhares)+" mil"});
+  if(centenas>0) grupos.push({q:centenas, txt: ate999(centenas)});
+  if(grupos.length===1) return grupos[0].txt;
+  const ultimo=grupos[grupos.length-1];
+  const cabeca=grupos.slice(0,-1).map(g=>g.txt).join(" ");
+  // DOC-01/F5: "e" so antes do ultimo grupo, quando ele e dezena/unidade (<100) ou centena exata.
+  return (ultimo.q<100 || ultimo.q%100===0) ? cabeca+" e "+ultimo.txt : cabeca+" "+ultimo.txt;
 }
 
 /* numeroPorExtenso(valor): formato hibrido "R$ X.XXX,XX (extenso reais)" — valor null/NaN
    retorna string vazia (nunca "R$ NaN"/"R$ null"). Centavos NAO sao escritos por extenso (so a
-   parte inteira em portugues) — o valor formatado em R$ traz os centavos numericos. Regra (c):
-   "de reais" apos milhão/milhões quando NAO ha casa de milhar/centena ("um milhão DE reais", mas
-   "um milhão e cem mil reais" sem "de"). */
+   parte inteira em portugues) — o valor formatado em R$ traz os centavos numericos.
+   Coerencia numeral<->extenso (DOC-02/F5): a moeda e arredondada a 2 casas UMA vez
+   (Math.round(valor*100)) e numeral e extenso derivam AMBOS dessa mesma base — o numeral
+   formatado nunca diverge do extenso (o bug era Math.floor no extenso vs toLocaleString
+   arredondando o numeral: "R$ 1.000,00 (novecentos e noventa e nove reais)").
+   Regra (c) + C-11/F5: "de reais" somente quando o inteiro e multiplo exato de milhao E nao ha
+   centavos ("um milhão DE reais", mas "R$ 1.000.000,50 (um milhão reais)" — o "de reais" afirma
+   quantia redonda e nunca acompanha centavos).
+   Guard honesto (C-10/F5): extenso vazio (fora de escala) retorna "" — nunca parentese quebrado. */
 function numeroPorExtenso(valor){
   if(valor==null||isNaN(valor)) return "";
   /* WR-01 (11.1-REVIEW): valor negativo NAO e preco valido — retorna "" (mesmo caminho honesto
      do null) em vez do Math.abs silencioso que renderizava o valor positivo sem sinal. */
   if(Number(valor)<0) return "";
-  const n=Number(valor);
-  const inteiro=Math.floor(n);
+  const centavosTotais=Math.round(Number(valor)*100); // base UNICA da moeda (2 casas)
+  const n=centavosTotais/100;
+  const inteiro=Math.trunc(n);
+  const temCentavos=centavosTotais%100!==0;
   const valorFmt="R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const ext=extensoInteiro(inteiro);
-  // "de reais" somente quando o valor é um multiplo exato de milhao (sem milhares/resto) — regra (c).
-  const somenteMilhoes=inteiro>=1000000 && (inteiro%1000000===0);
+  if(!ext) return ""; // fora de escala (>= 1e15): mesmo caminho honesto do null/negativo
+  const somenteMilhoes=inteiro>=1000000 && (inteiro%1000000===0) && !temCentavos;
   const reaisTxt=somenteMilhoes ? "de reais" : "reais";
   return valorFmt+" ("+ext+" "+reaisTxt+")";
 }
