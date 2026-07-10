@@ -2366,14 +2366,23 @@ function leituraDetector(item){
    RADAR_PURE (Planos 02/03) — aqui só a lógica de decisão, 100% testável via node:vm. */
 const CADERNO_ALLOW=["ci","nrinscr","cdbairro","nrquadra","nrlote","vlvenal","areaedif","areaterr","vlimp98","dtinclusao","uso","endereco","tag","nota","status","savedAt","updatedAt"];
 const CADERNO_STATUS=["nao_visitado","visitei","conversei","recusou","fechou"]; /* enum fixo, ordem = ciclo de campo */
+/* CADERNO_CI_RE (CR-01, 16-REVIEW.md): forma esperada de `ci`/`nrinscr` do cadastro — dígitos/
+   letras/pontuação cadastral, até 40 chars. Defesa em profundidade: mesmo que o render (Task 2)
+   nunca mais interpole `ci` numa string JS inline (fix já aplicado em renderCadernoBlock/handlers),
+   um `ci` com aspas/`<script>` nunca deveria sobreviver a sanitizeCaderno vindo de um arquivo
+   importado — rejeita/descarta o item inteiro em vez de tentar "limpar" o valor. */
+const CADERNO_CI_RE=/^[\w.\-\/]{1,40}$/;
 
 /* sanitizeCaderno(obj): ALLOWLIST POSITIVA (Pitfall 2, 16-RESEARCH.md) — só os campos de
    CADERNO_ALLOW sobrevivem; nunca `delete` de uma lista negra (padrão SENS/sanitiza, 1221-1222,
    não reusado aqui de propósito: um campo sensível novo do endpoint NUNCA passaria por padrão
-   nesta allowlist, fail-safe). */
+   nesta allowlist, fail-safe). CR-01 (16-REVIEW.md): além da allowlist de CHAVE, `ci` agora também
+   tem o VALOR validado — fora do formato cadastral (CADERNO_CI_RE) é descartado (out.ci fica
+   undefined, o item some do resultado — nunca chega ao DOM/onclick inline). */
 function sanitizeCaderno(obj){
   const out={};
   CADERNO_ALLOW.forEach(k=>{if(obj&&obj[k]!==undefined)out[k]=obj[k];});
+  if(out.ci!=null&&!CADERNO_CI_RE.test(String(out.ci)))delete out.ci;
   return out;
 }
 
@@ -2384,12 +2393,15 @@ function statusValido(s){
 
 /* validarImportCaderno(json): parseia (string ou já-array); nunca confia no arquivo externo —
    valida shape (Array) e aplica sanitizeCaderno a CADA item antes de aceitar; item sem `ci`
-   (chave primária do store) é descartado, nunca aceito. */
+   (chave primária do store) é descartado, nunca aceito. CR-01 (16-REVIEW.md): sanitizeCaderno pode
+   agora ZERAR `ci` (formato fora de CADERNO_CI_RE, ex.: aspas/`<script>` de um `ci` malicioso) —
+   filtra de novo DEPOIS do sanitize, nunca deixa passar um item cujo `ci` sobreviveu à allowlist de
+   chave mas foi descartado pela validação de forma. */
 function validarImportCaderno(json){
   let arr;
   try{arr=typeof json==="string"?JSON.parse(json):json;}catch(e){return {ok:false,erro:"json"};}
   if(!Array.isArray(arr))return {ok:false,erro:"shape"};
-  const itens=arr.filter(o=>o&&o.ci!=null).map(sanitizeCaderno);
+  const itens=arr.filter(o=>o&&o.ci!=null).map(sanitizeCaderno).filter(o=>o.ci!=null);
   return {ok:true,itens};
 }
 // RADAR_PURE_END
@@ -4898,7 +4910,7 @@ async function renderCadernoBlock(){
     const notaPrevTxt=it.nota?String(it.nota).slice(0,60):"";
     const statusChips=CADERNO_STATUS.map(s=>{
       const ativo=it.status===s;
-      return `<button type="button" class="${s==='fechou'?'is-fechou':''}" aria-pressed="${ativo}" onclick="cadernoStatusUI(this,'${esc(it.ci)}','${s}')">${CADERNO_STATUS_LBL[s]}</button>`;
+      return `<button type="button" class="${s==='fechou'?'is-fechou':''}" aria-pressed="${ativo}" onclick="cadernoStatusUI(this,'${s}')">${CADERNO_STATUS_LBL[s]}</button>`;
     }).join("");
     return `<details class="cadbook-item" data-ci="${esc(it.ci)}">
       <summary>
@@ -4909,9 +4921,9 @@ async function renderCadernoBlock(){
       </summary>
       <div class="cadbook-editor">
         <div class="cadbook-statuschips" role="group" aria-label="Status do lote">${statusChips}</div>
-        <input type="text" class="cadbook-tag" maxlength="40" placeholder="Tag (ex.: dono mora fora)" value="${esc(it.tag||"")}" onblur="cadernoTagUI(this,'${esc(it.ci)}')">
-        <textarea class="cadbook-nota" maxlength="500" rows="3" placeholder="Nota de campo — ex.: dono não atende, tentar de novo em 30 dias" onblur="cadernoNotaUI(this,'${esc(it.ci)}')">${esc(it.nota||"")}</textarea>
-        <button type="button" class="cadbook-rm" onclick="cadernoRemoverUI(this,'${esc(it.ci)}')">Remover do caderno</button>
+        <input type="text" class="cadbook-tag" maxlength="40" placeholder="Tag (ex.: dono mora fora)" value="${esc(it.tag||"")}" onblur="cadernoTagUI(this)">
+        <textarea class="cadbook-nota" maxlength="500" rows="3" placeholder="Nota de campo — ex.: dono não atende, tentar de novo em 30 dias" onblur="cadernoNotaUI(this)">${esc(it.nota||"")}</textarea>
+        <button type="button" class="cadbook-rm" onclick="cadernoRemoverUI(this)">Remover do caderno</button>
       </div>
     </details>`;
   }).join("");
@@ -4951,10 +4963,13 @@ function cadernoMaisUI(){
   CADERNO_PAGINA+=30;
   renderCadernoBlock();
 }
-/* cadernoStatusUI(btn,ci,status): autosave imediato ao clicar — atualiza SÓ o item aberto (chip +
+/* cadernoStatusUI(btn,status): autosave imediato ao clicar — atualiza SÓ o item aberto (chip +
    dot), sem full re-render (preserva o <details> aberto/scroll — mesma razão de cadernoNotaUI).
-   Sucesso é SILENCIOSO (sem toast, UI-SPEC §Copywriting); falha SEMPRE mostra toast (T-16-04). */
-function cadernoStatusUI(btn,ci,status){
+   Sucesso é SILENCIOSO (sem toast, UI-SPEC §Copywriting); falha SEMPRE mostra toast (T-16-04).
+   CR-01 (16-REVIEW.md): `ci` NUNCA mais chega por parâmetro interpolado em string JS inline — lido
+   do `data-ci` do `.cadbook-item` via `.closest()`, mesmo padrão de verNoMapa (4383). */
+function cadernoStatusUI(btn,status){
+  const ci=btn.closest(".cadbook-item").dataset.ci;
   cadernoAtualizar(ci,{status}).then(()=>{
     const item=btn.closest(".cadbook-item");if(!item)return;
     item.querySelectorAll(".cadbook-statuschips button").forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));
@@ -4962,13 +4977,17 @@ function cadernoStatusUI(btn,ci,status){
     if(dot)dot.classList.toggle("is-fechou",status==="fechou");
   }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
 }
-/* cadernoTagUI(el,ci): autosave no blur — tag não aparece na prévia do <summary>, sem update de DOM. */
-function cadernoTagUI(el,ci){
+/* cadernoTagUI(el): autosave no blur — tag não aparece na prévia do <summary>, sem update de DOM.
+   CR-01 (16-REVIEW.md): `ci` lido do data-ci do `.cadbook-item` pai, nunca interpolado inline. */
+function cadernoTagUI(el){
+  const ci=el.closest(".cadbook-item").dataset.ci;
   cadernoAtualizar(ci,{tag:el.value}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
 }
-/* cadernoNotaUI(el,ci): autosave no blur — atualiza a prévia da nota no <summary> sem full
-   re-render (evita fechar o <details> que o corretor acabou de editar). */
-function cadernoNotaUI(el,ci){
+/* cadernoNotaUI(el): autosave no blur — atualiza a prévia da nota no <summary> sem full
+   re-render (evita fechar o <details> que o corretor acabou de editar). CR-01 (16-REVIEW.md): `ci`
+   lido do data-ci do `.cadbook-item` pai, nunca interpolado inline. */
+function cadernoNotaUI(el){
+  const ci=el.closest(".cadbook-item").dataset.ci;
   const nota=el.value;
   cadernoAtualizar(ci,{nota}).then(()=>{
     const item=el.closest(".cadbook-item");if(!item)return;
@@ -4981,10 +5000,12 @@ function cadernoNotaUI(el,ci){
     }else if(prev)prev.remove();
   }).catch(()=>toast(ERRO_ESCRITA_CADERNO));
 }
-/* cadernoRemoverUI(btn,ci): duplo-toque de confirmação (UI-SPEC §Copywriting) — 1º toque muda o
+/* cadernoRemoverUI(btn): duplo-toque de confirmação (UI-SPEC §Copywriting) — 1º toque muda o
    texto do botão por 3s; 2º toque dentro da janela remove de fato. Sem modal (mesmo espírito leve
-   do app). Remoção É uma ação discreta -> toast de sucesso + re-render completo (item some). */
-function cadernoRemoverUI(btn,ci){
+   do app). Remoção É uma ação discreta -> toast de sucesso + re-render completo (item some).
+   CR-01 (16-REVIEW.md): `ci` lido do data-ci do `.cadbook-item` pai, nunca interpolado inline. */
+function cadernoRemoverUI(btn){
+  const ci=btn.closest(".cadbook-item").dataset.ci;
   if(btn.dataset.confirm==="1"){
     cadernoRemover(ci).then(()=>{
       toast("Removido do caderno.");

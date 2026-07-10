@@ -184,3 +184,23 @@ test("validarImportCaderno: item com PII (dtnascimen/cpf) e sanitizado antes de 
   assert.ok(!("cpf" in r.itens[0]));
   assert.equal(r.itens[0].ci, "333");
 });
+
+// CR-01 (16-REVIEW.md): esc(it.ci) interpolado dentro de string JS de onclick/onblur inline em
+// renderCadernoBlock() reabria o JS-string-breakout de 08-REVIEW.md CR-01 caso um `ci` malicioso
+// chegasse via import. O fix real vive no render/handlers (leem data-ci via .closest(), nao mais
+// recebem `ci` por parametro interpolado) — aqui cobrimos a DEFESA EM PROFUNDIDADE: nenhum `ci`
+// fora do formato cadastral (CADERNO_CI_RE) pode sobreviver a validarImportCaderno/sanitizeCaderno.
+test("validarImportCaderno/sanitizeCaderno: ci com aspas/<script> (JS-string-breakout) e REJEITADO — item inteiro descartado, nunca 'limpo'", () => {
+  const r = P.validarImportCaderno(CF.importItemCiMalicioso);
+  assert.equal(r.ok, true);
+  assert.equal(r.itens.length, 1, "os 2 itens com ci malicioso devem ser descartados; so o ci valido sobrevive");
+  assert.equal(r.itens[0].ci, "3020150346");
+  for (const item of r.itens) {
+    assert.ok(!/['"<>]/.test(String(item.ci)), "nenhum ci sobrevivente pode conter aspas ou < >");
+  }
+});
+
+test("sanitizeCaderno: ci fora do formato cadastral (aspas/script) faz o campo `ci` desaparecer do objeto sanitizado", () => {
+  const out = P.sanitizeCaderno({ ci: "x');alert(1);('", cdbairro: 16 });
+  assert.ok(!("ci" in out) || out.ci == null, "ci malicioso nunca deveria sobreviver, mesmo fora do fluxo de import");
+});

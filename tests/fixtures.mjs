@@ -945,6 +945,14 @@ export const FIXTURES = {
     ],
     importMalformado: "{isso nao e json valido",
     importItemSemCi: [{ cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 }], // sem `ci` -> descartado
+    // CR-01 (16-REVIEW.md): ci com aspas simples/duplas ou marcacao <script> — se sobrevivesse,
+    // quebraria o literal de string JS dentro de onclick/onblur inline em renderCadernoBlock().
+    // sanitizeCaderno deve REJEITAR o item inteiro (nunca "limpar" o valor e aceitar mesmo assim).
+    importItemCiMalicioso: [
+      { ci: "x');alert(document.cookie);('", cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 },
+      { ci: '10"><script>alert(1)</script>', cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 },
+      { ci: "3020150346", cdbairro: 16, vlvenal: 100000, areaedif: 100, areaterr: 100 }, // ci valido, no MESMO import — deve sobreviver
+    ],
     importItemComPII: [
       {
         ci: "333",
