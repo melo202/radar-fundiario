@@ -204,6 +204,13 @@ test("resolverZonaUI: AEIS presente -> badges.aeis===true; OOAU nunca vira badge
   assert.ok(!("ooau" in r.badges), "OOAU não está entre os 5 badges (aeis/apac/add/eixo/corredor)");
 });
 
+test("resolverZonaUI: WR-02 18-REVIEW.md — unidade resolvida É a ADD -> badges.add===false (não duplica a mesma info)", () => {
+  const r = P.resolverZonaUI(PF.respostas.addResolvido);
+  assert.equal(r.estado, "resolvido");
+  assert.equal(r.unidade.sigla, "ADD");
+  assert.equal(r.badges.add, false, "badges.add deveria ser suprimido quando a própria Unidade Territorial já é ADD");
+});
+
 test("resolverZonaUI é pura (mesmo array de entrada, mesmo resultado, sem rede)", () => {
   const r1 = P.resolverZonaUI(PF.respostas.aaResolvido);
   const r2 = P.resolverZonaUI(PF.respostas.aaResolvido);

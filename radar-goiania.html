@@ -2753,6 +2753,10 @@ function resolverZonaUI(respostas){
       if(r){unidade={sigla,nome:r.nome};regra=r;break;}
     }
   }
+  /* WR-02 18-REVIEW.md: badges.add é redundante quando a própria Unidade Territorial resolvida JÁ
+     é ADD (mesma resposta da layer `add` alimenta os dois) — suprime o badge para não duplicar a
+     mesma informação como "fato distinto" no accordion. */
+  badges.add=badges.add&&!(unidade&&unidade.sigla==="ADD");
   if(rejeitadas>0){
     return {estado:"parcial",macrozona,unidade,regra,badges};
   }

@@ -1222,6 +1222,12 @@ export const FIXTURES = {
           aeis: comFeature({ sigla: "AEIS", nm_des: "AREA ESPECIAL DE INTERESSE SOCIAL" }),
           ooau: comFeature({ nm_des: "OUTORGA ONEROSA DE ALTERACAO DE USO" }),
         }),
+        // WR-02 (18-REVIEW.md): unidade resolvida É a ADD (só a layer `add` intersectou) ->
+        // badges.add deveria ser suprimido (redundante com a própria Unidade Territorial).
+        addResolvido: baseTodasFulfilled({
+          macrozona: comFeature({ nm_mzo: "MACROZONA CONSTRUIDA" }),
+          add: comFeature({ sigla: "ADD", nm_des: "AREA DE DESACELERACAO DE DENSIDADE" }),
+        }),
       },
     };
   })(),
