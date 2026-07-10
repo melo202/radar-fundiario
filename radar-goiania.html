@@ -211,7 +211,7 @@
     color:var(--ink);font:600 13px/1 "Archivo";border-radius:2px;padding:0 12px;cursor:pointer}
   .bldg-toggle-provaveis[aria-pressed="true"]{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
   .bldg-buscaunidade{min-height:44px;width:100%;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
-    font:500 14px/1.3 "Archivo";border-radius:2px;padding:0 12px}
+    font:500 16px/1.3 "Archivo";border-radius:2px;padding:0 12px}/* D-03 (20): 16px evita auto-zoom no iOS */
   .card .unit{font:700 12px/1 "JetBrains Mono",monospace;color:var(--accent);letter-spacing:.02em;margin-bottom:4px}
   .go{width:100%;background:var(--accent);color:#fff;border:0;font:700 14px/1 "Archivo";letter-spacing:.02em;
     padding:13px;border-radius:2px;cursor:pointer;box-shadow:var(--elev-1);transition:transform .08s ease,background .15s ease}
@@ -823,8 +823,8 @@
   #cadernoBlock{display:none}
   .panel:has(#results .empty) #cadernoBlock{display:block}
   .cadbook-filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .cadbook-filtros select{min-height:44px;font:500 13px/1.3 "Archivo";padding:8px;border-radius:2px;
-    border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+  .cadbook-filtros select{min-height:44px;font:500 16px/1.3 "Archivo";padding:8px;border-radius:2px;
+    border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}/* D-03 (20): 16px evita auto-zoom no iOS */
   .cadbook-item{border-top:1px solid var(--line)}
   .cadbook-item:first-child{border-top:0}
   .cadbook-item>summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 4px;
@@ -844,10 +844,10 @@
     background:var(--paper);font:600 12px/1 "Archivo";color:var(--ink);cursor:pointer;min-height:44px}
   .cadbook-statuschips button[aria-pressed="true"]{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
   .cadbook-statuschips button.is-fechou[aria-pressed="true"]{background:var(--status-bom);color:#fff;border-color:var(--status-bom)}
-  .cadbook-tag{width:100%;min-height:44px;font:500 13px/1.3 "Archivo";padding:8px;border-radius:2px;
-    border:1px solid var(--line);background:var(--paper);color:var(--ink);box-sizing:border-box}
-  .cadbook-nota{width:100%;min-height:80px;font:500 13px/1.5 "Archivo";padding:8px;border-radius:2px;
-    border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical;box-sizing:border-box}
+  .cadbook-tag{width:100%;min-height:44px;font:500 16px/1.3 "Archivo";padding:8px;border-radius:2px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);box-sizing:border-box}/* D-03 (20): 16px evita auto-zoom no iOS */
+  .cadbook-nota{width:100%;min-height:80px;font:500 16px/1.5 "Archivo";padding:8px;border-radius:2px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical;box-sizing:border-box}/* D-03 (20): 16px evita auto-zoom no iOS */
   .cadbook-rm{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
     background:transparent;color:var(--status-risco);font:600 12px/1 "Archivo";cursor:pointer;align-self:flex-start}
   .cadbook-export-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
