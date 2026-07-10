@@ -3665,7 +3665,7 @@ function renderDetectorLista(cand,scan){
      detectarSubutilizados (slice), então bater exatamente nele é o sinal disponível de que a
      lista real de candidatos pode ser maior (16-RESEARCH.md Q2/Discretion). */
   const trunc=TERR_DETECTOR_CAND.length>=DETECTOR_LIMITE
-    ? '<div class="terrdet-trunc">Mostrando os 50 lotes mais subutilizados desta amostra.</div>' : "";
+    ? `<div class="terrdet-trunc">Mostrando os ${DETECTOR_LIMITE} lotes mais subutilizados desta amostra.</div>` : ""; // IN-02 (16-REVIEW.md): interpola DETECTOR_LIMITE em vez de hardcodar "50"
   const rows=TERR_DETECTOR_CAND.map((a,i)=>{
     const q=clean(a.nrquadra),l=clean(a.nrlote);
     const addr=(q||l)?("Quadra "+esc(q||"—")+" · Lote "+esc(l||"—")):"—";
