@@ -5275,9 +5275,19 @@ function verNoMapa(ci){
   if(!a){toast("Este prédio não tem coordenada no cadastro.");return;}
   const ll=toWGS(a.x_coord,a.y_coord);
   const go=()=>{map.setView(ll,18);
-    const mk=markers[LAST.indexOf(a)];
+    const idx=LAST.indexOf(a), mk=markers[idx];
     if(mk){mk.setStyle({radius:13,fillColor:"#c9691f"});
-      setTimeout(()=>{try{mk.setStyle({radius:8,fillColor:"#b5451f"});}catch(e){}},1300);}};
+      setTimeout(()=>{try{
+        /* WR-02 (13-REVIEW.md): restaura o estilo REAL do status (mesma fonte de plot()/pick(),
+           bestStatusPorCi sobre LAST) em vez do "#b5451f/raio 8" fixo pré-Fase-13, que deixava o
+           pino permanentemente vermelho/errado após o flash. Se ainda estiver SELECIONADO, mantém
+           o destaque laranja de seleção. */
+        if(idx===sel){mk.setStyle({radius:12,fillColor:"#c9691f"});return;}
+        const cci=clean(a.ci), predio=(LAST||[]).filter(x=>clean(x.ci)===cci).length>1;
+        const status=predio?bestStatusPorCi(LAST||[])[cci]:statusPino(a);
+        const style=PINO_STYLE[status];
+        mk.setStyle({radius:style.radius,fillColor:style.fillColor});
+      }catch(e){}},1300);}};
   if(isMobile()){setView("mapa");setTimeout(go,80);}else go(); /* espera o mapa remedir ao voltar a ficar visível */
 }
 
