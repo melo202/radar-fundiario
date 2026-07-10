@@ -2637,6 +2637,62 @@ function criterioDetectorPD(areaedif,areaterr,potencialPD){
   if(!(at>0))return null;
   return {razao:ae/at,criterio:"terreno"};
 }
+/* resolverZonaUI(respostas): monta o estado do accordion "Urbanístico" (PD-01/03) a partir das 9
+   respostas da bateria point-in-polygon, formato Promise.allSettled — uma entrada por layer de
+   PD_LAYERS: {layer, status:'fulfilled'|'rejected', value}. PURA (sem rede). 5 dos 6 estados do
+   contrato (o 6º, "carregando", é decidido pelo chamador ANTES de ter qualquer resposta):
+   - "erro": as 9 falharam
+   - "parcial": mix de falha/sucesso (mantém os campos que resolveram)
+   - "rural": macrozona resolvida e NÃO é a Macrozona Construída
+   - "resolvido": macrozona Construída + alguma das layers AA/ADD/AOS intersectou
+   - "resolvido_sem_unidade": macrozona Construída, mas NENHUMA das layers AA/ADD/AOS intersectou
+     (GUARD DO 6º ESTADO/BLOCKER 2 — regra é SEMPRE PD_MZC_BASICO aqui, nunca pdRegrasDaZona(null)). */
+function resolverZonaUI(respostas){
+  const arr=respostas||[];
+  const byLayer={};
+  arr.forEach(r=>{byLayer[r.layer]=r;});
+  const total=arr.length;
+  const rejeitadas=arr.filter(r=>r.status==="rejected").length;
+  if(total>0&&rejeitadas===total){
+    return {estado:"erro",macrozona:null,unidade:null,regra:null,badges:{aeis:false,apac:false,add:false,eixo:false,corredor:false}};
+  }
+  function temFeature(key){
+    const r=byLayer[key];
+    return !!(r&&r.status==="fulfilled"&&r.value&&Array.isArray(r.value.features)&&r.value.features.length>0);
+  }
+  function primeiraFeature(key){
+    return temFeature(key)?(byLayer[key].value.features[0].attributes||{}):null;
+  }
+  const macAttrs=primeiraFeature("macrozona");
+  const macrozona=macAttrs?(macAttrs.nm_mzo||macAttrs.nm_des||macAttrs.sigla||null):null;
+  const construida=!!(macrozona&&String(macrozona).toUpperCase().includes("CONSTRU"));
+  const badges={
+    aeis:temFeature("aeis"),
+    apac:temFeature("apac"),
+    add:temFeature("add"),
+    eixo:temFeature("eixo"),
+    corredor:temFeature("corredor"),
+  }; // OOAU (layer 32) é consultada mas NUNCA vira badge (18-UI-SPEC)
+  let unidade=null,regra=null;
+  for(const key of ["aa","add","aos"]){
+    if(temFeature(key)){
+      const attrs=primeiraFeature(key);
+      const sigla=(attrs&&attrs.sigla)?String(attrs.sigla).toUpperCase():key.toUpperCase();
+      const r=pdRegrasDaZona(sigla);
+      if(r){unidade={sigla,nome:r.nome};regra=r;break;}
+    }
+  }
+  if(rejeitadas>0){
+    return {estado:"parcial",macrozona,unidade,regra,badges};
+  }
+  if(macrozona&&!construida){
+    return {estado:"rural",macrozona,unidade:null,regra:null,badges:{aeis:false,apac:false,add:false,eixo:false,corredor:false}};
+  }
+  if(unidade){
+    return {estado:"resolvido",macrozona,unidade,regra,badges};
+  }
+  return {estado:"resolvido_sem_unidade",macrozona,unidade:null,regra:PD_MZC_BASICO,badges};
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -3510,6 +3566,33 @@ async function territorioScan(cdbairroRaw){
   return TERRCACHE[key];
 }
 // TERR_NET_END
+
+// PD_NET_START — consulta point-in-polygon do Plano Diretor por lote (Fase 18, 18-01, PD-01):
+// bateria de 9 queries em paralelo contra o Modelo Espacial (produção), Promise.allSettled +
+// resolverZonaUI (RADAR_PURE), cache de sessão por `ci` (dedupe, nunca avalanche no endpoint
+// frágil). LAZY — só é chamada pela UI do plano 02 (nunca em varredura de setor).
+// Testado por tests/pd.test.mjs (loadNetBlock, slice isolado via node:vm com jsonp stubado).
+const PDCACHE={}; /* cache de sessão por ci/coordenada — zona não muda na sessão (CONTEXT) */
+const PD_SVC_BASE="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Mapa_ModeloEspacial/MapServer"; // PRODUÇÃO — NUNCA "_teste" (numeração de layers diferente)
+/* pdConsultarLote(x,y,ci): PDCACHE[ci] existe -> devolve do cache (dedupe de sessão, sem 2ª
+   bateria). Senão dispara em PARALELO 1 jsonp por entrada de PD_LAYERS, coleta via
+   Promise.allSettled (falha parcial nunca derruba as que resolveram), monta o resultado via
+   resolverZonaUI e grava em PDCACHE[ci]. */
+async function pdConsultarLote(x,y,ci){
+  capCache(PDCACHE,60);
+  if(PDCACHE[ci])return PDCACHE[ci];
+  const chaves=Object.keys(PD_LAYERS);
+  const promessas=chaves.map(key=>
+    jsonp({geometry:x+","+y,geometryType:"esriGeometryPoint",inSR:31982,spatialRel:"esriSpatialRelIntersects",
+      outFields:"sigla,nm_des,nm_mzo",returnGeometry:false,f:"json"},1,PD_SVC_BASE+"/"+PD_LAYERS[key]+"/query")
+  );
+  const settled=await Promise.allSettled(promessas);
+  const respostas=settled.map((s,i)=>({layer:chaves[i],status:s.status,value:s.status==="fulfilled"?s.value:null}));
+  const resultado=resolverZonaUI(respostas);
+  PDCACHE[ci]=resultado;
+  return resultado;
+}
+// PD_NET_END
 
 // CADERNO_IO_START — camada de I/O real do Caderno de território (Fase 16, 16-02, TERR-05):
 // wrapper IndexedDB nativo mínimo, promise-based. FORA de RADAR_PURE (indexedDB.open é I/O real,
