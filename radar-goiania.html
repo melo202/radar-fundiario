@@ -3636,8 +3636,8 @@ function filterCombo(qtext){
   hits=hits.slice(0,50);
   comboActive=-1;
   if(!hits.length){list.innerHTML='<div class="combo-empty">nenhum setor com esse nome</div>';list.classList.add("show");return;}
-  list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" id="opt-${String(b.code).replace(/\D/g,"")}" aria-selected="false" data-code="${b.code}" onclick="pickBairro('${b.code}')">
-    <span class="code">${b.code}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
+  list.innerHTML=hits.map(b=>`<div class="combo-item" role="option" id="opt-${String(b.code).replace(/\D/g,"")}" aria-selected="false" data-code="${esc(b.code)}" onclick="pickBairro(this.dataset.code)">
+    <span class="code">${esc(b.code)}</span>${esc(b.disp)}<span class="raw">${esc(b.raw)}</span></div>`).join("");
   list.classList.add("show");
 }
 function pickBairro(code){
@@ -3668,7 +3668,7 @@ function updateCaixaList(qtext){
   inp.setAttribute("aria-expanded","true");
   if(!hits.length){list.innerHTML='<div class="combo-empty">nenhuma sugestão</div>';list.classList.add("show");return;}
   list.innerHTML=hits.map(h=>`<div class="combo-item" role="option" id="${h.id}" aria-selected="false"
-      data-kind="${h.kind}" data-code="${h.code||""}" data-nome="${esc(h.__nome||"")}"
+      data-kind="${h.kind}" data-code="${esc(h.code||"")}" data-nome="${esc(h.__nome||"")}"
       onclick="pickCaixaItem(this)">
     <span class="code">${h.kind==="setor"?"Setor":"Rua"}</span>${esc(h.label)}<span class="raw">${esc(h.sub)}</span></div>`).join("");
   list.classList.add("show");
@@ -5566,12 +5566,16 @@ function showDetail(a,ll){
     <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Street View ↗</a>
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
-  document.getElementById("dActsMore").innerHTML=`
+  /* A-04 (20): a inscrição vai num data-attribute do container (nunca interpolada em string JS de
+     on*, que permitia breakout via aspas); copyInsc(this)/copyLink(this) leem via closest. */
+  const dActsMore=document.getElementById("dActsMore");
+  dActsMore.dataset.insc=clean(insc||ci);
+  dActsMore.innerHTML=`
     <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">📓 Salvar no caderno</button>
-    <button type="button" onclick="copyInsc('${inscUse}')">Copiar inscrição ⧉</button>
+    <button type="button" onclick="copyInsc(this)">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">🧮 Calcular custos de compra (ITBI + cartório)</button>
-    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc('${inscUse}')" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
-    <button type="button" onclick="copyLink('${inscUse}')" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
+    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
+    <button type="button" onclick="copyLink(this)" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
     ${mapLinks}
     <div class="zapgroup">
       <div class="zapgroup-lbl">Copiar para WhatsApp</div>
@@ -6183,12 +6187,18 @@ function histPush(a){
   histSave(next);
   renderSavedBlocks();
 }
-function copyInsc(v){
+/* A-04 (20): aceita o elemento clicado (this) e lê a inscrição do data-attribute do container
+   [data-insc] via closest — nunca mais recebe dado do endpoint interpolado em string JS de on*.
+   Mantém o ramo string para chamadas legadas/programáticas. */
+function inscDoEl(x){return (x&&x.closest&&x.closest("[data-insc]"))?x.closest("[data-insc]").dataset.insc:x;}
+function copyInsc(x){
+  const v=inscDoEl(x);
   if(v&&navigator.clipboard)navigator.clipboard.writeText(v)
     .then(()=>toast("Inscrição "+v+" copiada — cole na consulta oficial."),()=>{});
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
-function copyLink(insc){
+function copyLink(x){
+  const insc=inscDoEl(x);
   if(!insc||!navigator.clipboard)return;
   const url=location.origin+location.pathname+"?insc="+encodeURIComponent(insc);
   navigator.clipboard.writeText(url)
