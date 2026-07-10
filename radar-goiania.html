@@ -7786,6 +7786,7 @@ function applyDetectAndSearch(mode,fields){
   fields=fields||{};
   if(mode==="ql"){document.getElementById("quadra").value=fields.quadra||"";document.getElementById("lote").value=fields.lote||"";}
   else if(mode==="addr"){document.getElementById("rua").value=fields.rua||"";document.getElementById("numero").value=fields.numero||"";}
+  else if(mode==="bd"){document.getElementById("predio").value=fields.predio||document.getElementById("caixaInput").value||"";} /* BUSCA-01 (F5): ramo bd ausente — Enter em nome de prédio nunca preenchia #predio; espelha forceMode() */
   else if(mode==="insc"){document.getElementById("insc").value=fields.value||"";}
   if(fields.bairroCode)pickBairro(fields.bairroCode);
   buscar();
