@@ -2207,6 +2207,78 @@ function estatTerritorio(lotes,total){
 function rotuloAmostra(n,total){
   return "Amostra de "+(n).toLocaleString("pt-BR")+" de "+(total).toLocaleString("pt-BR")+" lotes";
 }
+
+/* Fase 16 (16-01, TERR-04): Detector de Lote Subutilizado — filtro puro client-side sobre o
+   MESMO array do territorioScan (Fase 15), zero requisição própria. Reusa pm2Lote/quantilAmostra
+   já existentes; NENHUMA fórmula nova de mediana. */
+const DETECTOR_RATIO_MAX=0.15; /* "menos de 15% do terreno construído" — razão construído/terreno abaixo da qual o lote é candidato. Fixo/explicável (Claude's Discretion, CONTEXT §Detector); upgrade p/ potencial-do-PD na Fase 18. */
+const DETECTOR_LIMITE=50;
+
+/* medianasPorQuadra(lotes): agrupa por nrquadra, calcula a mediana de pm2Lote de cada quadra.
+   Quadra sem NENHUM lote com pm2 válido (pm2Lote retorna null p/ todos) fica FORA do resultado —
+   nunca aparece com mediana 0/null fingindo dado. */
+function medianasPorQuadra(lotes){
+  const porQuadra={};
+  (lotes||[]).forEach(a=>{
+    const q=a.nrquadra; if(q==null)return;
+    const p=pm2Lote(a); if(p==null)return;
+    (porQuadra[q]=porQuadra[q]||[]).push(p);
+  });
+  const out={};
+  Object.keys(porQuadra).forEach(q=>{
+    const arr=porQuadra[q].sort((a,b)=>a-b);
+    out[q]=quantilAmostra(arr,.5);
+  });
+  return out; // {nrquadra: medianaPm2}
+}
+
+/* limiarQuadraValorizada(medianas): Q3 da DISTRIBUIÇÃO DE MEDIANOS de quadra (não dos pm2
+   individuais de lote — são duas populações estatísticas diferentes). Amostra <4 quadras
+   distintas não sustenta um quartil informativo -> null (nunca inventa limiar). */
+function limiarQuadraValorizada(medianas){
+  const vals=Object.values(medianas).sort((a,b)=>a-b);
+  if(vals.length<4)return null;
+  return quantilAmostra(vals,.75);
+}
+
+/* razaoOcupacao(a): construído/terreno — null se areaterr ausente/0 (sem denominador real);
+   NUNCA usa ||0 (padrão pm2Lote) — aqui 0 real (terreno vago) e null/ausente (dado incompleto)
+   têm significados OPOSTOS p/ a guarda de qualidade seguinte (Pitfall 1, 16-RESEARCH.md). */
+function razaoOcupacao(a){
+  const at=+a.areaterr;
+  if(!(at>0))return null; // terreno ausente/inválido: sem razão calculável
+  const ae=a.areaedif; // NÃO coagido com +; testado abaixo por !=null explicitamente
+  if(ae==null)return null; // dado incompleto — nunca dado real
+  return (+ae)/at;
+}
+
+/* detectarSubutilizados(lotes,opts): quadra no quartil superior de R$/m² (limiarQuadraValorizada)
+   E razão de ocupação <= opts.razaoMax (inclui terreno vago, razaoOcupacao===0). Exclui razão
+   null (guarda de qualidade — registro incompleto nunca é candidato). Ordena do mais subutilizado
+   (razão menor) ao menos, truncado a opts.limite. [] se limiar null (amostra insuficiente). */
+function detectarSubutilizados(lotes,opts){
+  const th=Object.assign({razaoMax:DETECTOR_RATIO_MAX,limite:DETECTOR_LIMITE},opts||{});
+  const medianas=medianasPorQuadra(lotes);
+  const limiar=limiarQuadraValorizada(medianas);
+  if(limiar==null)return []; // amostra insuficiente p/ afirmar "quadra valorizada" -> honesto, vazio
+  const candidatos=(lotes||[]).filter(a=>{
+    if(a.nrquadra==null||medianas[a.nrquadra]==null)return false;
+    if(medianas[a.nrquadra]<limiar)return false; // fora do quartil superior
+    const r=razaoOcupacao(a);
+    if(r==null)return false; // dado incompleto — nunca candidato (guarda de qualidade)
+    return r<=th.razaoMax; // inclui r===0 (terreno vago) automaticamente
+  });
+  candidatos.sort((x,y)=>razaoOcupacao(x)-razaoOcupacao(y)); // mais subutilizado (razão menor) primeiro
+  return candidatos.slice(0,th.limite);
+}
+
+/* leituraDetector(item): template determinístico de leitura comercial — nunca LLM, nunca
+   interpolação de texto cru do endpoint (mesmo padrão de zapArgumento/captAbordagem, Fase 14). */
+function leituraDetector(item){
+  return (+item.areaedif===0)
+    ? "🏗️ Terreno vago em quadra valorizada"
+    : "🏗️ Baixo aproveitamento em quadra valorizada";
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
