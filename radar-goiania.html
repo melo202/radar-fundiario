@@ -1635,6 +1635,24 @@ function scoreOportunidade(myPm2, stats, flags){
   const {q1,med,q3} = stats;
   if(!(q1>0 && med>0 && q3>0) || !(q3>=q1)) return null;
   const iqr = q3-q1;
+  /* F5 FICHA-01: dispersão ~zero (q1===med===q3 — vizinhança homogênea, ex.: unidades de mesma
+     planta com venal idêntico) DEGENERA o percentil: as âncoras colapsam e qualquer valor <=min
+     virava 100 "Boa oportunidade" (inclusive o imóvel exatamente NA mediana) e qualquer valor
+     acima virava 0 — bimodal, sem gradiente. Sem dispersão não há percentil: NA mediana o score é
+     NEUTRO (50, rótulo honesto); fora dela aponta só a DIREÇÃO com score moderado (75/25), nunca o
+     extremo 100/0, e o porquê cita a homogeneidade. */
+  if(!(iqr>0)){
+    const diffPctH=Math.round(Math.abs(myPm2-med)/med*100);
+    if(diffPctH===0){
+      return {score:50, rotulo:"Na mediana — vizinhança homogênea",
+        porque:["Os comparáveis têm praticamente o mesmo R$/m² e o imóvel está alinhado a eles — sem dispersão para apontar oportunidade."]};
+    }
+    return myPm2<med
+      ? {score:75, rotulo:"Boa oportunidade",
+         porque:[`Está ${diffPctH}% abaixo de uma vizinhança homogênea (comparáveis com praticamente o mesmo R$/m²).`]}
+      : {score:25, rotulo:"Oportunidade baixa",
+         porque:[`Está ${diffPctH}% acima de uma vizinhança homogênea (comparáveis com praticamente o mesmo R$/m²).`]};
+  }
   const min = stats.min!=null ? stats.min : Math.max(1, q1-1.5*iqr);
   const max = stats.max!=null ? stats.max : q3+1.5*iqr;
   const lerp=(v,a,b,pa,pb)=> b===a ? pa : pa+(v-a)/(b-a)*(pb-pa);
@@ -1672,7 +1690,7 @@ function scoreOportunidade(myPm2, stats, flags){
    - venalOk: venal informado (>0) -- sem venal, a base fiscal do calculo fica mais fraca
    nivel: alta (0 pendencias E nComps>=8), media (<=1 pendencia E nComps>=3), baixa (demais casos) */
 function scoreConfianca(inputs){
-  const {areaOk,nComps,atipico,venalOk} = inputs||{};
+  const {areaOk,nComps,atipico,venalOk,amp} = inputs||{};
   const n = nComps||0;
   /* (fix plan-check) PENDENCIAS (defeitos contaveis) separadas de NOTAS (informativas):
      n entre 3 e 7 e uma NOTA no porque[], nao um defeito — senao qualquer 1 defeito real
@@ -1694,6 +1712,15 @@ function scoreConfianca(inputs){
   if(pendencias.length===0 && n>=8) nivel="alta";
   else if(pendencias.length<=1 && n>=3) nivel="media";
   else nivel="baixa";
+  /* F5 FICHA-02: a dispersão dos comparáveis entra no nível — MESMO critério já usado pelo badge
+     de renderComps (amp=(q3-q1)/med > 0.4 = "imóveis muito variados"): faixa dispersa não é
+     confiável, então rebaixa UM nível e cita a variabilidade no porquê. "Confiança: alta" NUNCA
+     mais coexiste com "imóveis muito variados" na mesma ficha. amp ausente (pré-consulta, sem
+     comparáveis ainda) nunca rebaixa — completude e dispersão seguem critérios separados. */
+  if(amp!=null && isFinite(amp) && amp>0.4 && nivel!=="baixa"){
+    nivel = nivel==="alta" ? "media" : "baixa";
+    notas.push("imóveis muito variados na vizinhança (faixa de preços dispersa)");
+  }
   const partes = pendencias.concat(notas);
   const porque = partes.length
     ? [partes.join("; ")+"."]
@@ -2415,22 +2442,53 @@ function quantilAmostra(sorted,p){
   return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);
 }
 
-/* breaksQuantil(sortedPm2): 4 cortes internos (quintis) para 5 faixas discretas do choropleth
-   (TERR-02) — nunca gradiente contínuo. Amostra curta (<5) não sustenta 5 faixas -> null. */
+/* breaksQuantil(sortedPm2): até 4 cortes internos (quintis) para até 5 faixas discretas do
+   choropleth (TERR-02) — nunca gradiente contínuo. Amostra curta (<5) não sustenta faixas -> null.
+   F5 TERR-01: quantis DEGENERADOS (amostra pouco dispersa — todos os pm2 iguais, ou muitos iguais
+   + outlier) colapsam cortes em valores repetidos; antes, as faixas do meio ficavam vazias e a
+   legenda exibia "R$X–R$X" fingindo granularidade inexistente. Agora os cortes são DEDUPLICADOS
+   (estritamente crescentes) e um corte igual ao MÁXIMO da amostra é descartado (criaria uma faixa
+   de topo garantidamente vazia) — o nº de faixas efetivas encolhe junto (5 -> 2-3 -> 1).
+   Contrato novo: retorna array de 0..4 cortes (0 = amostra uniforme, 1 faixa única). */
 function breaksQuantil(sortedPm2){
   if(!sortedPm2||sortedPm2.length<5)return null;
-  return [.2,.4,.6,.8].map(p=>quantilAmostra(sortedPm2,p));
+  const brutos=[.2,.4,.6,.8].map(p=>quantilAmostra(sortedPm2,p));
+  const maxAmostra=sortedPm2[sortedPm2.length-1];
+  const out=[];
+  brutos.forEach(b=>{if((!out.length||b>out[out.length-1])&&b<maxAmostra)out.push(b);});
+  return out;
 }
 
-/* binQuantil(breaks,v): mapeia um valor para a faixa 1..5 — monotônico, mínimo do setor cai em
-   1, máximo em 5, cobre bordas exatas. Sem breaks (amostra curta) -> null (nunca inventa faixa). */
+/* F5 TERR-01: mapeamento das faixas EFETIVAS (1..5, conforme nº de cortes deduplicados) para os
+   slots 1..5 da paleta (--terr-q1..q5) — espalha nas pontas p/ contraste máximo e mantém a
+   semântica barato=1 / caro=5. Fonte ÚNICA usada por binQuantil E legendaFaixas: a cor pintada no
+   lote SEMPRE bate com o swatch exibido na legenda. Índice = nº de cortes (0..4). */
+const TERR_BIN_SLOTS=[[3],[1,5],[1,3,5],[1,2,4,5],[1,2,3,4,5]];
+
+/* binQuantil(breaks,v): mapeia um valor para o slot 1..5 da paleta — monotônico, mínimo do setor
+   cai no 1º slot efetivo, máximo no último, cobre bordas exatas. Com 4 cortes (caso normal) é
+   idêntico ao contrato original 1..5. Sem breaks (amostra curta) -> null (nunca inventa faixa). */
 function binQuantil(breaks,v){
   if(!breaks)return null;
-  if(v<=breaks[0])return 1;
-  if(v<=breaks[1])return 2;
-  if(v<=breaks[2])return 3;
-  if(v<=breaks[3])return 4;
-  return 5;
+  const slots=TERR_BIN_SLOTS[Math.min(breaks.length,4)];
+  for(let i=0;i<breaks.length;i++){if(v<=breaks[i])return slots[i];}
+  return slots[breaks.length];
+}
+
+/* legendaFaixas(breaks,medianaPm2) (F5 TERR-01): rótulos das faixas EFETIVAS da legenda a partir
+   dos cortes deduplicados — com quantis degenerados a legenda encolhe (5 -> 2-3 -> 1 faixa) em
+   vez de exibir intervalos "R$X–R$X". Retorna [{slot,label}] (slot = índice 1..5 da paleta, MESMO
+   mapeamento TERR_BIN_SLOTS de binQuantil). breaks null (amostra curta) -> null (estado vazio
+   "—"). breaks [] (amostra uniforme) -> 1 faixa honesta rotulada com a mediana. */
+function legendaFaixas(breaks,medianaPm2){
+  if(!breaks)return null;
+  if(!breaks.length)return [{slot:TERR_BIN_SLOTS[0][0],label:brlSimples(medianaPm2)+" — valor uniforme na amostra"}];
+  const slots=TERR_BIN_SLOTS[Math.min(breaks.length,4)];
+  return slots.map((slot,i)=>{
+    if(i===0)return {slot,label:"≤ "+brlSimples(breaks[0])};
+    if(i===slots.length-1)return {slot,label:"≥ "+brlSimples(breaks[breaks.length-1])};
+    return {slot,label:brlSimples(breaks[i-1])+"–"+brlSimples(breaks[i])};
+  });
 }
 
 /* anoMedianoCadastro(lotes): idade mediana do cadastro a partir de dtinclusao — MESMA validação
@@ -3380,17 +3438,22 @@ function desenharChoropleth(){
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
   if(lotLayer&&lotLayer.eachLayer)lotLayer.eachLayer(p=>p.setStyle(lotStyle(p._terrCi)));
 }
-/* montarLegenda(st): preenche #terrLegenda com os 5 rótulos de faixa (R$/m², brlSimples) + o
-   rótulo de honestidade da amostra — SEMPRE via textContent/esc (nunca innerHTML com dado do
-   endpoint, T-15-05). Torna a legenda visível (hidden até o 1º setor escaneado). */
+/* montarLegenda(st): preenche #terrLegenda com os rótulos de faixa (R$/m², via legendaFaixas —
+   F5 TERR-01: só as faixas EFETIVAS aparecem; quantis degenerados encolhem a legenda em vez de
+   exibir "R$X–R$X") + o rótulo de honestidade da amostra — SEMPRE via textContent/esc (nunca
+   innerHTML com dado do endpoint, T-15-05). Torna a legenda visível (hidden até o 1º setor
+   escaneado). */
 function montarLegenda(st){
-  const b=st&&st.breaks;
-  const lbls=b
-    ? ["≤ "+brlSimples(b[0]), brlSimples(b[0])+"–"+brlSimples(b[1]), brlSimples(b[1])+"–"+brlSimples(b[2]), brlSimples(b[2])+"–"+brlSimples(b[3]), "≥ "+brlSimples(b[3])]
-    : ["—","—","—","—","—"];
+  const faixas=legendaFaixas(st&&st.breaks,st&&st.medianaPm2);
+  const porSlot={};
+  if(faixas)faixas.forEach(f=>{porSlot[f.slot]=f.label;});
   for(let i=1;i<=5;i++){
     const el=document.getElementById("terrLbl"+i);
-    if(el)el.textContent=lbls[i-1];
+    if(!el)continue;
+    el.textContent=faixas?(porSlot[i]||""):"—";
+    /* F5 TERR-01: coluna sem faixa efetiva SOME (swatch + rótulo) — a legenda nunca finge
+       granularidade que o choropleth não tem; sem breaks (amostra curta) mantém as 5 colunas "—". */
+    if(el.parentElement)el.parentElement.hidden=!!faixas&&porSlot[i]==null;
   }
   const am=document.getElementById("terrAmostra");
   if(am)am.textContent=rotuloAmostra(st.n,st.total);
@@ -5651,7 +5714,10 @@ function atualizarScores(a, statsR){
   const venalOk=(a.vlvenal||0)>0;
   const atipico=isGarage(a);
   const stats=statsR?{med:statsR.med,q1:statsR.q1,q3:statsR.q3,n:statsR.n,min:statsR.min,max:statsR.max}:null;
-  const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk});
+  /* F5 FICHA-02: amp — MESMA fórmula do badge de renderComps ((q3-q1)/med) — entra no nível de
+     confiança; sem stats (pré-compare) fica null e nunca rebaixa. */
+  const amp=(stats&&stats.med>0&&isFinite(stats.q1)&&isFinite(stats.q3))?(stats.q3-stats.q1)/stats.med:null;
+  const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk,amp});
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
   recolorPinoCi(clean(a.ci)); /* CR-01 parte (a): pino do lote no mapa ganha a cor do score real (compare() concluído) */
@@ -7272,8 +7338,10 @@ function montarFichaRapida(){
   const areaOk=!!(LZ.privativa||(isU?a.areaedif:a.areaterr));
   const venalOk=(a.vlvenal||0)>0;
   const atipico=isGarage(a);
-  const conf=scoreConfianca({areaOk,nComps:(g&&g.res)?g.res.n:0,atipico,venalOk});
   const stats=g&&g.res?{med:g.res.med,q1:g.res.q1,q3:g.res.q3,n:g.res.n,min:g.res.min,max:g.res.max}:null;
+  /* F5 FICHA-02: mesma dispersão de atualizarScores/renderComps entra no nível de confiança. */
+  const amp=(stats&&stats.med>0&&isFinite(stats.q1)&&isFinite(stats.q3))?(stats.q3-stats.q1)/stats.med:null;
+  const conf=scoreConfianca({areaOk,nComps:(g&&g.res)?g.res.n:0,atipico,venalOk,amp});
   const op=scoreOportunidade(myPm2,stats,{radius:g?g.radius:400});
   const tipo=ul||USO[a.uso]||"Imóvel";
   const leitura=leituraPratica({tipoImovel:tipo,bairro:clean(a.nmbairro),oportunidade:op,confianca:conf});

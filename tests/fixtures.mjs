@@ -67,6 +67,15 @@ export const FIXTURES = {
     { myPm2: 5000, stats: {n:2}, flags:{}, expectNull:true },
     { myPm2: null, stats: {med:5000,q1:4500,q3:5500,n:8}, flags:{}, expectNull:true },
     { myPm2: 0, stats: {med:5000,q1:4500,q3:5500,n:8}, flags:{}, expectNull:true },
+    // F5 FICHA-01: dispersao ~zero (q1===med===q3, vizinhanca homogenea) — imovel NA mediana NUNCA
+    // vira 100 "Boa oportunidade"; score NEUTRO 50 com rotulo honesto. Fora da mediana, so a
+    // DIRECAO com score moderado (75/25), nunca o extremo 100/0.
+    { myPm2: 100, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[50,50], expectRotulo:"Na mediana — vizinhança homogênea" },
+    { myPm2: 90, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[75,75], expectRotulo:"Boa oportunidade" },
+    { myPm2: 110, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[25,25], expectRotulo:"Oportunidade baixa" },
+    // IQR 0 com outlier no max (9 iguais + 1 caro): imovel na mediana continua NEUTRO (a cerca
+    // min/max nao salva — o colapso e dos quartis)
+    { myPm2: 50, stats: {med:50,q1:50,q3:50,n:10,min:50,max:200}, flags:{}, expectRange:[50,50], expectRotulo:"Na mediana — vizinhança homogênea" },
   ],
   scoreConfianca: [
     // alta: sem pendencias, >=8 comparaveis
@@ -75,6 +84,13 @@ export const FIXTURES = {
     { inputs:{areaOk:false,nComps:6,atipico:false,venalOk:true}, expectNivel:"media", expectPorqueContains:"área confirmada" },
     // baixa: >=2 pendencias (area + poucos comparaveis)
     { inputs:{areaOk:false,nComps:2,atipico:false,venalOk:true}, expectNivel:"baixa", expectPorqueContains:"comparáveis" },
+    // F5 FICHA-02: dispersao alta (amp=(q3-q1)/med > 0.4, MESMO criterio "imoveis muito variados"
+    // do badge de renderComps) rebaixa UM nivel e cita a variabilidade no porque[]; "alta" nunca
+    // coexiste com faixa muito variada. amp baixo ou ausente (pre-consulta) nunca rebaixa.
+    { inputs:{areaOk:true,nComps:9,atipico:false,venalOk:true,amp:0.5}, expectNivel:"media", expectPorqueContains:"muito variados" },
+    { inputs:{areaOk:false,nComps:6,atipico:false,venalOk:true,amp:0.5}, expectNivel:"baixa", expectPorqueContains:"muito variados" },
+    { inputs:{areaOk:true,nComps:9,atipico:false,venalOk:true,amp:0.3}, expectNivel:"alta" },
+    { inputs:{areaOk:true,nComps:9,atipico:false,venalOk:true,amp:null}, expectNivel:"alta" },
   ],
   leituraPratica: [
     { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:{score:78,rotulo:"Boa oportunidade",porque:[]},confianca:{nivel:"media",porque:[]}}, expectContains:"Setor Bueno", expectNotContains:["mediana","percentil","quartil"] },
@@ -748,6 +764,14 @@ export const FIXTURES = {
 
     binQuantilCasos: {
       breaks: [200, 400, 600, 800], // 5 faixas: <=200->1, <=400->2, <=600->3, <=800->4, >800->5
+    },
+
+    // F5 TERR-01: quantis DEGENERADOS — cortes deduplicados (estritamente crescentes, corte igual
+    // ao max da amostra descartado); as faixas efetivas encolhem em vez de exibir "R$X–R$X".
+    breaksQuantilDegenerados: {
+      todosIguais: { sorted: Array.from({ length: 10 }, () => 50), expectBreaks: [] }, // 1 faixa uniforme
+      noveIguaisOutlier: { sorted: [...Array.from({ length: 9 }, () => 50), 200], expectBreaks: [50] }, // 2 faixas
+      seteUnsUmCem: { sorted: [1, 1, 1, 1, 1, 1, 1, 100], expectBreaks: [1] }, // 2 faixas
     },
 
     // dtinclusao: valido (20100101/20120101/20180909) + invalido (sentinela "00000000",

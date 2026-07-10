@@ -31,11 +31,12 @@ function loadPureBlock() {
   assert.ok(src.includes("function estatTerritorio"), "estatTerritorio ausente do bloco RADAR_PURE");
   assert.ok(src.includes("function rotuloAmostra"), "rotuloAmostra ausente do bloco RADAR_PURE");
   assert.ok(src.includes("function scoresDePlot"), "scoresDePlot ausente do bloco RADAR_PURE (fix CR-01 13-REVIEW.md)");
+  assert.ok(src.includes("function legendaFaixas"), "legendaFaixas ausente do bloco RADAR_PURE (F5 TERR-01)");
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {pm2Lote,quantilAmostra,breaksQuantil,binQuantil,anoMedianoCadastro,mixUso,estatTerritorio,rotuloAmostra,scoresDePlot};",
+      "\n;globalThis.__exports = {pm2Lote,quantilAmostra,breaksQuantil,binQuantil,anoMedianoCadastro,mixUso,estatTerritorio,rotuloAmostra,scoresDePlot,legendaFaixas,TERR_BIN_SLOTS};",
     { filename: "radar-pure-territorio.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -73,6 +74,41 @@ test("binQuantil: monotônico 1..5, mínimo do setor -> 1, máximo -> 5, cobre b
   assert.equal(P.binQuantil(breaks, 800), 4, "borda exata do último corte -> faixa 4 (inclusive)");
   assert.equal(P.binQuantil(breaks, 999999), 5, "acima do último corte -> faixa 5 (máximo do setor)");
   assert.equal(P.binQuantil(null, 500), null, "sem breaks (amostra curta) -> null, nunca inventa faixa");
+});
+
+// F5 TERR-01: quantis degenerados — dedupe de cortes + faixas efetivas + legenda honesta.
+test("breaksQuantil (F5 TERR-01): cortes degenerados são deduplicados — todos iguais -> [], 9 iguais + outlier -> [50]", () => {
+  const D = TF.breaksQuantilDegenerados;
+  assert.deepEqual(JSON.parse(JSON.stringify(P.breaksQuantil(D.todosIguais.sorted))), D.todosIguais.expectBreaks, "amostra uniforme -> nenhum corte (1 faixa única)");
+  assert.deepEqual(JSON.parse(JSON.stringify(P.breaksQuantil(D.noveIguaisOutlier.sorted))), D.noveIguaisOutlier.expectBreaks, "9 iguais + outlier -> 1 corte (2 faixas), nunca 4 cortes repetidos");
+  assert.deepEqual(JSON.parse(JSON.stringify(P.breaksQuantil(D.seteUnsUmCem.sorted))), D.seteUnsUmCem.expectBreaks);
+});
+
+test("binQuantil (F5 TERR-01): breaks deduplicados mapeiam para slots ESPALHADOS da paleta — uniforme -> slot 3; 2 faixas -> slots 1/5", () => {
+  assert.equal(P.binQuantil([], 50), 3, "amostra uniforme (0 cortes) -> slot central 3, todos os lotes na mesma cor");
+  assert.equal(P.binQuantil([50], 50), 1, "2 faixas: <=corte -> slot 1 (barato)");
+  assert.equal(P.binQuantil([50], 200), 5, "2 faixas: >corte -> slot 5 (caro) — contraste máximo, nunca faixa vazia no meio");
+  assert.equal(P.binQuantil([50, 80], 60), 3, "3 faixas: meio -> slot 3");
+});
+
+test("legendaFaixas (F5 TERR-01): legenda encolhe junto com as faixas efetivas — nunca 'R$X–R$X'; slots batem com binQuantil", () => {
+  assert.equal(P.legendaFaixas(null), null, "sem breaks (amostra curta) -> null (estado vazio '—')");
+  const uniforme = JSON.parse(JSON.stringify(P.legendaFaixas([], 50)));
+  assert.equal(uniforme.length, 1, "amostra uniforme -> 1 faixa única, nunca 5 faixas 'R$50–R$50'");
+  assert.equal(uniforme[0].slot, 3, "faixa única usa o MESMO slot 3 que binQuantil pinta");
+  assert.ok(uniforme[0].label.includes("uniforme"), "rótulo honesto cita o valor uniforme");
+  const duas = JSON.parse(JSON.stringify(P.legendaFaixas([50], 50)));
+  assert.deepEqual(duas, [{ slot: 1, label: "≤ R$ 50" }, { slot: 5, label: "≥ R$ 50" }], "2 faixas efetivas -> 2 rótulos, slots 1/5 (mesmos de binQuantil)");
+  const cinco = JSON.parse(JSON.stringify(P.legendaFaixas([200, 400, 600, 800], 500)));
+  assert.equal(cinco.length, 5, "4 cortes distintos (caso normal) -> 5 faixas, contrato original intacto");
+  assert.deepEqual(cinco.map((f) => f.slot), [1, 2, 3, 4, 5]);
+  assert.equal(cinco[0].label, "≤ R$ 200");
+  assert.equal(cinco[2].label, "R$ 400–R$ 600");
+  assert.equal(cinco[4].label, "≥ R$ 800");
+  // nenhum rótulo degenerado "X–X" jamais sai de legendaFaixas
+  for (const f of [...uniforme, ...duas, ...cinco]) {
+    assert.ok(!/R\$ (\S+)–R\$ \1$/.test(f.label), `rótulo degenerado "${f.label}" nunca deveria aparecer`);
+  }
 });
 
 test("anoMedianoCadastro: filtra dtinclusao inválido/sentinela/ausente ANTES da mediana", () => {
