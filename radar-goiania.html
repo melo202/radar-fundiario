@@ -6535,10 +6535,26 @@ function abrirNeg(tipo){
   negRender();
   const primeiro=sheet.querySelector(".winput");if(primeiro)primeiro.focus();
 }
-function fecharNeg(){
+/* negTemDados(): há conteúdo DIGITADO pelo usuário em risco de perda? (B-08). Ignora o corretor,
+   que vem pré-preenchido do perfil salvo (regenerável, sem perda real). NEG nunca é persistido —
+   isto só decide se vale a pena confirmar o descarte antes de fechar. */
+function negTemDados(){
+  if(!NEG)return false;
+  if(NEG.minutaEditada!=null)return true;
+  for(const p of [NEG.proponente,NEG.vendedor,NEG.comprador,NEG.proprietario]){
+    if(p&&(p.nome||p.doc||p.endereco))return true;
+  }
+  if(NEG.valorOfertado!=null||NEG.precoTotal!=null)return true;
+  if(NEG.matTexto||NEG.matricula||NEG.cartorio)return true;
+  return false;
+}
+function fecharNeg(forcar){
+  /* B-08: se houver documento em edição, confirma antes de descartar (Esc/×). `forcar` pula a
+     confirmação quando o fluxo já concluiu (montarNeg gerou o PDF). Mantém a regra de nunca persistir. */
+  if(!forcar&&negTemDados()&&!confirm("Descartar o documento em edição?"))return;
   const sheet=document.getElementById("negSheet");
   sheet.hidden=true;
-  NEG=null; /* descarte silencioso — privacidade por design, sem confirmação (NEG nunca persistido) */
+  NEG=null; /* descarte silencioso — privacidade por design (NEG nunca persistido) */
   untrapFocus(sheet); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de NEGRET.
     WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #negSheet for o dono do trap ativo */
 }
@@ -6763,7 +6779,7 @@ function montarNeg(){
     <div class="negdisclaimer-print"><b>ATENÇÃO</b> — ${esc(DISCLAIMER_NEG)}</div>
     ${assinaturasHtml}
     <div class="foot">RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA · EMITIDO EM ${hoje}</div>`;
-  fecharNeg();
+  fecharNeg(true); /* B-08: PDF já gerado — fecha sem reconfirmar descarte */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView"); lv.hidden=false; lv.scrollTop=0; trapFocus(lv);/*B-07/D-07(20)*/
 }
