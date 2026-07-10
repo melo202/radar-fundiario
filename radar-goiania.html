@@ -5140,7 +5140,8 @@ function abrirComparacao(){
 }
 function fecharComparacao(){
   const sheet=document.getElementById("cmpSheet");if(sheet)sheet.hidden=true; /* NAO limpa CMP — marcacoes persistem */
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #cmpSheet não restaurava foco ao gatilho antes */
+  untrapFocus(sheet); /* Fase 19 (19-03, A11Y-01): #cmpSheet não restaurava foco ao gatilho antes.
+    WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #cmpSheet for o dono do trap ativo */
 }
 
 function scrollToResults(){
@@ -5341,8 +5342,11 @@ function showChooser(ci){
 }
 function chooseThis(i){closeChooser();pick(i);}
 function closeChooser(){
-  document.getElementById("chooser").classList.remove("show");
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #chooser não restaurava foco ao gatilho antes */
+  const chooser=document.getElementById("chooser");
+  chooser.classList.remove("show");
+  untrapFocus(chooser); /* Fase 19 (19-03, A11Y-01): #chooser não restaurava foco ao gatilho antes.
+    WR-01 (19-REVIEW.md): passa o próprio container — finish() chama closeChooser() incondicionalmente
+    mesmo com #detail aberto; sem isso, destruía o trap de #detail que nunca foi de #chooser */
 }
 
 /* ---------------- selecionar ---------------- */
@@ -6391,8 +6395,9 @@ function finEscolherDoc(tipoDoc){
   getComps(LZ.a).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
   wizRender();
 }
-function fecharLaudo(){document.getElementById("wiz").hidden=true;LZ=null;
-  untrapFocus();} /* Fase 19 (19-03, A11Y-01): substitui o restore manual de WIZRET */
+function fecharLaudo(){const wiz=document.getElementById("wiz");wiz.hidden=true;LZ=null;
+  untrapFocus(wiz);} /* Fase 19 (19-03, A11Y-01): substitui o restore manual de WIZRET.
+  WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #wiz for o dono do trap ativo */
 /* Fase 10 CAPT-01 (10-03): Modo Captação — sheet .wiz sem steps, populado pelos 4 templates puros
    (captAbordagem/captScript/captChecklist/captFollowup, RADAR_PURE 10-01) via dadosFicha(). */
 function abrirCaptacao(){
@@ -6412,8 +6417,10 @@ function abrirCaptacao(){
   const closeBtn=sheet.querySelector(".wclose");if(closeBtn)closeBtn.focus();
 }
 function fecharCaptacao(){
-  document.getElementById("captSheet").hidden=true;
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de CAPTRET */
+  const sheet=document.getElementById("captSheet");
+  sheet.hidden=true;
+  untrapFocus(sheet); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de CAPTRET.
+    WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #captSheet for o dono do trap ativo */
 }
 /* Fase 11.1 (11.1-02): wizard NEG (Documentos da negociação) — sheet .wiz PRÓPRIO (#negSheet),
    estado NEG PRÓPRIO (paralelo a LZ/CAPTRET), NUNCA persistido (privacidade — nem localStorage
@@ -6442,9 +6449,11 @@ function abrirNeg(tipo){
   const primeiro=sheet.querySelector(".winput");if(primeiro)primeiro.focus();
 }
 function fecharNeg(){
-  document.getElementById("negSheet").hidden=true;
+  const sheet=document.getElementById("negSheet");
+  sheet.hidden=true;
   NEG=null; /* descarte silencioso — privacidade por design, sem confirmação (NEG nunca persistido) */
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de NEGRET */
+  untrapFocus(sheet); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de NEGRET.
+    WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #negSheet for o dono do trap ativo */
 }
 function negBack(){
   if(!NEG)return;
@@ -7296,8 +7305,10 @@ function exportCSV(){
 function closeDetail(){
   const d=document.getElementById("detail");
   d.classList.remove("show");
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): #detail é o ramo else catch-all da cadeia de Esc —
-    só acrescenta a restauração de foco, não altera essa estrutura de fallback */
+  untrapFocus(d); /* Fase 19 (19-03, A11Y-01): #detail é o ramo else catch-all da cadeia de Esc —
+    só acrescenta a restauração de foco, não altera essa estrutura de fallback.
+    WR-01 (19-REVIEW.md): passa o próprio container — buscar() chama closeDetail() incondicionalmente
+    mesmo com #chooser aberto; sem isso, destruía o trap de #chooser que nunca foi de #detail */
   /* Fase 6 Plano 02: fecho mais rápido (não-spring) via mAnimate; anima da posição ATUAL do
      transform (que pode já estar em translateY(dy) se veio de um drag-to-dismiss — não zera antes).
      Nunca inicia durante um drag em andamento (SHEETDRAGY0!=null). */
@@ -7345,7 +7356,13 @@ function trapFocus(container){
   };
   container.addEventListener("keydown", TRAP_HANDLER);
 }
-function untrapFocus(){
+function untrapFocus(container){
+  /* WR-01 (19-REVIEW.md): slot único (TRAP_CONTAINER) é compartilhado por 6 superfícies — sem essa
+     checagem, um fecharX() cujo sheet nunca foi o dono do trap ativo (ex.: closeChooser() chamado
+     por finish() com #detail aberto) destruía o trap de OUTRO modal ainda visível. Chamada COM
+     container só desmonta se for de fato o dono; chamada SEM argumento (fluxos de reabertura, ex.:
+     showDetail() sobre si mesmo) preserva o comportamento global anterior. */
+  if(container && container!==TRAP_CONTAINER) return;
   if(TRAP_CONTAINER && TRAP_HANDLER) TRAP_CONTAINER.removeEventListener("keydown", TRAP_HANDLER);
   if(TRAP_LASTFOCUS && document.body.contains(TRAP_LASTFOCUS)) TRAP_LASTFOCUS.focus();
   TRAP_CONTAINER = null; TRAP_LASTFOCUS = null; TRAP_HANDLER = null;
@@ -7403,7 +7420,8 @@ function onbFechar(){
   try{localStorage.setItem("radar_onboard","1");}catch(e){}
   const ov=document.getElementById("onbOverlay");
   ov.hidden=true; ov.classList.remove("show"); /* par do onbAbrir */
-  untrapFocus(); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de onbLastFocus */
+  untrapFocus(ov); /* Fase 19 (19-03, A11Y-01): substitui o restore manual de onbLastFocus.
+    WR-01 (19-REVIEW.md): passa o próprio container — só desmonta se #onbOverlay for o dono do trap ativo */
   /* fallback: se o trap não tinha gatilho válido pra devolver foco (onbAbrir chamado em
      reentrância, guarda acima), garante que o foco não se perde no <body>. */
   if(document.activeElement===document.body){ const p=document.getElementById("searchPill"); if(p) p.focus(); }
