@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 after Phase 17 (Diff de cadastro na revisita — snapshot embutido no caderno, leitura comercial "venal subiu 12%"; cruzamento Caixa×território com badge/anel/popup, matching exato-normalizado 74% sem falso positivo; verificação passed 10/10 com evidência ao vivo em Chromium; suíte 184/184; Fases 7-17 completas, resta 18)*
+*Last updated: 2026-07-10 after Phase 18 — ÚLTIMA do v2.1 (Inteligência Urbanística PD 2022: bateria point-in-polygon nas 9 layers do Modelo Espacial verificada ao vivo (568ms, hotfix outFields=*); PD_TABELA_CA com CA conferidos na fonte primária (AA 6,0x Art.196 II, ADD 5,0x, básico 1,0x universal — divergência 6x/7,5x RESOLVIDA: 7,5x é exceção TDC); accordion Urbanístico com REGRA DE OURO; detector com potencial-do-PD + fallback; choropleth de zonas viewport-limited; suíte 238/238; TODAS as 13 fases do v2.1 completas)*
