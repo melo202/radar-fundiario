@@ -760,6 +760,45 @@
   .saveditem-rm:hover,.saveditem-rm:focus-visible{color:var(--accent)}
   .savedempty{font:500 12.5px/1.5 "IBM Plex Sans";color:var(--muted);padding:6px 2px}
 
+  /* Fase 16 (16-02, TERR-05): Caderno de território — CSS novo, escala 4px (16-UI-SPEC.md
+     §Spacing). Reusa .savedblock/.savedblock-head/.savedblock-tt/.savedblock-count/.savedlist/
+     .savedempty literalmente (ver #cadernoBlock). Zero cor nova — .dnote é scoped a .detail no
+     CSS legado; estendido aqui p/ #cadernoBlock (mesmo texto/estilo, container diferente). */
+  #cadernoBlock .dnote{margin:-4px 0 12px;font:500 10.5px/1.45 "IBM Plex Sans";color:var(--muted)}
+  #cadernoBlock{display:none}
+  .panel:has(#results .empty) #cadernoBlock{display:block}
+  .cadbook-filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .cadbook-filtros select{min-height:44px;font:500 13px/1.3 "IBM Plex Sans";padding:8px;border-radius:2px;
+    border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+  .cadbook-item{border-top:1px solid var(--line)}
+  .cadbook-item:first-child{border-top:0}
+  .cadbook-item>summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 4px;
+    cursor:pointer;list-style:none;font:500 13px/1.3 "IBM Plex Sans";color:var(--ink)}
+  .cadbook-item>summary::-webkit-details-marker{display:none}
+  .cadbook-item>summary::after{content:"▸";margin-left:auto;color:var(--muted)}
+  .cadbook-item[open]>summary::after{content:"▾"}
+  .cadbook-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+  .cadbook-dot.is-fechou{background:var(--status-bom)}
+  .cadbook-addr{font:700 13.5px/1.25 "IBM Plex Sans";color:var(--ink)}
+  .cadbook-meta{font:500 11.5px/1.3 "IBM Plex Sans";color:var(--muted)}
+  .cadbook-nota-prev{font:500 11.5px/1.3 "IBM Plex Sans";color:var(--muted);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .cadbook-editor{padding:16px 4px;display:flex;flex-direction:column;gap:12px}
+  .cadbook-statuschips{display:flex;gap:8px;flex-wrap:wrap}
+  .cadbook-statuschips button{padding:8px 14px;border-radius:20px;border:1.5px solid var(--line);
+    background:var(--paper);font:600 12px/1 "IBM Plex Sans";color:var(--ink);cursor:pointer;min-height:44px}
+  .cadbook-statuschips button[aria-pressed="true"]{background:var(--ink);color:var(--paper-2);border-color:var(--ink)}
+  .cadbook-statuschips button.is-fechou[aria-pressed="true"]{background:var(--status-bom);color:#fff;border-color:var(--status-bom)}
+  .cadbook-tag{width:100%;min-height:44px;font:500 13px/1.3 "IBM Plex Sans";padding:8px;border-radius:2px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);box-sizing:border-box}
+  .cadbook-nota{width:100%;min-height:80px;font:500 13px/1.5 "IBM Plex Sans";padding:8px;border-radius:2px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical;box-sizing:border-box}
+  .cadbook-rm{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
+    background:transparent;color:var(--status-risco);font:600 12px/1 "IBM Plex Sans";cursor:pointer;align-self:flex-start}
+  .cadbook-export-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .cadbook-export-row button{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:2px;
+    background:var(--paper);color:var(--ink);font:600 12px/1 "IBM Plex Sans";cursor:pointer}
+
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--ink);color:var(--paper-2);
     font:600 13px/1.3 "IBM Plex Sans";padding:11px 18px;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:80%;text-align:center}
   .toast.show{display:block}
@@ -3144,6 +3183,135 @@ async function territorioScan(cdbairroRaw){
   return TERRCACHE[key];
 }
 // TERR_NET_END
+
+// CADERNO_IO_START — camada de I/O real do Caderno de território (Fase 16, 16-02, TERR-05):
+// wrapper IndexedDB nativo mínimo, promise-based. FORA de RADAR_PURE (indexedDB.open é I/O real,
+// não mockável/testável de forma útil em node:vm) — toda a LÓGICA DE DECISÃO (allowlist, enum,
+// validação de import) já mora em RADAR_PURE (16-01: sanitizeCaderno/CADERNO_STATUS/statusValido/
+// validarImportCaderno) e é 100% TDD-coberta. Aqui só abrir/CRUD — NENHUMA função engole erro;
+// quem chama estas funções da UI (Tasks 2/3) SEMPRE encadeia .catch(()=>toast(...)) — falha de
+// escrita nunca é silenciosa (T-16-04).
+const CADERNO_DB="radar_territorio";
+const CADERNO_VERSION=1; // Fase 17 sobe para 2 e adiciona o store "snapshots" via onupgradeneeded (reservado abaixo)
+
+/* cadernoDisponivel(): feature-detect estático — cobre browsers/webviews muito antigos sem
+   indexedDB. A maioria das falhas reais (quota/sandboxed) acontece em onerror, tratado em cada
+   operação abaixo — os dois caminhos juntos nunca deixam uma falha silenciosa (UI-SPEC §4). */
+function cadernoDisponivel(){
+  return typeof window!=="undefined" && !!window.indexedDB;
+}
+
+/* cadernoAbrirDB(): abre (ou cria, via onupgradeneeded) o banco radar_territorio v1 — stores
+   "caderno" (keyPath ci, índices cdbairro/status) e "setores" (keyPath cdbairro, reservado). */
+function cadernoAbrirDB(){
+  return new Promise((resolve,reject)=>{
+    if(!cadernoDisponivel()){reject(new Error("IndexedDB indisponível"));return;}
+    const req=indexedDB.open(CADERNO_DB,CADERNO_VERSION);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains("caderno")){
+        const store=db.createObjectStore("caderno",{keyPath:"ci"});
+        store.createIndex("cdbairro","cdbairro",{unique:false});
+        store.createIndex("status","status",{unique:false});
+      }
+      if(!db.objectStoreNames.contains("setores")){
+        db.createObjectStore("setores",{keyPath:"cdbairro"});
+      }
+      /* Fase 17 (v2): if(e.oldVersion<2){ const snap=db.createObjectStore("snapshots",
+         {keyPath:["cdbairro","data"]}); snap.createIndex("cdbairro","cdbairro"); } */
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error("Não foi possível abrir o caderno"));
+  });
+}
+
+/* cadernoSalvar(itemBruto): sanitiza (allowlist positiva CADERNO_ALLOW) ANTES de gravar — nunca
+   confia no chamador. status default "nao_visitado" se ausente; savedAt sempre setado no save. */
+function cadernoSalvar(itemBruto){
+  const item=sanitizeCaderno(Object.assign({},itemBruto,{
+    status:(itemBruto&&itemBruto.status)||"nao_visitado",
+    savedAt:new Date().toISOString()
+  }));
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readwrite");
+    tx.objectStore("caderno").put(item);
+    tx.oncomplete=()=>resolve(item);
+    tx.onerror=()=>reject(tx.error);
+  }));
+}
+
+/* cadernoAtualizar(ci,patch): lê o item existente, aplica o patch (status só se statusValido —
+   status inválido é ignorado, nunca grava enum fora do ciclo), sanitiza de novo (defesa em
+   profundidade) e grava com updatedAt. Item inexistente -> rejeita (nunca cria implicitamente). */
+function cadernoAtualizar(ci,patch){
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readwrite");
+    const store=tx.objectStore("caderno");
+    const getReq=store.get(ci);
+    getReq.onsuccess=()=>{
+      const atual=getReq.result;
+      if(!atual){reject(new Error("Item não encontrado no caderno"));return;}
+      const p=Object.assign({},patch);
+      if(p.status!==undefined&&!statusValido(p.status))delete p.status;
+      const merged=sanitizeCaderno(Object.assign({},atual,p,{updatedAt:new Date().toISOString()}));
+      store.put(merged);
+    };
+    getReq.onerror=()=>reject(getReq.error);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  }));
+}
+
+/* cadernoRemover(ci): delete direto (duplo-toque de confirmação vive na UI, Task 2). */
+function cadernoRemover(ci){
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readwrite");
+    tx.objectStore("caderno").delete(ci);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  }));
+}
+
+/* cadernoListar(opts): opts={cdbairro,status}. cdbairro via índice (getAll(valor)) quando
+   presente; senão getAll() completo. status filtrado em memória se ambos os filtros ativos
+   (volume esperado: centenas de itens, não milhares — 16-RESEARCH.md A3, sem cursor paginado). */
+function cadernoListar(opts){
+  const o=opts||{};
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readonly");
+    const store=tx.objectStore("caderno");
+    const req=(o.cdbairro!=null&&o.cdbairro!=="")
+      ? store.index("cdbairro").getAll(o.cdbairro)
+      : store.getAll();
+    req.onsuccess=()=>{
+      let out=req.result||[];
+      if(o.status)out=out.filter(it=>it.status===o.status);
+      resolve(out);
+    };
+    req.onerror=()=>reject(req.error);
+  }));
+}
+
+/* cadernoTem(ci): boolean — usado por renderCadernoBtn()/salvarNoCadernoUI() (Task 3) p/ alternar
+   "📓 Salvar no caderno" ↔ "✓ No caderno" sem duplicar item já salvo. */
+function cadernoTem(ci){
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readonly");
+    const req=tx.objectStore("caderno").get(ci);
+    req.onsuccess=()=>resolve(req.result!==undefined);
+    req.onerror=()=>reject(req.error);
+  }));
+}
+
+function cadernoContar(){
+  return cadernoAbrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction("caderno","readonly");
+    const req=tx.objectStore("caderno").count();
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  }));
+}
+// CADERNO_IO_END
 
 /* ---------------- Painel do Meu Território (Fase 15, 15-03, TERR-03) ----------------
    Entrada de UI a partir do setor em foco (bairro destacado/buscado); dispara o mesmo
