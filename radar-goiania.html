@@ -2752,7 +2752,14 @@ function diffLote(snap,atual,opts){
   const out=[];
   ["vlvenal","vlimp98"].forEach(campo=>{
     const de=s[campo], para=a[campo];
-    if(de==null||para==null||!isFinite(de)||!isFinite(para)||+de===0)return;
+    if(de==null||para==null||!isFinite(de)||!isFinite(para))return;
+    if(+de===0){
+      /* F5 CAD-05: base 0 não tem % — mas 0 -> valor positivo é o evento comercial "imóvel entrou
+         na base de avaliação" (simétrico ao subtipo "nova" de areaedif), nunca mais engolido.
+         0 -> 0 segue honesto: sem mudança. */
+      if(+para>0)out.push({campo,tipo:"novo",para:+para});
+      return;
+    }
     const pctBruto=Math.abs((para-de)/de*100);
     if(pctBruto<o.DIFF_THRESH_PCT)return;
     out.push({campo,tipo:"pct",direcao:para>de?"subiu":"desceu",pct:Math.round(pctBruto)});
@@ -2771,10 +2778,13 @@ function diffLote(snap,atual,opts){
       }
     }
   }
+  /* F5 CAD-02: categóricos comparados de forma TIPO-INSENSÍVEL (String===String) — snapshot
+     importado (sanitizeCaderno preserva o tipo do JSON) ou drift do endpoint pode trazer 1 vs "1"
+     e o !== cru inventava "Uso mudou de Residencial para Residencial". */
   const de1=s.uso, para1=a.uso;
-  if(de1!=null&&para1!=null&&de1!==para1)out.push({campo:"uso",tipo:"categorico",de:de1,para:para1});
+  if(de1!=null&&para1!=null&&String(de1)!==String(para1))out.push({campo:"uso",tipo:"categorico",de:de1,para:para1});
   const de2=s.dtinclusao, para2=a.dtinclusao;
-  if(de2!=null&&para2!=null&&de2!==para2)out.push({campo:"dtinclusao",tipo:"categorico"});
+  if(de2!=null&&para2!=null&&String(de2)!==String(para2))out.push({campo:"dtinclusao",tipo:"categorico"});
   return out;
 }
 
@@ -2783,6 +2793,10 @@ function diffLote(snap,atual,opts){
    USO[...] (nunca código cru). NUNCA lança — mudanças de campo desconhecido são ignoradas. */
 function formatarDiff(mudancas,dataFmt){
   return (mudancas||[]).map(m=>{
+    /* F5 CAD-05: transição 0 -> valor tem frase própria (imóvel entrou na base de avaliação) —
+       % a partir de 0 é indefinido, mas o evento nunca mais é silenciado. */
+    if(m.campo==="vlvenal"&&m.tipo==="novo")return `Valor venal: passou a ter valor (${brlSimples(m.para)}) — imóvel avaliado?`;
+    if(m.campo==="vlimp98"&&m.tipo==="novo")return `IPTU: passou a ter lançamento (${brlSimples(m.para)})`;
     if(m.campo==="vlvenal")return `Valor venal ${m.direcao} ${m.pct}% desde ${dataFmt}`;
     if(m.campo==="vlimp98")return `IPTU ${m.direcao} ${m.pct}% desde ${dataFmt}`;
     if(m.campo==="areaedif"){
@@ -5978,9 +5992,9 @@ function renderCadernoBtn(){
    não existe pra esse imóvel, UI-SPEC §1). Item salvo SEM snapshot (lote salvo pelo Detector antes
    do fix de WR-02, ou importado de Caderno anterior à Fase 17) ganha BACKFILL: snapshot dos dados
    frescos atuais é gravado nesta revisita, mas o diff só aparece a PARTIR da próxima (não há base
-   de comparação ainda — 17-REVIEW.md WR-02). Grava snapshot novo silenciosamente ao final (caso
-   normal, já com snapshot); falha de escrita gera toast padrão, nunca esconde o diff já exibido
-   (T-17-08). */
+   de comparação ainda — 17-REVIEW.md WR-02). F5 CAD-04: o snapshot só avança quando o diff foi
+   EXIBIDO com mudanças reais (render "Sem mudanças" preserva a base — ver comentário no ponto de
+   gravação); falha de escrita gera toast padrão, nunca esconde o diff já exibido (T-17-08). */
 function renderDiffUI(a){
   const el=document.getElementById("dDiff");
   if(!el||!a)return;
@@ -6014,6 +6028,7 @@ function renderDiffUI(a){
         let sinal="●"; /* categórico (uso/dtinclusao) — sem direção comercial */
         if(m.tipo==="pct")sinal=m.direcao==="subiu"?"▲":"▼";
         else if(m.tipo==="area")sinal=(m.subtipo==="nova"||m.subtipo==="aumentou")?"▲":"▼";
+        else if(m.tipo==="novo")sinal="▲"; /* F5 CAD-05: 0 -> valor (venal/IPTU) — entrada na base, direção pra cima */
         const li=document.createElement("li");
         li.className="ddiff-item";
         const sp=document.createElement("span");
@@ -6025,9 +6040,15 @@ function renderDiffUI(a){
       });
     }
     el.hidden=false;
-    /* grava snapshot NOVO silenciosamente — sucesso sem toast (autosave, mesmo padrão da Fase 16);
-       falha nunca esconde o diff já exibido, só avisa por toast padrão de escrita. */
-    cadernoAtualizar(ci,{snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},snapshotAt:new Date().toISOString()}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+    /* F5 CAD-04: o snapshot só AVANÇA quando o diff foi EXIBIDO com mudanças reais — antes, toda
+       abertura da ficha (inclusive "Sem mudanças") regravava a base, então (a) o corretor via a
+       mudança UMA vez e a 2ª abertura já dizia "Sem mudanças" com a data resetada, e (b) drift
+       gradual abaixo do threshold (ex.: +0,6%/mês) nunca acumulava até virar alarme. Sem mudanças
+       exibidas = base preservada (o dado é igual ou quase igual; nada se perde). Gravação
+       silenciosa — sucesso sem toast (autosave, Fase 16); falha nunca esconde o diff já exibido. */
+    if(textos.length){
+      cadernoAtualizar(ci,{snapshot:{vlvenal:a.vlvenal,areaedif:a.areaedif,vlimp98:a.vlimp98,uso:a.uso,dtinclusao:a.dtinclusao},snapshotAt:new Date().toISOString()}).catch(()=>toast(ERRO_ESCRITA_CADERNO));
+    }
   }).catch(()=>{
     /* erro inesperado de LEITURA (não "não encontrado", que resolve com undefined acima) — nunca
        falha silenciosa (UI-SPEC §1). */

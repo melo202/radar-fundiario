@@ -1186,6 +1186,36 @@ export const FIXTURES = {
       atual: { uso: 1 },
       expect: [],
     },
+    // F5 CAD-02: categoricos com tipos divergentes (numero no snapshot importado x string da ficha,
+    // ou vice-versa) — comparacao tipo-insensivel, NUNCA "Uso mudou de Residencial para Residencial".
+    usoMesmoValorTipoDiferente: {
+      snap: { uso: 1, dtinclusao: 20240101 },
+      atual: { uso: "1", dtinclusao: "20240101" },
+      expect: [],
+    },
+    usoMudouComTipoDiferente: {
+      // mudanca REAL continua reportada mesmo com tipos mistos
+      snap: { uso: "1" },
+      atual: { uso: 2 },
+      expect: [{ campo: "uso", tipo: "categorico", de: "1", para: 2 }],
+    },
+    // F5 CAD-05: transicao 0 -> valor de venal/IPTU reporta (simetrico ao subtipo "nova" de
+    // areaedif) — antes era engolida pelo guard de base zero. 0 -> 0 segue sem mudanca.
+    vlvenalEntrouNaBase: {
+      snap: { vlvenal: 0 },
+      atual: { vlvenal: 250000 },
+      expect: [{ campo: "vlvenal", tipo: "novo", para: 250000 }],
+    },
+    vlimp98EntrouNaBase: {
+      snap: { vlimp98: 0 },
+      atual: { vlimp98: 800 },
+      expect: [{ campo: "vlimp98", tipo: "novo", para: 800 }],
+    },
+    vlvenalZeroParaZero: {
+      snap: { vlvenal: 0 },
+      atual: { vlvenal: 0 },
+      expect: [],
+    },
   },
 
   // formatarDiff: mudancas (shape de diffLote) -> frases comerciais EXATAS do UI-SPEC §Copywriting.
@@ -1218,6 +1248,15 @@ export const FIXTURES = {
     iptuSubiu: {
       mudancas: [{ campo: "vlimp98", tipo: "pct", direcao: "subiu", pct: 20 }],
       expect: ["IPTU subiu 20% desde 10/05"],
+    },
+    // F5 CAD-05: frases proprias da transicao 0 -> valor (brlSimples, mesmo formato do resto do app)
+    venalNovo: {
+      mudancas: [{ campo: "vlvenal", tipo: "novo", para: 250000 }],
+      expect: ["Valor venal: passou a ter valor (R$ 250 mil) — imóvel avaliado?"],
+    },
+    iptuNovo: {
+      mudancas: [{ campo: "vlimp98", tipo: "novo", para: 800 }],
+      expect: ["IPTU: passou a ter lançamento (R$ 800)"],
     },
     usoMudou: {
       mudancas: [{ campo: "uso", tipo: "categorico", de: 1, para: 2 }],

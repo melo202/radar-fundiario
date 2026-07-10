@@ -120,6 +120,31 @@ test("diffLote: dtinclusao mudou -> {campo:dtinclusao,tipo:categorico}", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.dtinclusaoMudou.expect);
 });
 
+// F5 CAD-02: comparacao de categoricos TIPO-INSENSIVEL — snapshot importado pode ter numero onde a
+// ficha tem string (e vice-versa); nunca mais "Uso mudou de Residencial para Residencial".
+test("diffLote (F5 CAD-02): uso 1 vs '1' e dtinclusao 20240101 vs '20240101' (so o TIPO difere) -> [] (nunca falso alarme)", () => {
+  const out = P.diffLote(DF.usoMesmoValorTipoDiferente.snap, DF.usoMesmoValorTipoDiferente.atual);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.usoMesmoValorTipoDiferente.expect);
+});
+
+test("diffLote (F5 CAD-02): mudanca REAL de uso continua reportada mesmo com tipos mistos ('1' -> 2)", () => {
+  const out = P.diffLote(DF.usoMudouComTipoDiferente.snap, DF.usoMudouComTipoDiferente.atual);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.usoMudouComTipoDiferente.expect);
+});
+
+// F5 CAD-05: 0 -> valor de venal/IPTU reporta (simetrico ao subtipo "nova" de areaedif).
+test("diffLote (F5 CAD-05): vlvenal 0->250000 -> {campo:vlvenal,tipo:novo,para:250000} (imovel entrou na base de avaliacao)", () => {
+  const out = P.diffLote(DF.vlvenalEntrouNaBase.snap, DF.vlvenalEntrouNaBase.atual);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.vlvenalEntrouNaBase.expect);
+});
+
+test("diffLote (F5 CAD-05): vlimp98 0->800 -> tipo novo; 0->0 segue sem mudanca (honesto)", () => {
+  const out = P.diffLote(DF.vlimp98EntrouNaBase.snap, DF.vlimp98EntrouNaBase.atual);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.vlimp98EntrouNaBase.expect);
+  const zz = P.diffLote(DF.vlvenalZeroParaZero.snap, DF.vlvenalZeroParaZero.atual);
+  assert.deepEqual(JSON.parse(JSON.stringify(zz)), DF.vlvenalZeroParaZero.expect);
+});
+
 test("diffLote: snap===atual em todos os 5 campos -> [] (honesto, reabrir na mesma sessao)", () => {
   const out = P.diffLote(DF.semMudancaRelevante.snap, DF.semMudancaRelevante.atual);
   assert.deepEqual(JSON.parse(JSON.stringify(out)), DF.semMudancaRelevante.expect);
@@ -162,6 +187,11 @@ test("formatarDiff: areaedif diminuiu -> 'Área construída diminuiu {delta} m²
 
 test("formatarDiff: IPTU subiu -> 'IPTU subiu {pct}% desde {dataFmt}'", () => {
   assert.deepEqual(P.formatarDiff(FD.iptuSubiu.mudancas, FD.dataFmt), FD.iptuSubiu.expect);
+});
+
+test("formatarDiff (F5 CAD-05): tipo novo -> 'Valor venal: passou a ter valor (R$ X)…' / 'IPTU: passou a ter lançamento (R$ X)'", () => {
+  assert.deepEqual(P.formatarDiff(FD.venalNovo.mudancas, FD.dataFmt), FD.venalNovo.expect);
+  assert.deepEqual(P.formatarDiff(FD.iptuNovo.mudancas, FD.dataFmt), FD.iptuNovo.expect);
 });
 
 test("formatarDiff: uso mudou -> rotulos via USO[...], nunca codigo cru", () => {
