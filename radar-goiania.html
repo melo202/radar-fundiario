@@ -3331,6 +3331,7 @@ const ZONA_SIGLAS=["aa","add","aos","aeis","apac","ooau"];
 let ZONA_LAYERS={};
 let ZONASDEB=null;
 let ZONASTOKEN=0;
+let ZONALAST=null; /* D-05 (20): última viewport (com padding) coberta por uma consulta de zonas bem-sucedida — pans curtos não refazem (mesmo padrão de LOTLAST) */
 /* limparZonas(): remove as 6 layers do mapa (toggle off, ou troca p/ "valor") — nunca deixa
    camada órfã. Idempotente (chamável mesmo sem nenhuma layer desenhada ainda). */
 function limparZonas(){
@@ -3340,6 +3341,7 @@ function limparZonas(){
       delete ZONA_LAYERS[k];
     }
   });
+  ZONALAST=null; /* D-05 (20): qualquer limpeza (toggle off, zoom-gate) invalida o envelope memorizado */
 }
 /* zonaEstiloPorSigla(sigla): resolve fill (--zone-{sigla}) + traço da paleta oficial, opacidade
    flat por fundo (.22 CARTO / .42 satélite, 18-UI-SPEC §Color) e a MESMA rampa de traço por zoom
@@ -3371,14 +3373,20 @@ async function desenharZonas(){
   }
   const sz=map.getSize();
   if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
+  /* D-05 (20): se a vista atual está contida no envelope já consultado, não refaz (pan curto,
+     setView pós-pick) — mesmo padrão de LOTLAST em refreshLots(). */
+  if(ZONALAST&&ZONALAST.contains(map.getBounds()))return;
   const tk=++ZONASTOKEN;
+  /* consulta o envelope com padding (0.3) — cobre pans curtos sem nova requisição */
+  const qb=map.getBounds().pad(0.3);
   let porZona=null;
-  try{porZona=await carregarZonasViewport(map.getBounds());}
+  try{porZona=await carregarZonasViewport(qb);}
   catch(e){porZona=null;}
   if(tk!==ZONASTOKEN||!ZONAS_ON)return;
   const am=document.getElementById("terrAmostra");
   if(am)am.textContent="";
   if(!porZona)return;
+  ZONALAST=qb; /* memoriza a vista (com padding) coberta pela consulta bem-sucedida */
   ZONA_SIGLAS.forEach(sigla=>{
     if(ZONA_LAYERS[sigla]){map.removeLayer(ZONA_LAYERS[sigla]);delete ZONA_LAYERS[sigla];}
     const resp=porZona[sigla];
