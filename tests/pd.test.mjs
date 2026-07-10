@@ -31,6 +31,7 @@ function loadPureBlock() {
   assert.ok(src.includes("function montarUrbBodyHTML"), "montarUrbBodyHTML ausente do bloco RADAR_PURE (18-02 Task 2)");
   assert.ok(src.includes("function detectorRotuloPD"), "detectorRotuloPD ausente do bloco RADAR_PURE (18-02 Task 3)");
   assert.ok(src.includes("function proximoEstadoCamada"), "proximoEstadoCamada ausente do bloco RADAR_PURE (18-03 Task 2)");
+  assert.ok(src.includes("function zonasZoomGateOk"), "zonasZoomGateOk ausente do bloco RADAR_PURE (18-REVIEW WR-01)");
   // esc()/clean() (18-02 Task 2): montarUrbBodyHTML usa esc() para todo campo textual de layer —
   // esc() vive FORA de RADAR_PURE (é usado por praticamente todo o app, definido antes do bloco),
   // então é stubado aqui como identidade (mesmo padrão já sugerido pelo 18-02-PLAN.md); clean() já
@@ -39,7 +40,7 @@ function loadPureBlock() {
   vm.createContext(sandbox);
   new vm.Script(
     src +
-      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA,detectorRotuloPD,proximoEstadoCamada};",
+      "\n;globalThis.__exports = {PD_TABELA_CA,PD_LAYERS,PD_DISCLAIMER,PD_MZC_BASICO,pdRegrasDaZona,potencialConstrutivo,criterioDetectorPD,resolverZonaUI,montarUrbBodyHTML,fmtCA,detectorRotuloPD,proximoEstadoCamada,zonasZoomGateOk};",
     { filename: "radar-pure-pd.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -508,6 +509,27 @@ test("proximoEstadoCamada: clicar no chip JÁ ativo desliga a camada (volta a 'n
 test("proximoEstadoCamada: a partir de 'nenhuma', ligar qualquer chip ativa exatamente aquele modo (nunca os dois)", () => {
   assert.equal(P.proximoEstadoCamada("nenhuma", "valor"), "valor");
   assert.equal(P.proximoEstadoCamada("nenhuma", "zonas"), "zonas");
+});
+
+// --- 18-REVIEW WR-01: zonasZoomGateOk (gate PURO de zoom p/ desenharZonas — "nunca a cidade
+// inteira", T-18-02) -------------------------------------------------------------------------------
+
+test("zonasZoomGateOk: zoom>=13 libera a consulta (13, 17, 18)", () => {
+  assert.equal(P.zonasZoomGateOk(13), true);
+  assert.equal(P.zonasZoomGateOk(17), true);
+  assert.equal(P.zonasZoomGateOk(18), true);
+});
+
+test("zonasZoomGateOk: zoom<13 bloqueia (12, 0, negativo)", () => {
+  assert.equal(P.zonasZoomGateOk(12), false);
+  assert.equal(P.zonasZoomGateOk(0), false);
+  assert.equal(P.zonasZoomGateOk(-1), false);
+});
+
+test("zonasZoomGateOk: entrada não-numérica (undefined/null/NaN) nunca libera — guarda anti-crash", () => {
+  assert.equal(P.zonasZoomGateOk(undefined), false);
+  assert.equal(P.zonasZoomGateOk(null), false);
+  assert.equal(P.zonasZoomGateOk(NaN), false);
 });
 
 // --- 18-03 Task 2: carregarZonasViewport (bloco PD_ZONA_NET, I/O viewport-limited + ZONACACHE) ---

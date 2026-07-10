@@ -2863,6 +2863,16 @@ function detectorRotuloPD(a,porQuadraMap){
 function proximoEstadoCamada(atual,modo){
   return atual===modo?"nenhuma":modo;
 }
+/* zonasZoomGateOk(zoom) (Fase 18, 18-REVIEW WR-01): gate PURO/testável que decide se o zoom atual
+   permite consultar carregarZonasViewport (T-18-02, "nunca a cidade inteira"). Mesmo espírito do
+   gate de refreshLots (zoom<17 para lotes individuais) mas com threshold mais baixo — zonas cobrem
+   uma área bem maior por polígono, então um zoom mais afastado ainda produz um envelope aceitável
+   (~86 KB/12 polígonos citados no REVIEW para uma viewport de 4×4 km em zoom 13). Abaixo de 13, a
+   camada some (limparZonas) e um aviso discreto substitui a amostra — nunca dispara a bateria de 6
+   layers com returnGeometry:true para um envelope arbitrariamente grande. */
+function zonasZoomGateOk(zoom){
+  return typeof zoom==="number"&&zoom>=13;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -3302,6 +3312,13 @@ function zonaEstiloPorSigla(sigla){
    (Promise.allSettled já dentro de carregarZonasViewport). */
 async function desenharZonas(){
   if(!ZONAS_ON||typeof map==="undefined"||!map)return;
+  if(!zonasZoomGateOk(map.getZoom())){ /* WR-01 18-REVIEW.md: nunca a cidade inteira (T-18-02) */
+    ZONASTOKEN++; /* invalida qualquer consulta pendente — senão ela re-adiciona a camada */
+    limparZonas();
+    const am=document.getElementById("terrAmostra");
+    if(am){am.textContent="Aproxime o mapa para ver as zonas do Plano Diretor.";am.title=am.textContent;}
+    return;
+  }
   const sz=map.getSize();
   if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
   const tk=++ZONASTOKEN;
