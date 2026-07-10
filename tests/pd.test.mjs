@@ -357,6 +357,8 @@ test("montarUrbBodyHTML: parcial com macrozona RURAL resolvida NÃO rotula 'Macr
 test("montarUrbBodyHTML: estado erro é só a nota de erro, SEM disclaimer (nada foi resolvido)", () => {
   const html = P.montarUrbBodyHTML({ estado: "erro", macrozona: null, unidade: null, regra: null, badges: BADGES_OFF });
   assert.ok(html.includes("Não foi possível consultar o Plano Diretor"));
+  assert.ok(html.includes('id="urbRetry"'), "estado erro deveria oferecer o botão de retry (B-01), nunca só a frase 'Toque para tentar de novo'");
+  assert.ok(!/Toque para tentar/i.test(html), "estado erro NÃO deveria dizer 'Toque para tentar' num .dnote sem botão (B-01)");
   assert.ok(!html.includes(P.PD_DISCLAIMER), "nada foi resolvido — o disclaimer de 'informação indicativa' não se aplica");
 });
 
@@ -430,6 +432,21 @@ test("pdConsultarLote: segunda chamada com o MESMO ci NÃO dispara jsonp de novo
   const callsAfterFirst = calls;
   await NET.pdConsultarLote(686000, 8153000, "ci-2");
   assert.equal(calls, callsAfterFirst, "2ª chamada com o mesmo ci não deveria disparar jsonp novamente");
+});
+
+test("pdConsultarLote: estado 'erro' (todas as layers falharam) NÃO é cacheado — retry reconsulta (B-01)", async () => {
+  let calls = 0;
+  const jsonpStub = async () => {
+    calls++;
+    throw new Error("rede caiu");
+  };
+  const NET = loadNetBlock({ jsonp: jsonpStub });
+  const r = await NET.pdConsultarLote(686000, 8153000, "ci-erro");
+  assert.equal(r.estado, "erro", "todas as layers falharam -> estado erro");
+  assert.ok(!NET.PDCACHE["ci-erro"], "estado erro NUNCA deveria ser cacheado (senão o retry devolve o mesmo erro)");
+  const callsAfterFirst = calls;
+  await NET.pdConsultarLote(686000, 8153000, "ci-erro");
+  assert.ok(calls > callsAfterFirst, "2ª chamada após erro deveria reconsultar (cache não reteve o erro)");
 });
 
 // --- 18-02 Task 3: upgrade do detector — critério PD por centroide de quadra (T-18-02/T-18-04) --

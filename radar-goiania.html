@@ -2832,7 +2832,7 @@ function fmtCA(n){return n==null?null:(Math.round(n*10)/10).toFixed(1).replace("
 function montarUrbBodyHTML(estado){
   const e=estado||{};
   if(e.estado==="erro"){
-    return '<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora. Toque para tentar de novo.</div>';
+    return '<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora.</div><button type="button" class="urb-retry" id="urbRetry">Tentar de novo</button>';
   }
   if(e.estado==="rural"){
     const nomeRural=esc(e.macrozona||"Macrozona Rural");
@@ -3983,7 +3983,9 @@ async function pdConsultarLote(x,y,ci){
   capCache(PDCACHE,60);
   if(PDCACHE[ci])return PDCACHE[ci];
   const resultado=await pdBateriaConsulta(x,y);
-  PDCACHE[ci]=resultado;
+  /* B-01: NUNCA cachear o estado "erro" — senão o retry devolve o mesmo erro do cache sem
+     reconsultar. Só persiste consultas que resolveram (mesmo que parcial). */
+  if(!resultado||resultado.estado!=="erro")PDCACHE[ci]=resultado;
   return resultado;
 }
 /* PDQUADRACACHE (Fase 18, 18-02, T-18-02): cache DEDICADO do detector, chaveado por `chaveQuadra`
@@ -5855,7 +5857,11 @@ function renderUrbanisticoUI(a,isRetry){
     atualizarScorePorquePD(a,estado); /* PD-04: acrescenta "Em {zona}..." ao porquê do score JÁ renderizado, quando conferido */
   }).catch(()=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
-    body.innerHTML='<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora. Toque para tentar de novo.</div>';
+    /* B-01: mesmo HTML de erro do estado "erro" (com botão de retry) e binding — antes era um
+       .dnote sem botão dizendo "Toque para tentar de novo", que não fazia nada. */
+    body.innerHTML=montarUrbBodyHTML({estado:"erro"});
+    const retryBtn=document.getElementById("urbRetry");
+    if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
   });
 }
