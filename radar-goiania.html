@@ -1854,10 +1854,15 @@ function zapRiscos(data){
     assinatura(d.perfil);
 }
 
-/* captAbordagem(data): esqueleto UI-SPEC Bloco 1 — abordagem por WhatsApp para captacao. */
+/* captAbordagem(data): esqueleto UI-SPEC Bloco 1 — abordagem por WhatsApp para captacao.
+   F5 ZAP-03: o bloco (Q, L) so inclui os campos PRESENTES — nunca o placeholder "—" numa
+   mensagem enviada ao proprietario ("(Q 9, L —)" parecia template quebrado). */
 function captAbordagem(data){
   const d=data||{};
-  const ql=(d.quadra||d.lote)?` (Q ${d.quadra||"—"}, L ${d.lote||"—"})`:"";
+  const qlParts=[];
+  if(d.quadra) qlParts.push(`Q ${d.quadra}`);
+  if(d.lote) qlParts.push(`L ${d.lote}`);
+  const ql=qlParts.length?` (${qlParts.join(", ")})`:"";
   return `Olá! Sou corretor(a) e trabalho com imóveis ${localTxt(d.bairro)}. Notei seu imóvel na ${d.endereco||"região"}${ql} `+
     "e gostaria de conversar sobre uma possível parceria para venda — sem compromisso. Tem 5 minutos para eu explicar?"+
     assinatura(d.perfil);
@@ -2149,7 +2154,7 @@ function propostaTexto(data){
   const vendedor=d.vendedor||{};
   const valorTxt=(d.valorOfertado!=null&&!isNaN(d.valorOfertado)) ? numeroPorExtenso(d.valorOfertado) : CAMPO_VAZIO;
   const formaPagto=d.formaPagamento||"a combinar entre as partes";
-  const validade=(d.validadeDias!=null) ? (d.validadeDias+" dias") : "10 dias";
+  const validade=(d.validadeDias!=null) ? (d.validadeDias+(Number(d.validadeDias)===1?" dia":" dias")) : "10 dias"; /* DOC-04 (F5): "1 dia", nunca "1 dias" */
   const foro=d.foro||"Goiânia/GO";
 
   let texto="PROPOSTA DE COMPRA E VENDA\n\n";
@@ -2185,7 +2190,7 @@ function termoExclusividadeTexto(data){
   const im=d.imovel||{};
   const proprietario=d.proprietario||{};
   const corretor=d.corretor||{};
-  const prazo=(d.prazoDias!=null) ? (d.prazoDias+" dias") : "90 dias";
+  const prazo=(d.prazoDias!=null) ? (d.prazoDias+(Number(d.prazoDias)===1?" dia":" dias")) : "90 dias"; /* DOC-04 (F5): "1 dia", nunca "1 dias" */
   const comissao=(d.comissaoPct!=null) ? (d.comissaoPct+"%") : CAMPO_VAZIO;
   const foro=d.foro||"Goiânia/GO";
 
@@ -6875,6 +6880,13 @@ function montarNeg(){
   const titulo={proposta:"Proposta de Compra e Venda",exclusividade:"Termo de Autorização/Exclusividade de Venda",contrato:"Contrato de Compra e Venda"}[NEG.tipo];
   const hoje=new Date().toLocaleDateString("pt-BR");
   const blocosBrutos=String(texto||"").split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);
+  /* C-14 (F5): o 1º bloco do texto puro é o título all-caps ("PROPOSTA DE COMPRA E VENDA") —
+     redundante com o banner .lbrand logo acima, virava um <b> duplicado. Dropa APENAS quando o
+     1º bloco é uma linha única toda em maiúsculas (com letra) e não é linha de assinatura —
+     se o usuário editou/removeu o título, nenhuma cláusula legítima é descartada. */
+  if(blocosBrutos.length&&blocosBrutos[0].indexOf("\n")===-1&&
+     blocosBrutos[0]===blocosBrutos[0].toUpperCase()&&/[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ]/.test(blocosBrutos[0])&&
+     !/^_{5,}/.test(blocosBrutos[0])) blocosBrutos.shift();
   const clausulasHtml=blocosBrutos
     /* WR-02 (11.1-REVIEW): dropar SÓ quando o bloco É o disclaimer (começa com ele) — o filtro por
        substring em qualquer posição apagava uma cláusula legítima que o usuário editou citando a
@@ -6888,7 +6900,10 @@ function montarNeg(){
       /* WR-03 (11.1-REVIEW): "linha toda maiúscula" só é título se tiver LETRA — string numérica
          ("45.678") passa em x===x.toUpperCase() e virava heading órfão em negrito. */
       const ehTitulo=/^Cláusula\s+\d+ª?\s*—?/.test(primeira)||(primeira===primeira.toUpperCase()&&/[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ]/.test(primeira));
-      return `<div class="negclausula-item">${ehTitulo?`<b>${esc(primeira)}</b>`:""}${resto||!ehTitulo?`<p>${esc(ehTitulo?resto:b)}</p>`:""}</div>`;
+      /* C-14 (F5): blocos multi-linha (ex.: preâmbulo "Proponente: X\nVendedor: Y") preservam as
+         quebras via <br> — antes o \n colapsava no <p> e as partes saíam em linha corrida.
+         O replace roda DEPOIS do esc(): o <br> inserido é o único markup, nunca conteúdo do usuário. */
+      return `<div class="negclausula-item">${ehTitulo?`<b>${esc(primeira)}</b>`:""}${resto||!ehTitulo?`<p>${esc(ehTitulo?resto:b).replace(/\n/g,"<br>")}</p>`:""}</div>`;
     }).join("");
   const corretorLinha=(NEG.corretor&&NEG.corretor.nome)?`Corretor(a): ${esc(NEG.corretor.nome)}${NEG.corretor.creci?" · CRECI "+esc(NEG.corretor.creci):""} · Goiânia/GO · ${hoje}`:`Goiânia/GO · ${hoje}`;
   const lassBloco=(nome,papel,creciTxt)=>`<div class="lass"><div class="linha"></div>${esc(nome||CAMPO_VAZIO)} — ${esc(papel)}${creciTxt?`<div class="lass-resp">${creciTxt}</div>`:""}</div>`;
@@ -7314,7 +7329,8 @@ function fecharLaudoView(){
 }
 
 /* ---------------- calculadora de custos de compra ----------------
-   ITBI é EXATO (2% sobre o maior entre venal e valor do negócio — LC 344/2021 Goiânia).
+   ITBI é EXATO (2% sobre o valor da transação declarado — STJ Tema 1.113; C-12/F5: o cabeçalho
+   descrevia a tese municipal superada "maior entre venal e negócio", mas o código sempre foi Tema 1.113).
    Cartório (escritura+registro) é tabela oficial em degraus (TJGO): campo editável + calculadora oficial. */
 const brlExato=n=>n==null?"—":Number(n).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
 /* Tabelas oficiais TJGO 2026 (reajuste Prov. 179/2025). Coluna TOTAL (emolumento + ISSQN 5% + fundos).

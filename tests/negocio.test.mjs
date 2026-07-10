@@ -207,6 +207,19 @@ test("parseMatricula(undefined/null) nunca lanca excecao", () => {
 
 // --- numeroPorExtenso ------------------------------------------------------------------------
 
+// --- DOC-04 (F5): concordancia de numero "1 dia" / "N dias" -----------------------------------
+
+test("propostaTexto/termoExclusividadeTexto: validade/prazo de 1 => '1 dia', nunca '1 dias' (DOC-04/F5)", () => {
+  const proposta = P.propostaTexto({ ...FIXTURES.propostaCasos.completo, validadeDias: 1 });
+  assert.ok(proposta.includes("prazo de 1 dia,"), `proposta com validadeDias=1 deveria conter "prazo de 1 dia,", obteve: ${JSON.stringify(proposta.match(/prazo de [^,]+,/))}`);
+  assert.ok(!proposta.includes("1 dias"), "proposta NAO deveria conter '1 dias'");
+  const termo = P.termoExclusividadeTexto({ ...FIXTURES.termoCasos.exclusivaSimComAnuncio, prazoDias: 1 });
+  assert.ok(termo.includes("prazo de 1 dia,"), `termo com prazoDias=1 deveria conter "prazo de 1 dia,", obteve: ${JSON.stringify(termo.match(/prazo de [^,]+,/))}`);
+  assert.ok(!termo.includes("1 dias"), "termo NAO deveria conter '1 dias'");
+  // plural preservado (defaults 10/90)
+  assert.ok(P.propostaTexto(FIXTURES.propostaCasos.completo).includes("10 dias"), "proposta default deveria seguir '10 dias'");
+});
+
 test("numeroPorExtenso: casos basicos (500000/90/1234567.89) + fronteiras pt-BR (1000000/2000000/100/150/1000) + null", () => {
   for (const [nome, caso] of Object.entries(FIXTURES.extensoCasos)) {
     if (caso.expectEmpty) {

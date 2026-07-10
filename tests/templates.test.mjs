@@ -287,6 +287,21 @@ test("zapRiscos: 2 pendencias reais viram lista com virgula + 'e' final, sem pon
   assert.ok(!/\.\s*\./.test(result), `zapRiscos NAO deveria conter ponto duplicado, obteve: ${JSON.stringify(result)}`);
 });
 
+// --- F5 ZAP-03: captAbordagem nunca envia placeholder "Q —"/"L —" ao proprietario -------------
+
+test("captAbordagem: so os campos presentes no bloco (Q, L) — nunca o placeholder '—'", () => {
+  const soQuadra = P.captAbordagem({ ...zapComData, quadra: "9", lote: null });
+  assert.ok(soQuadra.includes("(Q 9)"), `so quadra deveria sair "(Q 9)", obteve: ${JSON.stringify(soQuadra)}`);
+  assert.ok(!soQuadra.includes("L —") && !soQuadra.includes("Q —"), `so quadra NAO deveria conter placeholder, obteve: ${JSON.stringify(soQuadra)}`);
+  const soLote = P.captAbordagem({ ...zapComData, quadra: null, lote: "12" });
+  assert.ok(soLote.includes("(L 12)"), `so lote deveria sair "(L 12)", obteve: ${JSON.stringify(soLote)}`);
+  assert.ok(!soLote.includes("Q —") && !soLote.includes("L —"), `so lote NAO deveria conter placeholder, obteve: ${JSON.stringify(soLote)}`);
+  const ambos = P.captAbordagem(zapComData); // quadra 45, lote 12
+  assert.ok(ambos.includes("(Q 45, L 12)"), `ambos deveriam sair "(Q 45, L 12)", obteve: ${JSON.stringify(ambos)}`);
+  const nenhum = P.captAbordagem({ ...zapComData, quadra: null, lote: null });
+  assert.ok(!nenhum.includes("(Q") && !nenhum.includes("(L"), `sem quadra/lote NAO deveria haver bloco (Q/L), obteve: ${JSON.stringify(nenhum)}`);
+});
+
 test("zap*/capt*: nenhuma mensagem contem ponto duplicado ou '.,' com scoreConf real (todas as confiancas)", () => {
   const confs = [
     P.scoreConfianca({ areaOk: true, nComps: 9, atipico: false, venalOk: true }),   // alta
