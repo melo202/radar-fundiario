@@ -2572,14 +2572,17 @@ function cdbairroDoImovelCaixa(imovelCaixa,nomeParaCdbairro){
 
 /* cruzarCaixaTerritorio(imoveisCaixa,itensCaderno,nomeParaCdbairro): filtra por i.x&&i.y SEMPRE
    (mesmo guard de toggleCaixa — imóvel sem coordenada nunca é cruzável) e por QUALQUER cdbairro
-   candidato presente nos itens salvos do caderno (some(), nunca reduz a um único código). */
+   candidato presente nos itens salvos do caderno (some(), nunca reduz a um único código).
+   cdbairroDoImovelCaixa(i,...) é chamado 1x por imóvel (17-REVIEW.md IN-01) — o resultado já
+   filtrado por cdbairrosSalvos.has() alimenta matches/bairros na mesma passagem. */
 function cruzarCaixaTerritorio(imoveisCaixa,itensCaderno,nomeParaCdbairro){
   const cdbairrosSalvos=new Set((itensCaderno||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
-  const matches=(imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).filter(i=>
-    cdbairroDoImovelCaixa(i,nomeParaCdbairro).some(cd=>cdbairrosSalvos.has(cd))
-  );
-  const bairros=Array.from(new Set(matches.flatMap(i=>cdbairroDoImovelCaixa(i,nomeParaCdbairro).filter(cd=>cdbairrosSalvos.has(cd)))));
-  return {matches,bairros,n:matches.length};
+  const matches=[],bairrosSet=new Set();
+  (imoveisCaixa||[]).filter(i=>i&&i.x&&i.y).forEach(i=>{
+    const cds=cdbairroDoImovelCaixa(i,nomeParaCdbairro).filter(cd=>cdbairrosSalvos.has(cd));
+    if(cds.length){matches.push(i);cds.forEach(cd=>bairrosSet.add(cd));}
+  });
+  return {matches,bairros:Array.from(bairrosSet),n:matches.length};
 }
 
 /* cruzarCaixaSetor(imoveisCaixa,cdbairro,nomeParaCdbairro): mesma lógica de cruzarCaixaTerritorio,
