@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Polimento Premium
 status: executing
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-07-10T07:11:56.907Z"
+stopped_at: Completed 19-02-PLAN.md
+last_updated: "2026-07-10T07:19:43.775Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 19 (Estética Premium — Tipografia & Refinamento Visual) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-10
 
@@ -80,6 +80,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 18 P02 | 17min | 3 tasks | 2 files |
 | Phase 18 P03 | 35min | 3 tasks | 2 files |
 | Phase 19 P01 | 15min | 3 tasks | 1 files |
+| Phase 19 P02 | 12min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Logadas em PROJECT.md Key Decisions. Recentes p/ o v2.1:
 - [Phase 19]: 2 blocos @font-face com range de peso (400-800/500-700) em vez de 7 discretos - mesma fonte variavel servida pelo Google Fonts, payload real 86,4KB medido
 - [Phase 19]: CSP recebeu font-src 'self' data: como unico acrescimo; sw.js NAO bumpado (fonte vive dentro do HTML NETWORK_FIRST, radar-v7 mantido)
 - [Phase 19]: 14 declaracoes Open Sans do pipeline #laudo/PDF migradas por papel funcional (texto/heading/valor -> Archivo; eyebrow/rotulo/rodape -> JetBrains Mono), nao replace cego
+- [Phase 19]: [19-02]: --elev-0/1/2/3 no :root, derivados de --ink, substituem 14 box-shadow ad hoc (13 mapeados + .terr-legenda achado extra); def --shadow antiga removida
+- [Phase 19]: [19-02]: .card:hover escurece borda p/ --ink (era --muted); botoes primarios (.go/.onb-next) ganham :active scale(.98) formal; secundarios (.detail .acts :not(.primary), .moderow button) ganham hover --paper-2 sem cor nova
+- [Phase 19]: [19-02]: '.zapfab' do PLAN.md/UI-SPEC nao existe como seletor literal (e .cmp-fab); 'variante toast' e na verdade .leaflet-tooltip -- migrados pelo valor mapeado, mesma familia funcional
 
 ### Pending Todos
 
@@ -145,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-10T07:11:56.904Z
-Stopped at: Completed 19-01-PLAN.md
+Last session: 2026-07-10T07:19:43.772Z
+Stopped at: Completed 19-02-PLAN.md
 Resume file: None
