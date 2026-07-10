@@ -3691,6 +3691,11 @@ let bairroOutline=null;
 async function mostrarBairro(code){
   const b=COMBO.find(x=>String(x.code)===String(code));
   if(!b||!map)return false;
+  /* WR-01 (13-REVIEW.md): a divisa do setor NÃO são "pinos" — limpa os pinos da busca anterior
+     (ainda no layerGroup, pois este caminho não passa por plot()) e esconde a #pino-legenda, que
+     senão continuaria descrevendo marcadores que já não estão em foco no novo enquadramento. */
+  if(layerGroup)layerGroup.clearLayers();
+  atualizarLegenda(false);
   const toks=norm(b.raw).replace(/'/g,"").split(/\s+/);
   const core=(toks.length>1&&PFX[toks[0]]?toks.slice(1):toks).join(" ");
   loading(true,"localizando o setor…");
