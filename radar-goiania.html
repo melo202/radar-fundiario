@@ -1069,6 +1069,7 @@
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
       <span><i class="pl-dot" style="background:#57503f"></i>Sem dado ainda</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏗️ Lote subutilizado</span>
+      <span><i class="pl-dot" style="background:#a8842c;box-shadow:0 0 0 2px var(--ink)"></i>🏦📓 Caixa no seu território</span>
     </div>
     <!-- Fase 15 TERR-02: legenda do choropleth de R$/m² — hidden até o 1º setor ser escaneado
          (mesma regra de #pinoLegenda: não é decorativo por padrão, só aparece com dado real).
@@ -1149,6 +1150,10 @@
       <span class="dtag" id="terrSetorNome"></span>
       <div class="dnote" id="terrAviso" hidden></div>
       <div class="dgrid" id="terrGrid"></div>
+      <!-- Fase 17 (17-02, TERR-07): linha Caixa do setor em foco — estática, hidden por padrão;
+           montarPainel() revela via IIFE async (dataset.bairros setado em JS, onclick fixo — CR-01,
+           nunca interpolar valor do endpoint em onclick=""). -->
+      <button type="button" class="terr-caixa-line" id="terrCaixaLine" data-bairros="" hidden onclick="abrirCaixaNoMapaUI(this)"></button>
       <!-- Fase 16 (16-03, TERR-04): Detector de Lote Subutilizado — view-swap DENTRO do MESMO
            #terrPanel (nunca abre sheet nova, "1 sheet por vez"); zero requisição própria — reusa o
            scan já cacheado em TERRCACHE via territorioScan (T-16-05). hidden por padrão;
@@ -2763,6 +2768,20 @@ function resolveCdbairroDeLayer(layer){
   return idParaCdbairro&&layer&&layer.feature&&idParaCdbairro.get(layer.feature.properties.id);
 }
 
+/* garantirNomeParaCdbairro() (Fase 17, 17-02, TERR-07): Map<nomeNormalizado,Set<cdbairro>>
+   memoizado 1x por sessão — usa construirNomeParaCdbairro (RADAR_PURE, 17-01) sobre os dados JÁ
+   carregados (idParaCdbairro via carregarLookupCdbairro, lazy; BAIRROS via loadBairroPolys, já
+   disparado no boot). Zero requisição nova além do lookup já lazy. Nome da variável é `nomeMap`
+   nos call-sites (NUNCA `mapa`/`map` — colide com a instância global do Leaflet). */
+let nomeParaCdbairro=null;
+async function garantirNomeParaCdbairro(){
+  if(nomeParaCdbairro)return nomeParaCdbairro;
+  await carregarLookupCdbairro();
+  const feats=(BAIRROS&&BAIRROS.features)||BAIRROS||[];
+  nomeParaCdbairro=construirNomeParaCdbairro(feats,idParaCdbairro);
+  return nomeParaCdbairro;
+}
+
 /* ---------------- divisas de bairro (Fase 3, MAPA-02/03): outline estático do bairros-goiania.json (Fase 1) -----
    espelha o padrão de LOT_STYLE/LOT_HOVER; some em zoom>=17 (dá lugar aos lotes). */
 /* Canvas 2D (renderer usado abaixo) NÃO resolve var() do CSS — resolve os tokens p/ hex uma vez,
@@ -3077,6 +3096,10 @@ async function loadBairroPolys(){
   try{
     const r=await fetch('bairros-goiania.json');
     data=await r.json();
+    BAIRROS=data; /* Fase 17 (17-02, TERR-07): global já declarada (linha ~2554) nunca era
+      populada — garantirNomeParaCdbairro() precisa das features reais de bairros-goiania.json
+      pra montar o Map nome->cdbairro (construirNomeParaCdbairro, 17-01). Zero requisição nova:
+      mesmo fetch que já monta bairroLayer abaixo. */
   }catch(e){console.warn("bairros-goiania.json:",e);return;}
   try{
     bairroLayer=L.geoJSON(data,{renderer:L.canvas({pane:"bairros"}),pane:"bairros",style:baiStyle,onEachFeature:onEachBairro});
@@ -3663,6 +3686,30 @@ function montarPainel(scan,st,layer){
   const nomeEl=document.getElementById("terrSetorNome");
   const grid=document.getElementById("terrGrid");
   TERR_PANEL_CD=scan?scan.cdbairro:null;
+  /* Fase 17 (17-02, TERR-07): linha Caixa do setor — IIFE async ANTES dos early returns [fix I3 do
+     plan-check] pra também cobrir st.n===0 (lotes sem venal ainda podem ter imóvel Caixa no
+     setor). #terrCaixaLine nasce hidden — nunca "pisca vazia" antes do cruzamento resolver. Guard
+     TERR_PANEL_CD garante que trocar de setor enquanto a Promise resolvia não vaza a linha do
+     setor ANTERIOR pro painel do setor NOVO. */
+  const lineElInicial=document.getElementById("terrCaixaLine");
+  if(lineElInicial)lineElInicial.hidden=true;
+  if(scan&&window.CAIXA&&CAIXA.imoveis&&CAIXA.imoveis.length){
+    (async()=>{
+      const nomeMap=await garantirNomeParaCdbairro(); /* NUNCA `mapa`/`map` — colide com o Leaflet */
+      const cd=scan.cdbairro;
+      if(TERR_PANEL_CD!==cd)return; /* setor trocou enquanto a Promise resolvia */
+      const matches=cruzarCaixaSetor(CAIXA.imoveis,cd,nomeMap);
+      const el=document.getElementById("terrCaixaLine");
+      if(!el||TERR_PANEL_CD!==cd)return;
+      if(matches.length>0){
+        el.dataset.bairros=String(cd);
+        el.textContent="🏦 "+matches.length+" imóvel(is) Caixa neste setor — toque para ver no mapa";
+        el.hidden=false;
+      }else{
+        el.hidden=true;
+      }
+    })();
+  }
   if(!scan||!st){
     nomeEl.textContent="";
     grid.innerHTML='<div class="cell" style="grid-column:1/-1"><div class="k">Nenhum setor selecionado</div><div class="terr-metric-sub">Toque num bairro no mapa ou busque um setor para ver as métricas do território.</div></div>';
@@ -5192,6 +5239,17 @@ async function renderCadernoBlock(){
   itens=itens.slice().sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
   const setores=Array.from(new Set(itens.map(it=>it.cdbairro).filter(v=>v!=null))).sort((a,b)=>a-b);
   const total=itens.length;
+  /* Fase 17 (17-02, TERR-07): badge Caixa — só renderiza quando há match real (nunca "0 imóveis").
+     Zero requisição nova: CAIXA.imoveis já carregado estático; nomeMap memoizado 1x por sessão. */
+  let caixaBadgeHtml="";
+  if(window.CAIXA&&CAIXA.imoveis&&CAIXA.imoveis.length){
+    const nomeMap=await garantirNomeParaCdbairro(); /* NUNCA `mapa`/`map` — colide com o Leaflet */
+    const cx=cruzarCaixaTerritorio(CAIXA.imoveis,itens,nomeMap);
+    if(cx.n>0){
+      const rotulo=cx.n===1?"🏦 1 imóvel Caixa no seu território":"🏦 "+cx.n+" imóveis Caixa no seu território";
+      caixaBadgeHtml=`<button type="button" class="cadbook-caixabadge" id="cadernoCaixaBadge" data-bairros="${esc(cx.bairros.join(','))}" onclick="abrirCaixaNoMapaUI(this)">${esc(rotulo)}</button>`;
+    }
+  }
   const visiveis=itens.slice(0,CADERNO_PAGINA);
   const rows=visiveis.map(it=>{
     const fechou=it.status==="fechou";
@@ -5225,6 +5283,7 @@ async function renderCadernoBlock(){
       <span class="savedblock-tt">📓 Caderno de território</span>
       <span class="savedblock-count" id="cadernoCount">${total}</span>
     </div>
+    ${caixaBadgeHtml}
     <div class="dnote">Suas notas ficam só no seu aparelho — nada é enviado a servidor algum.</div>
     <div class="cadbook-filtros">
       <label for="cadernoFiltroSetor" style="position:absolute;left:-9999px">Filtrar por setor</label>
@@ -6343,7 +6402,7 @@ function copiarCustos(){
 }
 
 /* ---------------- camada Caixa (dados estáticos de caixa-goiania.js, gerado por atualizar-caixa.py) ---------------- */
-let caixaLayer=null,caixaOn=false;
+let caixaLayer=null,caixaAnelLayer=null,caixaOn=false;
 function initCaixa(){
   if(!window.CAIXA||!CAIXA.imoveis)return;
   const pl=CAIXA.imoveis.filter(i=>i.x&&i.y);
@@ -6358,10 +6417,14 @@ function initCaixa(){
     btn.innerHTML="🏦 Ver Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
   }
 }
-function caixaPopup(i){
+/* caixaPopup(i,noTerr) (Fase 17, 17-02, TERR-07): noTerr (opcional) — quando true, insere a linha
+   "📓 Este imóvel está no seu território salvo." depois do endereço e antes do preço (mesma ordem
+   de prioridade "onde fica -> o que é especial -> preço", UI-SPEC §4). */
+function caixaPopup(i,noTerr){
   return `<div class="cxp">
     <div class="tt">${esc(i.t)} — ${esc(i.b)}</div>
     <div>${esc(i.e)}</div>
+    ${noTerr?'<div class="cxp-terr">📓 Este imóvel está no seu território salvo.</div>':""}
     <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}%</span>`:""}</div>
     <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
     <div>${esc(i.m)}</div>
@@ -6369,26 +6432,83 @@ function caixaPopup(i){
     ${/^https:\/\//.test(i.u||"")?`<a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>`:""}
   </div>`;
 }
-function toggleCaixa(){
+/* garantirCaixaLayer() (Fase 17, 17-02, TERR-07, fix W1 do plan-check): resolve nomeMap+itens do
+   Caderno ANTES da 1ª construção dos pinos — caixaLayer só é montado 1x por sessão e bindPopup
+   recebe string ESTÁTICA; se o cruzamento fosse calculado DEPOIS, os pinos já construídos nunca
+   ganhariam a linha de território no popup. Idempotente (no-op se já construído). Compartilhada
+   por toggleCaixa()/abrirCaixaNoMapaUI() — nunca duplica a construção. */
+async function garantirCaixaLayer(){
+  if(caixaLayer||!window.CAIXA||!CAIXA.imoveis)return;
+  const [nomeMap,itens]=await Promise.all([garantirNomeParaCdbairro(),cadernoListar({}).catch(()=>[])]);
+  const cdbairrosSalvos=new Set((itens||[]).map(it=>it&&it.cdbairro).filter(v=>v!=null));
+  caixaLayer=L.layerGroup();
+  caixaAnelLayer=L.layerGroup();
+  CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
+    const noTerr=cdbairroDoImovelCaixa(i,nomeMap).some(cd=>cdbairrosSalvos.has(cd));
+    L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
+      .bindPopup(caixaPopup(i,noTerr)).addTo(caixaLayer);
+    if(noTerr){
+      /* anel extra — mesmo latlng, NUNCA dashArray (PIN-01: tracejado é ilegível em círculo de
+         8px); layerGroup próprio que sobe/desce junto com caixaLayer. */
+      L.circleMarker(toWGS(i.x,i.y),{radius:10,color:"#141a1f",weight:2,fillOpacity:0,bubblingMouseEvents:false}).addTo(caixaAnelLayer);
+    }
+  });
+}
+async function toggleCaixa(){
   if(!window.CAIXA)return;
   caixaOn=!caixaOn;
   const bC=document.getElementById("btnCaixa");bC.classList.toggle("on",caixaOn);bC.setAttribute("aria-pressed",caixaOn);
-  if(!caixaLayer){
-    caixaLayer=L.layerGroup();
-    CAIXA.imoveis.filter(i=>i.x&&i.y).forEach(i=>{
-      L.circleMarker(toWGS(i.x,i.y),{radius:7,color:"#141a1f",weight:1.5,fillColor:"#a8842c",fillOpacity:.95,bubblingMouseEvents:false})
-        .bindPopup(caixaPopup(i)).addTo(caixaLayer);
-    });
+  if(!caixaOn){
+    if(caixaLayer)map.removeLayer(caixaLayer);
+    if(caixaAnelLayer)map.removeLayer(caixaAnelLayer);
+    return;
   }
-  if(caixaOn){
-    caixaLayer.addTo(map);
-    if(isMobile())setView("mapa");
-    if(!LAST.length){
-      const pts=CAIXA.imoveis.filter(i=>i.x&&i.y).map(i=>toWGS(i.x,i.y));
-      map.fitBounds(L.latLngBounds(pts).pad(.15));
-    }
-    toast("Imóveis da Caixa à venda (lista de "+(CAIXA.gerado||"?")+"). Toque num pino dourado.");
-  }else map.removeLayer(caixaLayer);
+  await garantirCaixaLayer();
+  if(!caixaLayer||!caixaOn)return; /* usuário desligou de novo enquanto a Promise resolvia */
+  caixaLayer.addTo(map);
+  if(caixaAnelLayer)caixaAnelLayer.addTo(map);
+  if(isMobile())setView("mapa");
+  if(!LAST.length){
+    const pts=CAIXA.imoveis.filter(i=>i.x&&i.y).map(i=>toWGS(i.x,i.y));
+    map.fitBounds(L.latLngBounds(pts).pad(.15));
+  }
+  toast("Imóveis da Caixa à venda (lista de "+(CAIXA.gerado||"?")+"). Toque num pino dourado.");
+}
+/* abrirCaixaNoMapaUI(el) (Fase 17, 17-02, TERR-07): ação em 1 toque compartilhada pelo badge do
+   Caderno e pela linha do painel — lê el.dataset.bairros (CR-01: NUNCA interpola valor do endpoint
+   dentro de onclick=""); garante caixaLayer/caixaAnelLayer montados e no mapa (reusa
+   garantirCaixaLayer(), sem duplicar construção); filtra CAIXA.imoveis pelos códigos recebidos.
+   N=1 centraliza+abre popup; N>1 fitBounds+toast (UI-SPEC §4). */
+async function abrirCaixaNoMapaUI(el){
+  if(!window.CAIXA||!el)return;
+  const codigos=String(el.dataset.bairros||"").split(",").map(Number).filter(n=>!isNaN(n));
+  if(!codigos.length)return;
+  await garantirCaixaLayer();
+  if(!caixaLayer)return;
+  if(!caixaOn){
+    caixaOn=true;
+    const bC=document.getElementById("btnCaixa");
+    if(bC){bC.classList.add("on");bC.setAttribute("aria-pressed","true");}
+  }
+  if(!map.hasLayer(caixaLayer))caixaLayer.addTo(map);
+  if(caixaAnelLayer&&!map.hasLayer(caixaAnelLayer))caixaAnelLayer.addTo(map);
+  const nomeMap=await garantirNomeParaCdbairro();
+  const alvo=CAIXA.imoveis.filter(i=>i&&i.x&&i.y&&cdbairroDoImovelCaixa(i,nomeMap).some(cd=>codigos.includes(cd)));
+  if(!alvo.length)return;
+  if(isMobile())setView("mapa");
+  if(alvo.length===1){
+    const i=alvo[0];
+    const ll=toWGS(i.x,i.y);
+    map.setView(ll,18);
+    caixaLayer.eachLayer(m=>{
+      const p=m.getLatLng();
+      if(Math.abs(p.lat-ll[0])<1e-9&&Math.abs(p.lng-ll[1])<1e-9)m.openPopup();
+    });
+  }else{
+    const pts=alvo.map(i=>toWGS(i.x,i.y));
+    map.fitBounds(L.latLngBounds(pts).pad(.15));
+    toast("Mostrando "+alvo.length+" imóveis Caixa no mapa — toque num pino com anel.");
+  }
 }
 
 /* ---------------- exportar resultados em CSV (Excel pt-BR: ; e vírgula decimal) ---------------- */
