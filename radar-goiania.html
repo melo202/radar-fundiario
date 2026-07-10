@@ -1123,7 +1123,7 @@
          Ancorada no canto superior-direito (único canto livre — 15-UI-SPEC.md Componente 1). -->
     <div id="terrLegenda" class="terr-legenda" hidden aria-label="Legenda de valor por m² no mapa" data-mode="valor">
       <div class="terr-legend-head">
-        <button type="button" id="terrToggle" class="terr-toggle" aria-pressed="false" onclick="toggleCamadaTematica(document.getElementById('terrLegenda').dataset.mode)">Cor por valor</button>
+        <button type="button" id="terrToggle" class="terr-toggle" aria-pressed="false" onclick="toggleCamadaTematica(document.getElementById('terrLegenda').dataset.mode)">Colorir por valor</button>
         <button type="button" id="terrChevron" class="terr-chevron" aria-expanded="true" aria-label="Recolher legenda" onclick="recolherLegenda()">⌄</button>
       </div>
       <div id="terrBody" class="terr-legend-body">
@@ -2828,7 +2828,7 @@ function montarUrbBodyHTML(estado){
     linhas.push('<div class="cell" style="grid-column:1/-1"><div class="k">Macrozona</div><div class="v">Macrozona Construída</div></div>');
   }
   if(e.unidade){
-    linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Unidade Territorial</div><div class="v">${esc(e.unidade.sigla)} — ${esc(e.unidade.nome)}</div></div>`);
+    linhas.push(`<div class="cell" style="grid-column:1/-1"><div class="k">Unidade territorial</div><div class="v">${esc(e.unidade.sigla)} — ${esc(e.unidade.nome)}</div></div>`);
   }
   let notaSemCA="";
   if(r&&r.conferido===true&&r.ca_basico!=null){
@@ -3292,16 +3292,16 @@ function sincCamadaChips(novo){
   const sv=document.getElementById("terrSwatchesValor"),sz=document.getElementById("terrSwatchesZonas");
   if(leg)leg.dataset.mode=novo;
   if(novo==="valor"){
-    if(t){t.textContent="Cor por valor";t.setAttribute("aria-pressed","true");}
+    if(t){t.textContent="Colorir por valor";t.setAttribute("aria-pressed","true");}
     if(sv)sv.hidden=false;
     if(sz)sz.hidden=true;
     if(!TERR_LAST_ST&&leg)leg.hidden=true;
   }else if(novo==="zonas"){
-    if(t){t.textContent="Cor por zonas do Plano Diretor";t.setAttribute("aria-pressed","true");}
+    if(t){t.textContent="Colorir por zonas do Plano Diretor";t.setAttribute("aria-pressed","true");}
     if(sv)sv.hidden=true;
     if(sz)sz.hidden=false;
   }else{
-    if(t){t.textContent="Cor por valor";t.setAttribute("aria-pressed","false");}
+    if(t){t.textContent="Colorir por valor";t.setAttribute("aria-pressed","false");}
     if(leg)leg.hidden=true;
   }
 }
@@ -5843,7 +5843,7 @@ function cadernoImportarJSON(input){
   const reader=new FileReader();
   reader.onload=()=>{
     const val=validarImportCaderno(String(reader.result||""));
-    if(!val.ok){toast("Arquivo inválido — não é um backup do caderno. Nada foi importado.");return;}
+    if(!val.ok){toast("Arquivo inválido — não é um backup do caderno. Nada foi importado. Escolha outro arquivo.");return;}
     Promise.all(val.itens.map(it=>cadernoSalvar(it))).then(saved=>{
       toast(saved.length+" lotes importados para o caderno.");
       renderCadernoBlock();
@@ -5970,7 +5970,7 @@ async function renderCadernoBlock(){
     const nomeMap=await garantirNomeParaCdbairro(); /* NUNCA `mapa`/`map` — colide com o Leaflet */
     const cx=cruzarCaixaTerritorio(CAIXA.imoveis,itens,nomeMap);
     if(cx.n>0){
-      const rotulo=cx.n===1?"🏦 1 imóvel Caixa no seu território":"🏦 "+cx.n+" imóveis Caixa no seu território";
+      const rotulo=(cx.n===1?"🏦 1 imóvel Caixa no seu território":"🏦 "+cx.n+" imóveis Caixa no seu território")+" — toque para ver no mapa";
       caixaBadgeHtml=`<button type="button" class="cadbook-caixabadge" id="cadernoCaixaBadge" data-bairros="${esc(cx.bairros.join(','))}" onclick="abrirCaixaNoMapaUI(this)">${esc(rotulo)}</button>`;
     }
   }
