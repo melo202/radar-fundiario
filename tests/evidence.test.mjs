@@ -85,6 +85,7 @@ test("fluxo visual obriga confirmação antes do primeiro dossiê e explicita o 
   assert.ok(html.includes('id="identityCheck"'));
   assert.ok(html.includes("Confirmar e abrir dossiê"));
   assert.ok(html.includes("não valida matrícula, titularidade, ônus ou regularidade documental"));
+  assert.ok(html.includes(".idcheck-warning[hidden]{display:none}"));
   const pickStart = html.indexOf("function pick(i,origemForcada)");
   const pickEnd = html.indexOf("/* ---------------- trilha de evidências", pickStart);
   const pickSrc = html.slice(pickStart, pickEnd);
