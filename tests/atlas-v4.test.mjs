@@ -47,6 +47,19 @@ test("V4: shell expõe estado global de conexão (chip + banner)", () => {
   assert.match(html, /\.net-banner\{[^}]*background:var\(--danger-soft\)/);
 });
 
+test("V1 (fechamento): camadas territoriais leem a paleta viva do shell", () => {
+  assert.match(html, /const mapTok=\(n,fb\)=>\(_MAPTOK\.getPropertyValue\(n\)\.trim\(\)\|\|fb\)/);
+  assert.match(html, /const LOT_STYLE=\{pane:"lots",color:MAP_BRAND/);
+  assert.match(html, /const TERR_GOLD=MAP_BRASS/);
+  /* petróleo saiu das layers; risco (#c0392b) permanece desacoplado; zonas oficiais intactas */
+  for (const antigo of ['"#1d5a73"', '"#3d8fb0"', '"#2c5545"', '"#a8842c"', '"#141a1f"', '"#57503f"']) {
+    const usos = (html.match(new RegExp(antigo, "g")) || []).length;
+    assert.equal(usos, 0, `hex da paleta antiga ainda em uso literal: ${antigo}`);
+  }
+  assert.match(html, /risco:\s*\{fillColor:"#c0392b"/);
+  assert.match(html, /--zone-aa:#ffaa00/);
+});
+
 test("V4: banner offline não promete o que o SW não entrega", () => {
   /* consultas e tiles são sempre-rede no sw.js — o texto do banner precisa dizer isso
      sem sugerir que a busca funciona offline */
