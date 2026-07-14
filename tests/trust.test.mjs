@@ -13,6 +13,10 @@ test("contrato de confiança: interface não promete liquidez nem área privativ
     "fator oferta 0,90",
     "Veja valor e oportunidade",
     "score de oportunidade e uma leitura",
+    "estimado médio · faixa",
+    "Menor estimado",
+    "mercado_estimado_min",
+    "mercado_estimado_max",
   ]) {
     assert.ok(!html.includes(proibido), `copy proibida voltou para a interface: ${proibido}`);
   }

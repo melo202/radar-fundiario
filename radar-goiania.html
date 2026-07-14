@@ -432,6 +432,7 @@
   .chooser .chrow .u{display:block;font:700 14px/1.15 "Archivo";color:var(--ink)}
   .chooser .chrow .m{display:block;font:600 11px/1.3 "JetBrains Mono",monospace;color:var(--muted);margin-top:3px}
   .chooser .chrow .val{flex:none;font:800 14px/1.1 "Archivo";color:var(--accent);white-space:nowrap}
+  .chooser .chrow .val small{display:block;margin-bottom:3px;font:600 9px/1.1 "Archivo";letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right}
   .detail .dtag{font:700 12px/1 "JetBrains Mono";color:var(--lot-bright);letter-spacing:.06em}
   .detail h3{margin:6px 0 3px;font:700 18px/1.15 "Archivo"}
   .detail .insc{font:600 13px/1 "JetBrains Mono";color:var(--accent);margin-bottom:12px}
@@ -2449,7 +2450,7 @@ function ehAptoProvavel(a){return (a.uso===1||a.uso===5)&&!isGarage(a);}
 
 /* analisePredicoTexto(resumo, meta): texto copiável WhatsApp-style a partir do retorno de
    resumoPredio + metadados do prédio. Omite cada cláusula de métrica independentemente
-   quando seu campo é null (nunca "estimado médio: —"/"área média: —" num texto copiável).
+   quando seu campo é null (nunca "referência indicativa: —"/"área média: —" num texto copiável).
    Nunca chama esc() (texto puro de clipboard, não innerHTML — Wave 2 decide sanitização). */
 function analisePredicoTexto(resumo,meta){
   const r=resumo||{};
@@ -2458,7 +2459,7 @@ function analisePredicoTexto(resumo,meta){
   const partes=[String(r.n==null?0:r.n)+" unidades"];
   if(r.areaMedia!=null)partes.push("área média "+Math.round(r.areaMedia)+" m²");
   if(r.venalMedio!=null)partes.push("venal médio "+rs(r.venalMedio));
-  if(r.estimadoMedio!=null)partes.push("estimado médio "+rs(r.estimadoMedio)+" · faixa "+rs(r.faixaLo)+"–"+rs(r.faixaHi));
+  if(r.estimadoMedio!=null)partes.push("referência indicativa média "+rs(r.estimadoMedio)+" · faixa "+rs(r.faixaLo)+"–"+rs(r.faixaHi));
   let texto="🏢 "+(m.nome||"Edifício")+" — Q "+(m.quadra||"—")+" · L "+(m.lote||"—")+"\n";
   texto+=partes.join(" · ");
   if(m.endereco)texto+="\n\n📍 "+m.endereco;
@@ -5340,13 +5341,13 @@ function bldgSumarioHTML(ci){
   const nUnidTxt=String(resumo.n);
   const areaMediaTxt=resumo.areaMedia!=null?Math.round(resumo.areaMedia)+" m²":"—";
   const venalMedioTxt=resumo.venalMedio!=null?brlC(resumo.venalMedio):"—";
-  const faixaTxt=resumo.estimadoMedio!=null?("~"+brlC(resumo.estimadoMedio)+" · "+brlC(resumo.faixaLo)+"–"+brlC(resumo.faixaHi)):"sem estimativa disponível";
+  const faixaTxt=resumo.estimadoMedio!=null?("~"+brlC(resumo.estimadoMedio)+" · "+brlC(resumo.faixaLo)+"–"+brlC(resumo.faixaHi)):"sem referência indicativa";
   return `<div class="bldg-sumario">
     <div class="bldg-metricas">
       <div class="bm"><b>${esc(nUnidTxt)}</b><span>${esc(nounUnid)}</span></div>
       <div class="bm"><b>${esc(areaMediaTxt)}</b><span>área média</span></div>
       <div class="bm"><b>${esc(venalMedioTxt)}</b><span>venal médio</span></div>
-      <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>estimado médio · faixa</span></div>
+      <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>referência indicativa média · faixa</span></div>
     </div>
     <div class="bldg-acoes">
       <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">🔍 Ordenar / filtrar</button>
@@ -5371,7 +5372,7 @@ function bldgOrdHTML(ci){
     <div class="chips" role="group" aria-label="Ordenar unidades">
       <button type="button"${onOf("padrao")} onclick="ordenarBldg(this,'padrao')">Padrão</button>
       <button type="button"${onOf("oportunidade")} onclick="ordenarBldg(this,'oportunidade')">Menor valor cadastral/m²</button>
-      <button type="button"${onOf("estimado-asc")} onclick="ordenarBldg(this,'estimado-asc')">Menor estimado</button>
+      <button type="button"${onOf("estimado-asc")} onclick="ordenarBldg(this,'estimado-asc')">Menor referência indicativa</button>
       <button type="button"${onOf("area-desc")} onclick="ordenarBldg(this,'area-desc')">Maior área</button>
     </div>
     <div class="bldg-filtros">
@@ -5721,7 +5722,8 @@ function showChooser(ci){
   document.getElementById("chList").innerHTML=units.map(a=>{
     const gi=LAST.indexOf(a), ul=esc(unitLabel(a))||"Imóvel", area=a.areaedif?Math.round(a.areaedif)+" m²":"—";
     const est=mercadoEstimado(a), val=est?"~"+brlC((est.lo+est.hi)/2):(a.vlvenal>0?brl(a.vlvenal):"—");
-    return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${venalTxt(a.vlvenal)}</span></span><span class="val">${val}</span></button>`;
+    const valLbl=est?"ref. indicativa":"valor venal";
+    return `<button class="chrow" onclick="chooseThis(${gi})"><span class="ci"><span class="u">${ul}</span><span class="m">${area} · venal ${venalTxt(a.vlvenal)}</span></span><span class="val"><small>${valLbl}</small>${val}</span></button>`;
   }).join("");
   closeDetail(); /* já chama untrapFocus() (Fase 19) antes do trap abaixo — nunca vaza o handler do #detail */
   setView("mapa");
@@ -7774,7 +7776,7 @@ const csvNum=v=>v?String(Math.round(v*100)/100).replace(".",","):"";
 function exportCSV(){
   if(!LAST.length)return;
   const head=["inscricao","ci","bairro","quadra","lote","endereco","complemento","edificio","uso",
-    "area_terreno_m2","area_construida_m2","valor_venal","mercado_estimado_min","mercado_estimado_max","rs_m2","lat","lon"];
+    "area_terreno_m2","area_construida_m2","valor_venal","referencia_indicativa_min","referencia_indicativa_max","rs_m2","lat","lon"];
   const lines=[head.join(";")];
   LAST.forEach(a=>{
     const addr=addrDe(a);

@@ -226,7 +226,7 @@ test("analisePredicoTexto(resumo completo, meta completo) contem todos os elemen
     "unidades",
     "área média",
     "venal médio",
-    "estimado médio",
+    "referência indicativa média",
     "faixa",
     caso.meta.endereco,
     "Análise gerada pelo Radar Fundiário.",
@@ -235,10 +235,10 @@ test("analisePredicoTexto(resumo completo, meta completo) contem todos os elemen
   }
 });
 
-test("analisePredicoTexto(estimadoMedio:null) NAO contem 'estimado médio' nem 'faixa' (clausula omitida por completo)", () => {
+test("analisePredicoTexto(estimadoMedio:null) NAO contem referência indicativa nem faixa", () => {
   const caso = FIXTURES.analisePredicoTextoCasos.semEstimativa;
   const texto = P.analisePredicoTexto(caso.resumo, caso.meta);
-  assert.ok(!texto.includes("estimado médio"), `nao deveria conter "estimado médio", obteve:\n${texto}`);
+  assert.ok(!texto.includes("referência indicativa"), `nao deveria conter referência indicativa, obteve:\n${texto}`);
   assert.ok(!texto.includes("faixa"), `nao deveria conter "faixa", obteve:\n${texto}`);
 });
 
