@@ -496,6 +496,42 @@
   .evidence-row.is-warn .evidence-status{color:#7d621f}
   .evidence-row.is-error .evidence-status{color:var(--status-risco)}
 
+  /* DILIG-01/02: histórico comparável + checklist documental. Os dois reusam o accordion da
+     trilha; os estilos abaixo cobrem só o conteúdo novo. Tudo permanece neutro até o usuário
+     registrar um estado — nenhuma cor implica validação jurídica. */
+  .dilig-body{border-top:1px solid var(--line);padding:12px 13px}
+  .dilig-note{font:500 11px/1.45 "Archivo";color:var(--muted);margin:0 0 11px}
+  .hist-change{background:var(--paper-2);border-left:3px solid var(--gold);padding:10px 11px;margin-bottom:11px}
+  .hist-change-tt{font:700 12.5px/1.25 "Archivo";color:var(--ink);margin-bottom:6px}
+  .hist-change-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .hist-change-list li{font:500 11.5px/1.4 "Archivo";color:var(--ink)}
+  .hist-empty{background:var(--paper-2);padding:11px;font:500 12px/1.45 "Archivo";color:var(--muted);margin-bottom:11px}
+  .hist-timeline{display:flex;flex-direction:column;border:1px solid var(--grid)}
+  .hist-snap{display:grid;grid-template-columns:minmax(118px,.35fr) minmax(0,1fr);gap:8px 12px;padding:10px 11px;border-bottom:1px solid var(--grid)}
+  .hist-snap:last-child{border-bottom:0}
+  .hist-date{font:700 10px/1.35 "JetBrains Mono",monospace;color:var(--muted);text-transform:uppercase}
+  .hist-metrics{font:500 11.5px/1.45 "Archivo";color:var(--ink)}
+  .hist-metrics b{font-weight:700}
+  .dilig-mini-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  .dilig-mini-actions button,.dilig-mini-actions a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:600 11.5px/1.2 "Archivo";border-radius:2px;text-decoration:none;cursor:pointer}
+  .dilig-mini-actions button:hover,.dilig-mini-actions a:hover{border-color:var(--ink)}
+  .doc-list{display:flex;flex-direction:column;border:1px solid var(--grid)}
+  .doc-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,210px);gap:10px 14px;padding:11px;border-bottom:1px solid var(--grid);align-items:center}
+  .doc-row:last-child{border-bottom:0}
+  .doc-title{font:700 12.5px/1.3 "Archivo";color:var(--ink)}
+  .doc-detail{font:500 11px/1.4 "Archivo";color:var(--muted);margin-top:2px}
+  .doc-next{font:600 10px/1.4 "JetBrains Mono",monospace;color:var(--muted);margin-top:5px}
+  .doc-status{min-height:44px;width:100%;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink);font:600 12px/1.2 "Archivo";padding:0 32px 0 10px;border-radius:2px}
+  .doc-status:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .doc-row.is-conferido .doc-title{color:var(--lot)}
+  .doc-row.is-nao_aplica{opacity:.68}
+  .doc-progress{font:600 10.5px/1.35 "JetBrains Mono",monospace;color:var(--muted);margin:0 0 10px}
+  @media(max-width:640px){
+    .hist-snap,.doc-row{grid-template-columns:1fr}
+    .doc-status{max-width:none}
+    .dilig-mini-actions>*{flex:1 1 145px}
+  }
+
   .dscores{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .score{flex:1;min-width:150px;min-height:44px;display:block;text-align:left;background:var(--paper);
     border:1.5px solid var(--line);border-radius:2px;padding:10px 14px;cursor:pointer;font-family:inherit}
@@ -1246,6 +1282,16 @@
       <details class="devidence" id="dEvidence">
         <summary><span>Trilha de evidências</span><span class="devidence-summary" id="dEvidenceSummary"></span></summary>
         <div class="evidence-list" id="dEvidenceBody"></div>
+      </details>
+
+      <details class="devidence dhistory" id="dHistory">
+        <summary><span>Histórico entre consultas</span><span class="devidence-summary" id="dHistorySummary"></span></summary>
+        <div class="dilig-body" id="dHistoryBody"></div>
+      </details>
+
+      <details class="devidence dchecklist" id="dDocChecklist">
+        <summary><span>Checklist documental</span><span class="devidence-summary" id="dDocChecklistSummary"></span></summary>
+        <div class="dilig-body" id="dDocChecklistBody"></div>
       </details>
 
       <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
@@ -2123,6 +2169,102 @@ function oportunidadeItem(a, extras){
 function histAdd(lista, item, cap){
   const next=[...(lista||[]), item];
   return next.length>cap ? next.slice(next.length-cap) : next;
+}
+
+/* DILIG-01: checklist documental por imóvel. Os estados são marcações LOCAIS do usuário —
+   "conferido" nunca significa validado pelo Radar. A lista é estática e deliberadamente curta:
+   organiza a diligência sem virar CRM nem tentar substituir cartório/advogado. */
+const DOC_STATUS_ORDEM=["pendente","solicitado","recebido","conferido","nao_aplica"];
+const DOC_STATUS_LBL={
+  pendente:"Não iniciado",solicitado:"Solicitado",recebido:"Recebido",
+  conferido:"Marcado como conferido",nao_aplica:"Não se aplica"
+};
+const DOC_ITENS=[
+  {id:"matricula",titulo:"Matrícula atualizada e certidão de ônus",
+    detalhe:"Confronta descrição registral, titularidade e gravames informados pelo cartório.",
+    acao:"Solicitar certidão atualizada ao Registro de Imóveis competente."},
+  {id:"iptu",titulo:"IPTU do exercício e CND municipal",
+    detalhe:"Confronta a inscrição fiscal e a situação dos débitos municipais disponíveis.",
+    acao:"Emitir a CND oficial da Prefeitura com a inscrição do imóvel."},
+  {id:"pessoais",titulo:"Certidões pessoais dos vendedores",
+    detalhe:"Apoia a análise dos riscos pessoais relevantes à operação.",
+    acao:"Definir e solicitar as certidões conforme as partes e a orientação jurídica."},
+  {id:"condominio",titulo:"Quitação e documentos do condomínio",
+    detalhe:"Aplica-se quando houver condomínio; pode ser marcado como não aplicável.",
+    acao:"Solicitar declaração de quitação, convenção e atas relevantes."},
+  {id:"identidade",titulo:"Identidade, CPF e estado civil dos proprietários",
+    detalhe:"Apoia a conferência das partes e de eventual necessidade de anuência.",
+    acao:"Confrontar os documentos oficiais com a matrícula atualizada."}
+];
+function checklistDocumentalItens(estados){
+  const src=estados&&typeof estados==="object"?estados:{};
+  return DOC_ITENS.map(base=>{
+    const status=DOC_STATUS_ORDEM.includes(src[base.id])?src[base.id]:"pendente";
+    return Object.assign({},base,{status,rotulo:DOC_STATUS_LBL[status]});
+  });
+}
+function resumoChecklistDocumental(estados){
+  const itens=checklistDocumentalItens(estados);
+  const aplicaveis=itens.filter(it=>it.status!=="nao_aplica");
+  const conferidos=aplicaveis.filter(it=>it.status==="conferido").length;
+  const recebidos=aplicaveis.filter(it=>it.status==="recebido").length;
+  const solicitados=aplicaveis.filter(it=>it.status==="solicitado").length;
+  return {itens,total:aplicaveis.length,conferidos,recebidos,solicitados,
+    emCurso:recebidos+solicitados,pendentes:aplicaveis.filter(it=>it.status==="pendente").length,
+    naoAplica:itens.length-aplicaveis.length};
+}
+function proximaAcaoDocumental(item){
+  if(!item||item.status==="conferido"||item.status==="nao_aplica")return "";
+  if(item.status==="solicitado")return "Acompanhar o recebimento e registrar o próximo estado.";
+  if(item.status==="recebido")return "Conferir com a fonte oficial e a orientação profissional adequada.";
+  return item.acao||"";
+}
+function pendenciasDocumentaisTexto(estados){
+  return checklistDocumentalItens(estados)
+    .filter(it=>it.status!=="conferido"&&it.status!=="nao_aplica")
+    .map(it=>"• "+it.titulo+": "+proximaAcaoDocumental(it));
+}
+
+/* DILIG-02: histórico comparável = snapshots de consultas deste navegador. A chave nova preserva
+   unidades sem inscrição própria; itens legados (só `insc`) são aceitos apenas quando a chave não
+   tem sufixo de unidade, evitando misturar apartamentos do mesmo lote. */
+function historicoDoImovel(lista,chave,insc,limite){
+  const key=String(chave==null?"":chave).trim(),fallback=String(insc==null?"":insc).trim();
+  const cap=Math.max(1,Number(limite)||4);
+  return (Array.isArray(lista)?lista:[]).filter(it=>{
+    if(!it||typeof it!=="object")return false;
+    const itemKey=String(it.identityKey==null?"":it.identityKey).trim();
+    if(itemKey)return itemKey===key;
+    return !key.includes("|")&&String(it.insc==null?"":it.insc).trim()===fallback;
+  }).slice(-cap);
+}
+function mudancasHistorico(anterior,atual){
+  const a=anterior||{},b=atual||{},out=[];
+  const num=v=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):null;
+  const addNum=(id,rotulo,de,para,unidade)=>{
+    const x=num(de),y=num(para);if(x==null||y==null||Math.abs(x-y)<.01)return;
+    out.push({id,rotulo,de:x,para:y,unidade:unidade||"",pct:Math.round((y-x)/x*1000)/10});
+  };
+  addNum("venal","Valor venal",a.vlvenal,b.vlvenal,"moeda");
+  addNum("area","Área cadastrada",a.areaEdif||a.areaTerr,b.areaEdif||b.areaTerr,"m²");
+  const faixaA=num(a.faixaLo)&&num(a.faixaHi)?[num(a.faixaLo),num(a.faixaHi)]:null;
+  const faixaB=num(b.faixaLo)&&num(b.faixaHi)?[num(b.faixaLo),num(b.faixaHi)]:null;
+  if(faixaA&&faixaB&&(Math.abs(faixaA[0]-faixaB[0])>=1||Math.abs(faixaA[1]-faixaB[1])>=1))
+    out.push({id:"faixa",rotulo:"Faixa indicativa",de:faixaA,para:faixaB,unidade:"faixa"});
+  const addTexto=(id,rotulo,de,para)=>{
+    const x=String(de==null?"":de).trim(),y=String(para==null?"":para).trim();
+    /* campos derivados só entram quando existem nos DOIS snapshots; evita transformar uma
+       consulta ainda não executada nesta sessão em falsa "queda" de cobertura. */
+    if(x&&y&&x!==y)out.push({id,rotulo,de:x,para:y,unidade:"texto"});
+  };
+  addTexto("amostra","Tamanho da amostra",a.sampleN,b.sampleN);
+  addTexto("evidencias","Cobertura das evidências",
+    a.evidenceOk!=null?(a.evidenceOk+"/"+(a.evidenceTotal||5)):"",
+    b.evidenceOk!=null?(b.evidenceOk+"/"+(b.evidenceTotal||5)):"");
+  addTexto("posicao","Posição cadastral",a.scoreOportunidade,b.scoreOportunidade);
+  addTexto("zona","Enquadramento urbanístico",a.zona,b.zona);
+  addTexto("cadastro","Referência do cadastro",a.cadastroRef,b.cadastroRef);
+  return out;
 }
 
 /* DOC-01/DOC-02 (Fase 11, 11-01): recomendação de documento + pendências + texto da Ficha
@@ -5981,9 +6123,15 @@ function trilhaEvidencias(a){
       detalhe:ok||parcial?zona:"Não foi possível consultar as camadas agora; tente novamente.",
       fonte:"Prefeitura de Goiânia · mapa oficial do Plano Diretor · LC 349/2022",data:consulta});
   }
+  const doc=a.__docChecklistSummary;
+  const docDetalhe=doc&&doc.conferidos
+    ?doc.conferidos+"/"+doc.total+" itens marcados como conferidos pelo usuário. O Radar não validou os documentos."
+    :"O Radar não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.";
+  const docData=doc&&doc.updatedAt
+    ?fmtVisita(doc.updatedAt).replace("consultado","marcações atualizadas")+" · validação fora do Radar"
+    :"Fora do escopo desta consulta";
   rows.push({id:"registral",titulo:"Matrícula, titularidade e ônus",status:"off",rotulo:"Não verificado",
-    detalhe:"O Radar não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.",
-    fonte:"Exige Cartório de Registro de Imóveis e certidões oficiais",data:"Fora do escopo desta consulta"});
+    detalhe:docDetalhe,fonte:"Exige Cartório de Registro de Imóveis e certidões oficiais",data:docData});
   return rows;
 }
 function renderEvidence(a){
@@ -5999,6 +6147,28 @@ function renderEvidence(a){
 function evidenciasDocumentoHTML(a){
   return `<div class="lcard"><h3>Rastreabilidade das evidências</h3>${trilhaEvidencias(a).map(r=>
     `<div class="kv"><span class="k">${esc(r.titulo)} · ${esc(r.rotulo)}</span><span class="v">${esc(r.fonte)} · ${esc(r.data)}<br><small>${esc(r.detalhe)}</small></span></div>`).join("")}</div>`;
+}
+function historicoDocumentoHTML(a){
+  const itens=historicoDoImovel(histLoad(),identidadeChave(a),clean(a.nrinscr||a.ci),4);
+  const atual=itens[itens.length-1],anterior=itens[itens.length-2];
+  const mud=atual&&anterior?mudancasHistorico(anterior,atual):[];
+  const comparacao=anterior
+    ?(mud.length?mud.map(m=>`<div class="kv"><span class="k">${esc(m.rotulo)}</span><span class="v">${esc(historicoMudancaTxt(m))}</span></div>`).join("")
+      :'<p>Nenhuma mudança observável nos campos acompanhados entre as duas consultas mais recentes.</p>')
+    :'<p>Primeira referência local registrada; ainda não existe uma consulta anterior para comparar.</p>';
+  return `<div class="lcard"><h3>Histórico comparável</h3>
+    <p class="lmiudo">Compara snapshots salvos neste navegador. Não representa histórico de preço, anúncios, transações, matrícula ou cadeia dominial.</p>
+    ${comparacao}</div>`;
+}
+function checklistDocumentoHTML(a){
+  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados);
+  return `<div class="lcard"><h3>Checklist documental</h3>
+    <p>${res.conferidos} de ${res.total} itens marcados como conferidos pelo usuário${res.emCurso?" · "+res.emCurso+" em andamento":""}.</p>
+    ${res.itens.map(it=>`<div class="kv"><span class="k">${esc(it.titulo)}</span><span class="v">${esc(it.rotulo)}${proximaAcaoDocumental(it)?"<br><small>Próxima ação: "+esc(proximaAcaoDocumental(it))+"</small>":""}</span></div>`).join("")}
+    <p class="lmiudo">Estas são marcações locais de preparação. O Radar não examinou autenticidade, vigência, conteúdo, titularidade ou ônus.</p></div>`;
+}
+function diligenciaDocumentoHTML(a){
+  return historicoDocumentoHTML(a)+checklistDocumentoHTML(a);
 }
 
 /* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()
@@ -6165,6 +6335,7 @@ function showDetail(a,ll){
   const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
   if(DCUR!==a)d.scrollTop=0; /* imóvel novo: sheet abre no topo (senão o × fica fora da tela) */
   DCUR=a;
+  renderChecklistDocumental(a);
   renderEvidence(a);
   histPush(a); /* Fase 10 SALV-01: auto-add ao radar_historico a cada abertura de ficha (dedupe+FIFO 30) */
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
@@ -6285,6 +6456,160 @@ function oppExtras(a){
     scoreOportunidade: sc.op?sc.op.rotulo:null,
     scoreConfianca: sc.conf?sc.conf.nivel:null
   };
+}
+
+/* DILIG-01/02: estados locais do checklist e snapshots de consulta. Nenhum documento, nome de
+   proprietário ou certidão é armazenado — só marcações e métricas já exibidas no Radar. */
+const DOC_CHECK_STORAGE="radar_checklist_documental_v1";
+const HIST_SESSION_ID=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+function checklistLoadAll(){
+  try{
+    const v=JSON.parse(localStorage.getItem(DOC_CHECK_STORAGE)||"{}");
+    return v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+  }catch(e){return {};}
+}
+function checklistSaveAll(registros){
+  try{localStorage.setItem(DOC_CHECK_STORAGE,JSON.stringify(registros));return true;}
+  catch(e){toast("Não foi possível salvar o checklist neste navegador. Libere espaço e tente de novo.");return false;}
+}
+function checklistRegistro(a){
+  const all=checklistLoadAll(),key=identidadeChave(a),raw=all[key];
+  const estados=raw&&raw.estados&&typeof raw.estados==="object"?raw.estados:{};
+  const limpos={};
+  checklistDocumentalItens(estados).forEach(it=>{if(it.status!=="pendente")limpos[it.id]=it.status;});
+  return {key,estados:limpos,updatedAt:raw&&raw.updatedAt?raw.updatedAt:null};
+}
+function checklistSalvarEstado(a,id,status){
+  if(!a||!DOC_ITENS.some(it=>it.id===id)||!DOC_STATUS_ORDEM.includes(status))return false;
+  const all=checklistLoadAll(),key=identidadeChave(a),prev=checklistRegistro(a),estados=Object.assign({},prev.estados);
+  if(status==="pendente")delete estados[id];else estados[id]=status;
+  all[key]={estados,updatedAt:new Date().toISOString()};
+  /* teto defensivo: 120 imóveis mais recentes; o checklist não cresce sem limite no aparelho. */
+  const recentes=Object.entries(all).sort((x,y)=>String(x[1]&&x[1].updatedAt||"").localeCompare(String(y[1]&&y[1].updatedAt||""))).slice(-120);
+  const next={};recentes.forEach(([k,v])=>{next[k]=v;});
+  if(!checklistSaveAll(next))return false;
+  renderChecklistDocumental(a);
+  renderEvidence(a);
+  return true;
+}
+function alterarChecklistDocumental(sel){
+  if(!DCUR||!sel)return;
+  checklistSalvarEstado(DCUR,String(sel.dataset.docId||""),String(sel.value||""));
+}
+function limparChecklistDocumental(){
+  if(!DCUR||!confirm("Limpar as marcações documentais deste imóvel neste navegador?"))return;
+  const all=checklistLoadAll(),key=identidadeChave(DCUR);
+  delete all[key];
+  if(checklistSaveAll(all)){renderChecklistDocumental(DCUR);renderEvidence(DCUR);toast("Marcações documentais limpas.");}
+}
+function copiarPendenciasDocumentais(){
+  if(!DCUR)return;
+  const reg=checklistRegistro(DCUR),linhas=pendenciasDocumentaisTexto(reg.estados);
+  const cab="Checklist documental — "+(addrDe(DCUR)||clean(DCUR.nrinscr||DCUR.ci)||"imóvel");
+  const corpo=linhas.length?linhas.join("\n"):"• Nenhuma pendência aberta nas marcações locais.";
+  copyTexto(cab+"\n"+corpo+"\n\nMarcações de apoio do Radar; confirme documentos, validade e conteúdo nas fontes oficiais.","Pendências documentais copiadas.");
+}
+function renderChecklistDocumental(a){
+  const sumEl=document.getElementById("dDocChecklistSummary"),body=document.getElementById("dDocChecklistBody");
+  if(!sumEl||!body||!a)return;
+  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados);
+  a.__docChecklistSummary=Object.assign({},res,{updatedAt:reg.updatedAt});
+  sumEl.textContent=res.conferidos+" de "+res.total+" marcados"+(res.emCurso?" · "+res.emCurso+" em andamento":"");
+  const statusOpts=it=>DOC_STATUS_ORDEM.map(status=>
+    '<option value="'+esc(status)+'" '+(status===it.status?"selected":"")+'>'+esc(DOC_STATUS_LBL[status])+'</option>'
+  ).join("");
+  const insc=clean(a.nrinscr||a.ci).replace(/\D/g,"");
+  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(insc);
+  const atualizado=reg.updatedAt?fmtVisita(reg.updatedAt).replace("consultado","atualizado"):"Ainda sem marcações";
+  body.innerHTML=
+    '<p class="dilig-note">Organize o que foi solicitado, recebido e conferido. As marcações ficam só neste navegador e não validam autenticidade, vigência, titularidade ou ausência de ônus.</p>'+
+    '<div class="doc-progress">'+esc(atualizado)+' · '+res.pendentes+' não iniciados · '+res.naoAplica+' não aplicáveis</div>'+
+    '<div class="doc-list">'+res.itens.map(it=>{
+      const prox=proximaAcaoDocumental(it);
+      return '<div class="doc-row is-'+esc(it.status)+'">'+
+        '<div><div class="doc-title">'+esc(it.titulo)+'</div><div class="doc-detail">'+esc(it.detalhe)+'</div>'+
+        (prox?'<div class="doc-next">Próxima ação · '+esc(prox)+'</div>':"")+'</div>'+
+        '<select class="doc-status" data-doc-id="'+esc(it.id)+'" aria-label="Status documental: '+esc(it.titulo)+'">'+statusOpts(it)+'</select></div>';
+    }).join("")+'</div>'+
+    '<div class="dilig-mini-actions"><button type="button" id="docCopyPending">Copiar pendências ⧉</button>'+
+    '<a href="'+esc(cnd)+'" target="_blank" rel="noopener">Emitir CND municipal ↗</a>'+
+    '<a href="https://www.registrodeimoveis.org.br/servicos-interno/certidao-de-matricula" target="_blank" rel="noopener">Solicitar certidão registral ↗</a>'+
+    '<button type="button" id="docClearMarks">Limpar marcações</button></div>';
+  body.querySelectorAll(".doc-status").forEach(sel=>sel.addEventListener("change",()=>alterarChecklistDocumental(sel)));
+  const cp=document.getElementById("docCopyPending"),cl=document.getElementById("docClearMarks");
+  if(cp)cp.addEventListener("click",copiarPendenciasDocumentais);
+  if(cl)cl.addEventListener("click",limparChecklistDocumental);
+}
+
+function historicoSnapshot(a,visitedAt){
+  const base=oportunidadeItem(a,oppExtras(a)),ev=trilhaEvidencias(a);
+  const pd=a.__pdEstado,un=pd&&pd.unidade;
+  const analiseCompleta=!!a.__evidenceSample&&(!(a.x_coord&&a.y_coord)||!!pd);
+  return Object.assign({},base,{
+    identityKey:identidadeChave(a),sessionId:HIST_SESSION_ID,visitedAt:visitedAt||new Date().toISOString(),
+    sampleN:a.__evidenceSample&&a.__evidenceSample.n!=null?Number(a.__evidenceSample.n):null,
+    sampleRadius:a.__evidenceSample&&a.__evidenceSample.radius?Number(a.__evidenceSample.radius):null,
+    evidenceOk:analiseCompleta?ev.filter(r=>r.status==="ok").length:null,evidenceTotal:ev.length,
+    zona:un?(clean(un.sigla)+(un.nome?" — "+clean(un.nome):"")):pd&&pd.macrozona?clean(pd.macrozona):null,
+    cadastroRef:fmtDt(a.dtultalter)||fmtDt(a.dtrecadast)||fmtDt(a.dtinclusao)||null
+  });
+}
+function historicoMudancaTxt(m){
+  if(m.unidade==="moeda")return m.rotulo+": "+brlC(m.de)+" → "+brlC(m.para)+" ("+(m.pct>0?"+":"")+m.pct+"%)";
+  if(m.unidade==="m²")return m.rotulo+": "+Math.round(m.de)+" m² → "+Math.round(m.para)+" m²";
+  if(m.unidade==="faixa")return m.rotulo+": "+brlC(m.de[0])+"–"+brlC(m.de[1])+" → "+brlC(m.para[0])+"–"+brlC(m.para[1]);
+  return m.rotulo+": "+m.de+" → "+m.para;
+}
+function historicoMetricasTxt(it){
+  const out=[];
+  if(Number(it.vlvenal)>0)out.push("<b>Venal</b> "+brlC(Number(it.vlvenal)));
+  const area=Number(it.areaEdif||it.areaTerr);if(area>0)out.push("<b>Área</b> "+Math.round(area)+" m²");
+  if(Number(it.sampleN)>0)out.push("<b>Amostra</b> "+Math.round(Number(it.sampleN)));
+  if(it.evidenceOk!=null)out.push("<b>Evidências</b> "+Math.round(Number(it.evidenceOk))+"/"+Math.round(Number(it.evidenceTotal)||5));
+  if(it.scoreOportunidade)out.push("<b>Posição</b> "+esc(it.scoreOportunidade));
+  return out.join(" · ")||"Snapshot sem métricas comparáveis suficientes.";
+}
+function renderHistoricoComparavel(a){
+  const sum=document.getElementById("dHistorySummary"),body=document.getElementById("dHistoryBody");
+  if(!sum||!body||!a)return;
+  const itens=historicoDoImovel(histLoad(),identidadeChave(a),clean(a.nrinscr||a.ci),4);
+  const atual=itens.length?itens[itens.length-1]:null,anterior=itens.length>1?itens[itens.length-2]:null;
+  const mud=anterior&&atual?mudancasHistorico(anterior,atual):[];
+  sum.textContent=itens.length+(itens.length===1?" consulta local":" consultas locais")+(anterior?" · "+(mud.length?mud.length+" mudanças":"sem mudança observável"):"");
+  const comparacao=anterior
+    ? '<div class="hist-change"><div class="hist-change-tt">'+(mud.length?"O que mudou desde a consulta anterior":"Nenhuma mudança observável")+'</div>'+
+      (mud.length?'<ul class="hist-change-list">'+mud.map(m=>'<li>'+esc(historicoMudancaTxt(m))+'</li>').join("")+'</ul>':
+      '<div class="dilig-note" style="margin:0">Os campos acompanhados permaneceram iguais entre os dois snapshots.</div>')+'</div>'
+    : '<div class="hist-empty">Primeira referência local registrada. Uma nova consulta em outra sessão criará o ponto de comparação.</div>';
+  body.innerHTML=
+    '<p class="dilig-note">Compara snapshots das consultas feitas neste navegador. Não representa histórico de preço, anúncios, transações, matrícula ou cadeia dominial.</p>'+
+    comparacao+
+    (itens.length?'<div class="hist-timeline">'+itens.slice().reverse().map((it,idx)=>
+      '<div class="hist-snap"><div class="hist-date">'+esc(fmtVisita(it.visitedAt)||"Data não disponível")+(idx===0?" · atual":"")+'</div>'+
+      '<div class="hist-metrics">'+historicoMetricasTxt(it)+'</div></div>'
+    ).join("")+'</div>':'<div class="hist-empty">Nenhuma consulta local registrada para esta identidade cadastral.</div>')+
+    (itens.length?'<div class="dilig-mini-actions">'+(anterior?'<button type="button" id="histCopy">Copiar evolução ⧉</button>':"")+
+    '<button type="button" id="histClear">Apagar histórico deste imóvel</button></div>':"");
+  const cp=document.getElementById("histCopy"),cl=document.getElementById("histClear");
+  if(cp)cp.addEventListener("click",copiarHistoricoComparavel);
+  if(cl)cl.addEventListener("click",apagarHistoricoImovel);
+}
+function copiarHistoricoComparavel(){
+  if(!DCUR)return;
+  const itens=historicoDoImovel(histLoad(),identidadeChave(DCUR),clean(DCUR.nrinscr||DCUR.ci),4);
+  const a=itens[itens.length-2],b=itens[itens.length-1],mud=a&&b?mudancasHistorico(a,b):[];
+  const linhas=mud.length?mud.map(m=>"• "+historicoMudancaTxt(m)):["• Nenhuma mudança observável nos campos acompanhados."];
+  copyTexto("Evolução entre consultas — "+(addrDe(DCUR)||clean(DCUR.nrinscr||DCUR.ci))+"\n"+linhas.join("\n")+
+    "\n\nSnapshots locais do Radar; não são preços de mercado, transações ou certidões.","Evolução copiada.");
+}
+function apagarHistoricoImovel(){
+  if(!DCUR||!confirm("Apagar deste navegador o histórico comparável deste imóvel?"))return;
+  const key=identidadeChave(DCUR),insc=clean(DCUR.nrinscr||DCUR.ci);
+  const next=histLoad().filter(it=>{
+    const itemKey=clean(it&&it.identityKey);
+    return itemKey?itemKey!==key:(!key.includes("|")?clean(it&&it.insc)!==insc:true);
+  });
+  if(histSave(next)){renderSavedBlocks();renderHistoricoComparavel(DCUR);toast("Histórico deste imóvel apagado.");}
 }
 /* toggleOportunidade(): salva/remove o DCUR em radar_oportunidades. Falha de escrita NÃO muda o
    estado do botão (o toast de falha já saiu de dentro de oppSave) — nunca finge sucesso (T-10-06). */
@@ -6448,13 +6773,14 @@ function renderUrbanisticoUI(a,isRetry){
     if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     a.__pdEstado=estado; /* cache p/ atualizarScores() reaplicar a linha do porquê independente da ordem das 2 consultas assíncronas (compare() × pdConsultarLote) */
     renderEvidence(a); /* a mesma resposta atualiza fonte/data/status no dossiê */
+    histAtualizarUltimo(a); /* o snapshot local acompanha a evidência urbanística resolvida */
     atualizarScorePorquePD(a,estado); /* PD-04: acrescenta "Em {zona}..." ao porquê do score JÁ renderizado, quando conferido */
   }).catch(()=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
     /* B-01: mesmo HTML de erro do estado "erro" (com botão de retry) e binding — antes era um
        .dnote sem botão dizendo "Toque para tentar de novo", que não fazia nada. */
     body.innerHTML=montarUrbBodyHTML({estado:"erro"});
-    a.__pdEstado={estado:"erro"};renderEvidence(a);
+    a.__pdEstado={estado:"erro"};renderEvidence(a);histAtualizarUltimo(a);
     const retryBtn=document.getElementById("urbRetry");
     if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
@@ -6829,25 +7155,25 @@ function removerOportunidade(el){
   }
 }
 function limparHistorico(){
-  if(histSave([]))renderSavedBlocks();
+  if(histSave([])){renderSavedBlocks();if(DCUR)renderHistoricoComparavel(DCUR);}
 }
 /* histPush(a): auto-add ao radar_historico — chamado de dentro de showDetail() apos DCUR=a.
-   Dedupe: se o ULTIMO item do historico tem a mesma insc, atualiza visitedAt em vez de duplicar
-   (evita 30 copias do mesmo imovel ao reabrir repetidamente). Falha de escrita mostra o toast
-   (histSave), mas NAO bloqueia a abertura da ficha — historico e' acessorio. */
+   Dedupe só dentro da MESMA sessão do app: reabrir a ficha agora atualiza o snapshot; uma nova
+   sessão cria um ponto histórico real, mesmo que seja o mesmo imóvel consecutivo. */
 function histPush(a){
-  const insc=clean(a.nrinscr||a.ci);
+  const key=identidadeChave(a);
   const lista=histLoad();
-  const ultimo=lista.length?lista[lista.length-1]:null;
-  const item=Object.assign(oportunidadeItem(a,oppExtras(a)),{visitedAt:new Date().toISOString()});
+  let idxSessao=-1;
+  for(let i=lista.length-1;i>=0;i--)if(lista[i]&&lista[i].identityKey===key&&lista[i].sessionId===HIST_SESSION_ID){idxSessao=i;break;}
+  const anteriorSessao=idxSessao>=0?lista[idxSessao]:null;
+  const item=historicoSnapshot(a,anteriorSessao?anteriorSessao.visitedAt:null);
   let next;
-  if(ultimo&&ultimo.insc===insc){
-    next=lista.slice(0,-1).concat([item]);
+  if(idxSessao>=0){
+    next=lista.filter((_,i)=>i!==idxSessao).concat([item]);
   }else{
     next=histAdd(lista,item,30);
   }
-  histSave(next);
-  renderSavedBlocks();
+  if(histSave(next)){renderSavedBlocks();renderHistoricoComparavel(a);}
 }
 /* F5 FICHA-05: o item de histórico desta visita nasce SEM rótulo de oportunidade (histPush roda no
    showDetail, antes de compare() concluir — op ainda null). Quando o score REAL chega
@@ -6855,12 +7181,12 @@ function histPush(a){
    depender do timing de "Ver comparáveis". Nunca toca itens antigos (só o topo, mesma regra de
    dedupe do histPush); visitedAt original preservado. */
 function histAtualizarUltimo(a){
-  const insc=clean(a.nrinscr||a.ci);
+  const key=identidadeChave(a);
   const lista=histLoad();
   const ultimo=lista.length?lista[lista.length-1]:null;
-  if(!ultimo||ultimo.insc!==insc)return;
-  lista[lista.length-1]=Object.assign(oportunidadeItem(a,oppExtras(a)),{visitedAt:ultimo.visitedAt});
-  if(histSave(lista))renderSavedBlocks();
+  if(!ultimo||ultimo.identityKey!==key||ultimo.sessionId!==HIST_SESSION_ID)return;
+  lista[lista.length-1]=historicoSnapshot(a,ultimo.visitedAt);
+  if(histSave(lista)){renderSavedBlocks();renderHistoricoComparavel(a);}
 }
 /* A-04 (20): aceita o elemento clicado (this) e lê a inscrição do data-attribute do container
    [data-insc] via closest — nunca mais recebe dado do endpoint interpolado em string JS de on*.
@@ -7712,6 +8038,7 @@ function montarLaudo(){
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</div>
 
     ${evidenciasDocumentoHTML(a)}
+    ${diligenciaDocumentoHTML(a)}
 
     ${LZ.fotos.length>1?`<div class="lcard"><h3>Registro fotográfico</h3><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></div>`:""}
 
@@ -7781,6 +8108,7 @@ function renderFichaRapida(a,data,fr){
     <div class="lcard"><h3>Leitura prática</h3><p>${esc(fr.leitura)}</p></div>
     ${fr.comparaveis.length?`<div class="lcard"><h3>Referências cadastrais</h3><ul class="fr-comps">${fr.comparaveis.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
     ${evidenciasDocumentoHTML(a)}
+    ${diligenciaDocumentoHTML(a)}
     <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">${esc(fr.ressalva)}</p></div>
     ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
