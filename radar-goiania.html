@@ -5341,13 +5341,13 @@ function bldgSumarioHTML(ci){
   const nUnidTxt=String(resumo.n);
   const areaMediaTxt=resumo.areaMedia!=null?Math.round(resumo.areaMedia)+" m²":"—";
   const venalMedioTxt=resumo.venalMedio!=null?brlC(resumo.venalMedio):"—";
-  const faixaTxt=resumo.estimadoMedio!=null?("~"+brlC(resumo.estimadoMedio)+" · "+brlC(resumo.faixaLo)+"–"+brlC(resumo.faixaHi)):"sem referência indicativa";
+  const faixaTxt=resumo.estimadoMedio!=null?("~"+brlC(resumo.estimadoMedio)+" · "+brlC(resumo.faixaLo)+"–"+brlC(resumo.faixaHi)):"indisponível";
   return `<div class="bldg-sumario">
     <div class="bldg-metricas">
       <div class="bm"><b>${esc(nUnidTxt)}</b><span>${esc(nounUnid)}</span></div>
       <div class="bm"><b>${esc(areaMediaTxt)}</b><span>área média</span></div>
       <div class="bm"><b>${esc(venalMedioTxt)}</b><span>venal médio</span></div>
-      <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>referência indicativa média · faixa</span></div>
+      <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>referência indicativa</span></div>
     </div>
     <div class="bldg-acoes">
       <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">🔍 Ordenar / filtrar</button>
