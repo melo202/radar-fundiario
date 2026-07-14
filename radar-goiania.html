@@ -1360,6 +1360,13 @@
       <div id="detectLive" class="sr-only" role="status" aria-live="polite"></div>
       <div class="chips" id="ambigChips" role="group" aria-label="Escolha o que você quis dizer" hidden></div>
 
+      <button type="button" class="advanced-toggle" id="advancedSearchToggle" aria-expanded="false"
+              aria-controls="correctMenu cIN needBairro paneQL paneAddr paneUnit paneBD paneIN btnGo"
+              onclick="toggleAdvancedSearch()">
+        <span id="advancedSearchLabel">Busca avançada</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+      </button>
+
       <!-- menu de correcao: reaproveita .moderow/.modemore existentes, SEM CSS novo -->
       <div id="correctMenu" class="moderow" hidden>
         <button id="cAD" onclick="forceMode('addr')">Endereço</button>
@@ -1367,13 +1374,6 @@
         <button id="cQL" onclick="forceMode('ql')">Quadra/Lote</button>
       </div>
       <button class="modemore" id="cIN" hidden onclick="forceMode('insc')">ou buscar pela inscrição cadastral (CI)</button>
-
-      <button type="button" class="advanced-toggle" id="advancedSearchToggle" aria-expanded="false"
-              aria-controls="correctMenu cIN needBairro paneQL paneAddr paneUnit paneBD paneIN btnGo"
-              onclick="toggleAdvancedSearch()">
-        <span id="advancedSearchLabel">Busca avançada</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
-      </button>
 
       <!-- paineis de campo: permanecem no DOM, agora usados so pelo menu de correcao manual
            (setMode()/forceMode() continuam controlando a visibilidade quando o usuario forca um modo) -->
