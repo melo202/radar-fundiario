@@ -82,10 +82,10 @@ Achados da auditoria visual:
 
 #### V4 — Documentos, estados e acabamento
 
-- ⬜ Levar a linguagem dos relatórios para a interface, sem simplesmente copiar o PDF para a tela.
-- ⬜ Skeletons, estados vazios, erro e offline com a mesma direção visual.
-- ⬜ Movimento entre 160–240 ms, com redução de movimento respeitada; animação só para mudança de plano, seleção e confirmação.
-- ⬜ Revisão final de contraste, foco, zoom de texto e toque em iPhone/Android reais.
+- ✅ Levar a linguagem dos relatórios para a interface, sem simplesmente copiar o PDF para a tela. A família visual do laudo (superfícies brancas elevadas, cantos 12–16 px, hairlines, respiro, um acento) já governa a UI via tokens Atlas; diferença deliberada: o acento da interface é o verde profundo aprovado no V0, não o petróleo do PDF.
+- ✅ Skeletons, estados vazios, erro e offline com a mesma direção visual (14/07/2026): overlay de loading com véu do canvas, skeleton/hist-empty com cantos e superfícies Atlas, e estado global de conexão novo — chip vivo no cabeçalho + banner fino em todas as larguras, com `role="status"`. Tokens completados: `--space-1..7`, `--warning/--danger(-soft)`, `--font-ui/--font-code`, `--ease-out`.
+- ✅ Movimento entre 160–240 ms, com redução de movimento respeitada (14/07/2026): 11 transições legadas (.08–.25s) harmonizadas para `var(--motion-fast|base) var(--ease-out)`; kill-switch de `prefers-reduced-motion` preservado; animação segue restrita a troca de nível do dossiê, seleção e confirmação. Testes em `tests/atlas-v4.test.mjs` travam regressão de duração crua.
+- ⬜ Revisão final de contraste, foco, zoom de texto e toque em iPhone/Android reais — depende de teste humano nos aparelhos.
 
 #### V5 — Validação com corretores
 
