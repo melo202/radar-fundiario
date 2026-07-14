@@ -56,6 +56,9 @@ test("mobile demonstra três alturas de painel e mantém alvos acessíveis", () 
     assert.match(html, new RegExp(`data-sheet="${size}"|\\[data-sheet="${size}"\\]`));
   }
   assert.match(html, /min-height: 44px/);
+  assert.match(html, /\.example-chip \{ min-height: 44px/);
+  assert.match(html, /\.mobile-search \{ display: grid; place-items: center; width: 44px; height: 44px/);
+  assert.match(html, /\.sheet-grip \{[^}]*height: 44px/s);
   assert.match(html, /font-size: 16px/);
   assert.match(html, /prefers-reduced-motion: reduce/);
   assert.match(html, /aria-live="polite"/);
