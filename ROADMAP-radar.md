@@ -67,16 +67,18 @@ Achados da auditoria visual:
 
 #### V2 — Busca e resultados
 
-- 🔶 Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos. A omnibox agora é a entrada padrão; endereço, quadra/lote e inscrição separados ficam em divulgação progressiva e cedem lugar à lista assim que há resultado, sem impedir o refino.
-- ⬜ Resultado de prédio: resumo fixo + filtros + linhas compactas; mostrar diferenças entre unidades e esconder repetição invariável.
-- ⬜ Estado vazio orientado: exemplos, buscas recentes úteis e explicação curta do que o Radar entrega.
+- ✅ Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos. A omnibox agora é a entrada padrão; endereço, quadra/lote e inscrição separados ficam em divulgação progressiva e cedem lugar à lista assim que há resultado, sem impedir o refino.
+- ✅ Resultado de prédio: resumo fixo + filtros + linhas compactas; diferenças entre unidades aparecem sem repetir os dados invariáveis do prédio.
+- ✅ Estado vazio orientado: exemplos acionáveis, histórico de consultas útil, imóveis salvos e explicação curta do que o Radar entrega.
 
 #### V3 — Dossiê em três níveis
 
-- ⬜ **Resumo:** identidade confirmada, faixa/ausência de faixa, posição cadastral e ação principal.
-- ⬜ **Território:** vizinhança, Plano Diretor, mapa e dados técnicos.
-- ⬜ **Diligência:** evidências, histórico, checklist, datas e pacote exportável.
-- ⬜ Trocar a pilha atual de cartões/accordions por navegação curta, preservando acesso completo sem expor tudo ao mesmo tempo.
+- ✅ **Resumo:** identidade confirmada, faixa/ausência de faixa, posição cadastral, leitura prática e três ações principais.
+- ✅ **Território:** vizinhança, Plano Diretor, mapa e dados técnicos; “Analisar vizinhança” abre diretamente este nível.
+- ✅ **Diligência:** evidências, histórico, checklist, datas, opções profissionais e pacote exportável.
+- ✅ Trocar a pilha única por navegação curta com semântica de abas, setas/Home/End no teclado e foco sincronizado, preservando todos os identificadores e motores existentes.
+
+**Validação V2–V3 (14/07/2026):** fluxo real por inscrição carregou 184 unidades, confirmou a identidade de uma unidade e abriu o dossiê em inspetor de 480 px. Resumo, Território e Diligência alternaram por clique e teclado; a vizinhança retornou 1.904 registros fiscais semelhantes em 400 m, sem erro de interface ou console. O teste tátil em iPhone/Android reais continua no V4.
 
 #### V4 — Documentos, estados e acabamento
 
