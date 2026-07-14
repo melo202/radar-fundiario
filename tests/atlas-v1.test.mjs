@@ -39,3 +39,24 @@ test("atalho de busca não captura digitação em campos editáveis", () => {
   assert.match(html, /e\.key!=="\/"/);
   assert.match(html, /target\.matches\("input,textarea,select"\)\|\|target\.isContentEditable/);
 });
+
+test("resultado assume o inspetor e mantém a omnibox para refino", () => {
+  assert.match(html, /\.panel:has\(#results \.card\)>\.brand\{display:none\}/);
+  assert.match(html, /\.panel:has\(#results \.card\)>\.search>\.go,[\s\S]*\.search>\.caixabtn\{display:none!important\}/);
+  assert.doesNotMatch(html, /\.panel:has\(#results \.card\)>\.search>\.caixa-box/);
+  assert.match(html, /\.panel:has\(#results \.card\)>\.results\{padding-top:4px\}/);
+});
+
+test("controles centrais abandonam emojis por uma linguagem visual estável", () => {
+  assert.match(html, /id="caixaVoz"[\s\S]*?<svg viewBox="0 0 24 24"/);
+  assert.match(html, /id="btnSat"[\s\S]*?>SAT<\/button>/);
+  assert.doesNotMatch(html, /class="bldg-head"[\s\S]{0,180}🏢/);
+  assert.doesNotMatch(html, /class="bldg-ord-toggle"[^>]*>🔍/);
+  assert.doesNotMatch(html, /class="bldg-zap"[^>]*>💬/);
+});
+
+test("sumário do prédio permanece legível na superfície clara do Atlas", () => {
+  assert.match(html, /\.bm b\{color:var\(--ink\)\}/);
+  assert.match(html, /\.bm span\{color:var\(--muted\)\}/);
+  assert.match(html, /\.bldg-ord-toggle,\.bldg-zap\{[^}]*background:var\(--surface\)/);
+});

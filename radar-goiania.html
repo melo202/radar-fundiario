@@ -1163,6 +1163,7 @@
   select:focus,input:focus,.caixa-input:focus{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 4px rgba(24,81,62,.08)}
   .caixa-input{min-height:48px;padding-left:14px}
   .caixa-ic{border-radius:9px}
+  .caixa-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .go{min-height:48px;border:1px solid var(--brand);border-radius:var(--radius-sm);background:var(--brand);box-shadow:0 7px 18px rgba(24,81,62,.16)}
   .go:hover{background:var(--brand-strong)}
   .hint{margin-top:12px;line-height:1.5}
@@ -1181,6 +1182,11 @@
   .bldg-head .tomap{min-height:38px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);color:var(--brand)}
   .bldg-head .tomap:hover{border-color:var(--brand);background:var(--surface);color:var(--brand-strong)}
   .bldg-sumario{border-top:1px solid var(--line)}
+  .bm b{color:var(--ink)}
+  .bm span{color:var(--muted)}
+  .bm-faixa b{color:var(--brand)}
+  .bldg-ord-toggle,.bldg-zap{min-height:40px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);color:var(--brand)}
+  .bldg-ord-toggle:hover,.bldg-zap:hover{border-color:var(--brand);color:var(--brand-strong)}
   .empty{padding:40px 28px}
   .empty .big{font-size:18px;line-height:1.25;letter-spacing:-.01em}
   .foot{border-top:1px solid var(--line)}
@@ -1193,6 +1199,7 @@
   .leaflet-control-attribution{padding:4px 8px!important;border-radius:8px 0 0 0;color:var(--muted);font-size:10px!important}
   .leaflet-control-attribution a{color:var(--brand)}
   .searchpill,#breadcrumb,.coachmark,.pino-legenda,.terr-legenda,.sattoggle{border-color:var(--line);border-radius:var(--radius-md);background:rgba(255,255,255,.94);box-shadow:var(--elev-1);backdrop-filter:blur(14px)}
+  .sattoggle{font:750 9px/1 "JetBrains Mono",monospace;letter-spacing:.04em}
   .searchpill .pill-ic{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .pino-legenda{padding:9px 12px}
 
@@ -1204,6 +1211,7 @@
   .detail .insc{color:var(--muted);font-size:11px}
   .didentity{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:var(--radius-sm);background:var(--brand-soft)}
   .didentity button{min-height:40px;border-radius:9px;background:rgba(255,255,255,.78)}
+  .idcheck-warning-mark{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:var(--brass);color:#fff;font-weight:800}
   .dvalor{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-soft);padding:18px 20px}
   .dvalor-v{color:var(--brand-strong);font-size:24px;letter-spacing:-.02em}
   .dleitura,.devidence,.detail .dgrid .cell{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-soft)}
@@ -1221,6 +1229,21 @@
     .panel{position:relative;top:auto;left:auto;grid-column:2;grid-row:2;width:auto;max-width:none;max-height:none;min-width:0;min-height:0;
       border:0;border-left:1px solid var(--line);border-radius:0;box-shadow:-12px 0 40px rgba(20,35,29,.05);z-index:700;overflow-y:auto}
     body[data-view="busca"] .panel{display:flex}
+    /* Depois do primeiro resultado, a busca vira uma barra de refinamento: o formulário manual
+       deixa de consumir a maior parte do inspetor e a lista assume o plano principal. */
+    .panel:has(#results .card)>.brand{display:none}
+    .panel:has(#results .card)>.search{padding:12px 16px}
+    .panel:has(#results .card)>.search>label[for="caixaInput"],
+    .panel:has(#results .card)>.search>#needBairro,
+    .panel:has(#results .card)>.search>#paneQL,
+    .panel:has(#results .card)>.search>#paneAddr,
+    .panel:has(#results .card)>.search>#paneUnit,
+    .panel:has(#results .card)>.search>#paneBD,
+    .panel:has(#results .card)>.search>#paneIN,
+    .panel:has(#results .card)>.search>.go,
+    .panel:has(#results .card)>.search>.hint,
+    .panel:has(#results .card)>.search>.caixabtn{display:none!important}
+    .panel:has(#results .card)>.results{padding-top:4px}
     .searchpill{display:none}
     #pillClose{display:inline-grid;place-items:center}
     #breadcrumb{top:24px;left:24px;max-width:min(520px,calc(100% - 48px))}
@@ -1308,7 +1331,7 @@
           placeholder="quadra 128 lote 5 · rua portugal 582 · sumer park · 3020150346"
           role="combobox" aria-expanded="false" aria-controls="caixaList" aria-autocomplete="list"
           aria-describedby="detectChip">
-        <button id="caixaVoz" class="caixa-ic" aria-label="Buscar por voz" aria-pressed="false" style="display:none">Voz</button>
+        <button id="caixaVoz" class="caixa-ic" aria-label="Buscar por voz" aria-pressed="false" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"></path></svg></button>
         <button id="caixaClear" class="caixa-ic" aria-label="Limpar busca" style="display:none">×</button>
       </div>
       <div id="caixaList" class="combo-list" role="listbox" aria-label="Sugestões de setor e rua"></div>
@@ -1523,7 +1546,7 @@
            snapshot gravado (nunca para lote nunca salvo). Diff é NEUTRO (nunca cor de status,
            17-UI-SPEC.md §Color) — o sinal ▲/▼/● é tipográfico, mesma cor do texto ao lado. -->
       <div class="ddiff" id="dDiff" hidden>
-        <div class="ddiff-head"><span class="ddiff-tt">📓 Desde sua última visita</span><span class="ddiff-data" id="dDiffData"></span></div>
+        <div class="ddiff-head"><span class="ddiff-tt">Desde sua última visita</span><span class="ddiff-data" id="dDiffData"></span></div>
         <ul class="ddiff-list" id="dDiffList"></ul>
       </div>
 
@@ -1670,7 +1693,7 @@
   <div class="loading" id="loading" aria-live="polite"><div class="spin"></div><span id="loadmsg">Consultando cadastro…</span></div>
 
   <!-- Fase 12 (12-02) Componente 4: botao flutuante "Comparar (N)" — visivel so com CMP.length>=2 -->
-  <button type="button" id="cmpFab" class="cmp-fab" hidden onclick="abrirComparacao()">⚖️ Comparar (<span id="cmpFabN">0</span>)</button>
+  <button type="button" id="cmpFab" class="cmp-fab" hidden onclick="abrirComparacao()">Comparar (<span id="cmpFabN">0</span>)</button>
 
   <nav class="viewbar" id="viewbar">
     <button id="vbBusca" class="on" onclick="setView('busca')">Consulta</button>
@@ -1699,29 +1722,29 @@
   <div class="wbody" id="captBody">
     <p class="wsub">Textos prontos para captar este imóvel — copie e ajuste o que precisar.</p>
     <div class="captblock">
-      <div class="captblock-lbl">💬 Abordagem por WhatsApp</div>
+      <div class="captblock-lbl">Abordagem por WhatsApp</div>
       <div class="captblock-txt" id="captZap"></div>
       <button type="button" class="captcopy" onclick="copyCapt('zap')">Copiar ⧉</button>
     </div>
     <div class="captblock">
-      <div class="captblock-lbl">📞 Script de ligação</div>
+      <div class="captblock-lbl">Script de ligação</div>
       <div class="captblock-txt" id="captLig"></div>
       <button type="button" class="captcopy" onclick="copyCapt('ligacao')">Copiar ⧉</button>
     </div>
     <div class="captblock">
-      <div class="captblock-lbl">📋 Checklist documental</div>
+      <div class="captblock-lbl">Checklist documental</div>
       <div class="captblock-txt" id="captDoc"></div>
       <button type="button" class="captcopy" onclick="copyCapt('checklist')">Copiar ⧉</button>
     </div>
     <div class="captblock">
-      <div class="captblock-lbl">✅ Tarefa de follow-up</div>
+      <div class="captblock-lbl">Tarefa de follow-up</div>
       <div class="captblock-txt" id="captFollow"></div>
       <button type="button" class="captcopy" onclick="copyCapt('followup')">Copiar ⧉</button>
     </div>
     <div class="captblock captblock-neg">
-      <div class="captblock-lbl">📄 Termo de Autorização/Exclusividade</div>
+      <div class="captblock-lbl">Termo de Autorização/Exclusividade</div>
       <p class="wsub" style="margin:0 0 10px">Gere a minuta de exclusividade com o proprietário já identificado nesta captação.</p>
-      <button type="button" class="captcopy negcta" onclick="abrirNeg('exclusividade')">📄 Gerar Termo de Exclusividade</button>
+      <button type="button" class="captcopy negcta" onclick="abrirNeg('exclusividade')">Gerar Termo de Exclusividade</button>
     </div>
     <div class="captdisclaimer" id="captDisclaimer">Textos gerados automaticamente a partir dos dados do imóvel — revise antes de enviar. Não substituem orientação jurídica.</div>
   </div>
@@ -3810,7 +3833,7 @@ function initMap(){
     options:{position:"bottomright"},
     onAdd:function(){
       const wrap=L.DomUtil.create("div");
-      wrap.innerHTML='<button id="btnSat" type="button" class="sattoggle leaflet-control-sattoggle" aria-pressed="false" aria-label="Ver satélite" title="Alternar satélite">🛰️</button>';
+      wrap.innerHTML='<button id="btnSat" type="button" class="sattoggle leaflet-control-sattoggle" aria-pressed="false" aria-label="Ver satélite" title="Alternar satélite">SAT</button>';
       const b=wrap.firstChild;
       L.DomEvent.disableClickPropagation(b);
       L.DomEvent.on(b,"click",toggleSatelite);
@@ -3830,7 +3853,7 @@ function setSatelite(on){
     b.classList.toggle("on",on);
     b.setAttribute("aria-pressed",on);
     b.setAttribute("aria-label", on?"Ver ruas":"Ver satélite");
-    b.textContent = on?"🗺️":"🛰️";
+    b.textContent = on?"MAPA":"SAT";
   }
   /* Fase 4 SAT-02: crossfade de opacidade ~250ms escopado à tile do satélite+reference (lockstep),
      via .leaflet-tile{transition:opacity .25s ease} (className "sat-fade"). Outlines de bairro/lote
@@ -4279,7 +4302,7 @@ function lotInfo(ci){
       const a=its[0], nun=(a.ttsublot||its.length);
       const addr=logradouroDe(a);
       let h=`<b>Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}</b> · ${esc(a.nmbairro)}<br>${esc(addr)||"sem logradouro"}`;
-      if(nun>1||its.length>1)h+=`<br>🏢 ${esc(a.nmedificio)||"condomínio"} — ${nun} imóveis · <b>toque para abrir</b>`;
+      if(nun>1||its.length>1)h+=`<br>${esc(a.nmedificio)||"Condomínio"} — ${nun} imóveis · <b>toque para abrir</b>`;
       else h+=`<br>Terreno ${a.areaterr?Math.round(a.areaterr)+" m²":"—"} · Venal ${venalTxt(a.vlvenal)} · <b>toque p/ detalhe</b>`;
       return h;
     }).catch(e=>{delete LOTINFO[ci];return "não foi possível carregar";});
@@ -4324,7 +4347,7 @@ async function refreshLots(){
       hv=setTimeout(async()=>{const h=await lotInfo(ci);
         /* Fase 16 (16-03): destaque nunca só cor (PIN-01) — tooltip ganha ícone+rótulo p/ lotes
            detectados, sem disparar nenhuma requisição extra (lotInfo já era chamado no hover). */
-        poly.setTooltipContent((TERR_DETECTOR_HILITE.has(ci)?"🏗️ <b>Lote subutilizado</b><br>":"")+h);
+        poly.setTooltipContent((TERR_DETECTOR_HILITE.has(ci)?"<b>Lote subutilizado</b><br>":"")+h);
       },140);});
     poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(lotStyle(ci));});
     poly.on("click",()=>loadCi(ci)); /* direto pelo ci: mais rápido que a consulta espacial */
@@ -5206,7 +5229,7 @@ function montarPainel(scan,st,layer){
       if(!el||TERR_PANEL_CD!==cd)return;
       if(matches.length>0){
         el.dataset.bairros=String(cd);
-        el.textContent=(matches.length===1?"🏦 1 imóvel Caixa neste setor":"🏦 "+matches.length+" imóveis Caixa neste setor")+" — toque para ver no mapa"; /* B-09: plural correto */
+        el.textContent=(matches.length===1?"1 imóvel CAIXA neste setor":matches.length+" imóveis CAIXA neste setor")+" — toque para ver no mapa"; /* B-09: plural correto */
         el.hidden=false;
       }else{
         el.hidden=true;
@@ -5428,7 +5451,7 @@ function renderDetectorLista(cand,scan){
       <div class="terr-metric-sub" id="terrdetCrit${i}"></div>
       <div class="acts">
         <button type="button" onclick="abrirFichaDetector(${i})">Ver ficha</button>
-        <button type="button" class="acts-save" aria-pressed="false" onclick="salvarDetectorNoCadernoUI(${i},this)">📓 Salvar no caderno</button>
+        <button type="button" class="acts-save" aria-pressed="false" onclick="salvarDetectorNoCadernoUI(${i},this)">Salvar no caderno</button>
       </div>
     </div>`;
   }).join("");
@@ -5762,14 +5785,14 @@ function finish(items,fromMap){
         /* UM prédio com várias unidades: a LISTA é o destino (pino já está no mapa) */
         setView("busca");
         scrollToResults(); /* o formulário é alto e empurrava a lista p/ baixo da dobra — parecia "não listar nada" */
-        toast("🏢 "+units.length+" imóveis deste prédio — veja a lista abaixo");
+        toast(units.length+" imóveis deste prédio — veja a lista abaixo");
       }else{
         setView("mapa");
         if(units.length>1)toast(units.length+" imóveis no mapa — a lista completa está na aba Consulta.");
       }
     }else if(ehPredio){
       /* desktop mapa-first: a lista está no card de busca (overlay) — toque num imóvel para abrir a ficha */
-      toast("🏢 "+units.length+" imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha).");
+      toast(units.length+" imóveis neste prédio — toque num para abrir a ficha (a busca fecha sozinha).");
     }else{
       /* D-06 (20): desktop com resultados não-prédio não anunciava nada — o #toast (role=status
          aria-live=polite) leva a contagem ao leitor de tela, que só via a .count visualmente. */
@@ -5822,7 +5845,7 @@ function render(list,opts){
   list.forEach(a=>{const k=clean(a.ci);cnt[k]=(cnt[k]||0)+1;
     if(!nomeEd[k]&&clean(a.nmedificio))nomeEd[k]=clean(a.nmedificio);});
   const noun=list.length>1?"imóveis":"imóvel";
-  let html=`<div class="count">${list.length} ${noun}<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">⬇ Baixar planilha</button></div>`;
+  let html=`<div class="count">${list.length} ${noun}<button class="csv" onclick="exportCSV()" title="Baixar os resultados em planilha">Baixar planilha</button></div>`;
   let lastCi=null;
   list.slice(0,RENDN).forEach((a,i)=>{
     const ci=clean(a.ci);
@@ -5834,7 +5857,7 @@ function render(list,opts){
            de string JS single-quoted) — corrigido aqui tambem reaproveitando o data-ci JA presente
            no .bldg-head pai (nenhum atributo novo): verNoMapa(this) le this.closest(...).dataset.ci
            por referencia de elemento, nunca reconstruindo string JS com texto interpolado. */
-        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">🏢 ${ed}<button class="tomap" onclick="verNoMapa(this)" title="Centralizar este prédio no mapa">Ver no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — toque num deles abaixo para abrir a ficha ⬇</div>${bldgSumarioHTML(ci)}</div>${bldgOrdHTML(ci)}`;
+        html+=`<div class="bldg-head" data-ci="${esc(ci)}"><div class="nm">${ed}<button class="tomap" onclick="verNoMapa(this)" title="Centralizar este prédio no mapa">Ver no mapa ↗</button></div><div class="sub">Q ${esc(a.nrquadra)} · L ${esc(a.nrlote)} · ${cnt[ci]} imóveis — escolha uma unidade abaixo</div>${bldgSumarioHTML(ci)}</div>${bldgOrdHTML(ci)}`;
       }
     }
     /* Fase 12 (12-02): filtro de EXIBICAO por predio (BLDGSTATE) — nunca remove de LAST, so pula
@@ -5893,8 +5916,8 @@ function bldgSumarioHTML(ci){
       <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>referência indicativa</span></div>
     </div>
     <div class="bldg-acoes">
-      <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">🔍 Ordenar / filtrar</button>
-      <button type="button" class="bldg-zap" onclick="copyZapPredio(this)">💬 Copiar análise do prédio ⧉</button>
+      <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">Ordenar / filtrar</button>
+      <button type="button" class="bldg-zap" onclick="copyZapPredio(this)">Copiar análise do prédio</button>
     </div>
   </div>`;
 }
@@ -6260,7 +6283,7 @@ function showChooser(ci){
   if(units.length<=1){ const gi=LAST.indexOf(units[0]); if(gi>=0)pick(gi); return; }
   /* desktop agora é mapa-first (sem coluna lateral): o seletor de unidades vira um card sobre o mapa, igual mobile */
   const a0=units[0], ed=esc(clean(a0.nmedificio))||"Imóveis no mesmo lote";
-  document.getElementById("chNm").innerHTML="🏢 "+ed;
+  document.getElementById("chNm").textContent=ed;
   document.getElementById("chSub").textContent=`Q ${clean(a0.nrquadra)||"—"} · L ${clean(a0.nrlote)||"—"} · ${units.length} imóveis — escolha um`;
   document.getElementById("chList").innerHTML=units.map(a=>{
     const gi=LAST.indexOf(a), ul=esc(unitLabel(a))||"Imóvel", area=a.areaedif?Math.round(a.areaedif)+" m²":"—";
@@ -6306,7 +6329,7 @@ function abrirConfirmacaoIdentidade(a,ll,i,origem){
     avisos.push("O cadastro não informou: "+f.faltantes.map(x=>nomes[x]||x).join(", ")+". Confirme por outra fonte antes de compartilhar.");
   }
   const warn=document.getElementById("idCheckWarning");
-  warn.hidden=!avisos.length;warn.innerHTML=avisos.length?`<span aria-hidden="true">⚠</span><span>${avisos.map(esc).join(" ")}</span>`:"";
+  warn.hidden=!avisos.length;warn.innerHTML=avisos.length?`<span class="idcheck-warning-mark" aria-hidden="true">!</span><span>${avisos.map(esc).join(" ")}</span>`:"";
   const back=document.getElementById("idBackBtn");
   back.textContent=ID_PENDING.origem==="busca"?"Voltar aos resultados":"Voltar ao mapa";
   setView("mapa");
@@ -6696,9 +6719,9 @@ function showDetail(a,ll){
      ⭐ Salvar oportunidade). O botão de copiar a inscrição foi movido para o bloco de Mais opções
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
-    <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Exportar ficha ou relatório</button>
-    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">📊 Analisar vizinhança</button>`:""}
-    <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar imóvel</button>`;
+    <button type="button" class="primary" onclick="abrirSeletorFinalidade()">Exportar ficha ou relatório</button>
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">Analisar vizinhança</button>`:""}
+    <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">Salvar imóvel</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
   let mapLinks="";
@@ -6713,28 +6736,28 @@ function showDetail(a,ll){
   const dActsMore=document.getElementById("dActsMore");
   dActsMore.dataset.insc=clean(insc||ci);
   dActsMore.innerHTML=`
-    <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">📓 Salvar no caderno</button>
+    <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">Salvar no caderno</button>
     <button type="button" onclick="copyInsc(this)">Copiar inscrição ⧉</button>
-    <button type="button" onclick="abrirCustos()">🧮 Calcular custos de compra (ITBI + cartório)</button>
+    <button type="button" onclick="abrirCustos()">Calcular custos de compra (ITBI + cartório)</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink(this)" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
     ${mapLinks}
     <div class="zapgroup">
       <div class="zapgroup-lbl">Copiar para WhatsApp</div>
-      <button type="button" class="zapbtn" onclick="copyZap('resumo')">💬 Copiar resumo do imóvel ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('proprietario')">🏠 Copiar mensagem para o proprietário ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('comprador')">🔑 Copiar mensagem para o comprador ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('preco')">💲 Copiar argumento de preço ⧉</button>
-      <button type="button" class="zapbtn" onclick="copyZap('riscos')">⚠️ Copiar riscos e ressalvas ⧉</button>
+      <button type="button" class="zapbtn" onclick="copyZap('resumo')">Copiar resumo do imóvel</button>
+      <button type="button" class="zapbtn" onclick="copyZap('proprietario')">Copiar mensagem para o proprietário</button>
+      <button type="button" class="zapbtn" onclick="copyZap('comprador')">Copiar mensagem para o comprador</button>
+      <button type="button" class="zapbtn" onclick="copyZap('preco')">Copiar argumento de preço</button>
+      <button type="button" class="zapbtn" onclick="copyZap('riscos')">Copiar riscos e ressalvas</button>
     </div>
     <div class="zapgroup">
       <div class="zapgroup-lbl">Documentos da negociação</div>
-      <button type="button" class="zapbtn" onclick="abrirNeg('proposta')">📄 Gerar Proposta de Compra e Venda</button>
-      <button type="button" class="zapbtn" onclick="abrirNeg('exclusividade')">🔑 Gerar Termo de Exclusividade</button>
-      <button type="button" class="zapbtn" onclick="abrirNeg('contrato')">🧾 Gerar Contrato de Compra e Venda</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('proposta')">Gerar Proposta de Compra e Venda</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('exclusividade')">Gerar Termo de Exclusividade</button>
+      <button type="button" class="zapbtn" onclick="abrirNeg('contrato')">Gerar Contrato de Compra e Venda</button>
     </div>
     <div class="zapgroup">
-      <button type="button" class="zapbtn" onclick="abrirCaptacao()">🧾 Captar este imóvel</button>
+      <button type="button" class="zapbtn" onclick="abrirCaptacao()">Captar este imóvel</button>
     </div>`;
   renderCadernoBtn(); /* Fase 16 (16-02): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4) — cadernoTem() bate no IndexedDB, nunca trava o resto do render */
   renderDiffUI(a); /* Fase 17 (17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no IndexedDB, chave clean(a.ci||a.nrinscr) (Pitfall 1) */
@@ -7027,7 +7050,7 @@ function renderSaveBtn(){
   const salvo=oppTem(insc);
   btn.classList.toggle("is-saved",salvo);
   btn.setAttribute("aria-pressed",salvo?"true":"false");
-  btn.textContent=salvo?"✓ Salvo — remover?":"⭐ Salvar imóvel";
+  btn.textContent=salvo?"✓ Salvo — remover?":"Salvar imóvel";
 }
 /* renderCadernoBtn(): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4, 16-RESEARCH.md) — cadernoTem()
    bate no IndexedDB, sempre async; estado do botão fica neutro até resolver, NUNCA bloqueia o
@@ -7048,7 +7071,7 @@ function renderCadernoBtn(){
     if(!btn2||!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
     btn2.classList.toggle("is-saved",salvo);
     btn2.setAttribute("aria-pressed",salvo?"true":"false");
-    btn2.textContent=salvo?"✓ No caderno — remover?":"📓 Salvar no caderno"; /* F5 B-14: rótulo-espelho do ⭐ ("✓ Salva — remover?") — aria-pressed agora tem toggle de verdade */
+    btn2.textContent=salvo?"✓ No caderno — remover?":"Salvar no caderno"; /* F5 B-14: rótulo-espelho do botão de salvos — aria-pressed agora tem toggle de verdade */
   }).catch(()=>{}); /* falha de LEITURA de estado (não de escrita) — não precisa de toast; o botão fica no rótulo default */
 }
 /* renderDiffUI(a) (Fase 17, 17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no
@@ -7307,11 +7330,11 @@ function renderSavedBlocks(){
   }).join("");
   const oppBlock=`<div class="savedblock" id="oportunidadesBlock">
     <div class="savedblock-head">
-      <span class="savedblock-tt">⭐ Imóveis salvos</span>
+      <span class="savedblock-tt">Imóveis salvos</span>
       <span class="savedblock-count" id="oportunidadesCount">${opps.length}</span>
     </div>
     ${opps.length?`<div class="savedlist" id="oportunidadesList">${rowsOpp}</div>`
-      :`<div class="savedempty">Nenhum imóvel salvo ainda — toque ⭐ numa ficha.</div>`}
+      :`<div class="savedempty">Nenhum imóvel salvo ainda — use “Salvar imóvel” numa ficha.</div>`}
   </div>`;
   const hist=histLoad();
   let histBlock="";
@@ -7326,7 +7349,7 @@ function renderSavedBlocks(){
     }).join("");
     histBlock=`<div class="savedblock savedblock-hist" id="historicoBlock">
       <div class="savedblock-head">
-        <span class="savedblock-tt">🕘 Histórico</span>
+        <span class="savedblock-tt">Histórico</span>
         <span style="display:flex;gap:8px;align-items:center">
           <button type="button" class="savedblock-clear" onclick="limparHistorico()">Limpar</button>
           <span class="savedblock-count" id="historicoCount">${hist.length}</span>
@@ -7355,7 +7378,7 @@ async function renderCadernoBlock(){
   if(!box)return;
   if(!cadernoDisponivel()){
     box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
-      <div class="savedblock-head"><span class="savedblock-tt">📓 Caderno de território</span></div>
+      <div class="savedblock-head"><span class="savedblock-tt">Caderno de território</span></div>
       <div class="dnote">${CADERNO_INDISPONIVEL}</div>
     </div>`;
     return;
@@ -7365,7 +7388,7 @@ async function renderCadernoBlock(){
     itens=await cadernoListar({cdbairro:CADERNO_FILTRO.cdbairro||undefined,status:CADERNO_FILTRO.status||undefined});
   }catch(e){
     box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
-      <div class="savedblock-head"><span class="savedblock-tt">📓 Caderno de território</span></div>
+      <div class="savedblock-head"><span class="savedblock-tt">Caderno de território</span></div>
       <div class="dnote">Não foi possível abrir o caderno. Tente recarregar a página.</div>
     </div>`;
     return;
@@ -7380,7 +7403,7 @@ async function renderCadernoBlock(){
     const nomeMap=await garantirNomeParaCdbairro(); /* NUNCA `mapa`/`map` — colide com o Leaflet */
     const cx=cruzarCaixaTerritorio(CAIXA.imoveis,itens,nomeMap);
     if(cx.n>0){
-      const rotulo=(cx.n===1?"🏦 1 imóvel Caixa no seu território":"🏦 "+cx.n+" imóveis Caixa no seu território")+" — toque para ver no mapa";
+      const rotulo=(cx.n===1?"1 imóvel CAIXA no seu território":cx.n+" imóveis CAIXA no seu território")+" — toque para ver no mapa";
       caixaBadgeHtml=`<button type="button" class="cadbook-caixabadge" id="cadernoCaixaBadge" data-bairros="${esc(cx.bairros.join(','))}" onclick="abrirCaixaNoMapaUI(this)">${esc(rotulo)}</button>`;
     }
   }
@@ -7427,7 +7450,7 @@ async function renderCadernoBlock(){
     `<option value="${s}"${s===CADERNO_FILTRO.status?" selected":""}>${CADERNO_STATUS_LBL[s]}</option>`).join("");
   box.innerHTML=`<div class="savedblock" id="cadernoBlockInner">
     <div class="savedblock-head">
-      <span class="savedblock-tt">📓 Caderno de território</span>
+      <span class="savedblock-tt">Caderno de território</span>
       <span class="savedblock-count" id="cadernoCount">${total}</span>
     </div>
     ${caixaBadgeHtml}
@@ -7439,11 +7462,11 @@ async function renderCadernoBlock(){
       <select id="cadernoFiltroStatus" onchange="cadernoFiltrarUI()">${filtroStatusOpts}</select>
     </div>
     ${total?`<div class="savedlist" id="cadernoList">${rows}</div>`
-      :`<div class="savedempty">Nenhum lote no caderno ainda — toque '📓 Salvar no caderno' na ficha ou no detector.</div>`}
+      :`<div class="savedempty">Nenhum lote no caderno ainda — use “Salvar no caderno” na ficha ou no detector.</div>`}
     ${total>CADERNO_PAGINA?`<button type="button" class="savedblock-clear" onclick="cadernoMaisUI()">Mostrar mais 30</button>`:""}
     <div class="cadbook-export-row">
-      <button type="button" id="cadernoExport" onclick="cadernoExportarJSON()">⬇ Exportar caderno (JSON)</button>
-      <button type="button" id="cadernoImportBtn" onclick="document.getElementById('cadernoImportFile').click()">⬆ Importar caderno</button>
+      <button type="button" id="cadernoExport" onclick="cadernoExportarJSON()">Exportar caderno (JSON)</button>
+      <button type="button" id="cadernoImportBtn" onclick="document.getElementById('cadernoImportFile').click()">Importar caderno</button>
       <input type="file" accept="application/json" hidden id="cadernoImportFile" onchange="cadernoImportarJSON(this)">
     </div>
   </div>`;
@@ -8188,10 +8211,10 @@ function renderSeletorFinalidade(){
   document.getElementById("wBack").disabled=false;
   const wf=document.querySelector("#wiz .wfoot");if(wf)wf.style.display="none";
   const OPCOES=[
-    ["apresentar","📱","Apresentar ao cliente"],
-    ["captar","🏠","Captar o proprietário"],
-    ["justificar","💲","Justificar o preço"],
-    ["formal","🧾","Documento técnico formal"],
+    ["apresentar","Apresentar ao cliente"],
+    ["captar","Captar o proprietário"],
+    ["justificar","Justificar o preço"],
+    ["formal","Documento técnico formal"],
   ];
   let recHtml="";
   if(LZ.finalidadeUso){
@@ -8215,7 +8238,7 @@ function renderSeletorFinalidade(){
   }
   b.innerHTML=`<div class="wh1">Para que você precisa do documento?</div>
     <div class="wsub">Escolha a finalidade. O PTAM permanece suspenso até existir verificação profissional e revisão regulatória.</div>
-    <div class="fingrid">${OPCOES.map(([v,ic,txt])=>`<button type="button" class="finop" aria-pressed="${LZ.finalidadeUso===v}" onclick="finSet('${v}')">${ic}<br>${esc(txt)}</button>`).join("")}</div>
+    <div class="fingrid">${OPCOES.map(([v,txt])=>`<button type="button" class="finop" aria-pressed="${LZ.finalidadeUso===v}" onclick="finSet('${v}')">${esc(txt)}</button>`).join("")}</div>
     ${recHtml}`;
 }
 function wizRender(){
@@ -8503,7 +8526,7 @@ function renderFichaRapida(a,data,fr){
 function imprimirLaudo(){
   const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
   if(standalone){ /* em PWA instalado no iOS, window.print() é no-op */
-    alert("No app instalado na tela inicial, toque em Compartilhar ⬆ e depois em Imprimir para salvar o PDF (ou abra o Radar no Safari).");
+    alert("No app instalado na tela inicial, toque no ícone Compartilhar e depois em Imprimir para salvar o PDF (ou abra o Radar no Safari).");
     return;
   }
   document.body.classList.add("print-laudo");
@@ -8623,7 +8646,7 @@ function initCaixa(){
   if(g&&(Date.now()-g)/864e5>14){
     const d=CAIXA.gerado.split("-").reverse().join("/");
     btn.title="Lista da Caixa de "+d+" — pode estar desatualizada.";
-    btn.innerHTML="🏦 Ver Oportunidades Caixa (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
+    btn.innerHTML="Ver oportunidades CAIXA (<span id=\"caixaN\">"+pl.length+"</span>) · "+d;
   }
 }
 /* caixaPopup(i,noTerr) (Fase 17, 17-02, TERR-07): noTerr (opcional) — quando true, insere a linha
@@ -8633,7 +8656,7 @@ function caixaPopup(i,noTerr){
   return `<div class="cxp">
     <div class="tt">${esc(i.t)} — ${esc(i.b)}</div>
     <div>${esc(i.e)}</div>
-    ${noTerr?'<div class="cxp-terr">📓 Este imóvel está no seu território salvo.</div>':""}
+    ${noTerr?'<div class="cxp-terr">Este imóvel está no seu território salvo.</div>':""}
     <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}%</span>`:""}</div>
     <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
     <div>${esc(i.m)}</div>

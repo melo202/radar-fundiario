@@ -14,7 +14,7 @@
 - Datas opcionais de documento e de revisão escolhidas pelo usuário, com alertas locais de revisão próxima/atrasada. O Radar não presume prazo jurídico nem confirma vigência.
 - Pacote único de diligência exportável, reunindo identificação cadastral, trilha de evidências, histórico e checklist. Nenhum arquivo, nome de proprietário ou certidão é armazenado.
 
-### ⬜ P0 visual — redesign “Atlas Cívico”
+### 🔶 P0 visual — redesign “Atlas Cívico”
 
 **Diagnóstico:** o produto já é forte tecnicamente, mas a interface ainda comunica “ferramenta cadastral interna”, enquanto os relatórios comunicam um produto mais premium. Não é um problema resolvível apenas trocando cores: falta uma hierarquia visual única para mapa, busca, resultados e dossiê.
 
@@ -45,7 +45,7 @@ Achados da auditoria visual:
 
 - ✅ Consolidar tokens de cor, tipografia, raio, elevação, espaço e movimento no braço visual isolado; a migração dos tokens para a aplicação principal pertence ao V1.
 - ✅ Produzir um protótipo navegável de três telas: mapa inicial, resultados e dossiê — arquivo [`prototipo-atlas-civico.html`](prototipo-atlas-civico.html).
-- 🔶 Validar a direção antes de alterar toda a aplicação. Auditoria técnica e visual em desktop concluída; responsividade, três alturas do painel, redução de movimento, foco e alvos de toque cobertos no protótipo e nos testes. Pendente: aprovação da direção pelo usuário e teste tátil em iPhone/Android reais.
+- 🔶 Validar a direção antes de alterar toda a aplicação. Direção aprovada pelo usuário em 14/07/2026; auditoria técnica e visual em desktop concluída; responsividade, três alturas do painel, redução de movimento, foco e alvos de toque cobertos no protótipo e nos testes. Pendente apenas o teste tátil em iPhone/Android reais.
 
 **Decisões materializadas no V0 (14/07/2026):**
 
@@ -58,14 +58,16 @@ Achados da auditoria visual:
 
 #### V1 — Shell cartográfico
 
-- ⬜ Cabeçalho compacto com marca Radar Fundiário, busca universal e estado de conexão/fonte.
-- ⬜ Desktop com mapa dominante e inspetor lateral fixo de 440–500 px; painel empurra a área útil do mapa em vez de cobri-la.
-- ⬜ Mobile preserva bottom sheet, mas com três alturas claras: resumo, meio e tela quase cheia.
-- ⬜ Legendas e controles aparecem somente quando a camada correspondente estiver ativa.
+- ✅ Cabeçalho compacto com marca Radar Fundiário, busca universal e estado de fonte, reutilizando o único motor de busca já existente.
+- ✅ Desktop com mapa dominante e inspetor lateral fixo de 480 px; painel empurra a área útil do mapa em vez de cobri-la e o mapa recupera toda a largura quando o inspetor fecha.
+- 🔶 Mobile preserva bottom sheet com três alturas claras — resumo, meio e tela quase cheia — e controle acessível por toque; implementação automatizada, pendente teste em aparelhos reais.
+- 🔶 Legendas e controles contextuais preservados e integrados ao novo shell; falta a revisão visual final de todas as camadas territoriais.
+
+**Migração V1 iniciada em 14/07/2026:** o shell Atlas Cívico já está na aplicação real, mantendo endpoints, armazenamento e regras cadastrais existentes. A integração não duplica o `#caixaInput`, não cria um segundo motor de consulta e permanece isolada na branch `agent/radar-ultrapremium`.
 
 #### V2 — Busca e resultados
 
-- ⬜ Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos.
+- 🔶 Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos. No desktop, os campos avançados agora cedem lugar à lista assim que há resultado, sem impedir o refino pela omnibox.
 - ⬜ Resultado de prédio: resumo fixo + filtros + linhas compactas; mostrar diferenças entre unidades e esconder repetição invariável.
 - ⬜ Estado vazio orientado: exemplos, buscas recentes úteis e explicação curta do que o Radar entrega.
 
