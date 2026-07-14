@@ -39,15 +39,14 @@ function loadPureBlock() {
 
 const P = loadPureBlock();
 
-// --- habilitaPtam: CRECI E CNAI (nunca CNAI sozinho) — C-07 --------------------------------
+// --- habilitaPtam: suspenso até verificação profissional --------------------------------------
 
-test("habilitaPtam exige CRECI E CNAI preenchidos (CNAI sozinho NÃO habilita)", () => {
-  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "6789" }), true, "CRECI + CNAI habilita");
-  assert.equal(P.habilitaPtam({ creci: "", cnai: "6789" }), false, "CNAI sozinho NÃO habilita");
-  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "" }), false, "CRECI sozinho NÃO habilita");
-  assert.equal(P.habilitaPtam({ creci: "  ", cnai: "  " }), false, "só espaços NÃO habilita (trim)");
-  assert.equal(P.habilitaPtam({}), false, "perfil vazio NÃO habilita");
-  assert.equal(P.habilitaPtam(null), false, "perfil ausente NÃO habilita (nunca lança)");
+test("habilitaPtam nunca aceita credenciais apenas digitadas", () => {
+  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "6789" }), false);
+  assert.equal(P.habilitaPtam({ creci: "", cnai: "6789" }), false);
+  assert.equal(P.habilitaPtam({ creci: "12345", cnai: "" }), false);
+  assert.equal(P.habilitaPtam({}), false);
+  assert.equal(P.habilitaPtam(null), false);
 });
 
 // --- recomendaDocumento: matriz 4 finalidades x 2 estados de CNAI (8 combinacoes) -----------
@@ -68,18 +67,18 @@ test("recomendaDocumento cobre a matriz completa de finalidade x CNAI (8 combina
   }
 });
 
-test('recomendaDocumento("formal", false) recomenda "relatorio" (NUNCA "ptam") explicando que o PTAM pressupoe CNAI', () => {
+test('recomendaDocumento("formal", false) recomenda relatório e explica a suspensão', () => {
   const result = P.recomendaDocumento("formal", false);
   assert.equal(result.doc, "relatorio", `recomendaDocumento("formal", false) deveria ser "relatorio", obteve: ${JSON.stringify(result)}`);
   const lower = result.porque.toLowerCase();
-  assert.ok(lower.includes("cnai"), `porque deveria citar "CNAI", obteve: ${JSON.stringify(result.porque)}`);
+  assert.ok(lower.includes("suspenso"), `porque deveria explicar a suspensão, obteve: ${JSON.stringify(result.porque)}`);
   assert.ok(lower.includes("ptam"), `porque deveria citar "PTAM", obteve: ${JSON.stringify(result.porque)}`);
 });
 
-test('recomendaDocumento("formal", true) recomenda "ptam" com explicacao positiva citando CNAI', () => {
+test('recomendaDocumento("formal", true) também mantém PTAM suspenso', () => {
   const result = P.recomendaDocumento("formal", true);
-  assert.equal(result.doc, "ptam", `recomendaDocumento("formal", true) deveria ser "ptam", obteve: ${JSON.stringify(result)}`);
-  assert.ok(result.porque.toLowerCase().includes("cnai"), `porque deveria citar "CNAI" de forma positiva, obteve: ${JSON.stringify(result.porque)}`);
+  assert.equal(result.doc, "relatorio", `credencial digitada não deveria habilitar PTAM, obteve: ${JSON.stringify(result)}`);
+  assert.ok(result.porque.toLowerCase().includes("suspenso"));
 });
 
 test("recomendaDocumento: os 4 textos de porque (1 por finalidade) sao todos DIFERENTES entre si (nunca generico)", () => {

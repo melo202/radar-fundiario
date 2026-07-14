@@ -23,7 +23,7 @@ function loadPureBlock() {
   const sandbox = {};
   vm.createContext(sandbox);
   new vm.Script(
-    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,matchScoreQ,matchScoreL,matchScoreRua,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode,detectMode};",
+    src + "\n;globalThis.__exports = {clean,norm,ruaCore,likeTerm,isGarage,matchApto,matchScoreQ,lotTokens,matchScoreL,matchScoreRua,TIPOVIA,TIPOVIA_DETECT,extractSetor,getLastBairroCode,detectMode};",
     { filename: "radar-pure.js" }
   ).runInContext(sandbox);
   return sandbox.__exports;
@@ -59,6 +59,12 @@ test("matchScoreL", () => {
   for (const { nl, lU, out } of FIXTURES.matchScoreL) {
     assert.equal(P.matchScoreL(nl, lU), out, `matchScoreL(nl=${JSON.stringify(nl)}, lU=${JSON.stringify(lU)})`);
   }
+});
+
+test("lotTokens — normaliza formato sem confundir identificadores", () => {
+  assert.deepEqual(Array.from(P.lotTokens("Lote 05")), ["5"]);
+  assert.deepEqual(Array.from(P.lotTokens("20 / 021")), ["20", "21"]);
+  assert.deepEqual(Array.from(P.lotTokens("5-A")), ["5A"]);
 });
 
 test("matchScoreRua", () => {

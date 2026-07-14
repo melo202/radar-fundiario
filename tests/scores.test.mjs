@@ -95,7 +95,7 @@ test("leituraPratica", () => {
 test("scoreOportunidade (F5 FICHA-03): imóvel exatamente na mediana — porquê diz 'Na mediana', nunca 'Está 0% abaixo'", () => {
   const r = P.scoreOportunidade(100, { q1: 80, med: 100, q3: 120, n: 10, min: 60, max: 140 });
   assert.ok(r, "deveria calcular (base completa)");
-  assert.equal(r.rotulo, "Oportunidade média");
+  assert.equal(r.rotulo, "Alinhado à referência cadastral");
   const why = r.porque.join(" ");
   assert.ok(why.includes("Na mediana"), `porque="${why}" deveria dizer "Na mediana" (paridade com renderComps)`);
   assert.ok(!why.includes("0%"), `porque="${why}" NAO deveria conter "0%"`);

@@ -36,6 +36,13 @@ export const FIXTURES = {
     { nl: "20/21", lU: "21", out: 1 }, // caso obrigatório do roadmap: lote "20/21" bate "21" (token exato)
     { nl: "20/21", lU: "22", out: null },
     { nl: "20", lU: "20", out: 0 }, // exato
+    { nl: "15", lU: "5", out: null }, // regressão crítica: lote 5 nunca casa lote 15
+    { nl: "51", lU: "5", out: null },
+    { nl: "5A", lU: "5", out: null }, // sufixo identifica outro lote; usuário deve pesquisar 5A
+    { nl: "L 05", lU: "5", out: 1 }, // prefixo/padding do cadastro são apenas formatação
+    { nl: "05", lU: "5", out: 1 },
+    { nl: "20/21", lU: "20/21", out: 0 },
+    { nl: "20/21", lU: "20/22", out: null },
   ],
 
   matchScoreRua: [
@@ -59,31 +66,30 @@ export const FIXTURES = {
   // Fase 9 (09-01): fixtures de score/confianca/leitura — funcoes puras novas no bloco RADAR_PURE.
   // Contrato HONESTIDADE: scoreOportunidade NUNCA inventa numero (retorna null sem base suficiente).
   scoreOportunidade: [
-    // caso obrigatorio do CONTEXT.md/UI-SPEC: 8% abaixo da mediana -> "Boa oportunidade" (score alto)
-    { myPm2: 4600, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{radius:400}, expectRange:[66,100], expectRotulo:"Boa oportunidade" },
-    { myPm2: 5000, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{}, expectRange:[33,65], expectRotulo:"Oportunidade média" },
-    { myPm2: 6000, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{}, expectRange:[0,32], expectRotulo:"Oportunidade baixa" },
+    { myPm2: 4600, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{radius:400}, expectRange:[66,100], expectRotulo:"Abaixo da referência cadastral" },
+    { myPm2: 5000, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{}, expectRange:[33,65], expectRotulo:"Alinhado à referência cadastral" },
+    { myPm2: 6000, stats: {med:5000,q1:4500,q3:5500,n:8,min:4000,max:6200}, flags:{}, expectRange:[0,32], expectRotulo:"Acima da referência cadastral" },
     // SEM BASE: nunca inventa numero
     { myPm2: 5000, stats: {n:2}, flags:{}, expectNull:true },
     { myPm2: null, stats: {med:5000,q1:4500,q3:5500,n:8}, flags:{}, expectNull:true },
     { myPm2: 0, stats: {med:5000,q1:4500,q3:5500,n:8}, flags:{}, expectNull:true },
     // F5 FICHA-01: dispersao ~zero (q1===med===q3, vizinhanca homogenea) — imovel NA mediana NUNCA
-    // vira 100 "Boa oportunidade"; score NEUTRO 50 com rotulo honesto. Fora da mediana, so a
+    // vira extremo comercial; score NEUTRO 50 com rotulo cadastral. Fora da mediana, so a
     // DIRECAO com score moderado (75/25), nunca o extremo 100/0.
-    { myPm2: 100, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[50,50], expectRotulo:"Na mediana — vizinhança homogênea" },
-    { myPm2: 90, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[75,75], expectRotulo:"Boa oportunidade" },
-    { myPm2: 110, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[25,25], expectRotulo:"Oportunidade baixa" },
+    { myPm2: 100, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[50,50], expectRotulo:"Alinhado à referência cadastral" },
+    { myPm2: 90, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[75,75], expectRotulo:"Abaixo da referência cadastral" },
+    { myPm2: 110, stats: {med:100,q1:100,q3:100,n:10,min:100,max:100}, flags:{}, expectRange:[25,25], expectRotulo:"Acima da referência cadastral" },
     // IQR 0 com outlier no max (9 iguais + 1 caro): imovel na mediana continua NEUTRO (a cerca
     // min/max nao salva — o colapso e dos quartis)
-    { myPm2: 50, stats: {med:50,q1:50,q3:50,n:10,min:50,max:200}, flags:{}, expectRange:[50,50], expectRotulo:"Na mediana — vizinhança homogênea" },
+    { myPm2: 50, stats: {med:50,q1:50,q3:50,n:10,min:50,max:200}, flags:{}, expectRange:[50,50], expectRotulo:"Alinhado à referência cadastral" },
   ],
   scoreConfianca: [
     // alta: sem pendencias, >=8 comparaveis
     { inputs:{areaOk:true,nComps:9,atipico:false,venalOk:true}, expectNivel:"alta" },
     // media: 1 pendencia concreta (area) citada no porque
-    { inputs:{areaOk:false,nComps:6,atipico:false,venalOk:true}, expectNivel:"media", expectPorqueContains:"área confirmada" },
+    { inputs:{areaOk:false,nComps:6,atipico:false,venalOk:true}, expectNivel:"media", expectPorqueContains:"área de referência" },
     // baixa: >=2 pendencias (area + poucos comparaveis)
-    { inputs:{areaOk:false,nComps:2,atipico:false,venalOk:true}, expectNivel:"baixa", expectPorqueContains:"comparáveis" },
+    { inputs:{areaOk:false,nComps:2,atipico:false,venalOk:true}, expectNivel:"baixa", expectPorqueContains:"referências cadastrais" },
     // F5 FICHA-02: dispersao alta (amp=(q3-q1)/med > 0.4, MESMO criterio "imoveis muito variados"
     // do badge de renderComps) rebaixa UM nivel e cita a variabilidade no porque[]; "alta" nunca
     // coexiste com faixa muito variada. amp baixo ou ausente (pre-consulta) nunca rebaixa.
@@ -93,8 +99,8 @@ export const FIXTURES = {
     { inputs:{areaOk:true,nComps:9,atipico:false,venalOk:true,amp:null}, expectNivel:"alta" },
   ],
   leituraPratica: [
-    { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:{score:78,rotulo:"Boa oportunidade",porque:[]},confianca:{nivel:"media",porque:[]}}, expectContains:"Setor Bueno", expectNotContains:["mediana","percentil","quartil"] },
-    { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:null,confianca:null}, expectExact:"Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo." },
+    { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:{score:78,rotulo:"Abaixo da referência cadastral",porque:[]},confianca:{nivel:"media",porque:[]}}, expectContains:"Setor Bueno", expectNotContains:["mediana","percentil","quartil"] },
+    { inputs:{tipoImovel:"Apartamento",bairro:"Setor Bueno",oportunidade:null,confianca:null}, expectExact:"A amostra cadastral local ainda não foi analisada — consulte a vizinhança para contextualizar este registro." },
   ],
 
   // Fase 10 (10-01): fixtures de templates de WhatsApp/Captacao + helpers de persistencia pura
@@ -111,11 +117,11 @@ export const FIXTURES = {
     lote: "12",
     tipoImovel: "Apartamento",
     faixa: { lo: 690000, hi: 780000 },
-    scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
+    scoreOp: { score: 78, rotulo: "Abaixo da referência cadastral", porque: ["O valor venal por m² está 8% abaixo da mediana cadastral em até 400 m."] },
     // F5 ZAP-01/02: scoreConf NUNCA mais fabricado à mão — o teste computa a SAÍDA REAL de
     // scoreConfianca(scoreConfInputs) (o `porque` fabricado escondia o formato real pontuado).
     scoreConfInputs: { areaOk: false, nComps: 6, atipico: false, venalOk: true }, // => nivel "media"
-    leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+    leitura: "Apartamento no Setor Bueno. Valor venal por m² abaixo da amostra cadastral local. Isso não mede preço de mercado nem liquidez.",
     perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
   },
 
@@ -127,9 +133,9 @@ export const FIXTURES = {
     lote: "12",
     tipoImovel: "Apartamento",
     faixa: { lo: 690000, hi: 780000 },
-    scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: ["Está 8% abaixo da mediana da vizinhança (comparáveis em até 400 m)."] },
+    scoreOp: { score: 78, rotulo: "Abaixo da referência cadastral", porque: ["O valor venal por m² está 8% abaixo da mediana cadastral em até 400 m."] },
     scoreConfInputs: { areaOk: false, nComps: 6, atipico: false, venalOk: true }, // F5 ZAP-01/02: saída real computada no teste
-    leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+    leitura: "Apartamento no Setor Bueno. Valor venal por m² abaixo da amostra cadastral local. Isso não mede preço de mercado nem liquidez.",
     perfil: null,
   },
 
@@ -143,7 +149,7 @@ export const FIXTURES = {
     faixa: null,
     scoreOp: null,
     scoreConf: null,
-    leitura: "Apartamento no Setor Bueno. Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.",
+    leitura: "Apartamento no Setor Bueno. A amostra cadastral local ainda não foi analisada.",
     perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
   },
 
@@ -178,8 +184,8 @@ export const FIXTURES = {
   },
 
   // Fase 11 (11-01): fixtures de recomendaDocumento/pendenciasDocumento/fichaRapidaTexto — funcoes
-  // novas no bloco RADAR_PURE. Contrato de HONESTIDADE (11-UI-SPEC.md/11-CONTEXT.md): PTAM nunca
-  // e recomendado sem CNAI (explica o porque, nunca bloqueia); pendencias nunca marcam conservacao
+  // novas no bloco RADAR_PURE. Contrato de HONESTIDADE: PTAM permanece suspenso até existir
+  // verificação profissional e revisão regulatória; pendencias nunca marcam conservacao
   // como pendente (default "Bom"); fichaRapidaTexto nunca inventa faixa/comparaveis nem usa jargao.
 
   // matriz completa das 4 finalidades x 2 estados de CNAI (8 combinacoes) do Componente 1 do UI-SPEC.
@@ -190,8 +196,8 @@ export const FIXTURES = {
     { finalidadeUso: "captar", cnai: true, expectDoc: "ficha", expectPorqueContains: "captar" },
     { finalidadeUso: "justificar", cnai: false, expectDoc: "relatorio", expectPorqueContains: "justificar" },
     { finalidadeUso: "justificar", cnai: true, expectDoc: "relatorio", expectPorqueContains: "justificar" },
-    { finalidadeUso: "formal", cnai: false, expectDoc: "relatorio", expectPorqueContains: "CNAI" },
-    { finalidadeUso: "formal", cnai: true, expectDoc: "ptam", expectPorqueContains: "CNAI" },
+    { finalidadeUso: "formal", cnai: false, expectDoc: "relatorio", expectPorqueContains: "suspenso" },
+    { finalidadeUso: "formal", cnai: true, expectDoc: "relatorio", expectPorqueContains: "suspenso" },
   ],
 
   // pendenciasDocumento: 2 casos completos do <behavior> do 11-01-PLAN.md — media (1 pendencia,
@@ -226,9 +232,9 @@ export const FIXTURES = {
       lote: "12",
       tipoImovel: "Apartamento",
       faixa: { lo: 300000, hi: 400000 },
-      scoreOp: { score: 78, rotulo: "Boa oportunidade", porque: [] },
-      scoreConf: { nivel: "media", porque: ["faltou a área confirmada."] },
-      leitura: "Apartamento no Setor Bueno. Boa liquidez esperada — preço competitivo para a região.",
+      scoreOp: { score: 78, rotulo: "Abaixo da referência cadastral", porque: [] },
+      scoreConf: { nivel: "media", porque: ["área de referência não informada."] },
+      leitura: "Apartamento no Setor Bueno. Valor venal por m² abaixo da amostra cadastral local. Isso não mede preço de mercado nem liquidez.",
       perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
     },
     semFaixaComComparaveis: {
@@ -240,7 +246,7 @@ export const FIXTURES = {
       faixa: null,
       scoreOp: null,
       scoreConf: null,
-      leitura: "Apartamento no Setor Bueno. Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.",
+      leitura: "Apartamento no Setor Bueno. A amostra cadastral local ainda não foi analisada.",
       perfil: { nome: "Ana Souza", creci: "12345", contato: "62999999999" },
       comparaveis: ["Rua X, nº 100 — 8% abaixo da faixa desta região"],
     },

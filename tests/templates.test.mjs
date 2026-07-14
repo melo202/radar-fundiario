@@ -48,7 +48,7 @@ const P = loadPureBlock();
 
 // F5 ZAP-01/02: os data de teste usam a SAÍDA REAL de scoreConfianca (fixture guarda só os
 // inputs) — o `porque` fabricado à mão nunca reproduzia o formato real pontuado
-// ("faltou a área confirmada; 6 comparáveis na vizinhança.") e escondia o bug de interpolação.
+// ("área de referência não informada; 6 referências cadastrais semelhantes.") e escondia o bug de interpolação.
 const zapComData = { ...FIXTURES["zapComData"], scoreConf: null };
 zapComData.scoreConf = P.scoreConfianca(FIXTURES["zapComData"].scoreConfInputs);
 const zapSemPerfil = { ...FIXTURES["zapSemPerfil"], scoreConf: null };
@@ -115,7 +115,7 @@ test("zap*/capt* sem bairro usam 'na região' — nunca 'no região'", () => {
 // --- zapRiscos: honestidade sempre, nunca afirmacao absoluta -----------------------------------
 
 test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
-  const honestidadeTermos = ["recomendo confirmar", "faixa estimada", "não é uma avaliação oficial"];
+  const honestidadeTermos = ["recomendo confirmar", "referência indicativa", "não é uma avaliação oficial"];
   for (const data of [zapComData, FIXTURES.zapSemFaixa]) {
     const result = P.zapRiscos(data);
     const lower = result.toLowerCase();
@@ -128,7 +128,7 @@ test("zapRiscos contem termo de honestidade e nunca afirmacao absoluta", () => {
   }
 });
 
-// --- zapArgumento: coerencia direcional (C-03) -------------------------------------------------
+// --- zapArgumento: contexto cadastral nunca vira recomendacao comercial -------------------------
 
 test("zapArgumento com score baixo (acima da mediana) NAO afirma 'reforça o valor pedido'", () => {
   const caro = {
@@ -137,13 +137,14 @@ test("zapArgumento com score baixo (acima da mediana) NAO afirma 'reforça o val
   };
   const result = P.zapArgumento(caro);
   assert.ok(!result.includes("reforça o valor pedido"), `imóvel caro NAO deveria conter "reforça o valor pedido", obteve: ${JSON.stringify(result)}`);
-  assert.ok(result.includes("negociar o valor"), `imóvel caro deveria abrir margem para negociar, obteve: ${JSON.stringify(result)}`);
+  assert.ok(result.includes("não determina preço de mercado nem liquidez"), `deveria explicitar o limite cadastral, obteve: ${JSON.stringify(result)}`);
 });
 
-test("zapArgumento com score alto (abaixo da mediana) reforça o valor pedido", () => {
+test("zapArgumento com score alto (abaixo da mediana) também não recomenda preço", () => {
   const result = P.zapArgumento(zapComData); // score 78, "8% abaixo"
-  assert.ok(result.includes("reforça o valor pedido"), `imóvel barato deveria reforçar o valor pedido, obteve: ${JSON.stringify(result)}`);
-  assert.ok(!result.includes("negociar o valor"), `imóvel barato NAO deveria abrir margem para negociar, obteve: ${JSON.stringify(result)}`);
+  assert.ok(!result.includes("reforça o valor pedido"), `amostra fiscal não deveria reforçar preço, obteve: ${JSON.stringify(result)}`);
+  assert.ok(!result.includes("negociar o valor"), `amostra fiscal não deveria recomendar negociação, obteve: ${JSON.stringify(result)}`);
+  assert.ok(result.includes("não determina preço de mercado nem liquidez"), `deveria explicitar o limite cadastral, obteve: ${JSON.stringify(result)}`);
 });
 
 // --- Captacao: 4 funcoes ------------------------------------------------------------------------
@@ -269,7 +270,7 @@ test("zapProprietario: pendencia real (area) vira substantivo em frase gramatica
   const conf = P.scoreConfianca({ areaOk: false, nComps: 6, atipico: false, venalOk: true });
   const result = P.zapProprietario({ ...zapComData, scoreConf: conf });
   assert.ok(
-    result.includes("Recomendo confirmar a área do imóvel para uma avaliação mais precisa."),
+    result.includes("Recomendo confirmar a área do imóvel em uma análise complementar."),
     `zapProprietario deveria citar a pendencia como substantivo, obteve: ${JSON.stringify(result)}`
   );
   assert.ok(!result.includes("faltou"), `zapProprietario NAO deveria interpolar a frase-diagnostico crua ("faltou..."), obteve: ${JSON.stringify(result)}`);
@@ -280,7 +281,7 @@ test("zapRiscos: 2 pendencias reais viram lista com virgula + 'e' final, sem pon
   const conf = P.scoreConfianca({ areaOk: false, nComps: 2, atipico: false, venalOk: true }); // baixa: area + poucos comparaveis
   const result = P.zapRiscos({ ...zapComData, scoreConf: conf });
   assert.ok(
-    result.includes("a área do imóvel e o valor com mais comparáveis da região."),
+    result.includes("a área do imóvel e o valor com uma amostra cadastral maior."),
     `zapRiscos deveria listar as 2 pendencias com "e" final e um unico ponto, obteve: ${JSON.stringify(result)}`
   );
   assert.ok(!result.includes(";"), `zapRiscos NAO deveria conter o "; " de diagnostico do painel, obteve: ${JSON.stringify(result)}`);

@@ -9,18 +9,23 @@
    tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
    nunca cache — dado vivo, e tiles de satélite são pesados demais para
    inchar o storage do PWA. */
-const CACHE = "radar-v7";
-const LOCAL = [
+const CACHE = "radar-v8";
+/* CORE precisa existir para a aplicação abrir. Dados auxiliares são best-effort: a ausência
+   temporária de um JSON não pode abortar a instalação inteira do PWA. O app já trata degradação
+   das camadas opcionais e volta a buscá-las na rede quando disponíveis. */
+const CORE = [
   "./",
   "./radar-goiania.html",
-  "./caixa-goiania.js",
-  "./bairros-goiania.json",
-  "./logradouros-goiania.json",
-  "./bairro-cdbairro.json",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png"
+];
+const OPTIONAL = [
+  "./caixa-goiania.js",
+  "./bairros-goiania.json",
+  "./logradouros-goiania.json",
+  "./bairro-cdbairro.json"
 ];
 const CDN = [
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
@@ -30,9 +35,18 @@ const CDN = [
 const NETWORK_FIRST = /(\/$|\.html$|caixa-goiania\.js$|manifest\.json$)/;
 
 self.addEventListener("install", e => {
-  /* same-origin é obrigatório; CDN é best-effort (não deixa o install inteiro falhar se o cdnjs oscilar) */
+  /* CORE é obrigatório. Dados auxiliares e CDN são best-effort: um único 404 não inutiliza o PWA. */
   e.waitUntil(caches.open(CACHE).then(c =>
-    c.addAll(LOCAL).then(() => Promise.allSettled(CDN.map(u => fetch(u).then(r => r.ok && c.put(u, r)))))
+    c.addAll(CORE).then(() => Promise.allSettled([
+      ...OPTIONAL.map(u => fetch(u).then(r => {
+        if(!r.ok)throw new Error("asset opcional indisponível: "+u);
+        return c.put(u,r);
+      })),
+      ...CDN.map(u => fetch(u).then(r => {
+        if(!r.ok)throw new Error("CDN indisponível: "+u);
+        return c.put(u,r);
+      }))
+    ]))
   ).then(() => self.skipWaiting()));
 });
 

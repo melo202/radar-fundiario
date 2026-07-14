@@ -50,9 +50,9 @@
     --elev-2:0 6px 18px rgba(20,26,31,.16);   /* dropdowns/menus/combo */
     --elev-3:0 10px 28px rgba(20,26,31,.24);  /* modais/sheets */
     /* ===== paleta do LAUDO (troque estas 8 linhas para recolorir o laudo inteiro) ===== */
-    --l-accent:#1d5a73;   /* petróleo — títulos de seção/PDF, valores-chave, seta "maior liquidez" (era laranja #ff7d00). WCAG: 7,60:1 c/ #fff (cards/botão do laudo, AA ✓) */
+    --l-accent:#1d5a73;   /* petróleo — títulos de seção/PDF, valores-chave, referência inferior. WCAG: 7,60:1 c/ #fff (cards/botão do laudo, AA ✓) */
     --l-ink:#232526;      /* grafite — pill "Fachada", valor-herói, assinatura */
-    --l-blue:#4577c0;     /* azul — seta "menor liquidez" */
+    --l-blue:#4577c0;     /* azul — referência superior */
     --l-text:#333638;     /* corpo do texto */
     --l-label:#70706e;    /* rótulos e legendas */
     --l-card:#ffffff;     /* fundo dos cards */
@@ -249,7 +249,7 @@
   .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--muted)}
   .card .grid2 b{color:var(--ink);font-weight:600}
   .card .vals{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
-  /* mercado estimado = número-âncora da decisão (grande, accent); venal = legenda secundária */
+  /* referência indicativa = destaque visual; valor venal = legenda cadastral secundária */
   .card .vals .ref .lbl{display:block;font:700 10px/1 "Archivo";letter-spacing:.02em;color:var(--accent-ink)}/* D-09 (20): contraste do texto pequeno sobre --paper */
   .card .vals .ref b{display:block;font:800 17px/1.1 "Archivo";color:var(--accent-ink);margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}/* D-09 (20) */
   .card .vals .venal{text-align:right;font:600 10px/1.2 "Archivo";color:var(--muted)}
@@ -1077,7 +1077,7 @@
     <div class="results" id="results">
       <div class="empty" id="emptyState">
         <div class="big">Encontre qualquer imóvel de Goiânia</div>
-        Veja na hora o <b>preço estimado</b>, gere um <b>laudo em PDF</b> e descubra <b>oportunidades da Caixa</b> por perto. Toque num exemplo para começar:
+        Encontre o imóvel correto, confira <b>dados cadastrais e territoriais</b> e gere um <b>dossiê rastreável</b>. Toque num exemplo para começar:
         <div class="chips examplechips" id="exampleChips" role="group" aria-label="Exemplos de busca">
           <button data-example="quadra 128 lote 5">quadra 128 lote 5</button>
           <button data-example="rua portugal 582">rua portugal 582</button>
@@ -1094,11 +1094,11 @@
       <div class="footbody">
         <ul class="oqf-lista">
           <li><b>Busca unificada</b> — endereço, quadra/lote, prédio ou inscrição numa caixa só. <button type="button" onclick="focusFirstField()">Buscar agora →</button></li>
-          <li><b>Valor e oportunidade</b> — faixa estimada, score de oportunidade e leitura em linguagem simples. <button type="button" onclick="onbAbrirDireto(1)">Ver como →</button></li>
+          <li><b>Diagnóstico cadastral</b> — posição na amostra local, cobertura dos dados e leitura em linguagem simples. <button type="button" onclick="onbAbrirDireto(1)">Ver como →</button></li>
           <!-- F5 B-16: os 2 itens abaixo abrem o MESMO cartão 2 do onboarding (que cobre docs+captação
                juntos — não existem cartões distintos); "Sobre isto →" é honesto, "Ver como →" prometia demonstração -->
           <li><b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
-          <li><b>Ação comercial</b> — mensagens prontas pro WhatsApp, modo captação, salvar oportunidades. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
+          <li><b>Dossiê do imóvel</b> — salve a consulta, compare registros e compartilhe evidências selecionadas. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
           <li><b>Oportunidades da Caixa</b> — imóveis à venda da Caixa, plotados no mapa. <button type="button" onclick="toggleCaixa()">Ver no mapa →</button></li>
         </ul>
       </div>
@@ -1106,7 +1106,7 @@
 
     <details class="foot">
       <summary>Fontes &amp; metodologia</summary>
-      <div class="footbody">Fonte: ArcGIS público da Prefeitura de Goiânia (camada Cadastro Imobiliário). Coordenadas SIRGAS 2000 / UTM 22S convertidas para lat-long. Oportunidades: lista pública de venda de imóveis da CAIXA. Preços de mercado por bairro: fontes públicas (FipeZap/imprensa 2025-26), ajustados pelo fator oferta 0,90 (NBR 14653-2). O nome do titular não é lido por aqui — é consultado por você, manualmente, na CND oficial.</div>
+      <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Radar — a consulta é manual na CND oficial.</div>
     </details>
   </aside>
 
@@ -1138,10 +1138,10 @@
          o valor inicial/fallback, nunca dessincroniza de PINO_STYLE. Linhas de Caixa/subutilizado/
          território reusam o dourado de propósito (camadas próprias, fora de PINO_STYLE): sem data-status. -->
     <div id="pinoLegenda" class="pino-legenda" hidden aria-label="Legenda dos pinos no mapa">
-      <span><i class="pl-dot" data-status="bom" style="background:#2c5545"></i>Boa oportunidade</span>
-      <span><i class="pl-dot" data-status="atencao" style="background:#a8842c"></i>Oportunidade média</span><!-- F5 MAPA-01: mesmo rótulo da ficha p/ a mesma banda/cor -->
+      <span><i class="pl-dot" data-status="bom" style="background:#2c5545"></i>Abaixo da mediana cadastral</span>
+      <span><i class="pl-dot" data-status="atencao" style="background:#a8842c"></i>Próximo à mediana cadastral</span>
 
-      <span><i class="pl-dot" data-status="risco" style="background:#c0392b"></i>Oportunidade baixa</span>
+      <span><i class="pl-dot" data-status="risco" style="background:#c0392b"></i>Acima da mediana cadastral</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏦 Caixa</span>
       <span><i class="pl-dot" data-status="semdado" style="background:#57503f"></i>Sem dado ainda</span>
       <span><i class="pl-dot" style="background:#a8842c"></i>🏗️ Lote subutilizado</span>
@@ -1489,11 +1489,28 @@ function matchScoreQ(nq,qU){
   if(/\D/.test(qU)&&nq.includes(qU))return 2;
   return null;
 }
+/* Normaliza lote como identificador, nunca como trecho de texto. O cadastro usa formas como
+   "05", "L 05" e "20/21"; todas podem representar o mesmo lote sem autorizar que "5" case
+   "15". Separadores compostos (/,+, vírgula, ponto-e-vírgula ou "E") geram tokens próprios. */
+function lotTokens(v){
+  let s=norm(v).replace(/\b(?:LOTES?|LTS?)\.?\b/g," ").trim();
+  if(!s)return [];
+  return s.split(/\s*(?:\/|\+|,|;|\bE\b)\s*/)
+    .map(t=>t.replace(/^L(?=\s*\d)/,"" ).replace(/[^A-Z0-9]/g,""))
+    .filter(Boolean)
+    .map(t=>/^\d+$/.test(t)?String(Number(t)):t.replace(/^0+(?=\d)/,""));
+}
 function matchScoreL(nl,lU){
   if(!lU)return 0;
   if(nl===lU)return 0;
-  if(nl.replace(/[^0-9\/]/g,"").split("/").includes(lU))return 1; // "20/21" bate "20" ou "21" por token exato
-  if(nl.includes(lU))return 2;
+  const alvo=lotTokens(lU), candidatos=lotTokens(nl);
+  if(!alvo.length||!candidatos.length)return null;
+  /* Consulta composta só casa a mesma composição; consulta simples pode casar um dos lotes de
+     "20/21". Não existe fallback por substring: lote 5, 5A, 15 e 51 são identificadores distintos. */
+  if(alvo.length>1){
+    return alvo.length===candidatos.length&&alvo.every((t,i)=>t===candidatos[i])?1:null;
+  }
+  if(candidatos.includes(alvo[0]))return 1;
   return null;
 }
 /* modo Endereço: rua por fronteira de palavra (token completo via padding de espaço, sem regex
@@ -1664,14 +1681,14 @@ function detectMode(textoBruto,combo){
   return attachSetor({mode:"bd",predio:raw,confidence:"media",label:`Prédio (?) · ${raw}`});
 }
 
-/* SCORE-01 (Fase 9): score de oportunidade 0-100 pela posicao do R$/m² do imovel (myPm2) vs
-   mediana/quartis da vizinhanca (stats: {med,q1,q3,n}, mesmo shape de compsStats()/getComps()).
+/* SCORE-01 (legado interno): posição do VALOR VENAL por m² do imóvel vs. amostra cadastral
+   da vizinhança (stats: {med,q1,q3,n}, mesmo shape de compsStats()/getComps()).
    Formula: percentil aproximado de myPm2 dentro da distribuicao (usa q1/med/q3 como ancoras --
    interpolacao linear em 4 segmentos: [min~q1-1.5iqr, q1], [q1,med], [med,q3], [q3,max~q3+1.5iqr]).
    score = 100 - percentil (abaixo da mediana = mais oportunidade pro comprador, score alto).
    SEM BASE (retorna null, nunca inventa): stats ausente, stats.n<3, ou myPm2 nao finito/<=0.
    flags.atipico (imovel garagem/box/etc, via isGarage) NAO bloqueia o score mas rebaixa o rotulo
-   de confianca em scoreConfianca (nao aqui) -- score de oportunidade eh so posicao de preco. */
+   de cobertura em scoreConfianca (nao aqui) -- este score interno representa posição cadastral. */
 function scoreOportunidade(myPm2, stats, flags){
   if(!stats || !(stats.n>=3) || !(myPm2>0) || !isFinite(myPm2)) return null;
   let {q1,med,q3} = stats;
@@ -1684,21 +1701,21 @@ function scoreOportunidade(myPm2, stats, flags){
   const iqr = q3-q1;
   /* F5 FICHA-01: dispersão ~zero (q1===med===q3 — vizinhança homogênea, ex.: unidades de mesma
      planta com venal idêntico) DEGENERA o percentil: as âncoras colapsam e qualquer valor <=min
-     virava 100 "Boa oportunidade" (inclusive o imóvel exatamente NA mediana) e qualquer valor
+     virava 100 como se fosse oportunidade comercial (inclusive o imóvel exatamente NA mediana) e qualquer valor
      acima virava 0 — bimodal, sem gradiente. Sem dispersão não há percentil: NA mediana o score é
      NEUTRO (50, rótulo honesto); fora dela aponta só a DIREÇÃO com score moderado (75/25), nunca o
      extremo 100/0, e o porquê cita a homogeneidade. */
   if(!(iqr>0)){
     const diffPctH=Math.round(Math.abs(myPm2-med)/med*100);
     if(diffPctH===0){
-      return {score:50, rotulo:"Na mediana — vizinhança homogênea",
-        porque:["Os comparáveis têm praticamente o mesmo R$/m² e o imóvel está alinhado a eles — sem dispersão para apontar oportunidade."]};
+      return {score:50, rotulo:"Alinhado à referência cadastral",
+        porque:["A amostra cadastral tem praticamente o mesmo valor venal por m² e este imóvel está alinhado a ela."]};
     }
     return myPm2<med
-      ? {score:75, rotulo:"Boa oportunidade",
-         porque:[`Está ${diffPctH}% abaixo de uma vizinhança homogênea (comparáveis com praticamente o mesmo R$/m²).`]}
-      : {score:25, rotulo:"Oportunidade baixa",
-         porque:[`Está ${diffPctH}% acima de uma vizinhança homogênea (comparáveis com praticamente o mesmo R$/m²).`]};
+      ? {score:75, rotulo:"Abaixo da referência cadastral",
+         porque:[`O valor venal por m² está ${diffPctH}% abaixo de uma amostra cadastral homogênea.`]}
+      : {score:25, rotulo:"Acima da referência cadastral",
+         porque:[`O valor venal por m² está ${diffPctH}% acima de uma amostra cadastral homogênea.`]};
   }
   const min = stats.min!=null ? stats.min : Math.max(1, q1-1.5*iqr);
   const max = stats.max!=null ? stats.max : q3+1.5*iqr;
@@ -1715,28 +1732,29 @@ function scoreOportunidade(myPm2, stats, flags){
   const abaixo=myPm2<=med; /* IN-01: mesmo comparador (<=) da conclusao de renderComps */
   let rotulo, porque;
   if(score>=66){
-    rotulo="Boa oportunidade";
-    porque=[`Está ${diffPct}% abaixo da mediana da vizinhança (comparáveis em até ${(flags&&flags.radius)||400} m).`];
+    rotulo="Abaixo da referência cadastral";
+    porque=[`O valor venal por m² está ${diffPct}% abaixo da mediana cadastral em até ${(flags&&flags.radius)||400} m.`];
   } else if(score>=33){
-    rotulo="Oportunidade média";
+    rotulo="Alinhado à referência cadastral";
     /* F5 FICHA-03: diffPct=0 dizia "Está 0% abaixo da mediana" — agora tem a MESMA frase da
        conclusão de renderComps ("Na mediana...") p/ as 2 superfícies da ficha não divergirem. */
     porque=[diffPct===0
-      ? "Na mediana da vizinhança — alinhado à região."
+      ? "Na mediana cadastral da vizinhança."
       : abaixo
-        ? `Está ${diffPct}% abaixo da mediana da vizinhança.`
-        : `Está ${diffPct}% acima da mediana da vizinhança.`];
+        ? `O valor venal por m² está ${diffPct}% abaixo da mediana cadastral.`
+        : `O valor venal por m² está ${diffPct}% acima da mediana cadastral.`];
   } else {
-    rotulo="Oportunidade baixa";
-    porque=[`Está ${diffPct}% acima da mediana da vizinhança — entre os mais caros da região.`];
+    rotulo="Acima da referência cadastral";
+    porque=[`O valor venal por m² está ${diffPct}% acima da mediana cadastral da vizinhança.`];
   }
   return {score, rotulo, porque};
 }
 
-/* SCORE-02 (Fase 9): confianca alta/media/baixa por COMPLETUDE de dados (nunca por qualidade de preco).
+/* SCORE-02 (legado interno): cobertura alta/media/baixa dos dados disponíveis. Este indicador
+   NUNCA representa precisão da estimativa, probabilidade de venda, regularidade ou liquidez.
    Criterios (cada ausencia = 1 pendencia citada em porque[]):
-   - areaOk: area (privativa ou total, conforme o tipo) confirmada/presente (>0)
-   - nComps: numero de comparaveis validos na vizinhanca (0 se sem consulta ainda)
+   - areaOk: área de referência presente (>0), sem pressupor conferência documental
+   - nComps: número de registros cadastrais semelhantes na vizinhança
    - atipico: imovel atipico na amostra (garagem/box/etc via isGarage)
    - venalOk: venal informado (>0) -- sem venal, a base fiscal do calculo fica mais fraca
    nivel: alta (0 pendencias E nComps>=8), media (<=1 pendencia E nComps>=3), baixa (demais casos) */
@@ -1754,11 +1772,11 @@ function scoreConfianca(inputs){
      `porque` segue sendo a frase-diagnóstico do painel; nota informativa (contagem de comparáveis)
      e diagnóstico positivo ("dados completos") NUNCA entram em `confirmar` — não são pendências. */
   const confirmar=[];
-  if(!areaOk){ pendencias.push("faltou a área confirmada"); confirmar.push("a área do imóvel"); }
+  if(!areaOk){ pendencias.push("área de referência não informada"); confirmar.push("a área do imóvel"); }
   if(!venalOk){ pendencias.push("valor venal não informado"); confirmar.push("o valor venal"); }
   if(atipico){ pendencias.push("imóvel atípico na amostra (uso pouco comum na vizinhança)"); confirmar.push("o uso do imóvel (atípico na vizinhança)"); }
-  if(n<3){ pendencias.push(`poucos comparáveis na vizinhança (${n})`); confirmar.push("o valor com mais comparáveis da região"); }
-  else if(n<8) notas.push(`${n} comparáveis na vizinhança`);
+  if(n<3){ pendencias.push(`poucas referências cadastrais semelhantes (${n})`); confirmar.push("o valor com uma amostra cadastral maior"); }
+  else if(n<8) notas.push(`${n} referências cadastrais semelhantes`);
   let nivel;
   if(pendencias.length===0 && n>=8) nivel="alta";
   else if(pendencias.length<=1 && n>=3) nivel="media";
@@ -1770,12 +1788,12 @@ function scoreConfianca(inputs){
      comparáveis ainda) nunca rebaixa — completude e dispersão seguem critérios separados. */
   if(amp!=null && isFinite(amp) && amp>0.4 && nivel!=="baixa"){
     nivel = nivel==="alta" ? "media" : "baixa";
-    notas.push("imóveis muito variados na vizinhança (faixa de preços dispersa)");
+    notas.push("imóveis muito variados na amostra cadastral");
   }
   const partes = pendencias.concat(notas);
   const porque = partes.length
     ? [partes.join("; ")+"."]
-    : [`${n} comparáveis na vizinhança, dados completos.`];
+    : [`${n} referências cadastrais semelhantes; campos-base disponíveis.`];
   return {nivel, porque, confirmar};
 }
 
@@ -1788,18 +1806,18 @@ function leituraPratica(inputs){
   const local = bairro ? `no ${bairro}` : "nesta região";
   const sujeito = tipoImovel || "Imóvel";
   if(!oportunidade){
-    return "Dados insuficientes para uma leitura de mercado — confira os dados técnicos abaixo.";
+    return "A amostra cadastral local ainda não foi analisada — consulte a vizinhança para contextualizar este registro.";
   }
-  const liquidezBaixa = confianca && confianca.nivel==="baixa";
+  const coberturaLimitada = confianca && confianca.nivel==="baixa";
   if(oportunidade.score>=66){
-    return `${sujeito} ${local}. Boa liquidez esperada` +
-      (liquidezBaixa ? ", se área e conservação forem confirmadas." : " — preço competitivo para a região.");
+    return `${sujeito} ${local}. Valor venal por m² abaixo da amostra cadastral local` +
+      (coberturaLimitada ? "; a cobertura é limitada e exige conferência dos dados." : ". Isso não mede preço de mercado nem liquidez.");
   }
   if(oportunidade.score>=33){
-    return `${sujeito} ${local}. Imóvel alinhado à região` +
-      (liquidezBaixa ? ", com boa liquidez se área privativa e conservação forem confirmadas." : ".");
+    return `${sujeito} ${local}. Valor venal por m² alinhado à amostra cadastral local` +
+      (coberturaLimitada ? "; a cobertura é limitada e exige conferência dos dados." : ". Isso não mede preço de mercado nem liquidez.");
   }
-  return `${sujeito} ${local}. Preço acima da média da vizinhança — negociação pode ser necessária para boa liquidez.`;
+  return `${sujeito} ${local}. Valor venal por m² acima da amostra cadastral local. Isso não determina preço de mercado nem liquidez.`;
 }
 
 /* ZAP-01/CAPT-01 (Fase 10, 10-01): templates deterministicos de WhatsApp/Captacao + helpers
@@ -1853,7 +1871,7 @@ function listaE(itens){
   return itens.length===1 ? itens[0] : itens.slice(0,-1).join(", ")+" e "+itens[itens.length-1];
 }
 
-/* zapResumo(data): "[Tipo] no [bairro]. [leitura]. Faixa estimada: [lo]–[hi]." — sem faixa,
+/* zapResumo(data): "[Tipo] no [bairro]. [leitura]. Faixa indicativa: [lo]–[hi]." — sem faixa,
    variante honesta (nunca interpola undefined/NaN). */
 function zapResumo(data){
   const d=data||{};
@@ -1861,8 +1879,8 @@ function zapResumo(data){
   const leitura=d.leitura?` ${d.leitura}`:"";
   const ft=faixaTxt(d.faixa);
   const faixaLinha=ft
-    ? ` Faixa estimada: ${ft}.`
-    : " Ainda não tenho uma faixa estimada para este imóvel — os dados técnicos completos estão na ficha.";
+    ? ` Faixa indicativa: ${ft}.`
+    : " Ainda não há uma referência indicativa para este imóvel — os dados cadastrais disponíveis estão na ficha.";
   return abertura+leitura+faixaLinha+assinatura(d.perfil);
 }
 
@@ -1875,13 +1893,13 @@ function zapProprietario(data){
   const d=data||{};
   const ft=faixaTxt(d.faixa);
   const faixaFrase=ft
-    ? `a faixa de valor fica entre ${ft}`
-    : "ainda não consegui estimar uma faixa de valor com os dados disponíveis, mas gostaria de conversar sobre o seu imóvel";
+    ? `a referência indicativa fica entre ${ft}`
+    : "ainda não há referência indicativa suficiente, mas gostaria de conversar sobre o seu imóvel";
   const itensConf=pendenciasConfirmar(d.scoreConf);
   const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&itensConf.length)
-    ? ` Recomendo confirmar ${listaE(itensConf)} para uma avaliação mais precisa.`
+    ? ` Recomendo confirmar ${listaE(itensConf)} em uma análise complementar.`
     : "";
-  return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Radar e, pela análise cadastral e comparáveis da região, ${faixaFrase}.`+
+  return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Radar e, pela análise do cadastro e das referências disponíveis, ${faixaFrase}.`+
     pendencias+" Podemos conversar?"+assinatura(d.perfil);
 }
 
@@ -1890,9 +1908,9 @@ function zapComprador(data){
   const d=data||{};
   const ft=faixaTxt(d.faixa);
   const faixaFrase=ft
-    ? `a faixa estimada fica entre ${ft}`
-    : "recomendo uma avaliação para estimar melhor o valor deste imóvel";
-  return `Encontrei esse imóvel ${localTxt(d.bairro)}. Pela análise cadastral e pelos comparáveis próximos, ${faixaFrase}.`+
+    ? `a referência indicativa fica entre ${ft}`
+    : "recomendo uma avaliação independente para analisar o valor deste imóvel";
+  return `Encontrei esse imóvel ${localTxt(d.bairro)}. Pela análise do cadastro e das referências disponíveis, ${faixaFrase}.`+
     " Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar."+
     assinatura(d.perfil);
 }
@@ -1902,17 +1920,13 @@ function zapComprador(data){
 function zapArgumento(data){
   const d=data||{};
   if(!d.scoreOp){
-    return "Ainda não tenho comparáveis suficientes na região para um argumento de preço baseado em dados — recomendo aguardar a análise de vizinhança."+
+    return "A amostra cadastral da vizinhança ainda não é suficiente para contextualizar o valor venal deste imóvel."+
       assinatura(d.perfil);
   }
   const base=(d.scoreOp.porque&&d.scoreOp.porque[0])
     ? d.scoreOp.porque[0]
-    : `Está na faixa "${d.scoreOp.rotulo}" em relação aos comparáveis da região.`;
-  // Fecho coerente com a DIREÇÃO do preço: abaixo da mediana (score alto) reforça o valor pedido;
-  // acima da mediana (score baixo) abre margem para negociar. Nunca contradiz o `porque`.
-  const favoravel=Number(d.scoreOp.score)>=66||/abaixo/i.test(base);
-  const fecho=favoravel?"Isso reforça o valor pedido.":"Isso abre margem para negociar o valor.";
-  return `Sobre o valor: este imóvel ${base.charAt(0).toLowerCase()+base.slice(1)} ${fecho}`+
+    : `Está na posição "${d.scoreOp.rotulo}" na amostra cadastral local.`;
+  return `Contexto cadastral: ${base} Isso não determina preço de mercado nem liquidez.`+
     assinatura(d.perfil);
 }
 
@@ -1926,9 +1940,9 @@ function zapRiscos(data){
   const itensConf=pendenciasConfirmar(d.scoreConf);
   const pontos=itensConf.length
     ? listaE(itensConf)
-    : "área privativa, estado de conservação, documentação e número de comparáveis na região";
+    : "área privativa, estado de conservação, documentação e quantidade de registros cadastrais semelhantes";
   return `Alguns pontos para confirmar antes de avançar: ${pontos}. `+
-    "Esta é uma faixa estimada, não é uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
+    "Esta é uma referência indicativa, não uma avaliação oficial — recomendo confirmar esses pontos antes de qualquer decisão."+
     assinatura(d.perfil);
 }
 
@@ -1952,7 +1966,7 @@ function captScript(data){
   const d=data||{};
   return `1. Se apresente e explique o motivo da ligação (imóvel ${localTxt(d.bairro)}).\n`+
     "2. Pergunte se o proprietário já pensou em vender ou tem interesse em uma avaliação gratuita.\n"+
-    "3. Se houver interesse, agende uma visita ou envie a faixa estimada por WhatsApp.\n"+
+    "3. Se houver interesse, agende uma visita ou envie a referência indicativa por WhatsApp.\n"+
     "4. Encerre agradecendo o tempo, mesmo se a resposta for negativa.";
 }
 
@@ -2016,10 +2030,9 @@ function histAdd(lista, item, cap){
    rápida — puro, sem IA. */
 
 /* recomendaDocumento(finalidadeUso, cnai): mapa determinístico literal da tabela do UI-SPEC
-   (Componente 1) — apresentar/captar sempre "ficha"; justificar sempre "relatorio"; formal
-   depende de cnai (true="ptam", false/ausente="relatorio", nunca bloqueia acesso ao PTAM, so
-   recomenda diferente). Fallback (finalidadeUso desconhecido/ausente) = mesmo resultado de
-   "justificar" (default seguro, nunca lança exceção). Textos EXATOS do Copywriting Contract. */
+   (Componente 1) — apresentar/captar usam "ficha"; justificar/formal usam "relatorio".
+   O parâmetro cnai é preservado apenas por compatibilidade com integrações existentes: dados
+   autorreferidos não habilitam PTAM. Fallback desconhecido = "justificar". */
 function recomendaDocumento(finalidadeUso, cnai){
   if(finalidadeUso==="apresentar"){
     return {doc:"ficha", porque:"Você quer apresentar ao cliente — a Ficha rápida é direta, cabe numa tela e vai bem no WhatsApp."};
@@ -2028,20 +2041,16 @@ function recomendaDocumento(finalidadeUso, cnai){
     return {doc:"ficha", porque:"Você quer captar o proprietário — a Ficha rápida é direta, cabe numa tela e vai bem no WhatsApp."};
   }
   if(finalidadeUso==="formal"){
-    return cnai
-      ? {doc:"ptam", porque:"Você pediu um documento técnico formal — com sua habilitação CNAI, o PTAM é o parecer técnico completo, com responsabilidade profissional."}
-      : {doc:"relatorio", porque:"O PTAM pressupõe habilitação CNAI — preencha no perfil se possuir. Por enquanto, recomendamos o Relatório de avaliação."};
+    return {doc:"relatorio", porque:"Você pediu um documento técnico formal. O PTAM automatizado está suspenso até haver verificação profissional e revisão regulatória; use o Relatório de apoio."};
   }
   // "justificar" e fallback (finalidadeUso desconhecido/ausente) compartilham o mesmo resultado.
   return {doc:"relatorio", porque:"Você quer justificar o preço com dados — o Relatório traz comparáveis e metodologia, sem o peso formal do PTAM."};
 }
 
-/* habilitaPtam(prof): PTAM exige CRECI E CNAI preenchidos (Res. COFECI 1.066/2007 — corretor
-   inscrito no CRECI com registro no CNAI). CNAI sozinho NÃO habilita. Regra única, antes duplicada
-   em 3 pontos do fluxo do laudo (C-07). */
+/* PTAM permanece desabilitado nesta fase. Campos autorreferidos de CRECI/CNAI não constituem
+   verificação de identidade ou habilitação e, por isso, nunca transformam o relatório em PTAM. */
 function habilitaPtam(prof){
-  const p=prof||{};
-  return !!String(p.creci||"").trim() && !!String(p.cnai||"").trim();
+  return false;
 }
 
 /* pendenciasDocumento(inputs): chama scoreConfianca({areaOk,nComps,atipico,venalOk}) internamente
@@ -2053,9 +2062,9 @@ function pendenciasDocumento(inputs){
   const inp = inputs||{};
   const conf = scoreConfianca({areaOk:inp.areaOk, nComps:inp.nComps, atipico:inp.atipico, venalOk:inp.venalOk});
   const itens = [
-    {id:"area", texto:"Área privativa confirmada", resolvido: !!inp.areaOk, editavel:true},
+    {id:"area", texto:"Área de referência disponível", resolvido: !!inp.areaOk, editavel:true},
     {id:"conservacao", texto:"Estado de conservação declarado", resolvido:true, editavel:false},
-    {id:"documentacao", texto:"Estado da documentação", resolvido: inp.docOk===true, editavel:true},
+    {id:"documentacao", texto:"Situação documental declarada", resolvido: inp.docOk===true, editavel:true},
   ];
   return {conf, itens};
 }
@@ -2071,7 +2080,7 @@ function fichaRapidaTexto(data){
     resumo: (d.tipoImovel||"Imóvel")+" "+localTxt(d.bairro)+".",
     leitura: d.leitura||"",
     comparaveis: Array.isArray(d.comparaveis) ? d.comparaveis.slice(0,3) : [],
-    ressalva: "Faixa estimada com base em dados públicos do cadastro municipal — recomenda-se confirmar área, estado de conservação e documentação antes de decidir. Não substitui avaliação formal.",
+    ressalva: "Referência indicativa ancorada em dados públicos, quando disponível — recomenda-se confirmar área, estado de conservação e documentação antes de decidir. Não substitui avaliação formal.",
   };
 }
 
@@ -3215,9 +3224,6 @@ let CMP=[];
 let streetTile, satTile, satRef; /* Fase 4 SAT-01: camadas de base alternáveis, ruas é o default */
 let satelliteOn=false;
 let SATTOKEN=0; /* guarda contra toggle rápido: rAF/timeout obsoletos não forçam opacidade da vez errada (idioma LOTTOKEN/DRILLTOKEN) */
-/* multiplicador genérico venal->mercado, usado só quando não há tabela do bairro nem laudo da Caixa */
-const AUTO_COEF=2.8;
-
 /* ---------------- Fase 6: motion (foundation) ---------------- */
 /* let (não const) para o listener de "change" abaixo poder atualizar ao vivo, caso o usuário
    troque a preferência do SO enquanto o app está aberto. */
@@ -4161,7 +4167,7 @@ const MOTION_MSG={
   localizando:  "Localizando imóvel…",
   cadastro:     "Consultando cadastro…",
   estimativa:   "Calculando estimativa…",
-  comparaveis:  "Buscando comparáveis…",
+  comparaveis:  "Analisando amostra cadastral…",
   mapa:         "Preparando mapa…",
   /* Fase 15 TERR-03: 2 estágios da varredura de território (mesma gramática: maiúscula inicial,
      gerúndio, reticências) — varrendo cobre as páginas pagas (até 3), faixas cobre o cálculo
@@ -5238,48 +5244,19 @@ function tentarComoPredio(btn){
   buscar();
 }
 
-/* ---------------- estimativa de mercado (melhor fonte disponível) ----------------
-   Prioridade: 1) R$/m² de mercado do bairro (fontes públicas, transcrição manual —
-   atualizar 1-2x/ano); 2) laudos reais da Caixa no setor; 3) multiplicador manual. */
-/* NBR 14653-2, fator oferta: preço ANUNCIADO -> preço esperado de FECHAMENTO (anúncio costuma vir inflado) */
-const FATOR_OFERTA=0.90;
-/* a área construída do CADASTRO em apartamento é a TOTAL tributável (privativa + quota de comum + vaga);
-   o R$/m² de mercado é cotado por área PRIVATIVA. Razão privativa/total típica medida: ~0,55–0,70. */
-const FATOR_PRIV=0.60;
-const M2_MERCADO={ref:"FipeZap/imprensa 2025-26",bairros:{
-  "14":10800, /* Setor Marista */
-  "16":9400,  /* Setor Bueno */
-  "72":9300,  /* Jardim Goiás */
-  "3":8350,   /* Setor Oeste */
-  "17":7990,  /* Jardim América */
-  "15":7840,  /* Setor Pedro Ludovico */
-  "63":6870,  /* Parque Amazônia */
-  "19":6450,  /* Bairro Nova Suíça */
-  "20":5600,  /* Setor Sudoeste */
-  "1":5150    /* Setor Central */
-}};
+/* ---------------- referência indicativa (modo seguro da Fase 1) ----------------
+   O Radar não converte mais área fiscal em privativa, não aplica desconto universal de anúncio
+   e não usa multiplicador venal genérico. Uma faixa só aparece quando há pelo menos 5 avaliações
+   públicas da CAIXA no setor para ancorar a razão valor avaliado/valor venal. A reconstrução com
+   transações reais e backtest pertence à Fase 4 do roadmap. */
 const brlC=n=>n==null?"—":n>=995000?"R$ "+(n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi"
   :n>=1000?"R$ "+Math.round(n/1e3).toLocaleString("pt-BR")+" mil":brl(n);
-function mercadoEstimado(a,privReal){
-  const isU=!!unitLabel(a)||(a.cdedificio||0)>0;
-  const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
-  /* tabela FipeZap é residencial: só apto residencial (uso 1/misto 5), nunca sala/loja/box */
-  const podeTabela=isU&&m2b&&a.areaedif>0&&(a.uso===1||a.uso===5)&&!isGarage(a);
-  if(podeTabela){
-    /* R$/m² de anúncio é por área PRIVATIVA; a área do cadastro é a TOTAL (c/ comum e vaga) */
-    const priv=privReal>0?privReal:a.areaedif*FATOR_PRIV;
-    const v=priv*m2b*FATOR_OFERTA;
-    return {lo:v*.88,hi:v*1.12,
-      metodo:"preço de mercado do bairro (R$ "+m2b.toLocaleString("pt-BR")+"/m² anunciado, "+M2_MERCADO.ref+", fator oferta 0,90 da NBR 14653-2) sobre "+(privReal>0
-        ?("a área privativa informada de "+Math.round(privReal)+" m²")
-        :("área privativa estimada de ~"+Math.round(priv)+" m² (60% da área total do cadastro, que inclui comum e vaga — informe a privativa real no laudo para refinar)"))};
-  }
+function mercadoEstimado(a){
   const vv=a.vlvenal||0;if(!vv)return null;
   const fx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
-  if(fx)return {lo:vv*fx.fator*.85,hi:vv*fx.fator*1.15,
-    metodo:"laudos reais da Caixa neste setor ("+fx.n+" laudos)"};
-  return {lo:vv*AUTO_COEF*.7,hi:vv*AUTO_COEF*1.3,
-    metodo:"estimativa genérica (sem referência de mercado deste bairro ainda — precisão baixa)"};
+  if(!fx||!(fx.n>=5)||!(fx.fator>0)||!isFinite(fx.fator))return null;
+  return {lo:vv*fx.fator*.85,hi:vv*fx.fator*1.15,
+    metodo:"referência indicativa ancorada em "+fx.n+" avaliações públicas da CAIXA neste setor; não representa preço de fechamento"};
 }
 
 /* ---------------- render lista ---------------- */
@@ -5346,14 +5323,8 @@ function render(list,opts){
    AQUI (mercadoEstimado, fora do bloco puro) e NUNCA persistido em LAST/a.__scores. */
 /* IN-02 (12-REVIEW.md): mercadoEstimado(a) e recalculado aqui e de novo em cardHTML para as
    mesmas unidades visiveis a cada render(LAST) (inclusive a cada tecla em buscarUnidadeBldg,
-   WR-02) — redundante, mas deliberadamente NAO memoizado: mercadoEstimado(a,privReal) tem um 2o
-   parametro que VARIA entre chamadas para o MESMO objeto `a` em outros pontos do arquivo
-   (laudo/detail usam LZ.privativa; aqui/cardHTML nao passam privReal) — uma memo por identidade
-   de `a` teria que ser chaveada tambem por privReal para nao servir estimativa errada a partir
-   do cache, o que exigiria tocar 13 call-sites so para uma otimizacao de custo (pura,
-   sem rede) marcada Info/fora do escopo de performance desta fase. Deixado documentado; revisitar
-   se predios de 100+ unidades tornarem-se comuns (RENDN=300 limita cards, mas o agregado do
-   sumario roda sobre o predio inteiro). */
+   WR-02) — redundante, mas deliberadamente NAO memoizado para refletir atualizações da base
+   pública carregada durante a sessão. Revisitar se prédios de 100+ unidades tornarem-se comuns. */
 function unidadesEnriquecidasDoPredio(ci){
   ci=clean(ci);
   /* __orig: referencia (identidade, nunca chave) ao objeto REAL de LAST — usada por ordenarBldg
@@ -5399,7 +5370,7 @@ function bldgOrdHTML(ci){
     <div class="zapgroup-lbl">Ordenar por</div>
     <div class="chips" role="group" aria-label="Ordenar unidades">
       <button type="button"${onOf("padrao")} onclick="ordenarBldg(this,'padrao')">Padrão</button>
-      <button type="button"${onOf("oportunidade")} onclick="ordenarBldg(this,'oportunidade')">Maior oportunidade</button>
+      <button type="button"${onOf("oportunidade")} onclick="ordenarBldg(this,'oportunidade')">Menor valor cadastral/m²</button>
       <button type="button"${onOf("estimado-asc")} onclick="ordenarBldg(this,'estimado-asc')">Menor estimado</button>
       <button type="button"${onOf("area-desc")} onclick="ordenarBldg(this,'area-desc')">Maior área</button>
     </div>
@@ -5537,9 +5508,9 @@ function abrirComparacao(){
       <tbody>
         <tr><th scope="row" class="cmp-rowlbl">Área</th>${cells(u=>u.areaedif?Math.round(u.areaedif)+" m²":"—")}</tr>
         <tr><th scope="row" class="cmp-rowlbl">Venal</th>${cells(u=>venalTxt(u.vlvenal))}</tr>
-        <tr><th scope="row" class="cmp-rowlbl">Estimado</th>${cells(u=>{const e=mercadoEstimado(u);return e?"~"+brlC((e.lo+e.hi)/2):"—";})}</tr>
-        <tr><th scope="row" class="cmp-rowlbl">R$/m²</th>${cells(u=>{const p=m2Edif(u);return p?brl(p):"—";})}</tr>
-        <tr><th scope="row" class="cmp-rowlbl">Oportunidade</th>${cells(u=>u.__scores&&u.__scores.op?u.__scores.op.rotulo:"—")}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Referência indicativa</th>${cells(u=>{const e=mercadoEstimado(u);return e?"~"+brlC((e.lo+e.hi)/2):"—";})}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Venal/m²</th>${cells(u=>{const p=m2Edif(u);return p?brl(p):"—";})}</tr>
+        <tr><th scope="row" class="cmp-rowlbl">Posição cadastral</th>${cells(u=>u.__scores&&u.__scores.op?u.__scores.op.rotulo:"—")}</tr>
       </tbody>
       <tfoot>
         <tr>
@@ -5589,7 +5560,7 @@ function cardHTML(a,i,isUnit){
         <div>R$/m² ${isUnit?"const.":"terr"} <b>${pm2?brl(pm2):"—"}</b></div>
       </div>
       <div class="vals">
-        <div class="ref"><span class="lbl">Mercado estimado</span><b>${est?"~"+brlC((est.lo+est.hi)/2):"—"}</b></div>
+        <div class="ref"><span class="lbl">Referência indicativa</span><b>${est?"~"+brlC((est.lo+est.hi)/2):"—"}</b></div>
         <div class="venal">Venal<b>${venalTxt(a.vlvenal)}</b></div>
       </div>
     </div>`;
@@ -5610,9 +5581,7 @@ const PINO_STYLE={
   semdado:  {fillColor:"#57503f", radius:7},
 };
 const STATUS_LABEL={
-  /* F5 MAPA-01: banda média unificada com a ficha/#cmpSheet ("Oportunidade média", rotulo de
-     scoreOportunidade) — o mapa dizia "Atenção" para a MESMA banda/cor; as extremas já coincidiam. */
-  bom:"Boa oportunidade", atencao:"Oportunidade média", risco:"Oportunidade baixa", semdado:"Sem dado ainda",
+  bom:"Abaixo da mediana cadastral", atencao:"Próximo à mediana cadastral", risco:"Acima da mediana cadastral", semdado:"Sem amostra calculada",
 };
 /* T-13-05: prioridade única de "melhor status por CI" (prédio) — usada IDENTICAMENTE
    por plot() e pick(), nunca duplicada com critérios diferentes (mais otimista vence). */
@@ -5803,12 +5772,12 @@ function renderScoresInto(op,conf){
   const box=document.getElementById("dScores");
   let opCls="score-op",opBody;
   if(!op){
-    opBody=`<span class="score-lbl-main">Sem base para estimar</span>`;
+    opBody=`<span class="score-lbl-main">Posição cadastral: não calculada</span>`;
   }else{
     opCls+= op.score>=66?" alta":op.score>=33?" media":" baixa";
-    opBody=`<span class="score-num">${op.score}<span class="score-max">/100</span></span><span class="score-lbl">${esc(op.rotulo)}</span>`;
+    opBody=`<span class="score-lbl-main">Posição cadastral: <b>${esc(op.rotulo)}</b></span>`;
   }
-  const opWhy=op?esc(op.porque.join(" ")):"Sem comparáveis suficientes na vizinhança para calcular a posição de preço.";
+  const opWhy=(op?esc(op.porque.join(" ")):"A amostra cadastral da vizinhança ainda não foi calculada.")+" Este indicador compara valor venal por m²; não mede preço de mercado, demanda ou liquidez.";
   /* Fase 18 (18-02, PD-04): #scoreOpWhyPD é um placeholder VAZIO, só existe quando op!=null (é
      um acréscimo ao porquê DO SCORE, que só existe com op calculado) — atualizarScorePorquePD()
      o preenche de forma assíncrona/idempotente quando a zona do PD estiver conferida. W1: o
@@ -5821,17 +5790,17 @@ function renderScoresInto(op,conf){
   if(!conf){
     confCls="score conf-pre";
     confLbl="a calcular";
-    confWhy="Ainda não consultei a vizinhança — toque em “📊 Ver comparáveis” para calcular.";
+    confWhy="Analise a vizinhança para medir a cobertura dos dados cadastrais disponíveis.";
   }else{
     confCls="score conf-"+conf.nivel;
-    confLbl={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
+    confLbl={alta:"forte",media:"moderada",baixa:"limitada"}[conf.nivel]||conf.nivel;
     confWhy=esc(conf.porque.join(" "));
   }
   box.innerHTML=`
     <button type="button" class="score ${opCls}" aria-expanded="false" aria-controls="scoreOpWhy" onclick="toggleScoreWhy(this)">${opBody}<span class="score-chev" aria-hidden="true">▸</span></button>
     <div id="scoreOpWhy" class="score-why" hidden>${opWhy}${opWhyPD}</div>
-    <button type="button" class="${confCls}" aria-expanded="false" aria-controls="scoreConfWhy" onclick="toggleScoreWhy(this)"><span class="score-lbl-main">Confiança: <b>${confLbl}</b></span><span class="score-chev" aria-hidden="true">▸</span></button>
-    <div id="scoreConfWhy" class="score-why" hidden>${confWhy}</div>`;
+    <button type="button" class="${confCls}" aria-expanded="false" aria-controls="scoreConfWhy" onclick="toggleScoreWhy(this)"><span class="score-lbl-main">Cobertura dos dados: <b>${confLbl}</b></span><span class="score-chev" aria-hidden="true">▸</span></button>
+    <div id="scoreConfWhy" class="score-why" hidden>${confWhy} Este indicador não representa precisão da estimativa nem verificação documental.</div>`;
 }
 /* alterna o "por quê" do score clicado (aria-expanded no próprio botão, sem estado global —
    mesmo padrão de toggle já usado no arquivo); o .score-why correspondente é o PRÓXIMO elemento
@@ -5912,11 +5881,11 @@ function showDetail(a,ll){
   const estM=mercadoEstimado(a);
   const dValor=document.getElementById("dValor");
   if(estM){
-    dValor.innerHTML=`<div class="dvalor-k">Faixa estimada de mercado</div>
+    dValor.innerHTML=`<div class="dvalor-k">Faixa indicativa</div>
       <div class="dvalor-v">${brlC(estM.lo)} – ${brlC(estM.hi)}</div>
       <div class="dvalor-m">${esc(estM.metodo)}</div>`;
   }else{
-    dValor.innerHTML=`<div class="dvalor-k">Faixa estimada de mercado</div>
+    dValor.innerHTML=`<div class="dvalor-k">Faixa indicativa</div>
       <div class="dvalor-v muted">Sem base para estimar</div>
       <div class="dvalor-m">Faltam dados suficientes (venal ou área) para calcular uma faixa. Consulte o dado técnico abaixo.</div>`;
   }
@@ -5945,7 +5914,7 @@ function showDetail(a,ll){
     <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${venalTxt(a.vlvenal)}</div></div>
-    <div class="cell hl"><div class="k">Mercado (estimado)</div><div class="v">${estM?brlC(estM.lo)+"–"+brlC(estM.hi):"—"}</div></div>
+    <div class="cell hl"><div class="k">Referência indicativa</div><div class="v">${estM?brlC(estM.lo)+"–"+brlC(estM.hi):"—"}</div></div>
     <div class="cell"><div class="k">R$/m² ${isU?"const.":"terreno"}</div><div class="v">${(isU?pm2:pm2t)?brl(isU?pm2:pm2t):"—"}</div></div>
     <div class="cell"><div class="k">IPTU lançado/ano</div><div class="v">${a.vlimp98?brl(a.vlimp98):"—"}</div></div>
     <div class="cell"><div class="k">No cadastro desde</div><div class="v">${(fmtDt(a.dtinclusao)||"").slice(-4)||"—"}</div></div>
@@ -5971,8 +5940,8 @@ function showDetail(a,ll){
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Gerar documento</button>
-    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">📊 Ver comparáveis</button>`:""}
-    <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar oportunidade</button>`;
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">📊 Analisar vizinhança</button>`:""}
+    <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar imóvel</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
   let mapLinks="";
@@ -6015,9 +5984,9 @@ function showDetail(a,ll){
   renderUrbanisticoUI(a); /* Fase 18 (18-02, PD-03): IRMÃ ASSÍNCRONA de renderDiffUI — consulta lazy do Plano Diretor pro lote em foco, nunca trava o render síncrono da ficha */
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
-    <p><b>Score de oportunidade:</b> calculado pela posição do R$/m² do imóvel em relação à mediana e quartis (Q1–Q3) dos comparáveis na vizinhança (raio de 400–800 m, NBR 14653-2). Sem comparáveis suficientes, o score não é exibido.</p>
-    <p><b>Score de confiança:</b> alta/média/baixa por completude — presença de área confirmada, número de comparáveis (≥8 = alta) e se o imóvel é atípico dentro da amostra.</p>
-    <p><b>Faixa de valor:</b> preço de mercado do bairro (FipeZap/imprensa 2025-26, fator oferta 0,90) ou laudos reais da Caixa no setor, quando disponíveis.</p>
+    <p><b>Posição cadastral:</b> compara o valor venal por m² com registros fiscais semelhantes em um raio de 400–800 m. Não é comparação de preços de venda nem score de oportunidade comercial.</p>
+    <p><b>Cobertura dos dados:</b> resume presença de área e valor venal, tamanho e dispersão da amostra cadastral. Não mede precisão da estimativa, liquidez ou regularidade documental.</p>
+    <p><b>Faixa indicativa:</b> só aparece quando existe uma referência identificada. Consulte a fonte e a data; a faixa não substitui avaliação profissional nem comprova preço de fechamento.</p>
     <p>Fonte: ArcGIS público da Prefeitura de Goiânia (Cadastro Imobiliário). O nome do titular não é lido por aqui — é consultado manualmente na CND oficial.</p>`;
   /* no mobile, se a busca tem vários resultados, oferece voltar à lista sem precisar caçar a aba */
   document.getElementById("dBack").style.display=(isMobile()&&LAST&&LAST.length>1)?"block":"none";
@@ -6083,7 +6052,7 @@ function toggleOportunidade(){
   if(oppTem(insc)){
     const next=atual.filter(it=>it.insc!==insc);
     if(oppSave(next)){
-      toast("Oportunidade removida.");
+      toast("Imóvel removido dos salvos.");
       renderSaveBtn();
       renderSavedBlocks();
     }
@@ -6091,7 +6060,7 @@ function toggleOportunidade(){
     const item=Object.assign(oportunidadeItem(DCUR,oppExtras(DCUR)),{savedAt:new Date().toISOString()});
     const next=[...atual,item];
     if(oppSave(next)){
-      toast("Oportunidade salva.");
+      toast("Imóvel salvo.");
       renderSaveBtn();
       renderSavedBlocks();
     }
@@ -6107,7 +6076,7 @@ function renderSaveBtn(){
   const salvo=oppTem(insc);
   btn.classList.toggle("is-saved",salvo);
   btn.setAttribute("aria-pressed",salvo?"true":"false");
-  btn.textContent=salvo?"✓ Salva — remover?":"⭐ Salvar oportunidade";
+  btn.textContent=salvo?"✓ Salvo — remover?":"⭐ Salvar imóvel";
 }
 /* renderCadernoBtn(): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4, 16-RESEARCH.md) — cadernoTem()
    bate no IndexedDB, sempre async; estado do botão fica neutro até resolver, NUNCA bloqueia o
@@ -6371,7 +6340,7 @@ function renderSavedBlocks(){
   const rowsOpp=opps.map(it=>{
     const meta=["Q "+esc(it.quadra||"—")+" · L "+esc(it.lote||"—")+" · "+esc(it.bairro||"—")]
       .concat(it.faixaLo!=null&&it.faixaHi!=null?["faixa "+brlC(it.faixaLo)+"–"+brlC(it.faixaHi)]:[])
-      .concat(it.scoreOportunidade?["oportunidade: "+esc(it.scoreOportunidade)]:[])
+      .concat(it.scoreOportunidade?["posição cadastral: "+esc(it.scoreOportunidade)]:[])
       .concat(it.savedAt?[fmtSalva(it.savedAt)]:[])
       .join(" · ");
     return `<div class="saveditem-row" data-insc="${esc(it.insc)}">
@@ -6379,16 +6348,16 @@ function renderSavedBlocks(){
         <span class="saveditem-addr">${esc(it.endereco||"Endereço não cadastrado")}</span>
         <span class="saveditem-meta">${meta}</span>
       </button>
-      <button type="button" class="saveditem-rm" onclick="removerOportunidade(this)" aria-label="Remover esta oportunidade">×</button>
+      <button type="button" class="saveditem-rm" onclick="removerOportunidade(this)" aria-label="Remover este imóvel salvo">×</button>
     </div>`;
   }).join("");
   const oppBlock=`<div class="savedblock" id="oportunidadesBlock">
     <div class="savedblock-head">
-      <span class="savedblock-tt">⭐ Minhas oportunidades</span>
+      <span class="savedblock-tt">⭐ Imóveis salvos</span>
       <span class="savedblock-count" id="oportunidadesCount">${opps.length}</span>
     </div>
     ${opps.length?`<div class="savedlist" id="oportunidadesList">${rowsOpp}</div>`
-      :`<div class="savedempty">Nenhuma oportunidade salva ainda — toque ⭐ numa ficha.</div>`}
+      :`<div class="savedempty">Nenhum imóvel salvo ainda — toque ⭐ numa ficha.</div>`}
   </div>`;
   const hist=histLoad();
   let histBlock="";
@@ -6609,7 +6578,7 @@ function removerOportunidade(el){
   if(!insc)return;
   const next=oppLoad().filter(it=>it.insc!==insc);
   if(oppSave(next)){
-    toast("Oportunidade removida.");
+    toast("Imóvel removido.");
     renderSavedBlocks();
     renderSaveBtn(); /* se a ficha aberta e' o mesmo imovel, o ⭐ volta ao estado nao-salvo */
   }
@@ -6760,7 +6729,7 @@ async function compare(){
     /* F5 FICHA-04: mesmo nos desfechos curtos (sem base / poucos comparáveis) a consulta FOI
        feita — resolve a confiança real (nComps verdadeiro) em vez de deixar "a calcular" preso. */
     if(!g){atualizarScores(a,null);box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
-    if(!g.res||g.res.n<3){atualizarScores(a,g.res||null);box.innerHTML='<div class="cmp-load">Poucos comparáveis do mesmo perfil na vizinhança ('+(g.res?g.res.n:0)+' em '+g.radius+' m).</div>';return;}
+    if(!g.res||g.res.n<3){atualizarScores(a,g.res||null);box.innerHTML='<div class="cmp-load">Poucos registros fiscais de uso e porte semelhantes ('+(g.res?g.res.n:0)+' em '+g.radius+' m). Não há amostra cadastral suficiente.</div>';return;}
     await renderComps(box,g.res,g.myPm2,g.radius,g.isU,a);
   }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
 }
@@ -6821,18 +6790,15 @@ async function renderComps(box,r,myPm2,radius,isU,a){
   }
   if(DCUR!==a)return;
   const amp=(r.q3-r.q1)/r.med;
-  const conf=r.n<5?["baixa","poucos vizinhos"]:amp<=.3?["alta","faixa confiável"]:amp<=.4?["media","faixa aproximada"]:["baixa","imóveis muito variados"];
+  const conf=r.n<5?["baixa","amostra pequena"]:amp<=.3?["alta","dispersão menor"]:amp<=.4?["media","dispersão moderada"]:["baixa","dispersão alta"];
   const span=Math.max(r.max-r.min,1), px=v=>Math.min(100,Math.max(0,(v-r.min)/span*100));
   const pctl=below==null?null:Math.round(below*100), fx=v=>brl(v);
-  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
-  const m2b=M2_MERCADO.bairros[String(a.cdbairro)];
-  const cEff=(isU&&m2b&&r.med>0)?m2b*FATOR_OFERTA*FATOR_PRIV/r.med:(fxCx?fxCx.fator:AUTO_COEF);
   const temBase=r&&r.med>0&&myPm2>0, abaixo=temBase&&myPm2<=r.med;
   const diffPct=temBase?Math.round(Math.abs(myPm2-r.med)/r.med*100):null;
-  const conclusaoTxt=!temBase?"Posição na vizinhança não pôde ser calculada — confira a estatística completa.":diffPct===0?`<b>Na mediana</b> da vizinhança — alinhado à região.`:abaixo?`<b class="abaixo">${diffPct}% abaixo da mediana</b> da vizinhança — posição favorável para negociar.`:`<b class="acima">${diffPct}% acima da mediana</b> da vizinhança — acima do preço típico da região.`;
+  const conclusaoTxt=!temBase?"Posição cadastral não pôde ser calculada — confira a amostra.":diffPct===0?`Valor venal por m² <b>na mediana cadastral</b> da vizinhança.`:abaixo?`Valor venal por m² <b class="abaixo">${diffPct}% abaixo da mediana cadastral</b>. Isso não indica preço de mercado menor.`:`Valor venal por m² <b class="acima">${diffPct}% acima da mediana cadastral</b>. Isso não indica preço de mercado maior.`;
   r.radius=radius; /* WR-02: raio REAL da busca (400 ou 800 m) — o porquê do score citava sempre "400 m" mesmo quando a busca alargou */
   atualizarScores(a, r); /* fecha o wiring com a Wave 2 (09-02) -- nao depende do innerHTML abaixo */
-  box.innerHTML=`<div class="cmp"><div class="cmp-conclusao">${conclusaoTxt}</div><div class="cmp-acts"><button type="button" class="cmpbtn-sm" onclick="abrirMetodologiaCmp(this)">Ver metodologia</button></div><details class="cmp-detalhe"><summary>Estatística completa</summary><div class="footbody"><div class="h">Vizinhança — ${r.n} imóveis parecidos em até ${radius} m <span class="badge ${conf[0]}">${conf[1]}</span></div><div class="bar">${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div><div class="med" style="left:${px(r.med)}%"></div>`:""}<div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div></div><div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>meio: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div><div class="pos">Este imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — mais caro que <b>${pctl}%</b> dos vizinhos`:""}${pctl!=null&&pctl<=25?" · 💰 entre os mais baratos":pctl!=null&&pctl>=75?" · entre os mais caros":""}</div><div class="mkt">Preço de mercado estimado na vizinhança: <b>${fx(r.q1*cEff)}–${fx(r.q3*cEff)}/m²</b>. Base: cadastro da prefeitura — estimativa, não avaliação.</div></div></details></div>`;
+  box.innerHTML=`<div class="cmp"><div class="cmp-conclusao">${conclusaoTxt}</div><div class="cmp-acts"><button type="button" class="cmpbtn-sm" onclick="abrirMetodologiaCmp(this)">Ver metodologia</button></div><details class="cmp-detalhe"><summary>Estatística cadastral completa</summary><div class="footbody"><div class="h">Amostra cadastral — ${r.n} imóveis de uso e porte semelhantes em até ${radius} m <span class="badge ${conf[0]}">${conf[1]}</span></div><div class="bar">${r.n>=5?`<div class="iqr" style="left:${px(r.q1)}%;width:${px(r.q3)-px(r.q1)}%"></div><div class="med" style="left:${px(r.med)}%"></div>`:""}<div class="me" style="left:${px(myPm2)}%" title="este imóvel"></div></div><div class="lbl"><span>${r.exact?"":"~"}${fx(r.min)}</span><span>mediana: ${fx(r.med)}</span><span>${r.exact?"":"~"}${fx(r.max)}</span></div><div class="pos">Valor venal deste imóvel: <b>${fx(myPm2)}/m²</b>${pctl!=null?` — acima de <b>${pctl}%</b> da amostra`:""}</div><div class="mkt">Base fiscal do Cadastro Imobiliário de Goiânia. Não são transações, ofertas nem comparáveis de mercado.</div></div></details></div>`;
 }
 function abrirMetodologiaCmp(btn){
   const d=btn.closest(".cmp").querySelector(".cmp-detalhe");
@@ -6841,11 +6807,9 @@ function abrirMetodologiaCmp(btn){
 
 /* ---------------- laudo de avaliação: wizard iOS-style + PDF via impressão ---------------- */
 const CONSERVS=["Novo","Ótimo","Bom","Regular","Precisa reforma"];
-/* ajuste do valor sugerido pelo estado declarado (depreciação simplificada) */
-const FATOR_CONSERV={"Novo":1.06,"Ótimo":1.03,"Bom":1,"Regular":0.93,"Precisa reforma":0.85};
 const DIFS=["Reformado","Armários planejados","Área gourmet","Piscina","Esquina","Sol da manhã","Andar alto","Vaga extra","Quintal amplo","Documentação ok"];
 const FINS=["Venda / compra","Locação","Partilha ou inventário","Garantia","Instrução judicial","Outra"];
-const NOMES_DOC={ficha:"Ficha rápida",relatorio:"Relatório de avaliação",ptam:"Laudo / PTAM"};
+const NOMES_DOC={ficha:"Ficha rápida",relatorio:"Relatório de apoio à avaliação",ptam:"PTAM indisponível nesta versão"};
 let LZ=null;
 /* abrirSeletorFinalidade(): novo entry point de #dActsPrim (11-02, DOC-01) — substitui a antiga
    abrirLaudo() direta. Cria LZ com LZ.fase="finalidade" (sem step numerico ainda); os passos
@@ -7271,14 +7235,11 @@ function renderSeletorFinalidade(){
   ];
   let recHtml="";
   if(LZ.finalidadeUso){
-    /* C-07: habilitação p/ PTAM = CRECI E CNAI (não CNAI sozinho) — regra única habilitaPtam() */
-    const cnai=habilitaPtam(LZ.prof);
-    const rec=recomendaDocumento(LZ.finalidadeUso,cnai);
-    const ORDEM=["relatorio","ficha","ptam"];
+    const rec=recomendaDocumento(LZ.finalidadeUso,false);
+    const ORDEM=["relatorio","ficha"];
     const DESCS={
       relatorio:"Comparativo com dados e metodologia — uso comercial",
-      ficha:"1 página, direto ao ponto — pra enviar por WhatsApp",
-      ptam:"Estrutura formal, com identificação e responsabilidade técnica",
+      ficha:"1 página, direto ao ponto — para compartilhar",
     };
     const ordemFinal=[rec.doc,...ORDEM.filter(d=>d!==rec.doc)];
     recHtml=`<div class="finrec" role="status" aria-live="polite" tabindex="-1">
@@ -7293,7 +7254,7 @@ function renderSeletorFinalidade(){
         </button>`).join("")}</div>`;
   }
   b.innerHTML=`<div class="wh1">Para que você precisa do documento?</div>
-    <div class="wsub">Escolha a finalidade — recomendamos o tipo certo pra você. As 3 opções continuam disponíveis.</div>
+    <div class="wsub">Escolha a finalidade. O PTAM permanece suspenso até existir verificação profissional e revisão regulatória.</div>
     <div class="fingrid">${OPCOES.map(([v,ic,txt])=>`<button type="button" class="finop" aria-pressed="${LZ.finalidadeUso===v}" onclick="finSet('${v}')">${ic}<br>${esc(txt)}</button>`).join("")}</div>
     ${recHtml}`;
 }
@@ -7321,24 +7282,15 @@ function wizRender(){
       ${LZ.vistoria?`<input class="winput" style="margin-top:10px" type="date" value="${LZ.dataVist}" oninput="LZ.dataVist=this.value">`:""}`;
   }else if(LZ.step===1){
     const isUw=!!unitLabel(a)||(a.cdedificio||0)>0;
-    const est=mercadoEstimado(a,LZ.privativa);
-    const fc=FATOR_CONSERV[LZ.conserv]||1;
+    const est=mercadoEstimado(a);
     const g=LZ.comps;
-    /* âncora relativa: um imóvel acima/abaixo da mediana venal da vizinhança carrega essa posição p/ o mercado */
-    let rel=1;
-    if(g&&g.res&&g.res.n>=5&&g.res.med>0&&g.myPm2)rel=Math.min(1.4,Math.max(0.7,g.myPm2/g.res.med));
-    const sug=est?Math.round((est.lo+est.hi)/2*fc*rel/1000)*1000:null;
-    if(LZ.valor==null||LZ.valor===LZ.valorAuto)LZ.valor=sug; /* só sobrescreve se o usuário não editou */
-    LZ.valorAuto=sug;
-    b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">Sugerido pela análise — ajuste pelo seu conhecimento.</div>
-      <div class="wcard">${est?`Faixa estimada: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem estimativa disponível para este imóvel."}
-        ${g&&g.res&&g.res.n>=3?`<br><br>Vizinhança: <b>${g.res.n} imóveis parecidos</b> em ${g.radius} m · meio da faixa ${brl(g.res.med)}/m² (base cadastro)`:(g===null?"":"<br><br>⏳ analisando a vizinhança…")}</div>
-      ${isUw?`<span class="wlabel">Área privativa (m²) — refina muito o valor</span>
+    b.innerHTML=`<div class="wh1">Valor</div><div class="wsub">A referência externa e o valor informado ficam separados para evitar falsa precisão.</div>
+      <div class="wcard">${est?`Faixa indicativa: <b>${brlC(est.lo)}–${brlC(est.hi)}</b><br><span style="color:var(--muted)">${esc(est.metodo)}</span>`:"Sem referência indicativa disponível para este imóvel."}
+        ${g&&g.res&&g.res.n>=3?`<br><br>Amostra cadastral: <b>${g.res.n} registros fiscais semelhantes</b> em ${g.radius} m · mediana venal ${brl(g.res.med)}/m²`:(g===null?"":"<br><br>⏳ analisando a amostra cadastral…")}</div>
+      ${isUw?`<span class="wlabel">Área privativa declarada (m²) — opcional</span>
       <input class="winput" inputmode="numeric" placeholder="ex.: 84 — o cadastro traz a área TOTAL (${a.areaedif?Math.round(a.areaedif)+" m²":"?"}), com comum e vaga"
         value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null" onchange="wizRender()">`:""}
-      ${fc!==1?`<div class="wsub" style="margin:8px 0 0">Ajuste pelo estado "${esc(LZ.conserv)}": ${fc>1?"+":""}${Math.round((fc-1)*100)}%.</div>`:""}
-      ${rel!==1?`<div class="wsub" style="margin:4px 0 0">Ajuste pela posição do imóvel na vizinhança: ${rel>1?"+":""}${Math.round((rel-1)*100)}%.</div>`:""}
-      <span class="wlabel">Valor de venda sugerido (R$)</span>
+      <span class="wlabel">Valor informado pelo usuário (R$)</span>
       <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null">
       <span class="wlabel">Observações (opcional)</span>
       <textarea class="winput" placeholder="ex.: reformado em 2024, vista livre, aceita permuta…" oninput="LZ.obs=this.value">${esc(LZ.obs)}</textarea>`;
@@ -7349,7 +7301,7 @@ function wizRender(){
       <div class="pgrid">${LZ.fotos.map((f,i)=>`<div class="ph"><img src="${esc(f)}" alt="Foto ${i+1}"><button class="rm" onclick="wizRmFoto(${i})" aria-label="Remover foto ${i+1}">×</button></div>`).join("")}</div>`;
   }else if(LZ.step===3){
     const p=LZ.prof;
-    b.innerHTML=`<div class="wh1">Solicitante e você</div><div class="wsub">Com CNAI o documento sai como PTAM; sem, como relatório de referência. Seus dados ficam salvos para os próximos.</div>
+    b.innerHTML=`<div class="wh1">Solicitante e você</div><div class="wsub">O documento sai como relatório de apoio. CRECI e CNAI são autorreferidos e não são verificados nesta versão.</div>
       <span class="wlabel">Solicitante (opcional)</span>
       <input class="winput" placeholder="quem pediu o parecer" value="${esc(LZ.solicitante)}" oninput="LZ.solicitante=this.value">
       <span class="wlabel">Finalidade</span>
@@ -7358,7 +7310,7 @@ function wizRender(){
       <input class="winput" value="${esc(p.nome||"")}" oninput="LZ.prof.nome=this.value">
       <span class="wlabel">CRECI (opcional)</span>
       <input class="winput" placeholder="ex.: 12345" value="${esc(p.creci||"")}" oninput="LZ.prof.creci=this.value">
-      <span class="wlabel">CNAI (opcional) — habilita o PTAM</span>
+      <span class="wlabel">CNAI (opcional, informativo — não habilita PTAM)</span>
       <input class="winput" placeholder="ex.: 6789" value="${esc(p.cnai||"")}" oninput="LZ.prof.cnai=this.value">
       <span class="wlabel">Telefone / e-mail (opcional)</span>
       <input class="winput" value="${esc(p.contato||"")}" oninput="LZ.prof.contato=this.value">`;
@@ -7370,9 +7322,9 @@ function wizRender(){
     const nComps=(LZ.comps&&LZ.comps.res)?LZ.comps.res.n:0;
     const {conf,itens}=pendenciasDocumento({areaOk,nComps,atipico,venalOk,docOk:LZ.docOk});
     const nivelTxt={alta:"alta",media:"média",baixa:"baixa"}[conf.nivel]||conf.nivel;
-    b.innerHTML=`<div class="wh1">Antes de gerar</div><div class="wsub">Confira o nível de confiança dos dados — algumas informações ajudam a refinar o documento.</div>
+    b.innerHTML=`<div class="wh1">Antes de gerar</div><div class="wsub">Confira a cobertura dos dados — ela não representa validação documental nem precisão da estimativa.</div>
       <div class="confcard${conf.nivel==='baixa'?' conf-baixa':''}">
-        <div class="conf-nivel">Confiança: ${nivelTxt}</div>
+        <div class="conf-nivel">Cobertura dos dados: ${{alta:"forte",media:"moderada",baixa:"limitada"}[conf.nivel]||nivelTxt}</div>
         <div class="conf-porque">${esc((conf.porque||[]).join("; "))}</div>
       </div>
       <div class="checklist">${itens.map(it=>{
@@ -7387,7 +7339,7 @@ function wizRender(){
         }
         if(it.id==="documentacao"){
           return `<div class="checkitem"><span class="checkitem-txt">${esc(it.texto)}</span>
-              <div class="seg checkitem-seg"><button aria-pressed="${LZ.docOk===true}" class="${LZ.docOk===true?'on':''}" onclick="wizSet('docOk',true)">Em ordem</button><button aria-pressed="${LZ.docOk===false}" class="${LZ.docOk===false?'on':''}" onclick="wizSet('docOk',false)">Pendências</button></div></div>`;
+              <div class="seg checkitem-seg"><button aria-pressed="${LZ.docOk===true}" class="${LZ.docOk===true?'on':''}" onclick="wizSet('docOk',true)">Sem pendência declarada</button><button aria-pressed="${LZ.docOk===false}" class="${LZ.docOk===false?'on':''}" onclick="wizSet('docOk',false)">Com pendência declarada</button></div></div>`;
         }
         return "";
       }).join("")}</div>`;
@@ -7399,22 +7351,19 @@ function wizRender(){
       nComps:(LZ.comps&&LZ.comps.res)?LZ.comps.res.n:0,atipico:isGarage(a),venalOk:(a.vlvenal||0)>0,docOk:LZ.docOk}).conf;
     b.innerHTML=`<div class="wh1">Revisão final</div>
       <div class="wsub">Confira e ajuste o que for preciso — o PDF sai do jeito que você deixar aqui.</div>
-      ${conf5.nivel==='baixa'?`<div class="confwarn">Confiança baixa: recomenda-se confirmar os pontos acima antes de compartilhar este documento.</div>`:""}
+      ${conf5.nivel==='baixa'?`<div class="confwarn">Cobertura limitada: confirme os pontos acima antes de compartilhar este documento.</div>`:""}
       <div class="revsec"><div class="revsec-lbl">Documento</div>
-        ${(()=>{ /* WR-02 (11-REVIEW): mostrar o documento EFETIVO — se escolheu PTAM mas o perfil
-           foi editado e perdeu CRECI/CNAI, o render sai como Relatório; o preview tem que dizer isso
-           em vez de prometer PTAM. */
-          const hab=habilitaPtam(LZ.prof); /* C-07: regra única */
-          const downgrade=LZ.tipoDoc==="ptam"&&!hab;
-          const efetivo=downgrade?"relatorio":LZ.tipoDoc;
+        ${(()=>{
+          const legado=LZ.tipoDoc==="ptam";
+          const efetivo=LZ.tipoDoc==="ficha"?"ficha":"relatorio";
           return `<div class="revsec-val">${esc(NOMES_DOC[efetivo]||"Relatório de avaliação")}</div>`+
-            (downgrade?`<div class="confwarn">Você escolheu PTAM, mas o perfil está sem CRECI e CNAI — o documento sairá como Relatório de avaliação. Preencha ambos no passo do perfil para emitir o PTAM.</div>`:"");
+            (legado?`<div class="confwarn">O PTAM automatizado está suspenso. Esta seleção antiga será emitida como Relatório de apoio à avaliação.</div>`:"");
         })()}</div>
       <div class="revsec"><span class="wlabel">Solicitante</span>
         <input class="winput" value="${esc(LZ.solicitante)}" oninput="LZ.solicitante=this.value"></div>
       <div class="revsec"><span class="wlabel">Finalidade declarada</span>
         <select class="winput" oninput="LZ.finalidade=this.value">${FINS.map(f=>`<option ${LZ.finalidade===f?"selected":""}>${f}</option>`).join("")}</select></div>
-      <div class="revsec"><span class="wlabel">Valor de venda sugerido</span>
+      <div class="revsec"><span class="wlabel">Valor informado pelo usuário</span>
         <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null"></div>
       <div class="revsec"><span class="wlabel">Observações / ressalvas adicionais</span>
         <textarea class="winput" oninput="LZ.obs=this.value">${esc(LZ.obs)}</textarea></div>
@@ -7430,21 +7379,20 @@ function wizNext(){
   if(!LZ)return;
   if(LZ.step<5){LZ.step++;wizRender();return;}
   if(!(LZ.prof.nome||"").trim()){toast("Preencha seu nome para assinar o documento.");LZ.step=3;wizRender();return;}
-  if(LZ.valor==null){toast("Informe o valor de venda sugerido (passo Valor).");LZ.step=1;wizRender();return;}
+  if(LZ.valor==null){toast("Informe o valor que deseja registrar (passo Valor).");LZ.step=1;wizRender();return;}
   try{localStorage.setItem("radar_prof",JSON.stringify(LZ.prof));}catch(e){}
   montarLaudo();
 }
 function montarLaudo(){
   if(LZ.tipoDoc==="ficha"){montarFichaRapida();return;}
-  const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a,LZ.privativa),g=LZ.comps,ul=unitLabel(a);
+  const a=LZ.a,p=LZ.prof,est=mercadoEstimado(a),g=LZ.comps,ul=unitLabel(a);
   const hoje=new Date().toLocaleDateString("pt-BR");
   const addr=addrDe(a);
   const comCreci=!!(p.creci||"").trim();
   const comCnai=!!(p.cnai||"").trim();
-  /* C-07: PTAM exige CRECI E CNAI (Res. COFECI 1.066/2007) — regra única habilitaPtam(). */
-  const comPtam=habilitaPtam(p);
-  const titulo=comPtam?"Parecer Técnico de Avaliação Mercadológica (PTAM)":"Relatório de Referência de Mercado";
-  const fxCx=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  const titulo="Relatório de Apoio à Avaliação";
+  const fxCxRaw=window.CAIXA&&CAIXA.fatores&&CAIXA.fatores[String(a.cdbairro)];
+  const fxCx=fxCxRaw&&fxCxRaw.n>=5?fxCxRaw:null;
   const vist=LZ.vistoria?("Vistoria realizada pelo subscritor em "+(fmtDt((LZ.dataVist||"").replace(/-/g,""))||hoje)):"Sem vistoria presencial (avaliação com base em dados cadastrais, fotos e informações do interessado)";
   const linhas=[
     (LZ.solicitante||"").trim()?["Solicitante",esc(LZ.solicitante)]:null,
@@ -7474,11 +7422,10 @@ function montarLaudo(){
       <div class="llbl"><span>${brl(r.min)}/m²</span><span>mediana ${brl(r.med)}/m²</span><span>${brl(r.max)}/m²</span></div>`;
   }
   const compsHtml=g&&g.res&&g.res.n>=3
-    ?`<p>Foram considerados <b>${g.res.n} imóveis de perfil semelhante</b> (mesmo uso e porte) num raio de ${g.radius} m, com base no cadastro municipal. O valor unitário (base venal) do conjunto situa-se entre ${brl(g.res.q1)} e ${brl(g.res.q3)}/m² no miolo da amostra, mediana de ${brl(g.res.med)}/m². O imóvel avaliado (▼) apresenta ${brl(g.myPm2)}/m².</p>${barHtml}`
-    :`<p>Não havia amostra mínima de vizinhança disponível na data de emissão; a estimativa apoia-se na referência de mercado indicada abaixo.</p>`;
+    ?`<p>Foram considerados <b>${g.res.n} registros fiscais de uso e porte semelhantes</b> num raio de ${g.radius} m. O valor venal unitário situa-se entre ${brl(g.res.q1)} e ${brl(g.res.q3)}/m² no miolo da amostra, com mediana de ${brl(g.res.med)}/m². O imóvel analisado (▼) apresenta ${brl(g.myPm2)}/m². A amostra não contém preços anunciados ou transacionados.</p>${barHtml}`
+    :`<p>Não havia amostra cadastral mínima de vizinhança disponível na data de emissão.</p>`;
   const isU2=!!ul, pm2L=isU2?m2Edif(a):m2Terr(a);
-  const m2bL=M2_MERCADO.bairros[String(a.cdbairro)];
-  const regiaoHtml=`<p>O imóvel situa-se no bairro ${esc(a.nmbairro)}, Goiânia/GO${g&&g.res&&g.res.n>=3?`, região com ${g.res.n} imóveis de perfil semelhante cadastrados em raio de ${g.radius} m`:""}${m2bL?`, com referência pública de mercado de R$ ${m2bL.toLocaleString("pt-BR")}/m² (anunciado, ${M2_MERCADO.ref})`:""}.</p>`;
+  const regiaoHtml=`<p>O imóvel situa-se no bairro ${esc(a.nmbairro)}, Goiânia/GO${g&&g.res&&g.res.n>=3?`, com ${g.res.n} registros fiscais de uso e porte semelhantes em raio de ${g.radius} m`:""}. Essa amostra descreve o cadastro municipal e não constitui pesquisa de preços de mercado.</p>`;
   const nSec=LZ.fotos.length>1?4:3; /* seção de fotos só existe com >1 foto (a 1ª vira capa) */
   const foraFaixa=est&&LZ.valor&&(LZ.valor<est.lo*0.97||LZ.valor>est.hi*1.03);
   document.getElementById("laudo").innerHTML=`
@@ -7487,8 +7434,8 @@ function montarLaudo(){
       <div class="m">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?"<br>"+esc(p.contato):""}<br>Goiânia/GO · ${hoje}</div></div>
 
     <div class="lcard"><h3>Finalidade</h3>
-      <p>Determinar o valor de referência de mercado do imóvel${(LZ.finalidade||"").trim()?" para fins de "+esc(LZ.finalidade).toLowerCase():""}, apoiando as partes na negociação a estabelecer um preço condizente com as condições do mercado imobiliário local.</p>
-      <p>A referência apoia-se em dados públicos do Cadastro Imobiliário de Goiânia e em preços de mercado por bairro, seguindo os critérios da NBR 14.653 da ABNT${comPtam?" e as diretrizes do COFECI":""}.</p></div>
+      <p>Organizar referências cadastrais e evidências disponíveis sobre o imóvel${(LZ.finalidade||"").trim()?" para fins de "+esc(LZ.finalidade).toLowerCase():""}, apoiando a análise do profissional responsável.</p>
+      <p>O relatório usa dados públicos do Cadastro Imobiliário de Goiânia e, quando disponíveis, avaliações públicas da CAIXA. Não constitui laudo de engenharia, PTAM ou comprovação de preço de mercado.</p></div>
 
     <div class="lrow">
       <div class="lcard"><h3>Características do imóvel</h3>
@@ -7496,32 +7443,30 @@ function montarLaudo(){
       ${LZ.fotos.length?`<div class="lcard foto"><span class="pill">Fachada</span><img src="${esc(LZ.fotos[0])}" alt="Fachada do imóvel"></div>`:""}
     </div>
 
-    <div class="lcard preco"><h3>Precificação final</h3>
+    <div class="lcard preco"><h3>Valor informado</h3>
       ${(()=>{const vs=LZ.valor||0;
-        /* C-04: a banda de liquidez só é honesta quando ancorada na faixa estatística (est). Sem est,
-           os valores min/max seriam fabricados (vs*0,96 / vs*1,10) — omitimos os subcards (nunca fabrica). */
-        const gmin=est?Math.min(est.lo,vs*0.96):null, gmax=est?Math.max(est.hi,vs*1.08):null;
         return `<div class="prow"><div class="hero">${vs?brl(vs):"—"}</div>
         ${(vs&&est)?`<div class="subs">
-          <div class="subcard up"><div class="st"><span class="ar">↑</span> Maior liquidez</div><div class="sl">Valor mínimo</div><div class="sv">${brl(gmin)}</div></div>
-          <div class="subcard down"><div class="st"><span class="ar">↓</span> Menor liquidez</div><div class="sl">Valor máximo</div><div class="sv">${brl(gmax)}</div></div>
+          <div class="subcard up"><div class="st"><span class="ar">↘</span> Referência inferior</div><div class="sl">Faixa indicativa externa</div><div class="sv">${brl(est.lo)}</div></div>
+          <div class="subcard down"><div class="st"><span class="ar">↗</span> Referência superior</div><div class="sl">Faixa indicativa externa</div><div class="sv">${brl(est.hi)}</div></div>
         </div>`:""}</div>`;})()}
-      ${foraFaixa?`<p class="lmiudo">Valor arbitrado pelo subscritor com base em vistoria, diferenciais e observações, divergindo justificadamente da faixa estatística de referência.</p>`:""}</div>
+      <p class="lmiudo">Valor declarado pelo usuário; não foi calculado nem validado pelo Radar.</p>
+      ${foraFaixa?`<p class="lmiudo">O valor informado está fora da faixa indicativa externa e requer validação independente antes de uso comercial.</p>`:""}</div>
 
-    <div class="lcard"><h3>Análise de mercado</h3>
+    <div class="lcard"><h3>Referências cadastrais e indicativas</h3>
       ${regiaoHtml}
       ${compsHtml}
-      ${est?`<p>Fonte principal da estimativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
+      ${est?`<p>Origem da referência indicativa: ${esc(est.metodo)}. Faixa indicada: <b>${brl(est.lo)} a ${brl(est.hi)}</b>.</p>`:""}
       ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</div>
 
     ${LZ.fotos.length>1?`<div class="lcard"><h3>Registro fotográfico</h3><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></div>`:""}
 
     <div class="lcard"><h3>Metodologia, fontes e ressalvas</h3>
-      <p class="lmiudo">Abordagem comparativa simplificada: estatística robusta (mediana; exclusão de discrepantes pela cerca de Tukey) sobre a base fiscal pública do Cadastro Imobiliário de Goiânia (ArcGIS municipal), convertida a valores de mercado por referências públicas de R$/m² por bairro (${M2_MERCADO.ref}) ajustadas pelo fator oferta de 0,90 (NBR 14653-2 — preço anunciado convertido em preço esperado de fechamento) e, quando disponíveis, laudos públicos de avaliação da CAIXA.${(FATOR_CONSERV[LZ.conserv]||1)!==1?" O valor sugerido incorpora ajuste de "+Math.round((FATOR_CONSERV[LZ.conserv]-1)*100)+"% pelo estado de conservação declarado (\""+esc(LZ.conserv)+"\").":""} A calibração usa exclusivamente medianas de imóveis usados — lançamentos e anúncios isolados são desconsiderados por distorcerem a amostra.</p>
-      <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características conforme o cadastro municipal, podendo divergir da matrícula do imóvel. O subscritor declara não possuir interesse presente ou futuro no imóvel avaliado nem vínculo que comprometa sua isenção; as informações prestadas por terceiros foram assumidas como verdadeiras. Este documento é indivisível e destina-se exclusivamente à finalidade de ${esc(LZ.finalidade).toLowerCase()}. Expressa estimativa de referência na data de emissão, com validade sugerida de 90 dias, e não substitui laudo de avaliação nos termos da NBR 14653.${comPtam?" Parecer emitido por corretor de imóveis inscrito no CRECI e no CNAI; a menção à Resolução COFECI nº 1.066/2007 aplica-se a este parecer." : " A emissão de PTAM é privativa de corretor inscrito no CRECI e no CNAI (Res. COFECI nº 1.066/2007); na ausência dessa inscrição, este documento constitui relatório de referência de mercado, sem natureza de laudo ou parecer técnico oficial."}</p>
+      <p class="lmiudo">Análise cadastral: estatística robusta (mediana e exclusão de discrepantes pela cerca de Tukey) sobre valores venais da base fiscal pública do Cadastro Imobiliário de Goiânia. Esses registros não são ofertas nem transações. Quando há faixa indicativa, ela é ancorada em pelo menos cinco avaliações públicas da CAIXA no setor e permanece sujeita a diferenças de tipologia, área, conservação e data. O Radar não ajusta automaticamente o valor informado por conservação, área declarada ou posição cadastral.</p>
+      <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características seguem o cadastro municipal e podem divergir da matrícula. As informações prestadas por terceiros foram assumidas como verdadeiras. Este documento destina-se à finalidade de ${esc(LZ.finalidade).toLowerCase()}, não possui validade automática e não substitui vistoria, laudo de avaliação ou PTAM. O módulo de PTAM permanece suspenso até existir verificação profissional e revisão regulatória.</p>
       ${LZ.docOk===false?`<p class="lmiudo">O interessado declarou pendências na documentação do imóvel — recomenda-se regularização antes de qualquer decisão.</p>`:""}
-      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}${comCnai?" — CNAI "+esc(p.cnai):""}${comPtam?`<div class="lass-resp">Responsável técnico pela avaliação, nos termos da Res. COFECI nº 1.066/2007.</div>`:""}</div></div>
+      <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}${comCnai?" — CNAI "+esc(p.cnai):""}</div></div>
 
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo(true); /* F5 B-13: laudo já gerado — fecha sem reconfirmar descarte */
@@ -7549,12 +7494,12 @@ function montarFichaRapida(){
   const op=scoreOportunidade(myPm2,stats,{radius:g?g.radius:400});
   const tipo=ul||USO[a.uso]||"Imóvel";
   const leitura=leituraPratica({tipoImovel:tipo,bairro:clean(a.nmbairro),oportunidade:op,confianca:conf});
-  const est=mercadoEstimado(a,LZ.privativa);
+  const est=mercadoEstimado(a);
   let comparaveis;
   if(g&&g.res&&g.res.n>=3){
     const diffPct=Math.round(Math.abs(myPm2-g.res.med)/g.res.med*100);
     const abaixo=myPm2<=g.res.med;
-    comparaveis=[`Este imóvel está ${diffPct}% ${abaixo?"abaixo":"acima"} da faixa média desta região (${g.res.n} imóveis parecidos em ${g.radius} m).`];
+    comparaveis=[`O valor venal por m² deste imóvel está ${diffPct}% ${abaixo?"abaixo":"acima"} da mediana cadastral local (${g.res.n} registros semelhantes em ${g.radius} m).`];
   }
   let perfil=null;if(p&&p.nome)perfil={nome:p.nome,creci:p.creci,contato:p.contato};
   const data={
@@ -7575,13 +7520,13 @@ function renderFichaRapida(a,data,fr){
     <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>Ficha rápida do imóvel</div>
       <div class="m">${data.perfil?esc(data.perfil.nome)+(data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""):""}<br>Goiânia/GO · ${hoje}</div></div>
     <div class="fr-hero">
-      <div class="fr-faixa">${fr.faixaTxt?esc(fr.faixaTxt):"Sem faixa estimada"}</div>
-      <div class="fr-faixa-lbl">Faixa estimada de valor</div>
+      <div class="fr-faixa">${fr.faixaTxt?esc(fr.faixaTxt):"Sem referência indicativa"}</div>
+      <div class="fr-faixa-lbl">Referência indicativa de valor</div>
     </div>
     <div class="lcard"><h3>Resumo do imóvel</h3>
       <p>${esc(data.endereco)||"Endereço não cadastrado"} — ${esc(data.bairro)}. Q ${esc(data.quadra)||"—"} · L ${esc(data.lote)||"—"}${a.areaedif?" · "+Math.round(a.areaedif)+" m²":a.areaterr?" · "+Math.round(a.areaterr)+" m²":""}.</p></div>
     <div class="lcard"><h3>Leitura prática</h3><p>${esc(fr.leitura)}</p></div>
-    ${fr.comparaveis.length?`<div class="lcard"><h3>Comparáveis</h3><ul class="fr-comps">${fr.comparaveis.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
+    ${fr.comparaveis.length?`<div class="lcard"><h3>Referências cadastrais</h3><ul class="fr-comps">${fr.comparaveis.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
     <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">${esc(fr.ressalva)}</p></div>
     ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
@@ -7623,10 +7568,7 @@ const emolumento=(tab,v)=>{for(const[teto,tot]of tab)if((v||0)<=teto)return tot;
 let CALC=null;
 function abrirCustos(){
   const a=DCUR;if(!a)return;
-  const est=mercadoEstimado(a);
-  /* sugere a estimativa de mercado (proxy do preço real); se não houver, cai no venal como palpite */
-  const negocio=est?Math.round((est.lo+est.hi)/2):(a.vlvenal||0);
-  CALC={a,venal:a.vlvenal||0,negocio,cartorio:null,financiado:false};
+  CALC={a,venal:a.vlvenal||0,negocio:0,cartorio:null,financiado:false};
   const calc=document.getElementById("calc");
   calc.hidden=false;
   trapFocus(calc); /* B-07/D-07 (20): usa a pilha de focus-trap no lugar do CRET manual */
@@ -7639,21 +7581,22 @@ function renderCustos(){
   /* ITBI sobre o VALOR DA TRANSAÇÃO declarado (STJ Tema 1.113) — NÃO sobre o venal.
      Se o declarado ficar abaixo do venal, alertamos: a Prefeitura costuma resistir. */
   const v=CALC.negocio||0;
-  const itbi=v*0.02;
-  const abaixoVenal=v>0&&v<(CALC.venal||0);
+  const temValor=v>0;
+  const itbi=temValor?v*0.02:null;
+  const abaixoVenal=temValor&&v<(CALC.venal||0);
   /* cartório EXATO pelas tabelas oficiais TJGO 2026. Financiado (SFH): contrato do banco dispensa a escritura. */
-  const escritura=CALC.financiado?0:emolumento(ESCRITURA_GO,v);
-  const registro=emolumento(REGISTRO_GO,v);
-  const cart=escritura+registro;
-  const total=v+itbi+cart;
-  const custos=itbi+cart;
-  const pct=v>0?(custos/v*100):0;
+  const escritura=temValor?(CALC.financiado?0:emolumento(ESCRITURA_GO,v)):null;
+  const registro=temValor?emolumento(REGISTRO_GO,v):null;
+  const cart=temValor?escritura+registro:null;
+  const total=temValor?v+itbi+cart:null;
+  const custos=temValor?itbi+cart:null;
+  const pct=temValor?(custos/v*100):null;
   const linkCartorio="https://registrosdegoias.com.br/custas-e-emolumentos/";
   document.getElementById("calcBody").innerHTML=`
     <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
     <span class="clabel">Valor da transação (R$)</span>
     <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
-    <div class="wsub" style="margin:6px 0 0">Todos os custos incidem sobre o valor real da compra e venda. Sugerido pela estimativa; edite pelo preço fechado.</div>
+    <div class="wsub" style="margin:6px 0 0">Informe o valor real da compra e venda. O Radar não preenche este campo com valor venal nem referência indicativa.</div>
 
     <div class="cseg">
       <button class="${!CALC.financiado?'on':''}" onclick="CALC.financiado=false;renderCustos()">À vista</button>
@@ -7677,9 +7620,9 @@ function renderCustos(){
 
     <div class="crow total">
       <div class="ck">Custo total de aquisição</div>
-      <div class="cv">${brl(total)}</div>
+      <div class="cv">${temValor?brl(total):"—"}</div>
     </div>
-    <div class="wsub" style="margin:6px 2px 0">Custos além do preço: <b>${brl(custos)}</b> (${pct.toFixed(1).replace(".",",")}% do valor).</div>
+    <div class="wsub" style="margin:6px 2px 0">${temValor?`Custos além do preço: <b>${brl(custos)}</b> (${pct.toFixed(1).replace(".",",")}% do valor).`:"Preencha o valor da transação para calcular os custos."}</div>
 
     <button class="cmini" style="border-color:var(--accent);color:var(--accent)" onclick="copiarCustos()">⧉ Copiar resumo para o cliente</button>
     <a class="cmini" href="${linkCartorio}" target="_blank" rel="noopener">Conferir na tabela oficial do cartório ↗</a>
@@ -7687,6 +7630,7 @@ function renderCustos(){
 }
 function copiarCustos(){
   if(!CALC)return;
+  if(!(CALC.negocio>0)){toast("Informe o valor da transação antes de copiar o resumo.");return;}
   const a=CALC.a, v=CALC.negocio||0, itbi=v*0.02;
   const escritura=CALC.financiado?0:emolumento(ESCRITURA_GO,v), registro=emolumento(REGISTRO_GO,v);
   const total=v+itbi+escritura+registro;
@@ -7936,8 +7880,8 @@ function trapFocaveis(container){
 // Conteúdo dos 3 cartões (copy literal, travado — não reformular)
 const ONB_CARDS=[
   {titulo:"Busque qualquer imóvel", texto:"Digite endereço, quadra/lote, nome do prédio ou inscrição — numa caixa só. O Radar entende o que você quer dizer.", cta:"Próximo"},
-  {titulo:"Veja valor e oportunidade", texto:"Cada imóvel mostra a faixa de valor estimado, o score de oportunidade e uma leitura em linguagem simples — sem jargão técnico.", cta:"Próximo"},
-  {titulo:"Gere documentos e capte", texto:"Gere ficha, relatório ou laudo em PDF, copie mensagens prontas pro WhatsApp e monte a proposta — tudo pelo Radar.", cta:"Começar"},
+  {titulo:"Entenda os dados disponíveis", texto:"Cada imóvel separa valor venal, posição cadastral, cobertura dos dados e referências indicativas — sem transformar cadastro em promessa de mercado.", cta:"Próximo"},
+  {titulo:"Gere documentos e capte", texto:"Gere ficha ou relatório de apoio em PDF, copie mensagens prontas para o WhatsApp e monte a proposta — tudo pelo Radar.", cta:"Começar"},
 ];
 let onbIdx=0;
 function initOnboard(){
