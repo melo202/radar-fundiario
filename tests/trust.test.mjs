@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+/* normaliza CRLF: no Windows o checkout usa core.autocrlf e a comparação multilinha da
+   linha 59 quebraria sem isso */
+const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8").replace(/\r\n/g, "\n");
 
 test("contrato de confiança: interface não promete liquidez nem área privativa confirmada", () => {
   for (const proibido of [
