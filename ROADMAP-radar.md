@@ -51,7 +51,7 @@ Achados da auditoria visual:
 
 - mapa permanece como plano dominante; o inspetor de 480 px ocupa seu próprio espaço e não cobre o território no desktop;
 - entrada apresenta promessa, busca universal e três entregas do produto sem abrir toda a complexidade de uma vez;
-- resultado de prédio usa resumo fixo, filtro, ordenação e linhas que mostram apenas as diferenças relevantes entre unidades;
+- resultado de prédio usa um único marcador territorial, resumo fixo, filtro, ordenação e linhas que mostram apenas as diferenças relevantes entre unidades — unidades do mesmo prédio não recebem coordenadas artificiais;
 - dossiê passa a ter três níveis curtos — **Resumo**, **Território** e **Diligência** — preservando todas as ressalvas em linguagem progressiva;
 - iconografia funcional usa uma única família SVG; monoespaçada fica restrita a inscrição e metadados técnicos;
 - o protótipo é deliberadamente demonstrativo: não consulta endpoints, não grava dados e não substitui a aplicação atual.

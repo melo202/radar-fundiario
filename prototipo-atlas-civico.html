@@ -241,19 +241,20 @@
     .atlas-div-icon { background: transparent; border: 0; }
     .map-pin {
       position: relative;
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+      height: 38px;
+      padding: 0 11px;
       border: 3px solid var(--surface);
-      border-radius: 50% 50% 50% 12px;
+      border-radius: 14px;
       color: white;
-      background: #74837a;
-      box-shadow: 0 7px 18px rgba(20, 35, 29, .22);
-      transform: rotate(-45deg);
+      background: var(--brand);
+      box-shadow: 0 0 0 8px rgba(24, 81, 62, .12), 0 8px 22px rgba(20, 35, 29, .25);
     }
-    .map-pin span { font-size: 11px; font-weight: 800; transform: rotate(45deg); }
-    .map-pin.is-active { width: 42px; height: 42px; background: var(--brand); box-shadow: 0 0 0 8px rgba(24, 81, 62, .14), 0 9px 22px rgba(20, 35, 29, .28); }
+    .map-pin::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 12px; height: 12px; border-right: 3px solid var(--surface); border-bottom: 3px solid var(--surface); background: var(--brand); transform: translateX(-50%) rotate(45deg); }
+    .map-pin span { position: relative; z-index: 1; font-size: 11px; font-weight: 800; }
     .city-marker { display: flex; align-items: center; gap: 9px; color: var(--brand-strong); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
     .city-marker::before { content: ""; width: 13px; height: 13px; border: 3px solid var(--surface); border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 8px rgba(24, 81, 62, .14), var(--shadow-1); }
     .atlas-tooltip { padding: 8px 10px !important; border: 1px solid var(--line) !important; border-radius: 10px !important; box-shadow: var(--shadow-1) !important; color: var(--ink) !important; font-size: 11px !important; font-weight: 700; }
@@ -610,8 +611,7 @@
           <button class="map-tool" type="button" id="layersButton" aria-label="Ver camadas disponíveis"><svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg></button>
         </div>
         <div class="map-legend" aria-label="Legenda do cenário">
-          <span class="legend-item"><span class="legend-swatch"></span>Selecionado</span>
-          <span class="legend-item"><span class="legend-swatch muted"></span>Mesmo prédio</span>
+          <span class="legend-item"><span class="legend-swatch"></span><span id="mapLegendLabel">Prédio encontrado</span></span>
         </div>
       </section>
 
@@ -889,14 +889,7 @@
         dossie: { center: [-16.6968, -49.2688], zoom: 18 }
       };
 
-      const samplePoints = [
-        [-16.69680, -49.26880],
-        [-16.69650, -49.26845],
-        [-16.69708, -49.26842],
-        [-16.69653, -49.26910],
-        [-16.69712, -49.26912],
-        [-16.69682, -49.26934]
-      ];
+      const propertyPoint = [-16.69680, -49.26880];
 
       function icon(id) {
         return `<svg class="icon" aria-hidden="true"><use href="#${id}"></use></svg>`;
@@ -932,6 +925,7 @@
         const copy = mapCopy[view];
         document.getElementById("mapContextTitle").textContent = copy[0];
         document.getElementById("mapContextDetail").textContent = copy[1];
+        document.getElementById("mapLegendLabel").textContent = view === "dossie" ? "Imóvel selecionado" : "Prédio encontrado";
         announcement.textContent = view === "entrada" ? "Busca aberta" : view === "resultados" ? "Resultados abertos" : "Dossiê aberto";
         if (!options.fromHash) history.replaceState(null, "", `#${view}`);
         renderMapState(view);
@@ -976,12 +970,12 @@
         setView("dossie");
       }
 
-      function createPin(number, active) {
+      function createPin(label) {
         return L.divIcon({
           className: "atlas-div-icon",
-          html: `<span class="map-pin${active ? " is-active" : ""}"><span>${number}</span></span>`,
-          iconSize: active ? [42, 42] : [36, 36],
-          iconAnchor: active ? [21, 37] : [18, 32]
+          html: `<span class="map-pin"><span>${label}</span></span>`,
+          iconSize: [56, 46],
+          iconAnchor: [28, 44]
         });
       }
 
@@ -999,14 +993,15 @@
           L.marker([-16.6806, -49.2577], { icon: cityIcon, interactive: false }).addTo(markerLayer);
           return;
         }
-        const unitRows = [...document.querySelectorAll(".unit-row")];
-        samplePoints.forEach((point, index) => {
-          const marker = L.marker(point, { icon: createPin(index + 1, index === 0), keyboard: true, title: index === 0 ? "Apto 301 · Tipo A" : `Unidade ${index + 1}` }).addTo(markerLayer);
-          marker.bindTooltip(index === 0 ? "Apto 301 · Tipo A" : `Unidade ${index + 1}`, { direction: "top", offset: [0, -30], className: "atlas-tooltip" });
-          marker.on("click", () => unitRows[index] && openUnit(unitRows[index]));
-        });
+        const markerLabel = view === "resultados" ? "184" : "1";
+        const markerTitle = view === "resultados" ? "Cond. Park Line Urban House · 184 unidades" : state.unit;
+        const marker = L.marker(propertyPoint, { icon: createPin(markerLabel), interactive: false, keyboard: false }).addTo(markerLayer);
+        marker.bindTooltip(markerTitle, { direction: "top", offset: [0, -34], className: "atlas-tooltip" });
+        if (view === "resultados") {
+          selectedShape = L.circle(propertyPoint, { radius: 38, color: "#18513e", weight: 2, fillColor: "#18513e", fillOpacity: .08, interactive: false }).addTo(map);
+        }
         if (view === "dossie") {
-          const c = samplePoints[0];
+          const c = propertyPoint;
           selectedShape = L.polygon([
             [c[0] - .00010, c[1] - .00013],
             [c[0] - .00011, c[1] + .00012],

@@ -69,7 +69,9 @@ test("resultado de prédio evita repetição e permite filtrar unidades", () => 
   assert.match(html, /id="unitSort"/);
   assert.match(html, /function openUnit\(button\)/);
   assert.match(html, /unitSort"\)\.addEventListener\("change"/);
-  assert.match(html, /marker\.on\("click", \(\) => unitRows\[index\] && openUnit/);
+  assert.match(html, /view === "resultados" \? "184" : "1"/);
+  assert.match(html, /L\.marker\(propertyPoint, \{ icon: createPin\(markerLabel\), interactive: false/);
+  assert.doesNotMatch(html, /samplePoints\.forEach/);
 });
 
 test("abas e painel móvel expõem interação por teclado e estado compreensível", () => {
