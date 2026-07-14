@@ -26,6 +26,6 @@ test("PWA: datasets opcionais não derrubam a instalação inteira", () => {
   assert.ok(!arrayFromSource("CORE").includes("./bairro-cdbairro.json"));
 });
 
-test("PWA: versão do cache foi incrementada para a nova política", () => {
-  assert.match(sw, /const CACHE = "radar-v8"/);
+test("PWA: versão do cache foi incrementada para o dossiê rastreável", () => {
+  assert.match(sw, /const CACHE = "radar-v9"/);
 });

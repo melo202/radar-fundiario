@@ -433,9 +433,31 @@
   .chooser .chrow .m{display:block;font:600 11px/1.3 "JetBrains Mono",monospace;color:var(--muted);margin-top:3px}
   .chooser .chrow .val{flex:none;font:800 14px/1.1 "Archivo";color:var(--accent);white-space:nowrap}
   .chooser .chrow .val small{display:block;margin-bottom:3px;font:600 9px/1.1 "Archivo";letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right}
+  /* checkpoint de identidade — separa localizar de analisar. O usuário confirma o registro
+     cadastral uma vez por sessão antes de abrir qualquer leitura derivada ou documento. */
+  .idcheck-kicker{font:700 10.5px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  .idcheck-title{font:800 22px/1.15 "Archivo";color:var(--ink);margin:0 40px 6px 0}
+  .idcheck-lede{font:500 13.5px/1.45 "Archivo";color:var(--muted);margin:0 0 16px}
+  .idcheck-grid{display:flex;flex-direction:column;border:1.5px solid var(--ink);border-radius:2px;background:var(--paper);margin-bottom:12px}
+  .idcheck-row{display:grid;grid-template-columns:minmax(108px,.65fr) 1.35fr;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .idcheck-row:last-child{border-bottom:0}
+  .idcheck-label{font:600 10.5px/1.25 "Archivo";color:var(--muted);text-transform:uppercase;letter-spacing:.025em}
+  .idcheck-value{font:700 13px/1.3 "Archivo";color:var(--ink);overflow-wrap:anywhere}
+  .idcheck-warning{display:flex;gap:8px;background:rgba(168,132,44,.12);border-left:4px solid var(--gold);padding:10px 12px;margin:0 0 12px;font:600 12px/1.4 "Archivo";color:var(--ink)}
+  .idcheck-note{font:500 11px/1.45 "Archivo";color:var(--muted);margin:0 0 14px}
+  .idcheck-actions{display:grid;grid-template-columns:1fr;gap:8px}
+  .idcheck-actions button{min-height:46px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:700 13.5px/1.2 "Archivo";border-radius:2px;cursor:pointer;padding:0 14px}
+  .idcheck-actions .primary{border-color:var(--accent);background:var(--accent);color:#fff}
+  .idcheck-actions .primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+  @media(min-width:821px){#identityCheck{left:50%;right:auto;width:min(520px,calc(100vw - 32px));transform:translateX(-50%)}}
   .detail .dtag{font:700 12px/1 "JetBrains Mono";color:var(--lot-bright);letter-spacing:.06em}
   .detail h3{margin:6px 0 3px;font:700 18px/1.15 "Archivo"}
   .detail .insc{font:600 13px/1 "JetBrains Mono";color:var(--accent);margin-bottom:12px}
+  .didentity{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:rgba(44,85,69,.09);border-left:4px solid var(--lot);padding:10px 12px;margin:0 0 14px}
+  .didentity-copy{min-width:0}
+  .didentity-ok{display:block;font:700 12.5px/1.25 "Archivo";color:var(--ink)}
+  .didentity small{display:block;margin-top:3px;font:500 10.5px/1.35 "Archivo";color:var(--muted)}
+  .didentity button{flex:none;min-height:36px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 11.5px/1 "Archivo";border-radius:2px;padding:0 10px;cursor:pointer}
   .detail .dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
   .detail .dgrid .cell{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:8px 10px}
   .detail .dgrid .cell .k{font:600 11px/1.2 "Archivo";letter-spacing:.01em;color:var(--muted);margin-bottom:4px}
@@ -448,6 +470,30 @@
   .dvalor-v{font:800 22px/1.15 "Archivo";color:var(--ink);margin:4px 0 2px;font-variant-numeric:tabular-nums}
   .dvalor-v.muted{color:var(--muted)}
   .dvalor-m{font:500 10.5px/1.45 "Archivo";color:var(--muted)}
+
+  /* trilha de evidências — fonte, recência e disponibilidade por conjunto de informação. */
+  .devidence{border:1.5px solid var(--line);border-radius:2px;background:var(--paper);margin:0 0 16px}
+  .devidence>summary{min-height:46px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:0 13px;font:700 13px/1.2 "Archivo";color:var(--ink);list-style:none}
+  .devidence>summary::-webkit-details-marker{display:none}
+  .devidence>summary::after{content:"▸";color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .devidence[open]>summary::after{content:"▾"}
+  .devidence-summary{margin-left:auto;font:600 10.5px/1.2 "JetBrains Mono",monospace;color:var(--muted);text-align:right}
+  .evidence-list{border-top:1px solid var(--line)}
+  .evidence-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:9px 10px;align-items:start;padding:11px 13px;border-bottom:1px solid var(--grid)}
+  .evidence-row:last-child{border-bottom:0}
+  .evidence-dot{width:9px;height:9px;border-radius:50%;margin-top:4px;background:var(--muted);box-shadow:0 0 0 1px var(--line)}
+  .evidence-row.is-ok .evidence-dot{background:var(--lot)}
+  .evidence-row.is-warn .evidence-dot{background:var(--gold)}
+  .evidence-row.is-off .evidence-dot{background:var(--muted)}
+  .evidence-row.is-error .evidence-dot{background:var(--status-risco)}
+  .evidence-main{min-width:0}
+  .evidence-title{font:700 12.5px/1.25 "Archivo";color:var(--ink)}
+  .evidence-detail{font:500 11px/1.4 "Archivo";color:var(--muted);margin-top:2px}
+  .evidence-source{font:600 10px/1.35 "JetBrains Mono",monospace;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+  .evidence-status{font:700 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding-top:2px}
+  .evidence-row.is-ok .evidence-status{color:var(--lot)}
+  .evidence-row.is-warn .evidence-status{color:#7d621f}
+  .evidence-row.is-error .evidence-status{color:var(--status-risco)}
 
   .dscores{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .score{flex:1;min-width:150px;min-height:44px;display:block;text-align:left;background:var(--paper);
@@ -1098,7 +1144,7 @@
           <li><b>Diagnóstico cadastral</b> — posição na amostra local, cobertura dos dados e leitura em linguagem simples. <button type="button" onclick="onbAbrirDireto(1)">Ver como →</button></li>
           <!-- F5 B-16: os 2 itens abaixo abrem o MESMO cartão 2 do onboarding (que cobre docs+captação
                juntos — não existem cartões distintos); "Sobre isto →" é honesto, "Ver como →" prometia demonstração -->
-          <li><b>Documentos prontos</b> — ficha, relatório ou laudo em PDF, minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
+          <li><b>Documentos prontos</b> — ficha e relatório de apoio em PDF, além de minutas de proposta/contrato. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
           <li><b>Dossiê do imóvel</b> — salve a consulta, compare registros e compartilhe evidências selecionadas. <button type="button" onclick="onbAbrirDireto(2)">Sobre isto →</button></li>
           <li><b>Oportunidades da Caixa</b> — imóveis à venda da Caixa, plotados no mapa. <button type="button" onclick="toggleCaixa()">Ver no mapa →</button></li>
         </ul>
@@ -1179,7 +1225,7 @@
         <div class="terr-amostra" id="terrAmostra"></div>
       </div>
     </div>
-    <div class="detail" id="detail" role="region" aria-label="Detalhe do imóvel">
+    <div class="detail" id="detail" role="region" aria-label="Dossiê do imóvel">
       <div class="shead">
         <div class="grab" id="grab" aria-hidden="true"></div>
         <button class="backlist" id="dBack" onclick="closeDetail();setView('busca')" style="display:none">☰ Resultados</button>
@@ -1188,12 +1234,18 @@
       <div class="dtag" id="dTag"></div>
       <h3 id="dAddr"></h3>
       <div class="insc" id="dInsc"></div>
+      <div class="didentity" id="dIdentity" role="status"></div>
 
       <div class="dvalor" id="dValor"></div>
 
       <div class="dscores" id="dScores"></div>
 
       <div class="dleitura" id="dLeitura"></div>
+
+      <details class="devidence" id="dEvidence">
+        <summary><span>Trilha de evidências</span><span class="devidence-summary" id="dEvidenceSummary"></span></summary>
+        <div class="evidence-list" id="dEvidenceBody"></div>
+      </details>
 
       <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
            padrão; renderDiffUI(a) preenche e revela SÓ quando o lote já está no Caderno com
@@ -1306,6 +1358,25 @@
       <div class="chsub" id="chSub"></div>
       <div class="chlist" id="chList"></div>
     </div>
+
+    <!-- Checkpoint obrigatório entre localizar e analisar. Confirmação visual do registro,
+         sem prometer validação de matrícula, titularidade ou regularidade. -->
+    <div class="detail identity-check" id="identityCheck" role="dialog" aria-modal="true" aria-labelledby="idCheckTitle">
+      <div class="shead">
+        <div class="grab" onclick="fecharConfirmacaoIdentidade(true)" aria-hidden="true"></div>
+        <button class="x" onclick="fecharConfirmacaoIdentidade(true)" aria-label="Fechar confirmação">×</button>
+      </div>
+      <div class="idcheck-kicker">Antes da análise</div>
+      <h2 class="idcheck-title" id="idCheckTitle">Confirme o imóvel</h2>
+      <p class="idcheck-lede">Confira os identificadores abaixo. O dossiê será gerado para exatamente este registro cadastral.</p>
+      <div class="idcheck-grid" id="idCheckGrid"></div>
+      <div class="idcheck-warning" id="idCheckWarning" hidden></div>
+      <p class="idcheck-note">Esta confirmação identifica o item escolhido no Radar; não valida matrícula, titularidade, ônus ou regularidade documental.</p>
+      <div class="idcheck-actions">
+        <button type="button" class="primary" id="idConfirmBtn" onclick="confirmarIdentidade()">Confirmar e abrir dossiê</button>
+        <button type="button" id="idBackBtn" onclick="fecharConfirmacaoIdentidade(true)">Voltar aos resultados</button>
+      </div>
+    </div>
   </div>
 
   <!-- Fase 13 DESC-01: onboarding 3 cartões — filho direto de <body> (fora de .mapwrap/<aside>),
@@ -1337,11 +1408,11 @@
 </div>
 
 <!-- WIZARD DO LAUDO (estilo iOS: um assunto por tela, campos grandes) -->
-<div class="wiz" id="wiz" hidden role="dialog" aria-modal="true" aria-label="Laudo de avaliação">
+<div class="wiz" id="wiz" hidden role="dialog" aria-modal="true" aria-label="Gerador de documentos">
   <div class="wtop">
     <button class="wback" id="wBack" onclick="wizBack()" aria-label="Voltar">‹</button>
     <div class="wdots" id="wDots"></div>
-    <button class="wclose" onclick="fecharLaudo()" aria-label="Fechar laudo">×</button>
+    <button class="wclose" onclick="fecharLaudo()" aria-label="Fechar gerador de documentos">×</button>
   </div>
   <div class="wbody" id="wBody"></div>
   <div class="wfoot"><button class="wnext" id="wNext" onclick="wizNext()">Continuar</button></div>
@@ -1411,10 +1482,10 @@
 <div id="laudo"></div>
 
 <!-- Visão em tela do laudo (fallback do PWA standalone no iOS, onde window.print não abre) -->
-<div id="laudoView" hidden role="dialog" aria-modal="true" aria-label="Laudo de avaliação">
+<div id="laudoView" hidden role="dialog" aria-modal="true" aria-label="Visualização do documento">
   <div class="lvbar">
     <button class="lvprint" onclick="imprimirLaudo()">🖨️ Salvar PDF</button>
-    <button class="lvx" onclick="fecharLaudoView()" aria-label="Fechar laudo">×</button>
+    <button class="lvx" onclick="fecharLaudoView()" aria-label="Fechar documento">×</button>
   </div>
   <div class="lvbody" id="laudoViewBody"></div>
 </div>
@@ -1986,6 +2057,32 @@ function captChecklist(data){
 function captFollowup(data){
   const d=data||{};
   return `Follow-up: retornar contato com proprietário/interessado do imóvel na ${d.endereco||"região"} em até 3 dias úteis para confirmar interesse na captação.`;
+}
+
+/* Identidade cadastral do item selecionado. A chave prefere a inscrição da unidade; quando ela
+   falta, combina CI do lote com subinscrição/complemento para não tratar dois apartamentos do
+   mesmo prédio como o mesmo imóvel confirmado. Não afirma identidade civil nem registral. */
+function identidadeChave(a){
+  a=a||{};
+  const inscricao=clean(a.nrinscr),ci=clean(a.ci);
+  const principal=inscricao||ci||"sem-id";
+  const sub=inscricao?"":clean(a.insubprinc||a.incompl);
+  return principal+(sub?"|"+sub:"");
+}
+function identidadeFatos(a){
+  a=a||{};
+  const inscricao=clean(a.nrinscr||a.ci),ci=clean(a.ci);
+  const bairro=clean(a.nmbairro),quadra=clean(a.nrquadra),lote=clean(a.nrlote);
+  const unidade=clean(a.incompl),edificio=clean(a.nmedificio);
+  const multiplo=Number(a.ttsublot)>1||Number(a.cdedificio)>0;
+  const faltantes=[];
+  if(!inscricao)faltantes.push("inscricao");
+  if(!bairro)faltantes.push("bairro");
+  if(!quadra)faltantes.push("quadra");
+  if(!lote)faltantes.push("lote");
+  if(multiplo&&!unidade&&!clean(a.insubprinc))faltantes.push("unidade");
+  return {chave:identidadeChave(a),inscricao,ci,bairro,quadra,lote,unidade,edificio,
+    multiplo,completo:faltantes.length===0,faltantes};
 }
 
 /* endereco minimo local (copia da logica de logradouroDe/addrDe, que vivem fora do bloco puro) —
@@ -5015,7 +5112,7 @@ async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
   const tk=++SEARCHTOKEN;
-  btn.disabled=true;closeDetail();
+  btn.disabled=true;fecharConfirmacaoIdentidade(false);closeDetail();
   /* CR-02 (13-REVIEW.md): snapshot do #results ANTES do skeleton — early-returns de validação
      (inscrição/setor/rua vazios, "só a quadra" etc.) saem do try sem passar por finish()/catch,
      e o finally não reescrevia #results, deixando o skeleton shimmer preso para sempre. O finally
@@ -5157,6 +5254,7 @@ async function buscar(){
    fromMap=true quando veio de um clique no MAPA (pino/lote/ponto): aí um prédio abre
    o SELETOR de imóvel em vez de jogar o corretor na aba de busca. */
 function finish(items,fromMap){
+    fecharConfirmacaoIdentidade(false); /* resultado novo invalida qualquer confirmação pendente */
     closeChooser(); /* resultado novo: descarta qualquer seletor de prédio anterior (evita sheet fantasma) */
     fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes de qualquer resultado novo (senão fica atrás do #detail/#chooser, mesmo z-index) */
     /* Fase 12 (12-02): reset de estado de sessao no INICIO de finish() — mesma filosofia defensiva
@@ -5731,7 +5829,7 @@ function showChooser(ci){
   chooser.classList.add("show");
   trapFocus(chooser); /* Fase 19 (19-03, A11Y-01): #chooser não tinha pattern prévio de captura de foco */
 }
-function chooseThis(i){closeChooser();pick(i);}
+function chooseThis(i){closeChooser();pick(i,"mapa");}
 function closeChooser(){
   const chooser=document.getElementById("chooser");
   chooser.classList.remove("show");
@@ -5740,9 +5838,66 @@ function closeChooser(){
     mesmo com #detail aberto; sem isso, destruía o trap de #detail que nunca foi de #chooser */
 }
 
+/* ---------------- confirmação de identidade ----------------
+   O checkpoint impede que um clique em resultado aproximado/unidade vizinha vire análise ou
+   documento. A confirmação é local à sessão e à chave cadastral; não é persistida nem equivale
+   a conferir matrícula/titularidade. */
+const IDENTIDADES_CONFIRMADAS=new Set();
+let ID_PENDING=null;
+function abrirConfirmacaoIdentidade(a,ll,i,origem){
+  if(!a)return;
+  const f=identidadeFatos(a),ul=unitLabel(a),addr=addrDe(a);
+  ID_PENDING={a,ll,i,origem:origem==="busca"?"busca":"mapa",chave:f.chave};
+  closeDetail();closeChooser();fecharTerrPanel();
+  document.getElementById("idCheckGrid").innerHTML=`
+    <div class="idcheck-row"><span class="idcheck-label">Imóvel</span><span class="idcheck-value">${esc((f.edificio?f.edificio+" — ":"")+(ul||USO[a.uso]||"Registro cadastral"))}</span></div>
+    <div class="idcheck-row"><span class="idcheck-label">Endereço</span><span class="idcheck-value">${esc(addr)||"Não cadastrado"}</span></div>
+    <div class="idcheck-row"><span class="idcheck-label">Localizador</span><span class="idcheck-value">Q ${esc(f.quadra)||"—"} · L ${esc(f.lote)||"—"} · ${esc(f.bairro)||"Setor não cadastrado"}</span></div>
+    <div class="idcheck-row"><span class="idcheck-label">Inscrição</span><span class="idcheck-value">${esc(f.inscricao)||"Não cadastrada"}${f.ci&&f.ci!==f.inscricao?` · CI do lote ${esc(f.ci)}`:""}</span></div>`;
+  const avisos=[];
+  if(a.__matchScore===2)avisos.push("Este resultado foi encontrado por aproximação; revise rua, quadra e lote com atenção.");
+  if(!f.completo){
+    const nomes={inscricao:"inscrição",bairro:"setor",quadra:"quadra",lote:"lote",unidade:"unidade"};
+    avisos.push("O cadastro não informou: "+f.faltantes.map(x=>nomes[x]||x).join(", ")+". Confirme por outra fonte antes de compartilhar.");
+  }
+  const warn=document.getElementById("idCheckWarning");
+  warn.hidden=!avisos.length;warn.innerHTML=avisos.length?`<span aria-hidden="true">⚠</span><span>${avisos.map(esc).join(" ")}</span>`:"";
+  const back=document.getElementById("idBackBtn");
+  back.textContent=ID_PENDING.origem==="busca"?"Voltar aos resultados":"Voltar ao mapa";
+  setView("mapa");
+  const sheet=document.getElementById("identityCheck");
+  sheet.classList.add("show");
+  trapFocus(sheet);
+  const confirm=document.getElementById("idConfirmBtn");if(confirm)confirm.focus();
+}
+function confirmarIdentidade(){
+  const p=ID_PENDING;if(!p)return;
+  IDENTIDADES_CONFIRMADAS.add(p.chave);
+  fecharConfirmacaoIdentidade(false);
+  showDetail(p.a,p.ll);
+}
+function fecharConfirmacaoIdentidade(voltar){
+  const sheet=document.getElementById("identityCheck"),p=ID_PENDING;
+  sheet.classList.remove("show");
+  untrapFocus(sheet);
+  ID_PENDING=null;
+  if(voltar&&p){
+    setView(p.origem);
+    if(p.origem==="busca")scrollToResults();
+  }
+}
+function reverIdentidade(){
+  const a=DCUR;if(!a)return;
+  const i=LAST.indexOf(a),ll=(a.x_coord&&a.y_coord)?toWGS(a.x_coord,a.y_coord):null;
+  IDENTIDADES_CONFIRMADAS.delete(identidadeChave(a));
+  closeDetail();
+  abrirConfirmacaoIdentidade(a,ll,i,"mapa");
+}
+
 /* ---------------- selecionar ---------------- */
-function pick(i){
+function pick(i,origemForcada){
   const a=LAST[i];if(!a)return;sel=i;closeChooser();
+  const origem=origemForcada||(document.body.dataset.view==="busca"?"busca":"mapa");
   document.querySelectorAll(".card").forEach(c=>c.classList.toggle("sel",+c.dataset.i===i));
   const c=document.querySelector(`.card[data-i="${i}"]`);if(c)c.scrollIntoView({block:"nearest",behavior:"smooth"});
   const selMk=markers[i],done=new Set();
@@ -5759,12 +5914,90 @@ function pick(i){
   }});
   setView("mapa"); /* fecha o overlay de busca ao abrir a ficha — mobile E desktop mapa-first (evita sobreposição de cards) */
   if(a.x_coord&&a.y_coord){
-    const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);showDetail(a,ll);
+    const ll=toWGS(a.x_coord,a.y_coord);map.setView(ll,18);
+    if(IDENTIDADES_CONFIRMADAS.has(identidadeChave(a)))showDetail(a,ll);
+    else abrirConfirmacaoIdentidade(a,ll,i,origem);
   }else{
-    /* sem coordenada: abre a ficha mesmo assim — laudo e CND continuam acessíveis */
-    toast("Imóvel sem coordenada no cadastro — abrindo a ficha.");
-    showDetail(a,null);
+    /* sem coordenada: ainda exige confirmação; laudo e CND continuam acessíveis após o checkpoint */
+    toast("Imóvel sem coordenada no cadastro — confirme os identificadores para abrir o dossiê.");
+    if(IDENTIDADES_CONFIRMADAS.has(identidadeChave(a)))showDetail(a,null);
+    else abrirConfirmacaoIdentidade(a,null,i,origem);
   }
+}
+
+/* ---------------- trilha de evidências ----------------
+   Uma única estrutura alimenta a ficha na tela e os documentos. Status significa presença e
+   rastreabilidade da informação — nunca certificação jurídica nem precisão mercadológica. */
+function dataCaixaTxt(){
+  const cx=window.CAIXA;
+  const s=clean(cx&&cx.gerado);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)){const p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+  return null;
+}
+function trilhaEvidencias(a){
+  a=a||{};
+  const f=identidadeFatos(a),consulta=fmtVisita(a.__consultadoEm||new Date().toISOString());
+  const dtAlt=fmtDt(a.dtultalter)||fmtDt(a.dtrecadast),dtInc=fmtDt(a.dtinclusao);
+  const campos=[!!f.inscricao,!!(f.bairro&&f.quadra&&f.lote),!!(a.areaterr||a.areaedif),!!(a.vlvenal>0),!!(a.x_coord&&a.y_coord)];
+  const nCampos=campos.filter(Boolean).length;
+  const cadastroStatus=nCampos>=4?"ok":nCampos>=2?"warn":"off";
+  const cadastroData=dtAlt?"alteração cadastral em "+dtAlt:dtInc?"inclusão cadastral em "+dtInc:"registro sem data própria";
+  const rows=[{
+    id:"cadastro",titulo:"Cadastro e identificação",status:cadastroStatus,
+    rotulo:cadastroStatus==="ok"?"Disponível":cadastroStatus==="warn"?"Parcial":"Limitado",
+    detalhe:`${nCampos}/5 campos-chave presentes: inscrição, localizador, área, valor venal e coordenada cadastral.`,
+    fonte:"Prefeitura de Goiânia · Cadastro Imobiliário",data:cadastroData+" · "+consulta
+  }];
+  const am=a.__evidenceSample;
+  if(!am){
+    rows.push({id:"amostra",titulo:"Amostra cadastral local",status:"pending",rotulo:"A calcular",
+      detalhe:"Toque em “Analisar vizinhança” para consultar registros fiscais semelhantes.",
+      fonte:"Prefeitura de Goiânia · Cadastro Imobiliário",data:"Ainda não consultada nesta análise"});
+  }else{
+    const ok=am.estado==="disponivel",erro=am.estado==="erro";
+    rows.push({id:"amostra",titulo:"Amostra cadastral local",status:ok?"ok":erro?"error":am.estado==="limitada"?"warn":"off",
+      rotulo:ok?"Disponível":erro?"Falhou":am.estado==="limitada"?"Limitada":"Indisponível",
+      detalhe:erro?"A consulta falhou; tente analisar a vizinhança novamente.":am.estado==="indisponivel"?"Área ou valor venal insuficientes para formar a amostra.":`${am.n||0} registros fiscais semelhantes em até ${am.radius||800} m.`,
+      fonte:"Prefeitura de Goiânia · Cadastro Imobiliário",data:consulta});
+  }
+  const cx=window.CAIXA,est=mercadoEstimado(a),fx=cx&&cx.fatores&&cx.fatores[String(a.cdbairro)],dtCx=dataCaixaTxt();
+  rows.push({id:"referencia",titulo:"Referência indicativa de valor",status:est?"ok":"off",rotulo:est?"Disponível":"Indisponível",
+    detalhe:est?`${fx.n} avaliações públicas no setor; faixa apenas indicativa.`:"Sem valor venal ou sem o mínimo de 5 avaliações públicas no setor.",
+    fonte:"CAIXA · lista pública de imóveis e avaliações",data:dtCx?"snapshot de "+dtCx:"snapshot não carregado"});
+  const pd=a.__pdEstado;
+  if(!a.x_coord||!a.y_coord){
+    rows.push({id:"urbanistico",titulo:"Enquadramento urbanístico",status:"off",rotulo:"Indisponível",
+      detalhe:"O cadastro não forneceu coordenada para cruzar as camadas do Plano Diretor.",
+      fonte:"Prefeitura de Goiânia · mapa oficial do Plano Diretor",data:"Não consultado"});
+  }else if(!pd){
+    rows.push({id:"urbanistico",titulo:"Enquadramento urbanístico",status:"pending",rotulo:"Consultando",
+      detalhe:"Cruzamento das camadas oficiais em andamento.",fonte:"Prefeitura de Goiânia · mapa oficial do Plano Diretor",data:consulta});
+  }else{
+    const ok=["resolvido","resolvido_sem_unidade","rural"].includes(pd.estado),parcial=pd.estado==="parcial";
+    const zona=pd.unidade?(pd.unidade.sigla+" — "+pd.unidade.nome):(pd.macrozona||"sem unidade territorial específica identificada");
+    rows.push({id:"urbanistico",titulo:"Enquadramento urbanístico",status:ok?"ok":parcial?"warn":"error",
+      rotulo:ok?"Disponível":parcial?"Parcial":"Falhou",
+      detalhe:ok||parcial?zona:"Não foi possível consultar as camadas agora; tente novamente.",
+      fonte:"Prefeitura de Goiânia · mapa oficial do Plano Diretor · LC 349/2022",data:consulta});
+  }
+  rows.push({id:"registral",titulo:"Matrícula, titularidade e ônus",status:"off",rotulo:"Não verificado",
+    detalhe:"O Radar não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.",
+    fonte:"Exige Cartório de Registro de Imóveis e certidões oficiais",data:"Fora do escopo desta consulta"});
+  return rows;
+}
+function renderEvidence(a){
+  if(!a||DCUR!==a)return;
+  const rows=trilhaEvidencias(a),ok=rows.filter(r=>r.status==="ok").length;
+  const sum=document.getElementById("dEvidenceSummary"),body=document.getElementById("dEvidenceBody");
+  if(sum)sum.textContent=ok+" de "+rows.length+" disponíveis";
+  if(body)body.innerHTML=rows.map(r=>`<div class="evidence-row is-${esc(r.status)}">
+    <span class="evidence-dot" aria-hidden="true"></span>
+    <div class="evidence-main"><div class="evidence-title">${esc(r.titulo)}</div><div class="evidence-detail">${esc(r.detalhe)}</div><div class="evidence-source">${esc(r.fonte)} · ${esc(r.data)}</div></div>
+    <span class="evidence-status">${esc(r.rotulo)}</span></div>`).join("");
+}
+function evidenciasDocumentoHTML(a){
+  return `<div class="lcard"><h3>Rastreabilidade das evidências</h3>${trilhaEvidencias(a).map(r=>
+    `<div class="kv"><span class="k">${esc(r.titulo)} · ${esc(r.rotulo)}</span><span class="v">${esc(r.fonte)} · ${esc(r.data)}<br><small>${esc(r.detalhe)}</small></span></div>`).join("")}</div>`;
 }
 
 /* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()
@@ -5851,6 +6084,9 @@ function atualizarScores(a, statsR){
   const conf=scoreConfianca({areaOk,nComps:statsR?statsR.n:0,atipico,venalOk,amp});
   const op=scoreOportunidade(myPm2,stats,{radius:statsR?statsR.radius:400});
   a.__scores={op,conf}; /* Fase 10 SALV-01: cache leve p/ toggleOportunidade/histPush lerem sem recalcular */
+  a.__evidenceSample=statsR
+    ?{estado:statsR.n>=3?"disponivel":"limitada",n:statsR.n||0,radius:statsR.radius||800}
+    :{estado:"indisponivel",n:0,radius:0};
   histAtualizarUltimo(a); /* F5 FICHA-05: rótulo do histórico independente de timing — re-grava o item desta visita com o score real */
   recolorPinoCi(clean(a.ci)); /* CR-01 parte (a): pino do lote no mapa ganha a cor do score real (compare() concluído) */
   renderScoresInto(op,conf); /* reusa a MESMA função de render de showDetail() (09-02) — sem duplicar template */
@@ -5866,17 +6102,20 @@ function atualizarScores(a, statsR){
     oportunidade: op,
     confianca: conf
   }))}</p>`;
+  renderEvidence(a);
 }
 function showDetail(a,ll){
   fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes do #detail abrir (mesmo z-index/DOM depois dele; sem isto ficava visualmente escondido atrás) */
   const d=document.getElementById("detail");
   const addr=addrDe(a);
   const ci=clean(a.ci), insc=clean(a.nrinscr), ul=unitLabel(a), ed=clean(a.nmedificio);
+  a.__consultadoEm=a.__consultadoEm||new Date().toISOString();
   const tag=`Q ${clean(a.nrquadra)||"—"} · L ${clean(a.nrlote)||"—"} · ${clean(a.nmbairro)}`+(ul?" · "+ul:"");
   document.getElementById("dTag").textContent=tag;
   document.getElementById("dAddr").textContent=(ed?ed+" — ":"")+(addr||"Endereço não cadastrado");
   // p/ apartamento, a inscrição que serve na consulta do IPTU é a de 14 dígitos (unidade)
   document.getElementById("dInsc").textContent="Inscrição "+(insc||ci||"—")+(ul&&ci?"  ·  lote "+ci:"");
+  document.getElementById("dIdentity").innerHTML=`<div class="didentity-copy"><span class="didentity-ok">✓ Imóvel confirmado para esta análise</span><small>Seleção visual desta sessão; não equivale à conferência da matrícula ou titularidade.</small></div><button type="button" onclick="reverIdentidade()">Rever</button>`;
   const pm2=m2Edif(a),pm2t=m2Terr(a),isU=!!ul;
 
   /* 2. #dValor — faixa de valor em destaque, NUNCA número inventado (FICHA-01) */
@@ -5925,6 +6164,7 @@ function showDetail(a,ll){
   const mesmaAnalise=DCUR===a&&compsBox.querySelector(".cmp");
   if(DCUR!==a)d.scrollTop=0; /* imóvel novo: sheet abre no topo (senão o × fica fora da tela) */
   DCUR=a;
+  renderEvidence(a);
   histPush(a); /* Fase 10 SALV-01: auto-add ao radar_historico a cada abertura de ficha (dedupe+FIFO 30) */
   if(mesmaAnalise){compare();} /* re-render do cache (sem rede) — atualiza a conversão pelo coeficiente novo */
   else compsBox.innerHTML=""; /* F5 B-12: o único "Ver comparáveis" vive em #dActsPrim (carrega E rola);
@@ -5941,7 +6181,7 @@ function showDetail(a,ll){
      ⭐ Salvar oportunidade). O botão de copiar a inscrição foi movido para o bloco de Mais opções
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
-    <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Gerar documento</button>
+    <button type="button" class="primary" onclick="abrirSeletorFinalidade()">📄 Exportar ficha ou relatório</button>
     ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">📊 Analisar vizinhança</button>`:""}
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">⭐ Salvar imóvel</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
@@ -6192,12 +6432,12 @@ function renderUrbanisticoUI(a,isRetry){
   /* IN-01 18-REVIEW.md: sem coordenada, esconde o accordion INTEIRO (details+summary), não só o
      corpo — senão o usuário toca em "Urbanístico" e vê um corpo vazio sem explicação (beco sem
      saída de UX). Ausência de coordenada já é tratada em outros pontos do app (compare()/#dActsPrim). */
-  if(!a||!a.x_coord||!a.y_coord){acc.hidden=true;body.hidden=true;return;}
+  if(!a||!a.x_coord||!a.y_coord){acc.hidden=true;body.hidden=true;if(a)renderEvidence(a);return;}
   acc.hidden=false; /* restaura visibilidade caso o lote anterior tivesse escondido o accordion inteiro */
   body.hidden=false;
   body.innerHTML='<div class="skel-card"><div class="skel-line w60"></div><div class="skel-line w80"></div><div class="skel-line w40"></div></div>';
   const ci=clean(a.ci||a.nrinscr);
-  if(isRetry)delete PDCACHE[ci];
+  if(isRetry){delete PDCACHE[ci];delete a.__pdEstado;renderEvidence(a);}
   pdConsultarLote(a.x_coord,a.y_coord,ci).then(estado=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
     body.innerHTML=montarUrbBodyHTML(estado);
@@ -6206,12 +6446,14 @@ function renderUrbanisticoUI(a,isRetry){
     /* handler do retry via listener (nunca onclick interpolando dado de servidor — CR-01, Fase 16); id estático, sem dado do endpoint envolvido */
     if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     a.__pdEstado=estado; /* cache p/ atualizarScores() reaplicar a linha do porquê independente da ordem das 2 consultas assíncronas (compare() × pdConsultarLote) */
+    renderEvidence(a); /* a mesma resposta atualiza fonte/data/status no dossiê */
     atualizarScorePorquePD(a,estado); /* PD-04: acrescenta "Em {zona}..." ao porquê do score JÁ renderizado, quando conferido */
   }).catch(()=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
     /* B-01: mesmo HTML de erro do estado "erro" (com botão de retry) e binding — antes era um
        .dnote sem botão dizendo "Toque para tentar de novo", que não fazia nada. */
     body.innerHTML=montarUrbBodyHTML({estado:"erro"});
+    a.__pdEstado={estado:"erro"};renderEvidence(a);
     const retryBtn=document.getElementById("urbRetry");
     if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
@@ -6731,9 +6973,10 @@ async function compare(){
     /* F5 FICHA-04: mesmo nos desfechos curtos (sem base / poucos comparáveis) a consulta FOI
        feita — resolve a confiança real (nComps verdadeiro) em vez de deixar "a calcular" preso. */
     if(!g){atualizarScores(a,null);box.innerHTML='<div class="cmp-load">Sem área/venal cadastrados — comparação indisponível.</div>';return;}
+    if(g.res)g.res.radius=g.radius; /* a trilha registra o raio real também quando a amostra é pequena */
     if(!g.res||g.res.n<3){atualizarScores(a,g.res||null);box.innerHTML='<div class="cmp-load">Poucos registros fiscais de uso e porte semelhantes ('+(g.res?g.res.n:0)+' em '+g.radius+' m). Não há amostra cadastral suficiente.</div>';return;}
     await renderComps(box,g.res,g.myPm2,g.radius,g.isU,a);
-  }catch(e){if(DCUR===a)box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}
+  }catch(e){if(DCUR===a){a.__evidenceSample={estado:"erro",n:0,radius:0};renderEvidence(a);box.innerHTML='<div class="cmp-load">Falha ao consultar a vizinhança — tente de novo.</div>';}}
 }
 function compsBase(a,areaField,myArea,radius,isU){
   /* NBR 14653-2: área entre 0,5x e 2x a do alvo, mesmo uso; exclui o PRÓPRIO imóvel;
@@ -6848,7 +7091,12 @@ function finEscolherDoc(tipoDoc){
     vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",privativa:null,docOk:undefined});
   const wf=document.querySelector("#wiz .wfoot");if(wf)wf.style.display="";
   const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
-  getComps(LZ.a).then(g=>{if(LZ===lz0){LZ.comps=g;if(LZ.step===1)wizRender();}}).catch(()=>{if(LZ===lz0)LZ.comps=null;});
+  getComps(LZ.a).then(g=>{if(LZ===lz0){
+    LZ.comps=g;
+    LZ.a.__evidenceSample=g&&g.res?{estado:g.res.n>=3?"disponivel":"limitada",n:g.res.n||0,radius:g.radius||800}:{estado:"indisponivel",n:0,radius:0};
+    renderEvidence(LZ.a);
+    if(LZ.step===1)wizRender();
+  }}).catch(()=>{if(LZ===lz0){LZ.comps=null;LZ.a.__evidenceSample={estado:"erro",n:0,radius:0};renderEvidence(LZ.a);}});
   wizRender();
 }
 /* laudoTemDados(): espelho de negTemDados (F5 B-13) — há conteúdo PRODUZIDO pelo usuário em risco
@@ -7462,6 +7710,8 @@ function montarLaudo(){
       ${fxCx?`<p>Referência complementar: ${fxCx.n} laudos de avaliação da CAIXA no setor.</p>`:""}
       ${(LZ.obs||"").trim()?`<p><b>Observações:</b> ${esc(LZ.obs)}</p>`:""}</div>
 
+    ${evidenciasDocumentoHTML(a)}
+
     ${LZ.fotos.length>1?`<div class="lcard"><h3>Registro fotográfico</h3><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></div>`:""}
 
     <div class="lcard"><h3>Metodologia, fontes e ressalvas</h3>
@@ -7529,6 +7779,7 @@ function renderFichaRapida(a,data,fr){
       <p>${esc(data.endereco)||"Endereço não cadastrado"} — ${esc(data.bairro)}. Q ${esc(data.quadra)||"—"} · L ${esc(data.lote)||"—"}${a.areaedif?" · "+Math.round(a.areaedif)+" m²":a.areaterr?" · "+Math.round(a.areaterr)+" m²":""}.</p></div>
     <div class="lcard"><h3>Leitura prática</h3><p>${esc(fr.leitura)}</p></div>
     ${fr.comparaveis.length?`<div class="lcard"><h3>Referências cadastrais</h3><ul class="fr-comps">${fr.comparaveis.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
+    ${evidenciasDocumentoHTML(a)}
     <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">${esc(fr.ressalva)}</p></div>
     ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
@@ -8008,6 +8259,7 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
   if(!document.getElementById("calc").hidden)fecharCustos();
   else if(!document.getElementById("wiz").hidden)fecharLaudo();
   else if(!document.getElementById("laudoView").hidden)fecharLaudoView();
+  else if(document.getElementById("identityCheck").classList.contains("show"))fecharConfirmacaoIdentidade(true);
   else if(document.getElementById("chooser").classList.contains("show"))closeChooser();
   else if(document.body.dataset.view==="busca"&&!isMobile()){ /* overlay de busca do desktop (Plan 02-02) */
     setView("mapa");const p=document.getElementById("searchPill");if(p)p.focus();}
