@@ -1227,6 +1227,14 @@
   .detail .insc{color:var(--muted);font-size:11px}
   .didentity{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:var(--radius-sm);background:var(--brand-soft)}
   .didentity button{min-height:40px;border-radius:9px;background:rgba(255,255,255,.78)}
+  .dossier-tabs{position:sticky;top:20px;z-index:7;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin:14px 0 16px;padding:3px;
+    border:1px solid var(--line);border-radius:var(--radius-sm);background:rgba(244,246,243,.94);box-shadow:var(--elev-1);backdrop-filter:blur(14px)}
+  .dossier-tabs button{min-width:0;min-height:42px;padding:0 8px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:12px;font-weight:700;box-shadow:none}
+  .dossier-tabs button:hover{background:rgba(255,255,255,.72);color:var(--ink)}
+  .dossier-tabs button[aria-selected="true"]{background:var(--surface);color:var(--brand);box-shadow:0 1px 3px rgba(20,35,29,.09)}
+  .dossier-view[hidden]{display:none!important}
+  .dossier-view{animation:atlas-view-in var(--motion-fast) ease-out}
+  @keyframes atlas-view-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
   .idcheck-warning-mark{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:var(--brass);color:#fff;font-weight:800}
   .dvalor{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-soft);padding:18px 20px}
   .dvalor-v{color:var(--brand-strong);font-size:24px;letter-spacing:-.02em}
@@ -1307,6 +1315,7 @@
     .detail .grab::before{display:none}
     .detail .x{top:4px;right:6px}
     .detail .backlist{top:6px;left:8px;min-height:40px;border-radius:10px}
+    .dossier-tabs{top:52px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
     .mapwrap:has(.detail.show) .leaflet-bottom{z-index:490}
   }
@@ -1543,66 +1552,75 @@
       <div class="insc" id="dInsc"></div>
       <div class="didentity" id="dIdentity" role="status"></div>
 
-      <div class="dvalor" id="dValor"></div>
+      <nav class="dossier-tabs" role="tablist" aria-label="Níveis do dossiê">
+        <button type="button" id="dTabResumo" role="tab" aria-selected="true" aria-controls="dViewResumo" tabindex="0" onclick="setDossierView('resumo')" onkeydown="dossierTabKey(event)">Resumo</button>
+        <button type="button" id="dTabTerritorio" role="tab" aria-selected="false" aria-controls="dViewTerritorio" tabindex="-1" onclick="setDossierView('territorio')" onkeydown="dossierTabKey(event)">Território</button>
+        <button type="button" id="dTabDiligencia" role="tab" aria-selected="false" aria-controls="dViewDiligencia" tabindex="-1" onclick="setDossierView('diligencia')" onkeydown="dossierTabKey(event)">Diligência</button>
+      </nav>
 
-      <div class="dscores" id="dScores"></div>
+      <section class="dossier-view" id="dViewResumo" role="tabpanel" aria-labelledby="dTabResumo">
+        <div class="dvalor" id="dValor"></div>
+        <div class="dscores" id="dScores"></div>
+        <div class="dleitura" id="dLeitura"></div>
+        <div class="acts" id="dActsPrim"></div>
+      </section>
 
-      <div class="dleitura" id="dLeitura"></div>
+      <section class="dossier-view" id="dViewTerritorio" role="tabpanel" aria-labelledby="dTabTerritorio" hidden>
+        <div class="dcomps" id="dComps"></div>
+        <details class="foot dtecnico">
+          <summary>Dados técnicos</summary>
+          <div class="footbody">
+            <div class="dgrid" id="dGrid"></div>
+            <div class="dnote" id="dNote"></div>
+          </div>
+        </details>
 
-      <details class="devidence" id="dEvidence">
-        <summary><span>Trilha de evidências</span><span class="devidence-summary" id="dEvidenceSummary"></span></summary>
-        <div class="evidence-list" id="dEvidenceBody"></div>
-      </details>
+        <!-- Fase 18 (18-02, PD-03): accordion "Urbanístico" — irmã dos outros 2 accordions técnicos
+             vizinhos (dados técnicos/metodologia); populado por renderUrbanisticoUI(a), IRMÃ
+             ASSÍNCRONA de renderDiffUI (nunca trava o render síncrono da ficha). Disclaimer fixo do
+             SEPLANH SEMPRE presente no corpo resolvido/parcial/rural/resolvido_sem_unidade (REGRA
+             DE OURO: número de CA nunca aparece quando conferido:false). -->
+        <details class="foot durbanistico" id="dUrbanistico">
+          <summary>Urbanístico</summary>
+          <div class="footbody" id="dUrbBody"></div>
+        </details>
+      </section>
 
-      <details class="devidence dhistory" id="dHistory">
-        <summary><span>Histórico entre consultas</span><span class="devidence-summary" id="dHistorySummary"></span></summary>
-        <div class="dilig-body" id="dHistoryBody"></div>
-      </details>
+      <section class="dossier-view" id="dViewDiligencia" role="tabpanel" aria-labelledby="dTabDiligencia" hidden>
+        <details class="devidence" id="dEvidence">
+          <summary><span>Trilha de evidências</span><span class="devidence-summary" id="dEvidenceSummary"></span></summary>
+          <div class="evidence-list" id="dEvidenceBody"></div>
+        </details>
 
-      <details class="devidence dchecklist" id="dDocChecklist">
-        <summary><span>Checklist documental</span><span class="devidence-summary" id="dDocChecklistSummary"></span></summary>
-        <div class="dilig-body" id="dDocChecklistBody"></div>
-      </details>
+        <details class="devidence dhistory" id="dHistory">
+          <summary><span>Histórico entre consultas</span><span class="devidence-summary" id="dHistorySummary"></span></summary>
+          <div class="dilig-body" id="dHistoryBody"></div>
+        </details>
 
-      <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
-           padrão; renderDiffUI(a) preenche e revela SÓ quando o lote já está no Caderno com
-           snapshot gravado (nunca para lote nunca salvo). Diff é NEUTRO (nunca cor de status,
-           17-UI-SPEC.md §Color) — o sinal ▲/▼/● é tipográfico, mesma cor do texto ao lado. -->
-      <div class="ddiff" id="dDiff" hidden>
-        <div class="ddiff-head"><span class="ddiff-tt">Desde sua última visita</span><span class="ddiff-data" id="dDiffData"></span></div>
-        <ul class="ddiff-list" id="dDiffList"></ul>
-      </div>
+        <details class="devidence dchecklist" id="dDocChecklist">
+          <summary><span>Checklist documental</span><span class="devidence-summary" id="dDocChecklistSummary"></span></summary>
+          <div class="dilig-body" id="dDocChecklistBody"></div>
+        </details>
 
-      <div class="acts" id="dActsPrim"></div>
-      <details class="maisopcoes">
-        <summary>Mais opções</summary>
-        <div class="footbody acts" id="dActsMore"></div>
-      </details>
-
-      <div class="dcomps" id="dComps"></div>
-
-      <details class="foot dtecnico">
-        <summary>Dados técnicos</summary>
-        <div class="footbody">
-          <div class="dgrid" id="dGrid"></div>
-          <div class="dnote" id="dNote"></div>
+        <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
+             padrão; renderDiffUI(a) preenche e revela SÓ quando o lote já está no Caderno com
+             snapshot gravado (nunca para lote nunca salvo). Diff é NEUTRO (nunca cor de status,
+             17-UI-SPEC.md §Color) — o sinal ▲/▼/● é tipográfico, mesma cor do texto ao lado. -->
+        <div class="ddiff" id="dDiff" hidden>
+          <div class="ddiff-head"><span class="ddiff-tt">Desde sua última visita</span><span class="ddiff-data" id="dDiffData"></span></div>
+          <ul class="ddiff-list" id="dDiffList"></ul>
         </div>
-      </details>
 
-      <!-- Fase 18 (18-02, PD-03): accordion "Urbanístico" — irmã dos outros 2 accordions técnicos
-           vizinhos (dados técnicos/metodologia); populado por renderUrbanisticoUI(a), IRMÃ
-           ASSÍNCRONA de renderDiffUI (nunca trava o render síncrono da ficha). Disclaimer fixo do
-           SEPLANH SEMPRE presente no corpo resolvido/parcial/rural/resolvido_sem_unidade (REGRA
-           DE OURO: número de CA nunca aparece quando conferido:false). -->
-      <details class="foot durbanistico" id="dUrbanistico">
-        <summary>Urbanístico</summary>
-        <div class="footbody" id="dUrbBody"></div>
-      </details>
+        <details class="maisopcoes">
+          <summary>Mais opções</summary>
+          <div class="footbody acts" id="dActsMore"></div>
+        </details>
 
-      <details class="foot dmetodologia">
-        <summary>Metodologia e fontes</summary>
-        <div class="footbody" id="dMetodologia"></div>
-      </details>
+        <details class="foot dmetodologia">
+          <summary>Metodologia e fontes</summary>
+          <div class="footbody" id="dMetodologia"></div>
+        </details>
+      </section>
     </div>
 
     <!-- Fase 15 TERR-03: Painel do Meu Território — reusa .detail (bottom-sheet mobile / painel
@@ -4788,6 +4806,33 @@ function lowerDetailSheet(){
   const i=DETAIL_SHEET_ORDER.indexOf(d.dataset.sheet);
   if(i<=0)closeDetail();else setDetailSheet(DETAIL_SHEET_ORDER[i-1],true);
 }
+const DOSSIER_VIEWS={
+  resumo:{tab:"dTabResumo",panel:"dViewResumo"},
+  territorio:{tab:"dTabTerritorio",panel:"dViewTerritorio"},
+  diligencia:{tab:"dTabDiligencia",panel:"dViewDiligencia"}
+};
+function setDossierView(view,focusTab){
+  if(!DOSSIER_VIEWS[view])view="resumo";
+  Object.entries(DOSSIER_VIEWS).forEach(([key,ids])=>{
+    const tab=document.getElementById(ids.tab),panel=document.getElementById(ids.panel),active=key===view;
+    if(tab){tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;}
+    if(panel)panel.hidden=!active;
+  });
+  const detail=document.getElementById("detail"),activeTab=document.getElementById(DOSSIER_VIEWS[view].tab);
+  if(detail){detail.dataset.dossierView=view;if(detail.classList.contains("show"))detail.scrollTop=0;}
+  if(focusTab&&activeTab)activeTab.focus();
+}
+function dossierTabKey(event){
+  const order=["resumo","territorio","diligencia"];
+  const current=document.getElementById("detail")?.dataset.dossierView||"resumo";
+  let i=order.indexOf(current);
+  if(event.key==="ArrowRight")i=(i+1)%order.length;
+  else if(event.key==="ArrowLeft")i=(i-1+order.length)%order.length;
+  else if(event.key==="Home")i=0;
+  else if(event.key==="End")i=order.length-1;
+  else return;
+  event.preventDefault();setDossierView(order[i],true);
+}
 function setView(v){
   const prev=document.body.dataset.view;
   document.body.dataset.view=v;
@@ -6682,6 +6727,7 @@ function atualizarScores(a, statsR){
 function showDetail(a,ll){
   fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes do #detail abrir (mesmo z-index/DOM depois dele; sem isto ficava visualmente escondido atrás) */
   const d=document.getElementById("detail");
+  setDossierView("resumo");
   const addr=addrDe(a);
   const ci=clean(a.ci), insc=clean(a.nrinscr), ul=unitLabel(a), ed=clean(a.nmedificio);
   a.__consultadoEm=a.__consultadoEm||new Date().toISOString();
@@ -6758,7 +6804,7 @@ function showDetail(a,ll){
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirSeletorFinalidade()">Exportar ficha ou relatório</button>
-    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="compare()">Analisar vizinhança</button>`:""}
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="setDossierView('territorio');compare()">Analisar vizinhança</button>`:""}
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">Salvar imóvel</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
