@@ -523,12 +523,25 @@
   .doc-next{font:600 10px/1.4 "JetBrains Mono",monospace;color:var(--muted);margin-top:5px}
   .doc-status{min-height:44px;width:100%;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink);font:600 12px/1.2 "Archivo";padding:0 32px 0 10px;border-radius:2px}
   .doc-status:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .doc-controls{display:flex;flex-direction:column;gap:8px;min-width:0}
+  .doc-dates{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .doc-date-label{display:flex;flex-direction:column;gap:4px;font:600 9px/1.2 "JetBrains Mono",monospace;letter-spacing:.025em;text-transform:uppercase;color:var(--muted)}
+  .doc-date-input{min-height:40px;width:100%;min-width:0;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:600 11px/1.2 "Archivo";padding:0 7px;border-radius:2px;color-scheme:light}
+  .doc-date-input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .doc-date-input:disabled{opacity:.55;cursor:not-allowed}
+  .doc-review{font:700 10px/1.35 "Archivo";padding:6px 8px;border-left:3px solid var(--line);background:var(--paper-2);color:var(--muted)}
+  .doc-review.is-atrasada,.doc-review.is-hoje{border-color:var(--status-risco);color:var(--status-risco-ink)}
+  .doc-review.is-proxima{border-color:var(--gold);color:#7d621f}
+  .doc-alert{font:600 11.5px/1.45 "Archivo";padding:9px 10px;margin:0 0 10px;background:var(--paper-2);border-left:4px solid var(--gold);color:var(--ink)}
+  .doc-alert.has-late{border-left-color:var(--status-risco)}
   .doc-row.is-conferido .doc-title{color:var(--lot)}
   .doc-row.is-nao_aplica{opacity:.68}
   .doc-progress{font:600 10.5px/1.35 "JetBrains Mono",monospace;color:var(--muted);margin:0 0 10px}
   @media(max-width:640px){
     .hist-snap,.doc-row{grid-template-columns:1fr}
     .doc-status{max-width:none}
+    .doc-dates{grid-template-columns:1fr}
+    .doc-date-input{min-height:44px;font-size:16px}
     .dilig-mini-actions>*{flex:1 1 145px}
   }
 
@@ -2196,22 +2209,50 @@ const DOC_ITENS=[
     detalhe:"Apoia a conferência das partes e de eventual necessidade de anuência.",
     acao:"Confrontar os documentos oficiais com a matrícula atualizada."}
 ];
-function checklistDocumentalItens(estados){
-  const src=estados&&typeof estados==="object"?estados:{};
+function normalizarDataISO(valor){
+  const s=String(valor==null?"":valor).trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return "";
+  const [ano,mes,dia]=s.split("-").map(Number),dt=new Date(Date.UTC(ano,mes-1,dia));
+  return dt.getUTCFullYear()===ano&&dt.getUTCMonth()===mes-1&&dt.getUTCDate()===dia?s:"";
+}
+function dataISOTxt(valor){
+  const s=normalizarDataISO(valor);if(!s)return "";
+  const [ano,mes,dia]=s.split("-");return dia+"/"+mes+"/"+ano;
+}
+function estadoRevisaoDocumental(revisarEm,hojeISO){
+  const agora=new Date(),pad=n=>String(n).padStart(2,"0");
+  const hojeLocal=agora.getFullYear()+"-"+pad(agora.getMonth()+1)+"-"+pad(agora.getDate());
+  const alvo=normalizarDataISO(revisarEm),hoje=normalizarDataISO(hojeISO)||hojeLocal;
+  if(!alvo)return {tipo:"sem_data",dias:null,rotulo:""};
+  const diaUtc=s=>{const [a,m,d]=s.split("-").map(Number);return Date.UTC(a,m-1,d);};
+  const delta=Math.round((diaUtc(alvo)-diaUtc(hoje))/86400000),plural=n=>Math.abs(n)===1?"dia":"dias";
+  if(delta<0)return {tipo:"atrasada",dias:Math.abs(delta),rotulo:"Revisão atrasada há "+Math.abs(delta)+" "+plural(delta)};
+  if(delta===0)return {tipo:"hoje",dias:0,rotulo:"Revisar hoje"};
+  if(delta<=7)return {tipo:"proxima",dias:delta,rotulo:"Revisar em "+delta+" "+plural(delta)};
+  return {tipo:"agendada",dias:delta,rotulo:"Revisão agendada para "+dataISOTxt(alvo)};
+}
+function checklistDocumentalItens(estados,datas,hojeISO){
+  const src=estados&&typeof estados==="object"?estados:{},srcDatas=datas&&typeof datas==="object"?datas:{};
   return DOC_ITENS.map(base=>{
     const status=DOC_STATUS_ORDEM.includes(src[base.id])?src[base.id]:"pendente";
-    return Object.assign({},base,{status,rotulo:DOC_STATUS_LBL[status]});
+    const raw=srcDatas[base.id]&&typeof srcDatas[base.id]==="object"?srcDatas[base.id]:{};
+    const emissao=normalizarDataISO(raw.emissao),revisarEm=normalizarDataISO(raw.revisarEm);
+    const revisao=status==="nao_aplica"?{tipo:"sem_data",dias:null,rotulo:""}:estadoRevisaoDocumental(revisarEm,hojeISO);
+    return Object.assign({},base,{status,rotulo:DOC_STATUS_LBL[status],emissao,revisarEm,revisao});
   });
 }
-function resumoChecklistDocumental(estados){
-  const itens=checklistDocumentalItens(estados);
+function resumoChecklistDocumental(estados,datas,hojeISO){
+  const itens=checklistDocumentalItens(estados,datas,hojeISO);
   const aplicaveis=itens.filter(it=>it.status!=="nao_aplica");
   const conferidos=aplicaveis.filter(it=>it.status==="conferido").length;
   const recebidos=aplicaveis.filter(it=>it.status==="recebido").length;
   const solicitados=aplicaveis.filter(it=>it.status==="solicitado").length;
   return {itens,total:aplicaveis.length,conferidos,recebidos,solicitados,
     emCurso:recebidos+solicitados,pendentes:aplicaveis.filter(it=>it.status==="pendente").length,
-    naoAplica:itens.length-aplicaveis.length};
+    naoAplica:itens.length-aplicaveis.length,
+    comDatas:aplicaveis.filter(it=>it.emissao||it.revisarEm).length,
+    revisoesAtrasadas:aplicaveis.filter(it=>it.revisao.tipo==="atrasada").length,
+    revisoesProximas:aplicaveis.filter(it=>it.revisao.tipo==="hoje"||it.revisao.tipo==="proxima").length};
 }
 function proximaAcaoDocumental(item){
   if(!item||item.status==="conferido"||item.status==="nao_aplica")return "";
@@ -2219,10 +2260,15 @@ function proximaAcaoDocumental(item){
   if(item.status==="recebido")return "Conferir com a fonte oficial e a orientação profissional adequada.";
   return item.acao||"";
 }
-function pendenciasDocumentaisTexto(estados){
-  return checklistDocumentalItens(estados)
+function pendenciasDocumentaisTexto(estados,datas,hojeISO){
+  return checklistDocumentalItens(estados,datas,hojeISO)
     .filter(it=>it.status!=="conferido"&&it.status!=="nao_aplica")
-    .map(it=>"• "+it.titulo+": "+proximaAcaoDocumental(it));
+    .map(it=>{
+      const alerta=["atrasada","hoje","proxima"].includes(it.revisao.tipo)
+        ?it.revisao.rotulo+" (data escolhida pelo usuário). Confirmar vigência e conteúdo na fonte oficial."
+        :proximaAcaoDocumental(it);
+      return "• "+it.titulo+": "+alerta;
+    });
 }
 
 /* DILIG-02: histórico comparável = snapshots de consultas deste navegador. A chave nova preserva
@@ -6124,8 +6170,11 @@ function trilhaEvidencias(a){
       fonte:"Prefeitura de Goiânia · mapa oficial do Plano Diretor · LC 349/2022",data:consulta});
   }
   const doc=a.__docChecklistSummary;
-  const docDetalhe=doc&&doc.conferidos
-    ?doc.conferidos+"/"+doc.total+" itens marcados como conferidos pelo usuário. O Radar não validou os documentos."
+  const docRevisao=doc&&doc.revisoesAtrasadas
+    ?" "+doc.revisoesAtrasadas+" "+(doc.revisoesAtrasadas===1?"revisão local está atrasada.":"revisões locais estão atrasadas.")
+    :doc&&doc.revisoesProximas?" "+doc.revisoesProximas+" "+(doc.revisoesProximas===1?"revisão local está próxima.":"revisões locais estão próximas."):"";
+  const docDetalhe=doc&&(doc.conferidos||doc.revisoesAtrasadas||doc.revisoesProximas)
+    ?doc.conferidos+"/"+doc.total+" itens marcados como conferidos pelo usuário."+docRevisao+" O Radar não validou os documentos nem calculou prazos legais."
     :"O Radar não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.";
   const docData=doc&&doc.updatedAt
     ?fmtVisita(doc.updatedAt).replace("consultado","marcações atualizadas")+" · validação fora do Radar"
@@ -6161,14 +6210,52 @@ function historicoDocumentoHTML(a){
     ${comparacao}</div>`;
 }
 function checklistDocumentoHTML(a){
-  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados);
+  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
+  const revisoes=[];
+  if(res.revisoesAtrasadas)revisoes.push(res.revisoesAtrasadas+" "+(res.revisoesAtrasadas===1?"revisão atrasada":"revisões atrasadas"));
+  if(res.revisoesProximas)revisoes.push(res.revisoesProximas+" "+(res.revisoesProximas===1?"revisão próxima":"revisões próximas"));
   return `<div class="lcard"><h3>Checklist documental</h3>
-    <p>${res.conferidos} de ${res.total} itens marcados como conferidos pelo usuário${res.emCurso?" · "+res.emCurso+" em andamento":""}.</p>
-    ${res.itens.map(it=>`<div class="kv"><span class="k">${esc(it.titulo)}</span><span class="v">${esc(it.rotulo)}${proximaAcaoDocumental(it)?"<br><small>Próxima ação: "+esc(proximaAcaoDocumental(it))+"</small>":""}</span></div>`).join("")}
-    <p class="lmiudo">Estas são marcações locais de preparação. O Radar não examinou autenticidade, vigência, conteúdo, titularidade ou ônus.</p></div>`;
+    <p>${res.conferidos} de ${res.total} itens marcados como conferidos pelo usuário${res.emCurso?" · "+res.emCurso+" em andamento":""}${revisoes.length?" · "+revisoes.join(" · "):""}.</p>
+    ${res.itens.map(it=>{
+      const datas=[];
+      if(it.emissao)datas.push("Data do documento: "+dataISOTxt(it.emissao));
+      if(it.revisarEm)datas.push("Revisar em: "+dataISOTxt(it.revisarEm));
+      return `<div class="kv"><span class="k">${esc(it.titulo)}</span><span class="v">${esc(it.rotulo)}${datas.length?"<br><small>"+esc(datas.join(" · "))+"</small>":""}${it.revisao.rotulo?"<br><small>"+esc(it.revisao.rotulo)+" — data escolhida pelo usuário</small>":""}${proximaAcaoDocumental(it)?"<br><small>Próxima ação: "+esc(proximaAcaoDocumental(it))+"</small>":""}</span></div>`;
+    }).join("")}
+    <p class="lmiudo">Estas são marcações e datas locais de preparação. O Radar não examinou autenticidade, vigência, conteúdo, titularidade ou ônus e não calcula prazos legais.</p></div>`;
 }
 function diligenciaDocumentoHTML(a){
   return historicoDocumentoHTML(a)+checklistDocumentoHTML(a);
+}
+function montarPacoteDiligencia(){
+  const a=DCUR;if(!a)return;
+  const hoje=new Date().toLocaleDateString("pt-BR"),reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
+  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci),cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(insc.replace(/\D/g,""));
+  const situacao=[res.conferidos+" de "+res.total+" itens marcados como conferidos pelo usuário"];
+  if(res.emCurso)situacao.push(res.emCurso+" em andamento");
+  if(res.revisoesAtrasadas)situacao.push(res.revisoesAtrasadas+" "+(res.revisoesAtrasadas===1?"revisão atrasada":"revisões atrasadas"));
+  if(res.revisoesProximas)situacao.push(res.revisoesProximas+" "+(res.revisoesProximas===1?"revisão próxima":"revisões próximas"));
+  document.getElementById("laudo").innerHTML=`
+    <div class="lrun"><span>RADAR FUNDIÁRIO · PACOTE DE DILIGÊNCIA</span><span>EMITIDO EM ${hoje}</span></div>
+    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>Pacote de diligência do imóvel</div>
+      <div class="m">Marcações locais do usuário<br>Goiânia/GO · ${hoje}</div></div>
+    <div class="lcard"><h3>Imóvel de referência</h3>
+      <div class="kv"><span class="k">Endereço</span><span class="v">${esc(addrDe(a))||"—"}</span></div>
+      <div class="kv"><span class="k">Inscrição cadastral</span><span class="v">${esc(insc)||"—"}${ident.ci&&ident.ci!==insc?" · lote "+esc(ident.ci):""}</span></div>
+      <div class="kv"><span class="k">Localizador</span><span class="v">${ident.quadra?"Q "+esc(ident.quadra):"Q —"} · ${ident.lote?"L "+esc(ident.lote):"L —"}${ident.bairro?" · "+esc(ident.bairro):""}</span></div>
+      ${ident.unidade?`<div class="kv"><span class="k">Unidade</span><span class="v">${esc(ident.unidade)}</span></div>`:""}</div>
+    <div class="lcard"><h3>Situação local da diligência</h3><p>${esc(situacao.join(" · "))}.</p>
+      <p class="lmiudo">Este resumo reproduz marcações e datas escolhidas pelo usuário neste navegador. Não constitui verificação documental, parecer jurídico, certidão ou cálculo automático de prazo legal.</p></div>
+    ${evidenciasDocumentoHTML(a)}
+    ${historicoDocumentoHTML(a)}
+    ${checklistDocumentoHTML(a)}
+    <div class="lcard"><h3>Canais oficiais para continuidade</h3>
+      <p><a href="${esc(cnd)}">Prefeitura de Goiânia · emissão de CND municipal</a></p>
+      <p><a href="https://www.registrodeimoveis.org.br/servicos-interno/certidao-de-matricula">Registro de Imóveis do Brasil · certidão de matrícula</a></p>
+      <p class="lmiudo">Confirme o cartório competente, a vigência, a autenticidade e o conteúdo de cada documento diretamente nas fontes oficiais e com a orientação profissional aplicável.</p></div>
+    <div class="foot">RADAR FUNDIÁRIO · PACOTE DE DILIGÊNCIA · EMITIDO EM ${hoje}</div>`;
+  document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+  const lv=document.getElementById("laudoView");if(lv.hidden){lv.hidden=false;trapFocus(lv);}lv.scrollTop=0;
 }
 
 /* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()
@@ -6475,19 +6562,40 @@ function checklistSaveAll(registros){
 function checklistRegistro(a){
   const all=checklistLoadAll(),key=identidadeChave(a),raw=all[key];
   const estados=raw&&raw.estados&&typeof raw.estados==="object"?raw.estados:{};
-  const limpos={};
+  const datasRaw=raw&&raw.datas&&typeof raw.datas==="object"?raw.datas:{};
+  const limpos={},datas={};
   checklistDocumentalItens(estados).forEach(it=>{if(it.status!=="pendente")limpos[it.id]=it.status;});
-  return {key,estados:limpos,updatedAt:raw&&raw.updatedAt?raw.updatedAt:null};
+  DOC_ITENS.forEach(it=>{
+    const d=datasRaw[it.id]&&typeof datasRaw[it.id]==="object"?datasRaw[it.id]:{};
+    const emissao=normalizarDataISO(d.emissao),revisarEm=normalizarDataISO(d.revisarEm);
+    if(emissao||revisarEm)datas[it.id]=Object.assign({},emissao?{emissao}:null,revisarEm?{revisarEm}:null);
+  });
+  return {key,estados:limpos,datas,updatedAt:raw&&raw.updatedAt?raw.updatedAt:null};
+}
+function checklistPersistir(all,key,estados,datas){
+  all[key]={estados,datas,updatedAt:new Date().toISOString()};
+  /* teto defensivo: 120 imóveis mais recentes; o checklist não cresce sem limite no aparelho. */
+  const recentes=Object.entries(all).sort((x,y)=>String(x[1]&&x[1].updatedAt||"").localeCompare(String(y[1]&&y[1].updatedAt||""))).slice(-120);
+  const next={};recentes.forEach(([k,v])=>{next[k]=v;});
+  return checklistSaveAll(next);
 }
 function checklistSalvarEstado(a,id,status){
   if(!a||!DOC_ITENS.some(it=>it.id===id)||!DOC_STATUS_ORDEM.includes(status))return false;
   const all=checklistLoadAll(),key=identidadeChave(a),prev=checklistRegistro(a),estados=Object.assign({},prev.estados);
   if(status==="pendente")delete estados[id];else estados[id]=status;
-  all[key]={estados,updatedAt:new Date().toISOString()};
-  /* teto defensivo: 120 imóveis mais recentes; o checklist não cresce sem limite no aparelho. */
-  const recentes=Object.entries(all).sort((x,y)=>String(x[1]&&x[1].updatedAt||"").localeCompare(String(y[1]&&y[1].updatedAt||""))).slice(-120);
-  const next={};recentes.forEach(([k,v])=>{next[k]=v;});
-  if(!checklistSaveAll(next))return false;
+  if(!checklistPersistir(all,key,estados,prev.datas))return false;
+  renderChecklistDocumental(a);
+  renderEvidence(a);
+  return true;
+}
+function checklistSalvarData(a,id,campo,valor){
+  if(!a||!DOC_ITENS.some(it=>it.id===id)||!["emissao","revisarEm"].includes(campo))return false;
+  const data=valor?normalizarDataISO(valor):"";if(valor&&!data)return false;
+  const all=checklistLoadAll(),key=identidadeChave(a),prev=checklistRegistro(a),datas=Object.assign({},prev.datas);
+  const item=Object.assign({},datas[id]||{});
+  if(data)item[campo]=data;else delete item[campo];
+  if(item.emissao||item.revisarEm)datas[id]=item;else delete datas[id];
+  if(!checklistPersistir(all,key,prev.estados,datas))return false;
   renderChecklistDocumental(a);
   renderEvidence(a);
   return true;
@@ -6495,6 +6603,10 @@ function checklistSalvarEstado(a,id,status){
 function alterarChecklistDocumental(sel){
   if(!DCUR||!sel)return;
   checklistSalvarEstado(DCUR,String(sel.dataset.docId||""),String(sel.value||""));
+}
+function alterarDataChecklistDocumental(inp){
+  if(!DCUR||!inp)return;
+  checklistSalvarData(DCUR,String(inp.dataset.docId||""),String(inp.dataset.docField||""),String(inp.value||""));
 }
 function limparChecklistDocumental(){
   if(!DCUR||!confirm("Limpar as marcações documentais deste imóvel neste navegador?"))return;
@@ -6504,7 +6616,7 @@ function limparChecklistDocumental(){
 }
 function copiarPendenciasDocumentais(){
   if(!DCUR)return;
-  const reg=checklistRegistro(DCUR),linhas=pendenciasDocumentaisTexto(reg.estados);
+  const reg=checklistRegistro(DCUR),linhas=pendenciasDocumentaisTexto(reg.estados,reg.datas);
   const cab="Checklist documental — "+(addrDe(DCUR)||clean(DCUR.nrinscr||DCUR.ci)||"imóvel");
   const corpo=linhas.length?linhas.join("\n"):"• Nenhuma pendência aberta nas marcações locais.";
   copyTexto(cab+"\n"+corpo+"\n\nMarcações de apoio do Radar; confirme documentos, validade e conteúdo nas fontes oficiais.","Pendências documentais copiadas.");
@@ -6512,32 +6624,45 @@ function copiarPendenciasDocumentais(){
 function renderChecklistDocumental(a){
   const sumEl=document.getElementById("dDocChecklistSummary"),body=document.getElementById("dDocChecklistBody");
   if(!sumEl||!body||!a)return;
-  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados);
+  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
   a.__docChecklistSummary=Object.assign({},res,{updatedAt:reg.updatedAt});
-  sumEl.textContent=res.conferidos+" de "+res.total+" marcados"+(res.emCurso?" · "+res.emCurso+" em andamento":"");
+  const revResumo=[];
+  if(res.revisoesAtrasadas)revResumo.push(res.revisoesAtrasadas+" "+(res.revisoesAtrasadas===1?"revisão atrasada":"revisões atrasadas"));
+  if(res.revisoesProximas)revResumo.push(res.revisoesProximas+" "+(res.revisoesProximas===1?"revisão próxima":"revisões próximas"));
+  sumEl.textContent=res.conferidos+" de "+res.total+" marcados"+(res.emCurso?" · "+res.emCurso+" em andamento":"")+(revResumo.length?" · "+revResumo.join(" · "):"");
   const statusOpts=it=>DOC_STATUS_ORDEM.map(status=>
     '<option value="'+esc(status)+'" '+(status===it.status?"selected":"")+'>'+esc(DOC_STATUS_LBL[status])+'</option>'
   ).join("");
   const insc=clean(a.nrinscr||a.ci).replace(/\D/g,"");
   const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(insc);
   const atualizado=reg.updatedAt?fmtVisita(reg.updatedAt).replace("consultado","atualizado"):"Ainda sem marcações";
+  const alertaHtml=(res.revisoesAtrasadas||res.revisoesProximas)
+    ?'<div class="doc-alert '+(res.revisoesAtrasadas?'has-late':'')+'">'+esc(revResumo.join(" · "))+'. Datas escolhidas pelo usuário; confirme vigência e conteúdo nas fontes oficiais.</div>'
+    :'';
   body.innerHTML=
-    '<p class="dilig-note">Organize o que foi solicitado, recebido e conferido. As marcações ficam só neste navegador e não validam autenticidade, vigência, titularidade ou ausência de ônus.</p>'+
+    '<p class="dilig-note">Organize o que foi solicitado, recebido e conferido. As marcações e datas ficam só neste navegador e não validam autenticidade, vigência, titularidade ou ausência de ônus. Datas escolhidas pelo usuário; o Radar não calcula prazos legais.</p>'+
     '<div class="doc-progress">'+esc(atualizado)+' · '+res.pendentes+' não iniciados · '+res.naoAplica+' não aplicáveis</div>'+
+    alertaHtml+
     '<div class="doc-list">'+res.itens.map(it=>{
-      const prox=proximaAcaoDocumental(it);
+      const prox=proximaAcaoDocumental(it),mostraDatas=it.status!=="nao_aplica"&&(["recebido","conferido"].includes(it.status)||it.emissao||it.revisarEm);
       return '<div class="doc-row is-'+esc(it.status)+'">'+
         '<div><div class="doc-title">'+esc(it.titulo)+'</div><div class="doc-detail">'+esc(it.detalhe)+'</div>'+
         (prox?'<div class="doc-next">Próxima ação · '+esc(prox)+'</div>':"")+'</div>'+
-        '<select class="doc-status" data-doc-id="'+esc(it.id)+'" aria-label="Status documental: '+esc(it.titulo)+'">'+statusOpts(it)+'</select></div>';
+        '<div class="doc-controls"><select class="doc-status" data-doc-id="'+esc(it.id)+'" aria-label="Status documental: '+esc(it.titulo)+'">'+statusOpts(it)+'</select>'+
+        (mostraDatas?'<div class="doc-dates"><label class="doc-date-label">Data do documento<input class="doc-date-input" type="date" data-doc-id="'+esc(it.id)+'" data-doc-field="emissao" value="'+esc(it.emissao)+'" aria-label="Data do documento: '+esc(it.titulo)+'"></label>'+
+        '<label class="doc-date-label">Revisar em<input class="doc-date-input" type="date" data-doc-id="'+esc(it.id)+'" data-doc-field="revisarEm" value="'+esc(it.revisarEm)+'" aria-label="Revisar em: '+esc(it.titulo)+'"></label></div>':"")+
+        (it.revisao.rotulo?'<div class="doc-review is-'+esc(it.revisao.tipo)+'">'+esc(it.revisao.rotulo)+' · data escolhida pelo usuário</div>':"")+'</div></div>';
     }).join("")+'</div>'+
     '<div class="dilig-mini-actions"><button type="button" id="docCopyPending">Copiar pendências ⧉</button>'+
+    '<button type="button" id="docExportPackage">Exportar pacote de diligência</button>'+
     '<a href="'+esc(cnd)+'" target="_blank" rel="noopener">Emitir CND municipal ↗</a>'+
     '<a href="https://www.registrodeimoveis.org.br/servicos-interno/certidao-de-matricula" target="_blank" rel="noopener">Solicitar certidão registral ↗</a>'+
     '<button type="button" id="docClearMarks">Limpar marcações</button></div>';
   body.querySelectorAll(".doc-status").forEach(sel=>sel.addEventListener("change",()=>alterarChecklistDocumental(sel)));
-  const cp=document.getElementById("docCopyPending"),cl=document.getElementById("docClearMarks");
+  body.querySelectorAll(".doc-date-input").forEach(inp=>inp.addEventListener("change",()=>alterarDataChecklistDocumental(inp)));
+  const cp=document.getElementById("docCopyPending"),ex=document.getElementById("docExportPackage"),cl=document.getElementById("docClearMarks");
   if(cp)cp.addEventListener("click",copiarPendenciasDocumentais);
+  if(ex)ex.addEventListener("click",montarPacoteDiligencia);
   if(cl)cl.addEventListener("click",limparChecklistDocumental);
 }
 

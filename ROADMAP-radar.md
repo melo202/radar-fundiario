@@ -5,6 +5,85 @@
 
 ---
 
+## Atualização ultrapremium — 14/07/2026
+
+### ✅ Diligência local acionável
+
+- Histórico entre consultas por imóvel e por unidade, sem confundir snapshot local com histórico de mercado ou cadeia dominial.
+- Checklist documental com cinco grupos, estados locais, canais oficiais e integração à trilha de evidências e aos documentos.
+- Datas opcionais de documento e de revisão escolhidas pelo usuário, com alertas locais de revisão próxima/atrasada. O Radar não presume prazo jurídico nem confirma vigência.
+- Pacote único de diligência exportável, reunindo identificação cadastral, trilha de evidências, histórico e checklist. Nenhum arquivo, nome de proprietário ou certidão é armazenado.
+
+### ⬜ P0 visual — redesign “Atlas Cívico”
+
+**Diagnóstico:** o produto já é forte tecnicamente, mas a interface ainda comunica “ferramenta cadastral interna”, enquanto os relatórios comunicam um produto mais premium. Não é um problema resolvível apenas trocando cores: falta uma hierarquia visual única para mapa, busca, resultados e dossiê.
+
+Achados da auditoria visual:
+
+1. **Entrada fraca:** a tela inicial é quase um mapa vazio e excessivamente lavado; não apresenta marca, proposta de valor nem um próximo passo com presença suficiente.
+2. **Mapa e conteúdo competem:** controles, legendas, painel e dossiê parecem camadas independentes. No desktop, o dossiê cobre quase toda a experiência em vez de funcionar como inspetor contextual ao lado do mapa.
+3. **Hierarquia achatada:** há muitos retângulos, bordas, divisórias e textos pequenos com peso visual semelhante. O usuário precisa ler demais para descobrir imóvel, valor, evidência e próxima ação.
+4. **Paleta “papel técnico”:** bege, cinza, petróleo, verde, dourado e vermelho aparecem em superfícies extensas. O conjunto fica opaco e envelhecido, sem o contraste limpo de um produto premium.
+5. **Tipografia comprimida:** `JetBrains Mono`, caixa alta e tamanhos de 9–12 px aparecem além de códigos e fontes. Isso reforça a aparência de sistema legado e reduz a escaneabilidade.
+6. **Iconografia inconsistente:** emojis são usados como ícones funcionais. Eles variam entre sistemas, não formam uma família visual e tiram sofisticação do produto.
+7. **Resultados cansativos:** prédios com muitas unidades geram listas longas e repetitivas. Resumo, ordenação e unidades não formam uma sequência visual clara.
+8. **Dossiê excessivamente documental:** ressalvas corretas são repetidas no caminho principal. O conteúdo é confiável, mas a apresentação transmite peso e cautela antes de transmitir entendimento.
+9. **Dois produtos visuais:** a interface usa cantos quase retos e alta densidade; os PDFs usam cartões brancos, mais espaço e cantos suaves. O relatório parece mais premium que o próprio Radar.
+10. **Mobile funcional, não desejável:** bottom sheet, alvos e safe areas existem, porém a densidade e a linguagem visual continuam de desktop técnico comprimido.
+
+**Direção recomendada — Atlas Cívico:** inteligência territorial sóbria, precisa e contemporânea; mais próxima de um terminal cartográfico editorial do que de um portal imobiliário genérico. Luxo silencioso, não “luxo dourado”.
+
+- Fundo neutro claro, superfícies brancas sólidas, texto verde-carvão e um único acento verde profundo; latão apenas para destaque raro.
+- Mapa legível e com identidade própria; reduzir POIs irrelevantes, preservar ruas e limites e reservar cor forte para seleção/dados.
+- `Archivo`/fonte de interface para conteúdo; monoespaçada somente para inscrição, fonte, data e coordenada.
+- Família única de SVGs lineares; remover emojis de todos os controles de produção.
+- Escala de espaço de 8 px, cartões de 12–16 px, bordas discretas e sombra apenas para separar planos.
+- Uma ação primária por contexto; ações secundárias em menu contextual ou rodapé do painel.
+- Limites e ressalvas consolidados em “Limites da análise”, com detalhe progressivo e presença permanente na trilha de evidências.
+
+#### V0 — Fundamentos e protótipo visual
+
+- ⬜ Consolidar tokens de cor, tipografia, raio, elevação, espaço e movimento; eliminar valores visuais duplicados.
+- ⬜ Produzir um protótipo navegável de três telas: mapa inicial, resultados e dossiê.
+- ⬜ Validar a direção antes de alterar toda a aplicação.
+
+#### V1 — Shell cartográfico
+
+- ⬜ Cabeçalho compacto com marca Radar Fundiário, busca universal e estado de conexão/fonte.
+- ⬜ Desktop com mapa dominante e inspetor lateral fixo de 440–500 px; painel empurra a área útil do mapa em vez de cobri-la.
+- ⬜ Mobile preserva bottom sheet, mas com três alturas claras: resumo, meio e tela quase cheia.
+- ⬜ Legendas e controles aparecem somente quando a camada correspondente estiver ativa.
+
+#### V2 — Busca e resultados
+
+- ⬜ Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos.
+- ⬜ Resultado de prédio: resumo fixo + filtros + linhas compactas; mostrar diferenças entre unidades e esconder repetição invariável.
+- ⬜ Estado vazio orientado: exemplos, buscas recentes úteis e explicação curta do que o Radar entrega.
+
+#### V3 — Dossiê em três níveis
+
+- ⬜ **Resumo:** identidade confirmada, faixa/ausência de faixa, posição cadastral e ação principal.
+- ⬜ **Território:** vizinhança, Plano Diretor, mapa e dados técnicos.
+- ⬜ **Diligência:** evidências, histórico, checklist, datas e pacote exportável.
+- ⬜ Trocar a pilha atual de cartões/accordions por navegação curta, preservando acesso completo sem expor tudo ao mesmo tempo.
+
+#### V4 — Documentos, estados e acabamento
+
+- ⬜ Levar a linguagem dos relatórios para a interface, sem simplesmente copiar o PDF para a tela.
+- ⬜ Skeletons, estados vazios, erro e offline com a mesma direção visual.
+- ⬜ Movimento entre 160–240 ms, com redução de movimento respeitada; animação só para mudança de plano, seleção e confirmação.
+- ⬜ Revisão final de contraste, foco, zoom de texto e toque em iPhone/Android reais.
+
+#### V5 — Validação com corretores
+
+- ⬜ Teste moderado com 8–12 corretores da base antes da migração completa.
+- ⬜ Tarefas: encontrar imóvel, distinguir unidade, entender faixa/ausência, localizar pendência e exportar diligência.
+- ⬜ Critérios: identificar imóvel + estado da análise em até 5 segundos; concluir busca sem ajuda; zero interpretação de marcação local como documento verificado.
+
+Referências de estrutura, não de cópia visual: [Apple HIG — Layout](https://developer.apple.com/design/human-interface-guidelines/layout), [Apple HIG — Typography](https://developer.apple.com/design/human-interface-guidelines/typography), [Calcite — Shell Panel](https://developers.arcgis.com/calcite-design-system/components/shell-panel/), [Calcite — Map with sidebar](https://developers.arcgis.com/calcite-design-system/sample-code/app-map-with-sidebar/) e [Material 3 — Design tokens](https://m3.material.io/foundations/design-tokens).
+
+---
+
 ## 0. Fatos validados no endpoint real (base das decisões)
 
 Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:

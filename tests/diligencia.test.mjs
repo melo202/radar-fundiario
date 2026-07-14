@@ -16,7 +16,8 @@ function pureDiligencia() {
   vm.createContext(sandbox);
   new vm.Script(
     src + "\n;globalThis.__exports={checklistDocumentalItens,resumoChecklistDocumental," +
-      "proximaAcaoDocumental,pendenciasDocumentaisTexto,historicoDoImovel,mudancasHistorico};"
+      "proximaAcaoDocumental,pendenciasDocumentaisTexto,normalizarDataISO," +
+      "estadoRevisaoDocumental,historicoDoImovel,mudancasHistorico};"
   ).runInContext(sandbox);
   return sandbox.__exports;
 }
@@ -63,6 +64,48 @@ test("texto de pendências exclui itens concluídos e propõe a próxima ação 
   assert.ok(!linhas.some((linha) => linha.includes("Quitação e documentos")));
   assert.ok(linhas.some((linha) => linha.includes("Conferir com a fonte oficial")));
   assert.ok(linhas.some((linha) => linha.includes("Certidões pessoais")));
+});
+
+test("datas documentais são validadas sem presumir prazo jurídico", () => {
+  assert.equal(P.normalizarDataISO("2026-07-14"), "2026-07-14");
+  assert.equal(P.normalizarDataISO("2026-02-30"), "");
+  assert.equal(P.normalizarDataISO("14/07/2026"), "");
+
+  const atrasada = P.estadoRevisaoDocumental("2026-07-10", "2026-07-14");
+  assert.equal(atrasada.tipo, "atrasada");
+  assert.equal(atrasada.dias, 4);
+  assert.match(atrasada.rotulo, /Revisão atrasada/);
+
+  const proxima = P.estadoRevisaoDocumental("2026-07-18", "2026-07-14");
+  assert.equal(proxima.tipo, "proxima");
+  assert.equal(proxima.dias, 4);
+  assert.match(proxima.rotulo, /Revisar em 4 dias/);
+});
+
+test("resumo documental sinaliza revisões locais atrasadas e próximas", () => {
+  const resumo = P.resumoChecklistDocumental(
+    { matricula: "conferido", iptu: "recebido", condominio: "nao_aplica" },
+    {
+      matricula: { emissao: "2026-06-01", revisarEm: "2026-07-10" },
+      iptu: { revisarEm: "2026-07-18" },
+      condominio: { revisarEm: "2026-07-01" }
+    },
+    "2026-07-14"
+  );
+  assert.equal(resumo.revisoesAtrasadas, 1);
+  assert.equal(resumo.revisoesProximas, 1);
+  assert.equal(resumo.comDatas, 2, "item não aplicável não entra nos alertas");
+  assert.equal(resumo.itens.find((it) => it.id === "matricula").emissao, "2026-06-01");
+});
+
+test("pendências priorizam alerta de revisão declarado pelo usuário", () => {
+  const linhas = Array.from(P.pendenciasDocumentaisTexto(
+    { matricula: "recebido" },
+    { matricula: { revisarEm: "2026-07-10" } },
+    "2026-07-14"
+  ));
+  assert.ok(linhas.some((linha) => linha.includes("Revisão atrasada")));
+  assert.ok(linhas.some((linha) => linha.includes("fonte oficial")));
 });
 
 test("histórico nunca mistura unidades sem inscrição própria do mesmo lote", () => {
@@ -112,6 +155,9 @@ test("dossiê e os dois documentos compartilham histórico e checklist sem prome
   assert.ok(html.includes("function historicoSnapshot(a,visitedAt)"));
   assert.ok(html.includes("function renderHistoricoComparavel(a)"));
   assert.ok(html.includes("function renderChecklistDocumental(a)"));
+  assert.ok(html.includes("function montarPacoteDiligencia()"));
+  assert.ok(html.includes("Datas escolhidas pelo usuário"));
+  assert.ok(html.includes("Exportar pacote de diligência"));
   assert.ok((html.match(/\$\{diligenciaDocumentoHTML\(a\)\}/g) || []).length >= 2);
   assert.ok(html.includes("não validam autenticidade, vigência, titularidade ou ausência de ônus"));
   assert.ok(html.includes("Não representa histórico de preço, anúncios, transações, matrícula ou cadeia dominial"));
