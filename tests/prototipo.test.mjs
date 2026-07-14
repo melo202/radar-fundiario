@@ -68,4 +68,12 @@ test("resultado de prédio evita repetição e permite filtrar unidades", () => 
   assert.match(html, /id="unitFilter"/);
   assert.match(html, /id="unitSort"/);
   assert.match(html, /function openUnit\(button\)/);
+  assert.match(html, /unitSort"\)\.addEventListener\("change"/);
+  assert.match(html, /marker\.on\("click", \(\) => unitRows\[index\] && openUnit/);
+});
+
+test("abas e painel móvel expõem interação por teclado e estado compreensível", () => {
+  assert.match(html, /\["ArrowLeft", "ArrowRight", "Home", "End"\]/);
+  assert.match(html, /function updateSheetLabel\(\)/);
+  assert.match(html, /Painel em \$\{names\[state\.sheet\]\}/);
 });

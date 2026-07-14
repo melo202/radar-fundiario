@@ -43,9 +43,18 @@ Achados da auditoria visual:
 
 #### V0 — Fundamentos e protótipo visual
 
-- ⬜ Consolidar tokens de cor, tipografia, raio, elevação, espaço e movimento; eliminar valores visuais duplicados.
-- ⬜ Produzir um protótipo navegável de três telas: mapa inicial, resultados e dossiê.
-- ⬜ Validar a direção antes de alterar toda a aplicação.
+- ✅ Consolidar tokens de cor, tipografia, raio, elevação, espaço e movimento no braço visual isolado; a migração dos tokens para a aplicação principal pertence ao V1.
+- ✅ Produzir um protótipo navegável de três telas: mapa inicial, resultados e dossiê — arquivo [`prototipo-atlas-civico.html`](prototipo-atlas-civico.html).
+- 🔶 Validar a direção antes de alterar toda a aplicação. Auditoria técnica e visual em desktop concluída; responsividade, três alturas do painel, redução de movimento, foco e alvos de toque cobertos no protótipo e nos testes. Pendente: aprovação da direção pelo usuário e teste tátil em iPhone/Android reais.
+
+**Decisões materializadas no V0 (14/07/2026):**
+
+- mapa permanece como plano dominante; o inspetor de 480 px ocupa seu próprio espaço e não cobre o território no desktop;
+- entrada apresenta promessa, busca universal e três entregas do produto sem abrir toda a complexidade de uma vez;
+- resultado de prédio usa resumo fixo, filtro, ordenação e linhas que mostram apenas as diferenças relevantes entre unidades;
+- dossiê passa a ter três níveis curtos — **Resumo**, **Território** e **Diligência** — preservando todas as ressalvas em linguagem progressiva;
+- iconografia funcional usa uma única família SVG; monoespaçada fica restrita a inscrição e metadados técnicos;
+- o protótipo é deliberadamente demonstrativo: não consulta endpoints, não grava dados e não substitui a aplicação atual.
 
 #### V1 — Shell cartográfico
 
