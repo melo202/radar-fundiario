@@ -42,9 +42,17 @@ test("atalho de busca não captura digitação em campos editáveis", () => {
 
 test("resultado assume o inspetor e mantém a omnibox para refino", () => {
   assert.match(html, /\.panel:has\(#results \.card\)>\.brand\{display:none\}/);
-  assert.match(html, /\.panel:has\(#results \.card\)>\.search>\.go,[\s\S]*\.search>\.caixabtn\{display:none!important\}/);
-  assert.doesNotMatch(html, /\.panel:has\(#results \.card\)>\.search>\.caixa-box/);
+  assert.match(html, /\.panel:has\(#results \.card\)>\.search:not\(\.advanced-open\)>\.go,[\s\S]*\.search:not\(\.advanced-open\)>\.caixabtn\{display:none!important\}/);
+  assert.doesNotMatch(html, /\.panel:has\(#results \.card\)>\.search:not\(\.advanced-open\)>\.caixa(?:\{|,)/);
   assert.match(html, /\.panel:has\(#results \.card\)>\.results\{padding-top:4px\}/);
+});
+
+test("omnibox é a entrada principal e campos separados ficam sob divulgação progressiva", () => {
+  assert.match(html, /id="advancedSearchToggle"[^>]+aria-expanded="false"/);
+  assert.match(html, /\.search:not\(\.advanced-open\)>#needBairro,[\s\S]*\.search:not\(\.advanced-open\)>\.go,[\s\S]*display:none!important/);
+  assert.match(html, /function setAdvancedSearch\(open\)[\s\S]*classList\.toggle\("advanced-open",!!open\)[\s\S]*aria-expanded/);
+  assert.match(html, /function toggleCorrectMenu\(\)[\s\S]*setAdvancedSearch\(true\)[\s\S]*cm\.hidden=false/);
+  assert.match(html, /setAdvancedSearch\(false\); \/\* resultado válido devolve o protagonismo à lista/);
 });
 
 test("controles centrais abandonam emojis por uma linguagem visual estável", () => {

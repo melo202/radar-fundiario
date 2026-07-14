@@ -1168,6 +1168,22 @@
   .go:hover{background:var(--brand-strong)}
   .hint{margin-top:12px;line-height:1.5}
   .detectchip,.moderow,.combo-list{border-radius:var(--radius-sm)}
+  .advanced-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;margin-top:8px;padding:0 2px;
+    border:0;background:transparent;color:var(--brand);font-size:12px;font-weight:700;text-align:left;box-shadow:none}
+  .advanced-toggle:hover{background:transparent;color:var(--brand-strong)}
+  .advanced-toggle svg{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--motion-fast)}
+  .search.advanced-open>.advanced-toggle svg{transform:rotate(180deg)}
+  .search:not(.advanced-open)>#correctMenu,
+  .search:not(.advanced-open)>#cIN,
+  .search:not(.advanced-open)>#needBairro,
+  .search:not(.advanced-open)>#paneQL,
+  .search:not(.advanced-open)>#paneAddr,
+  .search:not(.advanced-open)>#paneUnit,
+  .search:not(.advanced-open)>#paneBD,
+  .search:not(.advanced-open)>#paneIN,
+  .search:not(.advanced-open)>.go,
+  .search:not(.advanced-open)>.hint,
+  .search:not(.advanced-open)>.caixabtn{display:none!important}
   .results{padding:10px 0 20px}
   .count{padding:12px 24px 6px;color:var(--muted)}
   .count .csv{border-radius:9px;background:var(--surface)}
@@ -1234,15 +1250,15 @@
     .panel:has(#results .card)>.brand{display:none}
     .panel:has(#results .card)>.search{padding:12px 16px}
     .panel:has(#results .card)>.search>label[for="caixaInput"],
-    .panel:has(#results .card)>.search>#needBairro,
-    .panel:has(#results .card)>.search>#paneQL,
-    .panel:has(#results .card)>.search>#paneAddr,
-    .panel:has(#results .card)>.search>#paneUnit,
-    .panel:has(#results .card)>.search>#paneBD,
-    .panel:has(#results .card)>.search>#paneIN,
-    .panel:has(#results .card)>.search>.go,
-    .panel:has(#results .card)>.search>.hint,
-    .panel:has(#results .card)>.search>.caixabtn{display:none!important}
+    .panel:has(#results .card)>.search:not(.advanced-open)>#needBairro,
+    .panel:has(#results .card)>.search:not(.advanced-open)>#paneQL,
+    .panel:has(#results .card)>.search:not(.advanced-open)>#paneAddr,
+    .panel:has(#results .card)>.search:not(.advanced-open)>#paneUnit,
+    .panel:has(#results .card)>.search:not(.advanced-open)>#paneBD,
+    .panel:has(#results .card)>.search:not(.advanced-open)>#paneIN,
+    .panel:has(#results .card)>.search:not(.advanced-open)>.go,
+    .panel:has(#results .card)>.search:not(.advanced-open)>.hint,
+    .panel:has(#results .card)>.search:not(.advanced-open)>.caixabtn{display:none!important}
     .panel:has(#results .card)>.results{padding-top:4px}
     .searchpill{display:none}
     #pillClose{display:inline-grid;place-items:center}
@@ -1351,6 +1367,13 @@
         <button id="cQL" onclick="forceMode('ql')">Quadra/Lote</button>
       </div>
       <button class="modemore" id="cIN" hidden onclick="forceMode('insc')">ou buscar pela inscrição cadastral (CI)</button>
+
+      <button type="button" class="advanced-toggle" id="advancedSearchToggle" aria-expanded="false"
+              aria-controls="correctMenu cIN needBairro paneQL paneAddr paneUnit paneBD paneIN btnGo"
+              onclick="toggleAdvancedSearch()">
+        <span id="advancedSearchLabel">Busca avançada</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+      </button>
 
       <!-- paineis de campo: permanecem no DOM, agora usados so pelo menu de correcao manual
            (setMode()/forceMode() continuam controlando a visibilidade quando o usuario forca um modo) -->
@@ -4674,6 +4697,7 @@ function setMode(m){
 /* foca o 1º campo VISÍVEL do modo atual — o combo mandava sempre para #quadra,
    que fica oculto fora do modo Quadra/Lote (quebrava o Enter no modo Endereço/Prédio) */
 function focusFirstField(){
+  setAdvancedSearch(true);
   const id={addr:"rua",bd:"predio",insc:"insc"}[MODE]||"quadra";
   const el=document.getElementById(id);
   if(el&&el.offsetParent!==null)el.focus();
@@ -4729,6 +4753,19 @@ function atlasCloseSearch(){
 function atlasInvalidateMap(){
   if(!map)return;
   setTimeout(()=>{map.invalidateSize();refreshLots();},60);
+}
+function setAdvancedSearch(open){
+  const search=document.querySelector(".panel>.search"),button=document.getElementById("advancedSearchToggle");
+  if(!search||!button)return;
+  search.classList.toggle("advanced-open",!!open);
+  button.setAttribute("aria-expanded",String(!!open));
+  const label=document.getElementById("advancedSearchLabel");
+  if(label)label.textContent=open?"Ocultar busca avançada":"Busca avançada";
+  if(!open)closeCorrectMenu();
+}
+function toggleAdvancedSearch(){
+  const search=document.querySelector(".panel>.search");
+  setAdvancedSearch(!(search&&search.classList.contains("advanced-open")));
 }
 const DETAIL_SHEET_ORDER=["peek","mid","full"];
 function setDetailSheet(state,announce){
@@ -5766,6 +5803,7 @@ function finish(items,fromMap){
       }
       document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}${acao?`<div class="chips" style="justify-content:center;margin-top:14px">${acao}</div>`:""}</div>`;
       return;}
+    setAdvancedSearch(false); /* resultado válido devolve o protagonismo à lista; o usuário pode reabrir os campos */
     /* Fase 13 MOT-01: mensagem 3, imediatamente antes de render() real (fase real de finish()) */
     loading(true,MOTION_MSG.estimativa);
     render(units,{stagger:true});
@@ -9055,6 +9093,7 @@ function closeCorrectMenu(){
 function toggleCorrectMenu(){
   const cm=document.getElementById("correctMenu");
   if(!cm.hidden){closeCorrectMenu();return;}
+  setAdvancedSearch(true);
   cm.hidden=false;
   document.getElementById("cIN").hidden=false;
   /* sincroniza aria-pressed dos 3 botoes conforme o modo detectado no ultimo resultado */
@@ -9065,6 +9104,7 @@ function toggleCorrectMenu(){
 /* forceMode(m): abre o modo manualmente a partir do menu de correcao — setMode(m) (preservado) +
    preenche os campos JA PARSEADOS pelo ultimo detectMode() + fecha o menu + focusFirstField() (preservado). */
 function forceMode(m){
+  setAdvancedSearch(true);
   setMode(m);
   const r=LASTDETECT||{};
   if(m==="ql"){
@@ -9292,6 +9332,7 @@ function loadCnefe(){
     /* B-04: restaura o estado vazio de #results — traz de volta #savedBlocks/#cadernoBlock via CSS :has.
        O listener dos exemplos é delegado no #results estático (abaixo), então sobrevive a este innerHTML. */
     const rbox=document.getElementById("results");if(rbox)rbox.innerHTML=EMPTYSTATE_HTML;
+    setAdvancedSearch(false);
     inp.focus();
   });
   ambig.addEventListener("click",e=>{

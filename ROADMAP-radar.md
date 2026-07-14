@@ -67,7 +67,7 @@ Achados da auditoria visual:
 
 #### V2 — Busca e resultados
 
-- 🔶 Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos. No desktop, os campos avançados agora cedem lugar à lista assim que há resultado, sem impedir o refino pela omnibox.
+- 🔶 Transformar a busca em omnibox realmente principal, com linguagem direta e menos campos simultâneos. A omnibox agora é a entrada padrão; endereço, quadra/lote e inscrição separados ficam em divulgação progressiva e cedem lugar à lista assim que há resultado, sem impedir o refino.
 - ⬜ Resultado de prédio: resumo fixo + filtros + linhas compactas; mostrar diferenças entre unidades e esconder repetição invariável.
 - ⬜ Estado vazio orientado: exemplos, buscas recentes úteis e explicação curta do que o Radar entrega.
 
