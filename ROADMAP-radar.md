@@ -61,7 +61,7 @@ Achados da auditoria visual:
 - ✅ Cabeçalho compacto com marca Radar Fundiário, busca universal e estado de fonte, reutilizando o único motor de busca já existente.
 - ✅ Desktop com mapa dominante e inspetor lateral fixo de 480 px; painel empurra a área útil do mapa em vez de cobri-la e o mapa recupera toda a largura quando o inspetor fecha.
 - 🔶 Mobile preserva bottom sheet com três alturas claras — resumo, meio e tela quase cheia — e controle acessível por toque; implementação automatizada, pendente teste em aparelhos reais.
-- 🔶 Legendas e controles contextuais preservados e integrados ao novo shell; falta a revisão visual final de todas as camadas territoriais.
+- ✅ Legendas e controles contextuais preservados e integrados ao novo shell. Revisão visual das camadas territoriais concluída em 14/07/2026: lotes, pinos, anéis CAIXA e destaques resolvem a paleta Atlas em runtime (`--brand/--brass/--muted/--ink`), seleção usa `--focus`, e permanecem intocados o vermelho-alerta de risco (desacoplado) e a simbologia oficial das zonas do Plano Diretor.
 
 **Migração V1 iniciada em 14/07/2026:** o shell Atlas Cívico já está na aplicação real, mantendo endpoints, armazenamento e regras cadastrais existentes. A integração não duplica o `#caixaInput`, não cria um segundo motor de consulta e permanece isolada na branch `agent/radar-ultrapremium`.
 
