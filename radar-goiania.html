@@ -1253,10 +1253,14 @@
   .empty-explore{margin:var(--space-5) 0 0;padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius-sm);
     background:var(--surface-soft);font-size:12.5px;line-height:1.55;color:var(--ink-soft);text-align:left}
   .empty-explore b{color:var(--ink)}
-  /* Splash de boot — cobre o app até a interface ficar interativa; primeiro paint com marca */
+  /* Splash de boot — cobre o app até a interface ficar interativa. Desde 15/07/2026 é a
+     CIDADE VIVA em toda carga (pedido do usuário: a linha andando tinha que voltar) —
+     o contorno se traça enquanto o app carrega e some quando o mapa fica pronto. */
   #bootSplash{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:18px;background:var(--canvas);opacity:1;transition:opacity var(--motion-base) var(--ease-out)}
+    gap:18px;background:#212E40;opacity:1;transition:opacity var(--motion-base) var(--ease-out)}
   #bootSplash.off{opacity:0;pointer-events:none}
+  #bootCeu{position:absolute;inset:0;width:100%;height:100%}
+  #bootSplash .bs-logo,#bootSplash .bs-sp,#bootSplash .bs-marca{position:relative}
   /* capa Cidade Viva (1ª visita) — abaixo do bootSplash (2000): o splash desvanece e revela a capa */
   #capaViva{position:fixed;inset:0;z-index:1900;background:#212E40;display:grid;place-items:center;
     transition:opacity var(--motion-base) var(--ease-out)}
@@ -1437,10 +1441,11 @@
      carregando). Some quando a interface fica interativa (bootSplashOff no init) e tem
      válvula de 6s — nunca prende a tela, nem com JS quebrado no meio. -->
 <div id="bootSplash" aria-hidden="true">
-  <img class="bs-logo" src="marca/corretorinteligente_logo_horizontal_flat.svg" alt=""
+  <canvas id="bootCeu" aria-hidden="true"></canvas>
+  <img class="bs-logo" src="marca/corretorinteligente_logo_branca.svg" alt=""
        onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-  <div class="bs-marca" hidden>Corretor Inteligente<small>GOIÂNIA · GO</small></div>
-  <div class="bs-sp"></div>
+  <div class="bs-marca" hidden style="color:#F5F8F8">Corretor Inteligente<small style="color:rgba(245,248,248,.6)">GOIÂNIA · GO</small></div>
+  <div class="bs-sp" style="border-color:rgba(245,248,248,.25);border-top-color:#19A99A"></div>
 </div>
 <!-- Capa "Cidade Viva" — SÓ na primeira visita (decisão do usuário, 15/07/2026): o mesmo
      fundo do login do painel apresenta o produto uma única vez; visitas seguintes vão
@@ -9471,7 +9476,8 @@ function capaVivaInit(){
   }catch(e){return;}
   CAPA_ON=true;
   document.getElementById("capaViva").hidden=false;
-  if(!matchMedia("(prefers-reduced-motion: reduce)").matches)capaAnima();
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches)
+    cidadeViva(document.getElementById("capaCeu"),()=>CAPA_ON);
 }
 function capaFechar(){
   try{localStorage.setItem("ci_capa","1");}catch(e){}
@@ -9481,8 +9487,10 @@ function capaFechar(){
   setTimeout(()=>{el.hidden=true;},240);
   initOnboard(); /* a capa apresenta; o tour ensina — nesta ordem */
 }
-function capaAnima(){
-  const cv=document.getElementById("capaCeu"),cx=cv.getContext("2d");
+/* animação Cidade Viva GENÉRICA: um canvas + um teste de vida (o dono decide quando
+   morrer) — serve a capa de 1ª visita E o splash de toda carga com o mesmo código */
+function cidadeViva(cv,vivo,periodoMs){
+  const cx=cv.getContext("2d");
   let W=0,H=0,anel=[],caminho=[],compr=0;
   const mede=()=>{const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);};
   const projeta=()=>{
@@ -9499,14 +9507,14 @@ function capaAnima(){
     x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:1.2+Math.random()*1.8}));
   let t0=performance.now();
   function quadro(t){
-    if(!CAPA_ON)return; /* capa fechada = animação morre sozinha */
+    if(!vivo())return; /* o dono fechou = animação morre sozinha */
     if(W!==innerWidth||H!==innerHeight){mede();projeta();}
     const dt=Math.min(33,t-t0);t0=t;
     const g=cx.createRadialGradient(W*.6,H*.42,80,W*.5,H*.5,Math.max(W,H)*.75);
     g.addColorStop(0,"#26344a");g.addColorStop(1,"#1a2433");
     cx.fillStyle=g;cx.fillRect(0,0,W,H);
     if(caminho.length){
-      const vis=Math.min(1,(t/11000)%1.15)*compr;let ac=0;
+      const vis=Math.min(1,(t/(periodoMs||11000))%1.15)*compr;let ac=0;
       cx.beginPath();cx.moveTo(caminho[0][0],caminho[0][1]);
       for(let i=1;i<caminho.length&&ac<vis;i++){ac+=Math.hypot(caminho[i][0]-caminho[i-1][0],caminho[i][1]-caminho[i-1][1]);cx.lineTo(caminho[i][0],caminho[i][1]);}
       cx.strokeStyle="#088780";cx.globalAlpha=.5+.22*Math.sin(t/1400);cx.lineWidth=1.6;
@@ -9527,6 +9535,15 @@ function capaAnima(){
   }
   requestAnimationFrame(quadro);
 }
+/* splash Cidade Viva em TODA carga (15/07/2026, pedido do usuário: "a linha andando"
+   tem que aparecer sempre): traçado acelerado (5 s) porque a janela do boot é curta;
+   morre sozinho quando o splash desvanece ou sai do DOM. */
+(function(){
+  const s=document.getElementById("bootSplash"),cv=document.getElementById("bootCeu");
+  if(!s||!cv)return;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  cidadeViva(cv,()=>document.body.contains(s)&&!s.classList.contains("off"),5000);
+})();
 function initOnboard(){
   /* deep-link ?insc= vence o onboarding: 1º acesso via link compartilhado tem que abrir a FICHA
      prometida, não um modal bloqueante por cima — pula o auto-show (o usuário ainda pode ver os

@@ -35,7 +35,12 @@ test("capa Cidade Viva: SÓ na primeira visita, emenda no tour e respeita deep-l
   assert.ok(html.includes('if(CAPA_ON)return; /* capa Cidade Viva na frente'), "tour espera a capa");
   assert.match(html, /function capaVivaInit\(\)[\s\S]{0,300}\.get\("insc"\)\)return; \/\* deep-link vai direto à ficha/,
     "deep-link vai direto à ficha");
-  assert.ok(html.includes('matchMedia("(prefers-reduced-motion: reduce)").matches)capaAnima'), "reduced-motion sem animação");
+  assert.match(html, /prefers-reduced-motion: reduce\)"\)\.matches\)\s*\n?\s*cidadeViva\(document\.getElementById\("capaCeu"\)/,
+    "reduced-motion sem animação na capa");
+  /* splash Cidade Viva em TODA carga — a linha andando nunca some da entrada */
+  assert.ok(html.includes('cidadeViva(cv,()=>document.body.contains(s)&&!s.classList.contains("off"),5000)'),
+    "splash anima em toda carga e morre com o splash");
+  assert.match(html, /function cidadeViva\(cv,vivo,periodoMs\)/, "animação é compartilhada capa+splash");
   assert.ok(html.includes("com fonte e limites declarados"), "a capa já apresenta o contrato de honestidade");
 });
 
