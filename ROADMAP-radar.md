@@ -197,8 +197,8 @@ O produto muda de nome: **Radar Fundiário → Corretor Inteligente** (casa com 
 Hoje a varredura noturna só DESCOBRE anúncios novos; ninguém revisita os já conhecidos. Para "novos imóveis, novos valores":
 
 - ⬜ **A1 — Revisita dos anúncios conhecidos:** rotina periódica que re-busca URLs já colhidas (respeitando a cota Brave), atualiza `last_seen_at`, grava mudança de preço em `price_history` (a tabela já existe e está subusada) e marca anúncio sumido como possivelmente vendido/retirado — sinal de mercado valioso.
-- ⬜ **A2 — Frescor honesto na avaliação:** o peso de recência (§8) já existe; expor a IDADE da amostra no card Mercado e no laudo ("ofertas coletadas entre X e Y"), e alertar quando a mediana da amostra passar de N dias.
-- ⬜ **A3 — Sinal de variação:** quando um mesmo anúncio muda de preço, registrar o delta e usar como termômetro do bairro (métrica agregada, nunca inferência por imóvel isolado).
+- ✅ (15/07) **A2 — Frescor honesto na avaliação:** ofertasColetadasEntre no resultado; card Mercado e laudo declaram o período da amostra. Verificado ao vivo. Alerta de amostra velha: o peso de recência (§8) já existe; expor a IDADE da amostra no card Mercado e no laudo ("ofertas coletadas entre X e Y"), e alertar quando a mediana da amostra passar de N dias.
+- ✅ (15/07) **A3 — Sinal de variação:** painel ganhou o bloco "Mercado em movimento" (subiu/baixou por anúncio, agregado, com fonte); popula conforme as varreduras capturam mudanças. Métrica por bairro: quando um mesmo anúncio muda de preço, registrar o delta e usar como termômetro do bairro (métrica agregada, nunca inferência por imóvel isolado).
 
 ### Pendências humanas (inalteradas)
 
