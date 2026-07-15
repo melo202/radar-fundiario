@@ -151,6 +151,10 @@ O usuário definiu: as avaliações do motor devem sair no **laudo de avaliaçã
 - ⬜ **PTAM:** permanece suspenso pelo contrato de honestidade (`habilitaPtam()` → false, travado em teste) até existir **verificação profissional real** (CRECI/CNAI verificados — Res. COFECI 1.066/2007). Quando destravar, a ACM do motor vira o núcleo de comparáveis do PTAM (10+ comparáveis, metodologia, mapa, homogeneização §12), com o corretor revisando a amostra (§14) antes da emissão.
 - ⬜ Requisito técnico de caminho: mapa de comparáveis no laudo (depende do geocoding CNEFE §7) e versão do laudo apontando o id da valuation usada (auditoria §16).
 
+### INTELIGÊNCIA DE LOCALIZAÇÃO — exploração registrada (ideia do usuário, 15/07/2026)
+
+Especificação completa + parecer técnico + **prova de cobertura já executada** em [`INTELIGENCIA-LOCALIZACAO.md`](INTELIGENCIA-LOCALIZACAO.md). Resumo da evidência: OSM cobre bem os bairros de mercado (Bueno: 7 supermercados/1 km; Pq. Amazônia: 15 POIs nomeados) e falha na periferia (Vera Cruz: 1 POI); Overpass público é inviável para produção (congestão + espelho devolvendo "zero falso"). **MVP decidido (custo ~zero):** extrato Geofabrik de Goiás → tabela `pois` no PostGIS do VPS (`gerar-pois.py` + timer mensal) → `GET /motor/localizacao` com raio por categoria e `dataQuality` honesto → card "Localização" no Território → IA só explica (pipeline do parecer §17). Sem nota geral na v1; impacto no valor só por correlação medida (§10), nunca % arbitrário. Atribuição ODbL obrigatória.
+
 ### Pendências humanas (inalteradas)
 
 - ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.

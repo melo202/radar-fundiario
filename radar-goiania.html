@@ -6905,6 +6905,7 @@ function atualizarScores(a, statsR){
    avaliação profissional. Falha de rede degrada em aviso — o cadastro segue valendo. */
 const MOTOR_BASE="https://api.corretorinteligente.tech";
 let MERCADO_A=null;
+let MERCADO_LAST=null; /* última ACM calculada NESTA sessão — alimenta a seção do laudo */
 const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas anunciadas publicamente na web, coletadas e peneiradas pelo motor do Radar. Não são transações e não substituem avaliação profissional.</p>';
 function mercadoReset(a){
   MERCADO_A=a;
@@ -6937,6 +6938,10 @@ function renderMercado(d,subject){
     return;
   }
   const r=d.result;
+  /* LAUDO-MERCADO (curto prazo): guarda a ACM desta sessão para o Relatório de Referência.
+     A chave prende a análise ao imóvel — laudo de OUTRO imóvel nunca herda esta seção. */
+  MERCADO_LAST={chave:clean(MERCADO_A&&MERCADO_A.nrinscr)||clean(MERCADO_A&&MERCADO_A.ci)||null,
+    d,quando:new Date().toLocaleDateString("pt-BR")};
   const comps=(d.comparaveis||[]).map(c=>`<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.portal)}</a> · ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · ${brlC(c.preco)} <small>(${brlC(c.pm2)}/m² · peso ${c.peso})</small></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
   body.innerHTML=`
@@ -6946,6 +6951,27 @@ function renderMercado(d,subject){
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
+}
+
+/* LAUDO-MERCADO (curto prazo do roadmap): a ACM entra como SEÇÃO do Relatório de Referência
+   quando o corretor já analisou o mercado DESTE imóvel na sessão. Sem análise = sem seção
+   (nunca inventa). Leva o id da avaliação para auditoria (§16 do plano do motor). */
+function mercadoDocumentoHTML(a){
+  const m=MERCADO_LAST;
+  if(!m||!m.d||!m.d.result)return "";
+  const chave=clean(a.nrinscr)||clean(a.ci);
+  if(!chave||m.chave!==chave)return "";
+  const r=m.d.result;
+  const linhas=(m.d.comparaveis||[]).map(c=>`<div class="kv"><span>${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
+  return `<div class="lcard"><h3>Análise Comparativa de Mercado — ofertas públicas</h3>
+    <p class="lmiudo">Referência de mercado a partir de ofertas anunciadas publicamente, coletadas e tratadas pelo motor do Radar com estatística determinística (deduplicação, cerca de Tukey para atípicos e média ponderada por semelhança). Ofertas não são transações fechadas e esta seção não substitui avaliação profissional.</p>
+    <div class="kv"><span>Valor de referência (ofertas)</span><b>${brlC(r.estimatedValue)}</b></div>
+    <div class="kv"><span>Faixa provável</span><b>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)}</b></div>
+    <div class="kv"><span>R$/m² ponderado</span><b>${brlC(r.estimatedPricePerM2)}</b></div>
+    <div class="kv"><span>Confiança</span><b>${esc(r.confidence.rotulo)} — ${r.sample.totalAccepted} oferta(s) no cálculo</b></div>
+    ${linhas}
+    <p class="lmiudo">Avaliação nº ${esc(m.d.id)} (auditável no motor) · consultada em ${esc(m.quando)}.${(r.warnings&&r.warnings.length)?" "+esc(r.warnings[0]):""}</p>
+  </div>`;
 }
 
 function showDetail(a,ll){
@@ -8757,6 +8783,7 @@ function montarLaudo(){
 
     ${LZ.fotos.length>1?`<div class="lcard"><h3>Registro fotográfico</h3><div class="lfotos">${LZ.fotos.slice(1).map((f,i)=>`<img src="${esc(f)}" alt="Foto ${i+2} do imóvel">`).join("")}</div></div>`:""}
 
+    ${mercadoDocumentoHTML(a)}
     <div class="lcard"><h3>Metodologia, fontes e ressalvas</h3>
       <p class="lmiudo">Análise cadastral: estatística robusta (mediana e exclusão de discrepantes pela cerca de Tukey) sobre valores venais da base fiscal pública do Cadastro Imobiliário de Goiânia. Esses registros não são ofertas nem transações. Quando há faixa indicativa, ela é ancorada em pelo menos cinco avaliações públicas da CAIXA no setor e permanece sujeita a diferenças de tipologia, área, conservação e data. O Radar não ajusta automaticamente o valor informado por conservação, área declarada ou posição cadastral.</p>
       <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características seguem o cadastro municipal e podem divergir da matrícula. As informações prestadas por terceiros foram assumidas como verdadeiras. Este documento destina-se à finalidade de ${esc(LZ.finalidade).toLowerCase()}, não possui validade automática e não substitui vistoria, laudo de avaliação ou PTAM. O módulo de PTAM permanece suspenso até existir verificação profissional e revisão regulatória.</p>

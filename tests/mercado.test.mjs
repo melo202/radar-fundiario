@@ -25,6 +25,18 @@ test("mercado: rotulagem honesta obrigatória em todos os caminhos", () => {
   assert.ok(html.includes("Amostra insuficiente</b>"));
 });
 
+test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada NESTE imóvel", () => {
+  assert.match(html, /function mercadoDocumentoHTML\(a\)/);
+  assert.ok(html.includes("${mercadoDocumentoHTML(a)}"), "seção plugada no template do laudo");
+  /* chave prende a análise ao imóvel: sem análise ou imóvel diferente = sem seção */
+  assert.ok(html.includes("if(!m||!m.d||!m.d.result)return \"\";"));
+  assert.ok(html.includes("if(!chave||m.chave!==chave)return \"\";"));
+  /* rotulagem honesta + rastreabilidade (§16): id da avaliação e data da consulta */
+  assert.ok(html.includes("Análise Comparativa de Mercado — ofertas públicas"));
+  assert.ok(html.includes("Ofertas não são transações fechadas e esta seção não substitui avaliação profissional."));
+  assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
+});
+
 test("mercado: novo imóvel aberto reseta o card e falha de rede degrada com aviso", () => {
   assert.ok(html.includes("mercadoReset(a); /* Mercado (beta)"));
   assert.ok(html.includes("Análise de mercado indisponível agora"));
