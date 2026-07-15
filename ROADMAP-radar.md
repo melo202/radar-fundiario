@@ -158,6 +158,20 @@ Especificação completa + parecer técnico + **prova de cobertura já executada
 
 **✅ MVP NO AR (15/07/2026):** 6.734 POIs no PostGIS, endpoint público com rate limit por rota, card "Localização" no Território e **resumo do entorno por IA** (pipeline §17: whitelist de números medidos + `validarNumeros`, 2 reprovações → texto determinístico). Lições de produção gravadas: `<think>` do qwen remoto é removido no provedor; categoria zerada é filtrada ANTES do prompt (o modelo narrava "ausências" como atenção); pontos de atenção só por sinal medido. Próximos degraus: geocoding CNEFE (§7), locationMetrics nos comparáveis (§10), OSRM/INEP/CNES.
 
+### SEGURANÇA — endurecimento do site + painel com senha (ideia do usuário, 15/07/2026)
+
+Fonte estudada: repositório `melo202/swisstony-bot` (dashboard Flask com fase de hardening SEC-01..05 + testes dedicados). O que lá é Flask aqui vira Node puro no motor — copiamos as **medidas**, não o framework. **Decisão do usuário: SEM multitenant por enquanto** — uma senha única de corretor; contas/perfis ficam para um ciclo futuro.
+
+**Já temos hoje (não refazer):** TLS + renovação automática, SSH só por chave, ufw + fail2ban, CORS com whitelist, rate limit por rota e por IP no motor, MOTOR_TOKEN (Bearer) nas rotas de escrita, queries 100% parametrizadas (pg), CSP no app, `.env` fora do git com chmod 640.
+
+- ⬜ **SEG-01 — Painel do corretor com senha (sem multitenant).** Rota `/painel` no motor: login com senha única do `.env` (`PAINEL_SENHA`), hash **PBKDF2-HMAC-SHA256 (100k iterações) calculado uma vez na inicialização**, comparação com `timingSafeEqual` (espelho do `hmac.compare_digest` do swisstony). Sessão por cookie **assinado com HMAC** (`HttpOnly`, `SameSite=Lax`, `Secure`, validade 24 h) + logout. É a casa natural da tela de revisão do corretor (§14) e das operações hoje só por token (varrer, requalificar, logs de IA).
+- ⬜ **SEG-02 — Trava anti-força-bruta no login (copiar do swisstony).** 5 tentativas falhas por IP → lockout de 5 min, **mais teto GLOBAL de 50 falhas na janela** (segura ataque distribuído que troca de IP), com poda dos IPs antigos (memória limitada — mesmo espírito da válvula do RATE atual).
+- ⬜ **SEG-03 — Cabeçalhos de segurança em TODAS as respostas.** No nginx (app + api): `X-Frame-Options DENY`, `X-Content-Type-Options nosniff`, `Referrer-Policy strict-origin-when-cross-origin`, `Strict-Transport-Security` (já temos TLS) e CSP nas páginas do painel (o app já tem a dele).
+- ⬜ **SEG-04 — CSRF nos POSTs autenticados do painel.** Double-submit do swisstony: token de sessão + header `X-CSRF-Token`, comparação constant-time; login isento (o `SameSite` do cookie cobre).
+- ⬜ **SEG-05 — Sem senha configurada = painel FECHADO.** Equivalente do OPS-01 do swisstony (sem senha ele recusa modo live): sem `PAINEL_SENHA` no `.env`, as rotas do painel respondem 404 — nunca um painel aberto por esquecimento de configuração.
+- ⬜ **SEG-06 — Suíte de testes de segurança dedicada** (`tests/seguranca.test.mjs`, espelho do `test_security.py`): lockout/limites, headers presentes, caches com teto, nenhuma query por interpolação de string, painel fechado sem senha.
+- ⬜ **SEG-07 — Higiene de segredos:** `.env.example` versionado no repo (documenta as variáveis sem os valores); rotação da senha root do VPS no painel Hostinger (pendência do usuário desde 15/07 — a senha original apareceu no chat).
+
 ### Pendências humanas (inalteradas)
 
 - ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.
