@@ -18,7 +18,7 @@ http.createServer(async (req, res) => {
       const db = await pool.query("SELECT count(*)::int AS migracoes FROM schema_migrations").then(r => r.rows[0]).catch(e => ({ erro: e.message }));
       const ia = await fetch((process.env.AI_BASE_URL || "http://localhost:11434") + "/api/version",
         { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(e => ({ erro: e.message }));
-      return json(res, 200, { ok: true, db, ia, provider: aiProvider.provider, models: aiProvider.models });
+      return json(res, 200, { ok: true, db, ia, cadeia: aiProvider.status() });
     }
     if (req.method === "POST" && req.url === "/motor/extrair") {
       const { titulo, descricao, tier } = JSON.parse(await readBody(req) || "{}");
