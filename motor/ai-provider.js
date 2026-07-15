@@ -68,9 +68,12 @@ async function chatOnce(p, { system, prompt, tier, schema }) {
        NO PROMPT, senão o modelo inventa os próprios nomes de campo (bug real pego no
        1º teste com o Groq: ajv rejeitou e a cadeia caiu para o local). A validação
        ajv do nosso lado continua sendo a garantia final. */
-    const sys = schema
+    let sys = schema
       ? system + "\n\nSAÍDA OBRIGATÓRIA: responda SOMENTE com um objeto JSON válido que satisfaça exatamente este JSON Schema (mesmos nomes de campo; use null onde não houver evidência):\n" + JSON.stringify(schema)
       : system;
+    /* Qwen3 servido remoto raciocina por padrão e queima o TPM gratuito à toa em tarefa
+       de extração — o /no_think da família Qwen3 desliga isso. */
+    if (/qwen/i.test(model)) sys += "\n/no_think";
     body = {
       model, temperature: 0.1, max_tokens: 2048,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],

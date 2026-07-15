@@ -77,6 +77,18 @@ http.createServer(async (req, res) => {
       if (!consulta) return json(res, 400, { erro: "consulta obrigatória" });
       return json(res, 200, await ingerir({ consulta, paginas, tier }));
     }
+    if (req.method === "POST" && req.url === "/motor/avaliar") {
+      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      const subject = JSON.parse(await readBody(req) || "{}");
+      const { avaliar } = await import("./avaliacao.js");
+      return json(res, 200, await avaliar(subject));
+    }
+    if (req.method === "GET" && /^\/motor\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
+      const id = req.url.split("/").pop();
+      const r2 = await pool.query("SELECT id, subject, status, result, created_at FROM valuations WHERE id=$1", [id]);
+      if (!r2.rowCount) return json(res, 404, { erro: "avaliação não encontrada" });
+      return json(res, 200, r2.rows[0]);
+    }
     if (req.method === "POST" && req.url === "/motor/varrer") {
       if (!autorizado(req)) return json(res, 401, { erro: "token" });
       const { bairros, paginas, tier } = JSON.parse(await readBody(req) || "{}");
