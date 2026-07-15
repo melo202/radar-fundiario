@@ -18,4 +18,4 @@ systemctl daemon-reload
 systemctl enable --now radar-api >/dev/null 2>&1
 systemctl restart radar-api
 sleep 1
-curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git rev-parse --short HEAD)"
+curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"
