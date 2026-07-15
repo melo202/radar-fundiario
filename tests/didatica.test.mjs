@@ -61,6 +61,12 @@ test("R5: nenhuma sombra ou anel de foco ficou no verde antigo (resíduo fora do
   assert.ok(!html.includes("rgba(20,35,29"), "sombra do ink antigo");
 });
 
+test("MOB-01: controles do Leaflet nunca flutuam por cima das sheets (X de fechar clicável)", () => {
+  /* print do usuário (15/07): o +/− do mapa (z 1000 padrão) cobria o X do dossiê no celular */
+  assert.ok(html.includes(".leaflet-control-container .leaflet-top,.leaflet-control-container .leaflet-bottom{z-index:450}"));
+  assert.match(html, /\.detail\{[^}]*z-index:500/, "sheets seguem acima (500) dos controles (450)");
+});
+
 test("R4: página Como usar existe, é honesta e o app aponta para ela", () => {
   assert.ok(html.includes('href="como-usar.html"'), "link no O que o Corretor Inteligente faz");
   assert.ok(guia.includes("<title>Como usar · Corretor Inteligente</title>"));

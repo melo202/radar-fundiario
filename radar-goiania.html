@@ -661,6 +661,11 @@
   .sattoggle:hover{border-color:var(--accent-ink)}
   .sattoggle.on{border-color:var(--accent);color:var(--accent)}
   .leaflet-control-sattoggle{z-index:490}
+  /* MOB-01 (15/07, print do usuário): os controles do Leaflet têm z-index 1000 por
+     padrão e flutuavam POR CIMA do dossiê no celular — o +/− cobria exatamente o X de
+     fechar. Toda superfície do app começa em 500; controle de mapa NUNCA precisa ficar
+     por cima de uma sheet aberta. */
+  .leaflet-control-container .leaflet-top,.leaflet-control-container .leaflet-bottom{z-index:450}
   /* Fase 4 SAT-02: crossfade de opacidade (250ms) escopado só à tile do satélite + reference —
      NÃO é um token de transição compartilhado; outlines de bairro/lote continuam em snap instantâneo. */
   .sat-fade .leaflet-tile{transition:opacity var(--motion-base) var(--ease-out)}
