@@ -5845,6 +5845,34 @@ function limparDestaqueDetector(){
    returnCountOnly; __terrReq reflete as paginadas (TERR_NET_START, ~2907). */
 function terrUltimoOrcamento(){return __terrReq;}
 
+/* ---------------- âncora de endereço (BUSCA-15 — CNEFE/IBGE, §7 da localização) --------
+   O cadastro municipal falha no número de porta (prédio costuma ser "S/N"); o CNEFE do
+   Censo 2022 sabe ONDE o número fica fisicamente. A busca de endereço consulta o geocoder
+   do motor EM PARALELO à consulta cadastral e desenha um alvo discreto no ponto do
+   endereço — inclusive quando o cadastro não devolve nada. Falha do motor nunca quebra
+   a busca (o alvo simplesmente não aparece). */
+let ANCORAEND=null;
+function limparAncoraEnd(){if(ANCORAEND){map.removeLayer(ANCORAEND);ANCORAEND=null;}}
+function buscarAncoraEnd(rua,num){
+  return fetch(`${MOTOR_BASE}/motor/geocodificar?rua=${encodeURIComponent(rua)}${num?`&numero=${encodeURIComponent(num)}`:""}`,
+    {signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).catch(()=>null);
+}
+function desenharAncoraEnd(d,rua,num,semResultado){
+  if(!d||!(d.candidatos||[]).length)return;
+  /* rua inteira não vira alvo — um ponto médio de rua pareceria precisão que não existe */
+  if(d.precisao!=="numero"&&d.precisao!=="numero-proximo")return;
+  /* prefere o candidato da mesma localidade que o setor escolhido (o CNEFE separa por bairro) */
+  const alvoB=norm(clean(document.getElementById("bairroInput").value));
+  const cand=d.candidatos.find(c=>{const l=norm(c.localidade||"");return l&&alvoB&&(alvoB.includes(l)||l.includes(alvoB));})||d.candidatos[0];
+  const ll=L.latLng(cand.lat,cand.lon);
+  const aprox=d.precisao==="numero-proximo";
+  const tip=`${aprox?`Nº ${esc(num)} não consta no CNEFE — ponto do nº ${cand.numero}`:`Ponto do nº ${esc(num)}`} · ${esc(rua)} (${esc(cand.localidade||"")}) — IBGE, Censo 2022`;
+  limparAncoraEnd();
+  ANCORAEND=L.circleMarker(ll,{radius:7,color:MAP_BRASS,weight:3,fillColor:"#fff",fillOpacity:.95,bubblingMouseEvents:false})
+    .bindTooltip(tip).addTo(map);
+  if(semResultado){map.setView(ll,17);toast("O cadastro não achou o endereço — o alvo dourado marca o ponto dele segundo o IBGE (Censo 2022).");}
+  else if(!map.getBounds().contains(ll))map.fitBounds(map.getBounds().extend(ll),{padding:[40,40]});
+}
 async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
@@ -5860,8 +5888,9 @@ async function buscar(){
      qualquer branch/rede. Skeleton shimmer complementa o overlay de loading em #results. */
   loading(true,MOTION_MSG.localizando);
   mostrarSkeleton();
+  limparAncoraEnd(); /* busca nova apaga o alvo CNEFE da anterior (early-returns inclusos) */
   try{
-    let items=[],aviso=null;
+    let items=[],aviso=null,geoAncora=null;
     if(MODE==="insc"){
       const ci=clean(document.getElementById("insc").value).replace(/\D/g,"");
       if(!ci){toast("Digite a inscrição cadastral.");return;}
@@ -5881,6 +5910,8 @@ async function buscar(){
       /* rCore ignora "rua/av/r." e espaços duplicados — o cadastro grava tipo dentro do nome ("R  MARAJO") */
       const rCore=ruaCore(rua), rD=rCore.replace(/\D/g,""), nN=num.replace(/\D/g,"");
       if(!rCore&&!rD){toast("Digite o nome da rua (além de \"rua/av\").");return;}
+      /* BUSCA-15: geocoder CNEFE em paralelo — o resultado só é desenhado depois do finish() */
+      geoAncora=buscarAncoraEnd(rua,num).then(d=>({d,rua,num}));
       let whereA=`cdbairro=${b} AND vlvenal>0`;
       if(nN)whereA+=` AND nrimovel LIKE '%${nN}%'`;
       else if(rD)whereA+=` AND nmlogradou LIKE '%${rD}%'`;
@@ -5957,6 +5988,7 @@ async function buscar(){
     }
     if(tk!==SEARCHTOKEN)return;
     finish(items);
+    if(geoAncora)geoAncora.then(({d,rua,num})=>{if(tk===SEARCHTOKEN)desenharAncoraEnd(d,rua,num,!items.length);});
     if(aviso&&items.length)setTimeout(()=>toast(aviso),450); /* depois do toast do finish */
   }catch(e){
     if(tk===SEARCHTOKEN){

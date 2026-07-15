@@ -43,6 +43,18 @@ test("geocodificar declara precisão em degraus e nunca inventa coordenada", () 
   assert.ok(src.includes("precisao: parecido.rowCount ? \"logradouro\" : null"), "vazio = null, sem invenção");
 });
 
+test("app (BUSCA-15): âncora CNEFE em paralelo, honesta e que nunca quebra a busca", () => {
+  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  assert.ok(html.includes("/motor/geocodificar?rua="));
+  assert.ok(html.includes(".catch(()=>null)"), "falha do motor vira alvo ausente, nunca erro de busca");
+  /* rua inteira não vira alvo — ponto médio de rua seria falsa precisão */
+  assert.ok(html.includes('if(d.precisao!=="numero"&&d.precisao!=="numero-proximo")return;'));
+  assert.ok(html.includes("não consta no CNEFE — ponto do nº"), "aproximação declarada no rótulo");
+  assert.ok(html.includes("IBGE, Censo 2022"), "fonte declarada no mapa");
+  assert.ok(html.includes("limparAncoraEnd(); /* busca nova apaga o alvo CNEFE"), "alvo não sobrevive a outra busca");
+  assert.ok(html.includes("desenharAncoraEnd(d,rua,num,!items.length)"), "sem resultado cadastral ainda ancora o endereço");
+});
+
 test("rota pública com rate limit próprio e loader espelha a normalização", () => {
   const server = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
   assert.ok(server.includes('estourou(req, 30, "geocodificar")'));
