@@ -26,6 +26,19 @@ test('R4: "Mais opções" virou "Ferramentas" (pedido do usuário)', () => {
   assert.ok(!html.includes("<summary>Mais opções</summary>"));
 });
 
+test("capa Cidade Viva: SÓ na primeira visita, emenda no tour e respeita deep-link", () => {
+  assert.ok(html.includes('id="capaViva"'), "capa existe");
+  assert.ok(html.includes('localStorage.getItem("ci_capa")'), "uma vez por navegador");
+  assert.ok(html.includes('localStorage.setItem("ci_capa","1")'), "fechar grava a marca");
+  assert.match(html, /capaFechar[\s\S]{0,400}initOnboard\(\); \/\* a capa apresenta; o tour ensina/,
+    "Começar fecha a capa e abre o tour");
+  assert.ok(html.includes('if(CAPA_ON)return; /* capa Cidade Viva na frente'), "tour espera a capa");
+  assert.match(html, /function capaVivaInit\(\)[\s\S]{0,300}\.get\("insc"\)\)return; \/\* deep-link vai direto à ficha/,
+    "deep-link vai direto à ficha");
+  assert.ok(html.includes('matchMedia("(prefers-reduced-motion: reduce)").matches)capaAnima'), "reduced-motion sem animação");
+  assert.ok(html.includes("com fonte e limites declarados"), "a capa já apresenta o contrato de honestidade");
+});
+
 test("R4: página Como usar existe, é honesta e o app aponta para ela", () => {
   assert.ok(html.includes('href="como-usar.html"'), "link no O que o Corretor Inteligente faz");
   assert.ok(guia.includes("<title>Como usar · Corretor Inteligente</title>"));

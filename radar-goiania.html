@@ -1244,6 +1244,23 @@
   #bootSplash{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:18px;background:var(--canvas);opacity:1;transition:opacity var(--motion-base) var(--ease-out)}
   #bootSplash.off{opacity:0;pointer-events:none}
+  /* capa Cidade Viva (1ª visita) — abaixo do bootSplash (2000): o splash desvanece e revela a capa */
+  #capaViva{position:fixed;inset:0;z-index:1900;background:#212E40;display:grid;place-items:center;
+    transition:opacity var(--motion-base) var(--ease-out)}
+  #capaViva.off{opacity:0;pointer-events:none}
+  #capaCeu{position:absolute;inset:0;width:100%;height:100%}
+  .capa-conteudo{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px;
+    text-align:center;padding:24px;max-width:520px;animation:capachega .8s var(--ease-out) both .25s}
+  @keyframes capachega{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .capa-conteudo img{width:min(320px,74vw)}
+  .capa-conteudo p{color:rgba(245,248,248,.85);font:15px/1.6 var(--font-ui);margin:0}
+  .capa-conteudo small{color:rgba(245,248,248,.5);font-size:11.5px}
+  #capaComecar{font:600 16px var(--font-ui);color:#fff;border:0;border-radius:11px;padding:13px 42px;
+    cursor:pointer;background:linear-gradient(135deg,#088780,#19A99A);
+    transition:filter var(--motion-base) var(--ease-out),transform var(--motion-base) var(--ease-out)}
+  #capaComecar:hover{filter:brightness(1.08)}
+  #capaComecar:active{transform:scale(.97)}
+  @media (prefers-reduced-motion:reduce){.capa-conteudo{animation:none}}
   #bootSplash .bs-logo{width:min(240px,64vw);display:block;animation:bsrespira 2.2s ease-in-out infinite}
   @keyframes bsrespira{0%,100%{opacity:.85}50%{opacity:1}}
   #bootSplash .bs-marca{font:800 21px/1.2 var(--font-ui);letter-spacing:-.01em;color:var(--ink);text-align:center}
@@ -1411,6 +1428,18 @@
        onerror="this.hidden=true;this.nextElementSibling.hidden=false">
   <div class="bs-marca" hidden>Corretor Inteligente<small>GOIÂNIA · GO</small></div>
   <div class="bs-sp"></div>
+</div>
+<!-- Capa "Cidade Viva" — SÓ na primeira visita (decisão do usuário, 15/07/2026): o mesmo
+     fundo do login do painel apresenta o produto uma única vez; visitas seguintes vão
+     direto ao mapa. Deep-link ?insc= e reduced-motion pulam a animação. -->
+<div id="capaViva" hidden role="dialog" aria-label="Bem-vindo ao Corretor Inteligente">
+  <canvas id="capaCeu" aria-hidden="true"></canvas>
+  <div class="capa-conteudo">
+    <img src="marca/corretorinteligente_logo_branca.svg" alt="Corretor Inteligente">
+    <p>Inteligência territorial e de mercado — Goiânia.<br>Cadastro público, análise de preço e laudo, num lugar só.</p>
+    <button type="button" id="capaComecar" onclick="capaFechar()">Começar</button>
+    <small>Dados públicos da Prefeitura, IBGE e OpenStreetMap — com fonte e limites declarados.</small>
+  </div>
 </div>
 <div class="wrap">
   <header class="atlas-topbar" aria-label="Cabeçalho do Corretor Inteligente">
@@ -9418,10 +9447,78 @@ const ONB_CARDS=[
   {titulo:"Gere documentos e capte", texto:"Gere ficha ou relatório de apoio em PDF, copie mensagens prontas para o WhatsApp e monte a proposta — tudo pelo Corretor Inteligente.", cta:"Começar"},
 ];
 let onbIdx=0;
+/* ---------------- capa Cidade Viva (1ª visita) ----------------
+   Mesmo desenho do login do painel: contorno real de Goiânia se traçando + nós de
+   circuito. Aparece UMA vez (ci_capa); "Começar" fecha e emenda no tour. */
+let CAPA_ON=false;
+function capaVivaInit(){
+  try{
+    if(localStorage.getItem("ci_capa"))return;
+    if(new URLSearchParams(location.search).get("insc"))return; /* deep-link vai direto à ficha */
+  }catch(e){return;}
+  CAPA_ON=true;
+  document.getElementById("capaViva").hidden=false;
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches)capaAnima();
+}
+function capaFechar(){
+  try{localStorage.setItem("ci_capa","1");}catch(e){}
+  CAPA_ON=false;
+  const el=document.getElementById("capaViva");
+  el.classList.add("off");
+  setTimeout(()=>{el.hidden=true;},240);
+  initOnboard(); /* a capa apresenta; o tour ensina — nesta ordem */
+}
+function capaAnima(){
+  const cv=document.getElementById("capaCeu"),cx=cv.getContext("2d");
+  let W=0,H=0,anel=[],caminho=[],compr=0;
+  const mede=()=>{const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);};
+  const projeta=()=>{
+    if(!anel.length)return;
+    const xs=anel.map(p=>p[0]),ys=anel.map(p=>p[1]);
+    const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+    const e2=Math.min(W*.94/(x1-x0),H*.94/(y1-y0)),ox=(W-(x1-x0)*e2)/2,oy=(H-(y1-y0)*e2)/2;
+    caminho=anel.map(([lon,lat])=>[ox+(lon-x0)*e2,oy+(y1-lat)*e2]);
+    compr=0;for(let i=1;i<caminho.length;i++)compr+=Math.hypot(caminho[i][0]-caminho[i-1][0],caminho[i][1]-caminho[i-1][1]);
+  };
+  fetch("limite-goiania.json").then(r=>r.json()).then(gj=>{anel=gj.features[0].geometry.coordinates[0];projeta();}).catch(()=>{});
+  mede();
+  const nos=Array.from({length:Math.min(60,Math.round(innerWidth*innerHeight/26000))||36},()=>({
+    x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:1.2+Math.random()*1.8}));
+  let t0=performance.now();
+  function quadro(t){
+    if(!CAPA_ON)return; /* capa fechada = animação morre sozinha */
+    if(W!==innerWidth||H!==innerHeight){mede();projeta();}
+    const dt=Math.min(33,t-t0);t0=t;
+    const g=cx.createRadialGradient(W*.6,H*.42,80,W*.5,H*.5,Math.max(W,H)*.75);
+    g.addColorStop(0,"#26344a");g.addColorStop(1,"#1a2433");
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    if(caminho.length){
+      const vis=Math.min(1,(t/11000)%1.15)*compr;let ac=0;
+      cx.beginPath();cx.moveTo(caminho[0][0],caminho[0][1]);
+      for(let i=1;i<caminho.length&&ac<vis;i++){ac+=Math.hypot(caminho[i][0]-caminho[i-1][0],caminho[i][1]-caminho[i-1][1]);cx.lineTo(caminho[i][0],caminho[i][1]);}
+      cx.strokeStyle="#088780";cx.globalAlpha=.5+.22*Math.sin(t/1400);cx.lineWidth=1.6;
+      cx.shadowColor="#19A99A";cx.shadowBlur=12;cx.stroke();cx.shadowBlur=0;cx.globalAlpha=1;
+    }
+    for(const n of nos){
+      n.x+=n.vx*dt/16;n.y+=n.vy*dt/16;
+      if(n.x<-10)n.x=W+10;if(n.x>W+10)n.x=-10;
+      if(n.y<-10)n.y=H+10;if(n.y>H+10)n.y=-10;
+    }
+    cx.lineWidth=.7;
+    for(let i=0;i<nos.length;i++)for(let j=i+1;j<nos.length;j++){
+      const a=nos[i],b=nos[j],dd=Math.hypot(a.x-b.x,a.y-b.y);
+      if(dd<110){cx.strokeStyle=`rgba(25,169,154,${(1-dd/110)*.26})`;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();}
+    }
+    for(const n of nos){cx.fillStyle="rgba(25,169,154,.75)";cx.beginPath();cx.arc(n.x,n.y,n.r,0,7);cx.fill();}
+    requestAnimationFrame(quadro);
+  }
+  requestAnimationFrame(quadro);
+}
 function initOnboard(){
   /* deep-link ?insc= vence o onboarding: 1º acesso via link compartilhado tem que abrir a FICHA
      prometida, não um modal bloqueante por cima — pula o auto-show (o usuário ainda pode ver os
      cartões depois via "O que o Corretor Inteligente faz"). Fail-open: se der erro, não mostra. */
+  if(CAPA_ON)return; /* capa Cidade Viva na frente: o tour entra quando ela fechar */
   try{ if(new URLSearchParams(location.search).get("insc")) return; }catch(e){ return; }
   let seen="1"; try{seen=localStorage.getItem("radar_onboard");}catch(e){}
   if(!seen) onbAbrir(0);
@@ -9484,7 +9581,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
   bootSplashOff(); /* a mensagem de erro tem que aparecer — splash nunca a esconde */
 }else{
-  initMap();setView(isMobile()?"mapa":"busca");initCoach();initOnboard();loadBairros();loadBairroPolys();loadLimite();
+  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();loadBairros();loadBairroPolys();loadLimite();
   bootSplashOff(); /* mapa criado e view definida = interface interativa */
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
