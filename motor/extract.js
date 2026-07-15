@@ -32,10 +32,16 @@ export const EXTRACAO_SCHEMA = {
 const SYSTEM = `Você extrai dados de anúncios imobiliários brasileiros para JSON.
 REGRAS INEGOCIÁVEIS:
 - Extraia SOMENTE o que está escrito. Campo sem evidência textual = null. NUNCA estime.
+- ÁREA: só preencha se o número vier acompanhado de m2/m²/metros quadrados. Contagens como
+  "3.703 imóveis" ou "128 apartamentos" NÃO são área — deixe null.
 - Não confunda área total com área privativa: se o anúncio não distinguir, preencha só totalAreaM2.
+- PREÇO: só preencha askingPrice quando for claramente o preço DESTE imóvel. Faixas
+  ("de 400 a 600 mil"), "a partir de R$..." e "consulte" = null.
+- Se o texto descreve uma LISTA/CATÁLOGO de vários imóveis (ex.: "3.703 imóveis à venda"),
+  preencha só propertyType/neighborhood e deixe o resto null.
 - Opinião de anúncio ("melhor preço da região", "alto padrão") NÃO é fato: ignore para os campos.
 - Liste em "confirmados" os nomes dos campos com evidência textual direta; em "inferidos" os que
-  exigiram interpretação (ex.: "3 qtos sendo 1 suíte" -> bedrooms confirmado, suites confirmado).
+  exigiram interpretação (ex.: "4 suítes" -> bedrooms 4 é inferido).
 - Valores em reais como número puro (890000, nunca "R$ 890 mil").`;
 
 export async function extrairAnuncio({ titulo, descricao, tier = "fast" }) {

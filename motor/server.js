@@ -7,6 +7,7 @@ import { pool } from "./db.js";
 import { aiProvider } from "./ai-provider.js";
 import { extrairAnuncio } from "./extract.js";
 import { ingerir } from "./ingerir.js";
+import { avaliarQualidade } from "./qualidade.js";
 
 const PORT = 8140;
 const json = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(obj)); };
@@ -30,12 +31,39 @@ http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, db, ia, cadeia: aiProvider.status(), acervo, busca: !!process.env.BRAVE_API_KEY });
     }
     if (req.method === "GET" && req.url.startsWith("/motor/imoveis")) {
-      const lim = Math.min(Number(new URL(req.url, "http://x").searchParams.get("limit") || 20), 100);
+      const u = new URL(req.url, "http://x");
+      const lim = Math.min(Number(u.searchParams.get("limit") || 20), 100);
+      const soComparaveis = u.searchParams.get("grau") === "comparavel";
       const r2 = await pool.query(
-        `SELECT p.id, l.portal, l.url, p.neighborhood, p.property_type, p.characteristics, p.pricing, p.created_at
+        `SELECT p.id, l.portal, l.url, p.neighborhood, p.property_type, p.characteristics, p.pricing, p.quality, p.created_at
          FROM properties p JOIN listings l ON l.id = p.listing_id
+         ${soComparaveis ? "WHERE (p.quality->>'comparableGrade')::boolean IS TRUE" : ""}
          ORDER BY p.created_at DESC LIMIT $1`, [lim]);
       return json(res, 200, { total: r2.rowCount, imoveis: r2.rows });
+    }
+    if (req.method === "POST" && req.url === "/motor/requalificar") {
+      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      /* retroativo e determinístico: recalcula a peneira para TODO o acervo a partir
+         do que está gravado — zero chamadas de IA, zero cota. */
+      const todos = await pool.query(
+        `SELECT p.id, l.url, l.raw_title AS titulo, l.raw_description AS descricao,
+                p.neighborhood, p.property_type, p.characteristics, p.pricing
+         FROM properties p JOIN listings l ON l.id = p.listing_id`);
+      let comparaveis = 0, catalogos = 0;
+      for (const row of todos.rows) {
+        const extracao = Object.assign({ propertyType: row.property_type, neighborhood: row.neighborhood },
+          row.characteristics, row.pricing);
+        const q = avaliarQualidade({ url: row.url, titulo: row.titulo, descricao: row.descricao, extracao });
+        if (q.comparableGrade) comparaveis++;
+        if (q.isCatalogPage) catalogos++;
+        await pool.query("UPDATE properties SET quality=$1, updated_at=now() WHERE id=$2",
+          [JSON.stringify(q), row.id]);
+      }
+      const stats = { total: todos.rowCount, comparaveis, catalogos };
+      await pool.query(
+        "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('properties','*','requalificacao',$1)",
+        [JSON.stringify(stats)]).catch(() => {});
+      return json(res, 200, stats);
     }
     if (req.method === "POST" && req.url === "/motor/extrair") {
       if (!autorizado(req)) return json(res, 401, { erro: "token" });

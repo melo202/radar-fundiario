@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { pool } from "./db.js";
 import { buscarWeb } from "./busca-web.js";
 import { extrairAnuncio } from "./extract.js";
+import { avaliarQualidade } from "./qualidade.js";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
@@ -17,7 +18,7 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
     if (p > 0) await dormir(1200); /* Brave free = 1 req/s */
     achados.push(...await buscarWeb(consulta, { offset: p }));
   }
-  const stats = { consulta, encontrados: achados.length, novos: 0, jaConhecidos: 0, extraidos: 0, falhasExtracao: 0 };
+  const stats = { consulta, encontrados: achados.length, novos: 0, jaConhecidos: 0, extraidos: 0, falhasExtracao: 0, comparaveis: 0, catalogos: 0 };
   for (const a of achados) {
     const hash = sha(a.titulo + "\n" + a.descricao);
     const ins = await pool.query(
@@ -32,15 +33,20 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
     try {
       const ex = await extrairAnuncio({ titulo: a.titulo, descricao: a.descricao, tier });
       const v = ex.value;
+      /* peneira §6 (determinística, depois da IA): classifica, nunca apaga */
+      const q = avaliarQualidade({ url: a.url, titulo: a.titulo, descricao: a.descricao, extracao: v });
+      if (q.comparableGrade) stats.comparaveis++;
+      if (q.isCatalogPage) stats.catalogos++;
       await pool.query(
-        `INSERT INTO properties (listing_id, neighborhood, property_type, characteristics, pricing, extraction)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
+        `INSERT INTO properties (listing_id, neighborhood, property_type, characteristics, pricing, quality, extraction)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         [id, v.neighborhood, v.propertyType,
           JSON.stringify({ privateAreaM2: v.privateAreaM2, totalAreaM2: v.totalAreaM2, bedrooms: v.bedrooms,
             suites: v.suites, bathrooms: v.bathrooms, parkingSpaces: v.parkingSpaces, isFurnished: v.isFurnished }),
           JSON.stringify({ askingPrice: v.askingPrice, condominiumFee: v.condominiumFee, isLaunch: v.isLaunch }),
+          JSON.stringify(q),
           JSON.stringify({ confirmados: v.confirmados, inferidos: v.inferidos, model: ex.model, provider: ex.provider })]);
-      if (v.askingPrice) await pool.query(
+      if (q.comparableGrade && v.askingPrice) await pool.query(
         "INSERT INTO price_history (listing_id, price) VALUES ($1,$2)", [id, v.askingPrice]);
       stats.extraidos++;
     } catch (e) {
