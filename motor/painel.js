@@ -15,7 +15,7 @@ const SEC = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
 };
-const CSP = "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'";
+const CSP = "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://corretorinteligente.tech; connect-src 'self'";
 
 const json = (res, code, obj, extra = {}) => {
   res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, SEC, extra));
@@ -60,6 +60,16 @@ export async function painel(req, res) {
     res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": CSP, "Cache-Control": "no-store" }, SEC));
     return res.end(HTML);
+  }
+  if (req.method === "GET" && req.url === "/painel/limite.json") {
+    /* dado público (limite IBGE) para o fundo Cidade Viva do login — servido daqui
+       para o canvas não depender de CORS do domínio do app */
+    try {
+      const gj = readFileSync(new URL("./limite-goiania.json", import.meta.url));
+      res.writeHead(200, Object.assign({ "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=86400" }, SEC));
+      return res.end(gj);
+    } catch { return json(res, 404, { erro: "limite indisponível" }); }
   }
 
   if (req.method === "POST" && req.url === "/painel/entrar") {

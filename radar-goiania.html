@@ -1237,6 +1237,8 @@
   #bootSplash{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:18px;background:var(--canvas);opacity:1;transition:opacity var(--motion-base) var(--ease-out)}
   #bootSplash.off{opacity:0;pointer-events:none}
+  #bootSplash .bs-logo{width:min(240px,64vw);display:block;animation:bsrespira 2.2s ease-in-out infinite}
+  @keyframes bsrespira{0%,100%{opacity:.85}50%{opacity:1}}
   #bootSplash .bs-marca{font:800 21px/1.2 var(--font-ui);letter-spacing:-.01em;color:var(--ink);text-align:center}
   #bootSplash .bs-marca small{display:block;font:600 10px/1 var(--font-code);letter-spacing:.26em;color:var(--muted);margin-top:6px}
   #bootSplash .bs-sp{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite}
@@ -1398,7 +1400,9 @@
      carregando). Some quando a interface fica interativa (bootSplashOff no init) e tem
      válvula de 6s — nunca prende a tela, nem com JS quebrado no meio. -->
 <div id="bootSplash" aria-hidden="true">
-  <div class="bs-marca">Radar Fundiário<small>GOIÂNIA · GO</small></div>
+  <img class="bs-logo" src="marca/corretorinteligente_logo_horizontal_flat.svg" alt=""
+       onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+  <div class="bs-marca" hidden>Radar Fundiário<small>GOIÂNIA · GO</small></div>
   <div class="bs-sp"></div>
 </div>
 <div class="wrap">

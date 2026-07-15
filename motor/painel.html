@@ -6,11 +6,14 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Radar Fundiário — Painel do corretor</title>
 <style>
-  :root{--brand:#18513e;--brand-strong:#0f3b2d;--canvas:#f4f6f3;--ink:#14231d;--muted:#5c6b63;
-    --brass:#95743b;--card:#fff;--linha:#e3e8e4;--raio:12px;--motion:.22s;--ease:cubic-bezier(.2,.7,.3,1)}
+  /* paleta do kit Corretor Inteligente (rebrand aprovado 15/07/2026):
+     marinho #212E40 · petróleo #088780 · verde-claro #19A99A · claro #F5F8F8 */
+  :root{--brand:#088780;--brand-strong:#066b60;--marinho:#212E40;--canvas:#F5F8F8;--ink:#212E40;--muted:#5c6b74;
+    --brass:#19A99A;--card:#fff;--linha:#dfe6e8;--raio:12px;--motion:.22s;--ease:cubic-bezier(.2,.7,.3,1)}
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--canvas);color:var(--ink)}
-  header{background:var(--brand);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:12px}
+  header{background:var(--marinho);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:12px}
+  header img{height:26px;display:block}
   header b{font-size:16px;letter-spacing:.2px}
   header .tag{font-size:11px;background:rgba(255,255,255,.14);padding:3px 9px;border-radius:99px}
   header button{margin-left:auto}
@@ -28,9 +31,9 @@
     letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--linha)}
   td{padding:7px 8px;border-bottom:1px solid var(--linha)}
   .ok{color:var(--brand)}.falha{color:#c0392b}
-  button{font:inherit;background:var(--brand);color:#fff;border:0;border-radius:9px;padding:9px 16px;
-    cursor:pointer;transition:background var(--motion) var(--ease),transform var(--motion) var(--ease)}
-  button:hover{background:var(--brand-strong)}
+  button{font:inherit;font-weight:600;background:linear-gradient(135deg,#088780,#19A99A);color:#fff;border:0;border-radius:9px;padding:9px 16px;
+    cursor:pointer;transition:filter var(--motion) var(--ease),transform var(--motion) var(--ease)}
+  button:hover{filter:brightness(1.07)}
   button:active{transform:scale(.97)}
   button[disabled]{opacity:.55;cursor:wait}
   button.suave{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);padding:7px 13px}
@@ -41,11 +44,14 @@
     animation:shimmer 1.1s infinite}
   @keyframes shimmer{to{transform:translateX(100%)}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-  /* login */
-  #login{max-width:380px;margin:12vh auto;padding:0 18px}
-  #login .card{padding:26px}
-  #login h1{font-size:19px;color:var(--brand-strong);margin-bottom:6px}
-  #login p{font-size:13px;color:var(--muted);margin-bottom:16px}
+  /* login "Cidade Viva" (protótipo aprovado pelo usuário em 15/07/2026) */
+  #ceuLogin{position:fixed;inset:0;display:block;background:#212E40}
+  #login{position:fixed;inset:0;display:grid;place-items:center;padding:20px}
+  #login .card{width:min(400px,92vw);padding:32px 30px 26px;background:rgba(245,248,248,.97);
+    box-shadow:0 24px 80px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25);border:0;border-radius:18px}
+  #login img{width:80%;display:block;margin:0 auto 8px}
+  #login h1{font-size:15px;color:var(--muted);font-weight:500;text-align:center;margin-bottom:6px}
+  #login p{font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:16px}
   #login input{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:9px;
     margin-bottom:12px;outline-color:var(--brand)}
   #login button{width:100%}
@@ -55,10 +61,12 @@
 </style>
 </head>
 <body>
+<canvas id="ceuLogin" aria-hidden="true" hidden></canvas>
 <div id="login" hidden>
   <div class="card">
+    <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_horizontal_flat.svg" alt="Corretor Inteligente">
     <h1>Painel do corretor</h1>
-    <p>Área restrita do Radar Fundiário. Acesso com a senha única do servidor.</p>
+    <p>Área restrita — inteligência territorial e de mercado de Goiânia.</p>
     <div id="loginErro" role="alert"></div>
     <form id="formLogin">
       <input id="senha" type="password" placeholder="Senha" autocomplete="current-password" required>
@@ -69,7 +77,8 @@
 
 <div id="painel" hidden>
   <header>
-    <b>Radar Fundiário</b><span class="tag">painel do corretor</span>
+    <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_branca.svg" alt="Corretor Inteligente">
+    <span class="tag">painel do corretor</span>
     <button class="suave" id="btnSair" type="button">Sair</button>
   </header>
   <main>
@@ -120,10 +129,84 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;"
 const brl=v=>v==null?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const dt=s=>s?new Date(s).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
 
-function mostraLogin(msg){$("painel").hidden=true;$("login").hidden=false;$("loginErro").textContent=msg||"";$("senha").focus();}
+function mostraLogin(msg){$("painel").hidden=true;$("login").hidden=false;$("ceuLogin").hidden=false;$("loginErro").textContent=msg||"";$("senha").focus();cidadeVivaLiga();}
+
+/* ---- fundo "Cidade Viva" (protótipo aprovado 15/07/2026): o limite real de Goiânia
+   se traçando + nós de circuito da marca + pulsos de medição. Só roda na tela de
+   login; reduced-motion desliga tudo. rAF com fallback de timer (webview/pane). */
+let CIDADE_ATIVA=false,CIDADE_INIT=false,CIDADE_KICK=null;
+function cidadeVivaLiga(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  CIDADE_ATIVA=true;
+  if(CIDADE_INIT){if(CIDADE_KICK)CIDADE_KICK();return;} /* sair e voltar religa o loop */
+  CIDADE_INIT=true;
+  const cv=$("ceuLogin"),cx=cv.getContext("2d");
+  let W=0,H=0,DPR=1,anel=[],caminho=[],compr=0;
+  const mede=()=>{DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);};
+  const projeta=()=>{
+    if(!anel.length)return;
+    const xs=anel.map(p=>p[0]),ys=anel.map(p=>p[1]);
+    const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+    const esc2=Math.min(W*.92/(x1-x0),H*.92/(y1-y0));
+    const ox=(W-(x1-x0)*esc2)/2+W*.06,oy=(H-(y1-y0)*esc2)/2;
+    caminho=anel.map(([lon,lat])=>[ox+(lon-x0)*esc2,oy+(y1-lat)*esc2]);
+    compr=0;for(let i=1;i<caminho.length;i++)compr+=Math.hypot(caminho[i][0]-caminho[i-1][0],caminho[i][1]-caminho[i-1][1]);
+  };
+  fetch("/painel/limite.json").then(r=>r.ok?r.json():null).then(gj=>{if(gj){anel=gj.features[0].geometry.coordinates[0];projeta();}}).catch(()=>{});
+  mede();
+  const N=Math.min(70,Math.round(innerWidth*innerHeight/22000))||40;
+  const nos=Array.from({length:N},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:1.2+Math.random()*1.8}));
+  const pulsos=[];
+  let usaRaf=true,agendado=false,t0=performance.now();
+  function agenda(){
+    if(agendado||!CIDADE_ATIVA)return;agendado=true;
+    const disparo=()=>{agendado=false;quadro(performance.now());};
+    if(usaRaf)requestAnimationFrame(disparo);else setTimeout(disparo,33);
+  }
+  setTimeout(()=>{if(agendado&&usaRaf){usaRaf=false;agendado=false;agenda();}},600);
+  function quadro(t){
+    if(!CIDADE_ATIVA)return;
+    if(W!==innerWidth||H!==innerHeight){mede();projeta();}
+    const dt=Math.min(33,t-t0);t0=t;
+    const g=cx.createRadialGradient(W*.62,H*.45,80,W*.5,H*.5,Math.max(W,H)*.75);
+    g.addColorStop(0,"#26344a");g.addColorStop(1,"#1a2433");
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    if(caminho.length){
+      const fase=(t/12000)%1.15,visivel=Math.min(1,fase)*compr;
+      let acum=0;cx.beginPath();cx.moveTo(caminho[0][0],caminho[0][1]);
+      for(let i=1;i<caminho.length&&acum<visivel;i++){acum+=Math.hypot(caminho[i][0]-caminho[i-1][0],caminho[i][1]-caminho[i-1][1]);cx.lineTo(caminho[i][0],caminho[i][1]);}
+      cx.strokeStyle="#088780";cx.globalAlpha=.5+.22*Math.sin(t/1400);cx.lineWidth=1.6;
+      cx.shadowColor="#19A99A";cx.shadowBlur=12;cx.stroke();cx.shadowBlur=0;cx.globalAlpha=1;
+    }
+    for(const n of nos){
+      n.x+=n.vx*dt/16;n.y+=n.vy*dt/16;
+      if(n.x<-10)n.x=W+10;if(n.x>W+10)n.x=-10;
+      if(n.y<-10)n.y=H+10;if(n.y>H+10)n.y=-10;
+    }
+    cx.lineWidth=.7;
+    for(let i=0;i<nos.length;i++)for(let j=i+1;j<nos.length;j++){
+      const a=nos[i],b=nos[j],dd=Math.hypot(a.x-b.x,a.y-b.y);
+      if(dd<110){cx.strokeStyle=`rgba(25,169,154,${(1-dd/110)*.28})`;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();}
+    }
+    for(const n of nos){cx.fillStyle="rgba(25,169,154,.75)";cx.beginPath();cx.arc(n.x,n.y,n.r,0,7);cx.fill();}
+    if(Math.random()<.012&&pulsos.length<4&&caminho.length){
+      const p=caminho[Math.floor(Math.random()*caminho.length)];
+      pulsos.push({x:p[0],y:p[1],r:0});
+    }
+    for(let i=pulsos.length-1;i>=0;i--){
+      const p=pulsos[i];p.r+=dt*.035;const al=Math.max(0,1-p.r/90);
+      if(!al){pulsos.splice(i,1);continue;}
+      cx.strokeStyle=`rgba(8,135,128,${al*.5})`;cx.lineWidth=1.4;
+      cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.stroke();
+    }
+    agenda();
+  }
+  CIDADE_KICK=()=>quadro(performance.now());
+  quadro(performance.now());
+}
 
 function render(d){
-  $("login").hidden=true;$("painel").hidden=false;CSRF=d.csrf;
+  $("login").hidden=true;$("ceuLogin").hidden=true;CIDADE_ATIVA=false;$("painel").hidden=false;CSRF=d.csrf;
   const a=d.acervo||{};
   $("kpis").innerHTML=[["anuncios","anúncios coletados"],["imoveis","imóveis extraídos"],["comparaveis","comparáveis válidos"],["enderecos","endereços CNEFE"],["pois","POIs de entorno"]]
     .map(([k,rot])=>`<div class="kpi"><b>${Number(a[k]||0).toLocaleString("pt-BR")}</b><span>${rot}</span></div>`).join("");

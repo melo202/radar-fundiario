@@ -7,6 +7,7 @@ git fetch -q origin agent/radar-ultrapremium
 git reset -q --hard origin/agent/radar-ultrapremium
 mkdir -p /opt/radar/api
 cp -r motor/. /opt/radar/api/
+cp limite-goiania.json /opt/radar/api/ # fundo Cidade Viva do login do painel
 cd /opt/radar/api
 [ -f .env ] || { echo "FALTA /opt/radar/api/.env (DATABASE_URL, AI_*)"; exit 1; }
 npm install --omit=dev --no-audit --no-fund --loglevel=error
