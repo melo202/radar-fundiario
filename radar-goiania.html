@@ -1229,6 +1229,10 @@
   .bldg-ord-toggle:hover,.bldg-zap:hover{border-color:var(--brand);color:var(--brand-strong)}
   .empty{padding:40px 28px}
   .empty .big{font-size:18px;line-height:1.25;letter-spacing:-.01em}
+  /* dica de exploração do mapa (onboarding): mesmo tom do estado vazio, separada dos exemplos */
+  .empty-explore{margin:var(--space-5) 0 0;padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius-sm);
+    background:var(--surface-soft);font-size:12.5px;line-height:1.55;color:var(--ink-soft);text-align:left}
+  .empty-explore b{color:var(--ink)}
   .foot{border-top:1px solid var(--line)}
 
   #map{background:#e7ece8}
@@ -1282,11 +1286,13 @@
   .combo-empty{padding:14px}
 
   @media(min-width:821px){
-    .wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--atlas-inspector);grid-template-rows:var(--atlas-header) minmax(0,1fr);height:100vh;height:100dvh}
+    /* Inspetor à ESQUERDA (pedido do usuário, 15/07/2026): coluna 1 = painel/dossiê, coluna 2 = mapa.
+       O mapa continua dominante; só o lado espelhou. */
+    .wrap{display:grid;grid-template-columns:var(--atlas-inspector) minmax(0,1fr);grid-template-rows:var(--atlas-header) minmax(0,1fr);height:100vh;height:100dvh}
     .mapwrap{position:relative;inset:auto;grid-column:1/-1;grid-row:2;min-width:0;min-height:0;transition:none}
-    body[data-view="busca"] .mapwrap,body:has(.mapwrap>.detail.show) .mapwrap{grid-column:1/2}
-    .panel{position:relative;top:auto;left:auto;grid-column:2;grid-row:2;width:auto;max-width:none;max-height:none;min-width:0;min-height:0;
-      border:0;border-left:1px solid var(--line);border-radius:0;box-shadow:-12px 0 40px rgba(20,35,29,.05);z-index:700;overflow-y:auto}
+    body[data-view="busca"] .mapwrap,body:has(.mapwrap>.detail.show) .mapwrap{grid-column:2/3}
+    .panel{position:relative;top:auto;left:auto;grid-column:1;grid-row:2;width:auto;max-width:none;max-height:none;min-width:0;min-height:0;
+      border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:12px 0 40px rgba(20,35,29,.05);z-index:700;overflow-y:auto}
     body[data-view="busca"] .panel{display:flex}
     /* Depois do primeiro resultado, a busca vira uma barra de refinamento: o formulário manual
        deixa de consumir a maior parte do inspetor e a lista assume o plano principal. */
@@ -1306,13 +1312,13 @@
     .searchpill{display:none}
     #pillClose{display:inline-grid;place-items:center}
     #breadcrumb{top:24px;left:24px;max-width:min(520px,calc(100% - 48px))}
-    .detail{position:fixed;inset:var(--atlas-header) 0 0 auto;width:var(--atlas-inspector);height:auto;max-height:none;overflow-y:auto;
-      border:0;border-left:1px solid var(--line);border-radius:0;padding:24px 24px 32px;box-shadow:-12px 0 40px rgba(20,35,29,.06);z-index:750}
+    .detail{position:fixed;inset:var(--atlas-header) auto 0 0;width:var(--atlas-inspector);height:auto;max-height:none;overflow-y:auto;
+      border:0;border-right:1px solid var(--line);border-radius:0;padding:24px 24px 32px;box-shadow:12px 0 40px rgba(20,35,29,.06);z-index:750}
     .detail .shead{position:sticky;top:-24px;z-index:8;height:44px;margin:-24px -24px 4px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px)}
     .detail .x{top:8px;right:12px}
     .detail .backlist{top:8px;left:12px}
     .detail .dgrid{grid-template-columns:repeat(2,1fr)}
-    #identityCheck{inset:var(--atlas-header) 0 0 auto;width:var(--atlas-inspector);transform:none}
+    #identityCheck{inset:var(--atlas-header) auto 0 0;width:var(--atlas-inspector);transform:none}
     .terr-legenda{right:24px;top:24px}
     body:has(.mapwrap>.detail.show) .terr-legenda{right:24px}
     .cmp-fab{bottom:24px}
@@ -1483,6 +1489,7 @@
           <button data-example="sumer park">sumer park</button>
           <button data-example="3020150346">3020150346</button>
         </div>
+        <p class="empty-explore">Prefere explorar pelo mapa? <b>Aproxime o zoom</b> até as divisas dos lotes aparecerem e toque num lote — ou toque num <b>bairro</b> para ver o território.</p>
       </div>
     </div>
 
@@ -1516,7 +1523,7 @@
       <svg class="pill-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><span class="pill-lb">O que você procura?</span>
     </button>
     <div id="coachMark" class="coachmark" role="status" style="display:none">
-      <span class="coach-tx">Toque num bairro pra explorar, ou use a busca.</span>
+      <span class="coach-tx">Aproxime o zoom para ver as divisas dos lotes, toque num bairro, ou use a busca.</span>
       <button class="coach-x" aria-label="Dispensar dica" onclick="dismissCoach()">×</button>
     </div>
     <nav id="breadcrumb" aria-label="Navegação do mapa" style="display:none">

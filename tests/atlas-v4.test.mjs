@@ -60,6 +60,23 @@ test("V1 (fechamento): camadas territoriais leem a paleta viva do shell", () => 
   assert.match(html, /--zone-aa:#ffaa00/);
 });
 
+test("shell atlas: inspetor fica à esquerda e o mapa à direita no desktop", () => {
+  assert.match(html, /grid-template-columns:var\(--atlas-inspector\) minmax\(0,1fr\)/);
+  assert.match(html, /\.panel\{[^}]*grid-column:1/);
+  assert.match(html, /\.detail\{position:fixed;inset:var\(--atlas-header\) auto 0 0/);
+  assert.match(html, /#identityCheck\{inset:var\(--atlas-header\) auto 0 0/);
+  /* mapa recua para a coluna 2 quando painel/dossiê abrem */
+  assert.match(html, /body\[data-view="busca"\] \.mapwrap,body:has\(\.mapwrap>\.detail\.show\) \.mapwrap\{grid-column:2\/3\}/);
+});
+
+test("onboarding: usuário aprende zoom, toque no bairro e busca", () => {
+  assert.ok(html.includes("Aproxime o zoom para ver as divisas dos lotes, toque num bairro, ou use a busca."));
+  assert.ok(html.includes('class="empty-explore"'));
+  assert.ok(html.includes("até as divisas dos lotes aparecerem"));
+  /* a dica dos lotes recém-desenhados permanece (toast do LOTHINT) */
+  assert.ok(html.includes("Lotes delimitados — toque num lote para abrir os dados."));
+});
+
 test("V4: banner offline não promete o que o SW não entrega", () => {
   /* consultas e tiles são sempre-rede no sw.js — o texto do banner precisa dizer isso
      sem sugerir que a busca funciona offline */

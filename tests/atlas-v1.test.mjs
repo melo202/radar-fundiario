@@ -19,9 +19,10 @@ test("cabeçalho Atlas reutiliza a busca existente em vez de duplicar o motor", 
 });
 
 test("desktop reserva 480 px para o inspetor e redimensiona o mapa", () => {
-  assert.match(html, /grid-template-columns:minmax\(0,1fr\) var\(--atlas-inspector\)/);
-  assert.match(html, /body\[data-view="busca"\] \.mapwrap,body:has\(\.mapwrap>\.detail\.show\) \.mapwrap\{grid-column:1\/2\}/);
-  assert.match(html, /\.panel\{position:relative;top:auto;left:auto;grid-column:2;grid-row:2/);
+  /* 15/07/2026: inspetor migrou para a ESQUERDA a pedido do usuário — coluna 1 = inspetor, 2 = mapa */
+  assert.match(html, /grid-template-columns:var\(--atlas-inspector\) minmax\(0,1fr\)/);
+  assert.match(html, /body\[data-view="busca"\] \.mapwrap,body:has\(\.mapwrap>\.detail\.show\) \.mapwrap\{grid-column:2\/3\}/);
+  assert.match(html, /\.panel\{position:relative;top:auto;left:auto;grid-column:1;grid-row:2/);
   assert.match(html, /function atlasInvalidateMap\(\)[\s\S]*map\.invalidateSize\(\)/);
 });
 
