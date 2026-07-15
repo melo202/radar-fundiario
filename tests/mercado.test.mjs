@@ -37,6 +37,16 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
 });
 
+test("avaliação a 1 toque: ação principal do dossiê leva ao card e dispara sozinha", () => {
+  /* pedido do usuário (15/07): "não tá fácil de encontrar o laudo" */
+  assert.match(html, /onclick="irParaAvaliacao\(\)">Avaliação de mercado<\/button>/);
+  assert.match(html, /function irParaAvaliacao\(\)[\s\S]{0,400}setDossierView\('territorio'\)[\s\S]{0,400}analisarMercado\(\)/);
+  /* não dispara em cima de análise em andamento nem refaz a já feita */
+  assert.ok(html.includes("!bt.disabled&&!body.querySelector('.dmercado-num')"));
+  /* Analisar vizinhança continua existindo, agora em Ferramentas */
+  assert.match(html, /onclick="setDossierView\('territorio'\);compare\(\)"[^>]*>Analisar vizinhança<\/button>/);
+});
+
 test("laudo-mercado: mapa de comparáveis em SVG estático — dados, não tiles", () => {
   assert.match(html, /function mercadoMapaSVG\(m,a\)/);
   /* sem posição real (imóvel E ao menos 1 oferta) o mapa NÃO existe — nunca se inventa */

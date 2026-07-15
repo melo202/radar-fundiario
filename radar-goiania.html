@@ -7074,6 +7074,17 @@ function mercadoNoMapa(){
   if(pts.length)map.fitBounds(L.latLngBounds(pts).pad(.25));
   if(isMobile())setView("mapa");
 }
+/* Atalho de 1 toque para a avaliação (pedido do usuário 15/07: "não tá fácil de
+   encontrar o laudo"): vai à aba Território, rola até o card Mercado e — se a análise
+   deste imóvel ainda não rodou — dispara sozinha. O documento fica a 1 clique dali. */
+function irParaAvaliacao(){
+  setDossierView('territorio');
+  const card=document.getElementById('dMercado');
+  if(card)setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  const body=document.getElementById('dMercadoBody');
+  const bt=document.getElementById('btnMercado');
+  if(body&&bt&&!bt.disabled&&!body.querySelector('.dmercado-num'))analisarMercado();
+}
 async function analisarMercado(){
   const a=MERCADO_A; if(!a)return;
   const body=document.getElementById("dMercadoBody"), bt=document.getElementById("btnMercado");
@@ -7347,7 +7358,7 @@ function showDetail(a,ll){
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
   document.getElementById("dActsPrim").innerHTML=`
     <button type="button" class="primary" onclick="abrirSeletorFinalidade()">Exportar ficha ou relatório</button>
-    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="setDossierView('territorio');compare()">Analisar vizinhança</button>`:""}
+    <button type="button" onclick="irParaAvaliacao()">Avaliação de mercado</button>
     <button type="button" class="acts-save" onclick="toggleOportunidade()" aria-pressed="false">Salvar imóvel</button>`;
   renderSaveBtn(); /* recalcula rótulo/classe/aria-pressed lendo oppTem() — estado a CADA abertura */
   /* 6. Mais opções — resto (copiar inscrição, custos, CND, copiar link, mapas), dentro do <details class="maisopcoes"> */
@@ -7363,6 +7374,7 @@ function showDetail(a,ll){
   const dActsMore=document.getElementById("dActsMore");
   dActsMore.dataset.insc=clean(insc||ci);
   dActsMore.innerHTML=`
+    ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="setDossierView('territorio');compare()">Analisar vizinhança</button>`:""}
     <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">Salvar no caderno</button>
     <button type="button" onclick="copyInsc(this)">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">Calcular custos de compra (ITBI + cartório)</button>
