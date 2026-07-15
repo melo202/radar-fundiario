@@ -34,10 +34,13 @@ export async function entorno({ lat, lon }) {
       nearestDistanceMeters: n ? d : null, sinal: SINAL[cat] || "positivo" };
   }
 
-  /* dataQuality (§6): densidade em janela larga decide a confiança da cobertura */
+  /* dataQuality (§6): a confiança mede a densidade de AMENIDADES ESSENCIAIS mapeadas —
+     ponto de ônibus e área industrial não contam (aprendido no aceite: a periferia dava
+     "alta" com zero supermercado/escola/farmácia, o que mascarava a lacuna real). */
   const denso = await pool.query(
     `SELECT count(*)::int AS n FROM pois
-     WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1,$2),4326)::geography, 1500)`,
+     WHERE categoria IN ('supermarket','bakery','pharmacy','school','restaurant','bank','clinic','gym')
+       AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1,$2),4326)::geography, 1500)`,
     [lon, lat]);
   const nAmplo = denso.rows[0].n;
   const dataQuality = {
