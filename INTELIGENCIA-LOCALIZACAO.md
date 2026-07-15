@@ -65,7 +65,17 @@ StreetImageryProvider) para nunca acoplar a uma fonte única.
 laudo; dados derivados de OSM herdam share-alike quando redistribuídos como banco; nunca
 misturar dado armazenado de Google com o banco aberto.
 
-## C. MVP recomendado (Cenário A adaptado — custo ~zero)
+## C. MVP recomendado (Cenário A adaptado — custo ~zero) — **ENTREGUE em 15/07/2026**
+
+**Passos 1–5 no ar:** `gerar-pois.py` carregou **6.734 POIs** do extrato Geofabrik de
+15/07 (recarga mensal via `radar-pois.timer`); `GET /motor/localizacao` público com raio
+por categoria, cache e `dataQuality` honesto; card "Localização — entorno mapeado (beta)"
+no Território com skeleton, pontos de atenção separados e atribuição ODbL. Aceite nas 5
+regiões da spec: Bueno 211 POIs (supermercado a 100 m), Marista 232, Jd. Goiás 108,
+Pq. Amazônia 63, Vera Cruz 14 — e a lição de honestidade aprendida no próprio aceite: a
+confiança de cobertura passou a contar só amenidades ESSENCIAIS (ônibus/indústria
+inflavam a periferia para "alta"). Falta do MVP: resumo curto por IA (passo 6 — entra no
+pipeline do parecer §17) e, depois, OSRM/INEP/CNES/correlação com comparáveis (§10).
 
 1. **`gerar-pois.py`** (padrão dos gerar-*.py): baixa o PBF de Goiás da Geofabrik, filtra as
    ~20 categorias internas (mapa tag OSM → `LocationCategory` próprio, §7 da spec), grava
