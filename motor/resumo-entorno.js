@@ -18,10 +18,10 @@ REGRAS INEGOCIÁVEIS:
 - Se coverageConfidence for "baixa", diga explicitamente que o mapeamento da região é
   incompleto e ausências podem ser lacuna de dados.
 - Não avalie segurança pública nem perfil de moradores. Não afirme valorização.
-- Não qualifique quantidades das categorias de atenção ("poucos"/"muitos") — apenas
-  aponte a existência e a distância. Não diga que o mapeamento é "completo": no máximo
-  "região bem mapeada" quando a cobertura for alta.
-- Não liste categorias zeradas como "ausência" — omita-as.`;
+- Não qualifique quantidades das categorias de atenção ("poucos"/"muitos"/"apenas") —
+  aponte a existência e a distância, sem juízo. Não diga que o mapeamento é "completo":
+  no máximo "região bem mapeada" quando a cobertura for alta.
+- Não mencione o que não está no JSON — nem como ausência.`;
 
 function resumoDeterministico(d) {
   const c = d.categorias;
@@ -45,7 +45,11 @@ export async function resumirEntorno({ lat, lon }) {
       permitidos.push(x.nearestDistanceMeters, (x.nearestDistanceMeters / 1000).toFixed(1));
     }
   }
-  const payload = { categorias: d.categorias, dataQuality: { coverageConfidence: d.dataQuality.coverageConfidence, warnings: d.dataQuality.warnings } };
+  /* categoria zerada NEM ENTRA no que a IA vê — o modelo não resiste a narrar
+     "ausência" (visto em produção: cemitério zerado virou "ponto de atenção").
+     Filtrar na construção > pedir por prompt. */
+  const categorias = Object.fromEntries(Object.entries(d.categorias).filter(([, x]) => x.count > 0));
+  const payload = { categorias, dataQuality: { coverageConfidence: d.dataQuality.coverageConfidence, warnings: d.dataQuality.warnings } };
 
   let texto = null, modo = "ia", modelo = null;
   let problema = "";

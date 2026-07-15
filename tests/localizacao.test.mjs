@@ -40,7 +40,8 @@ test("resumo por IA: <think> do qwen remoto nunca vaza e a prosa não inventa ju
   const resumo = readFileSync(new URL("../motor/resumo-entorno.js", import.meta.url), "utf-8");
   assert.ok(resumo.includes('Não qualifique quantidades das categorias de atenção'));
   assert.ok(resumo.includes('Não diga que o mapeamento é "completo"'));
-  assert.ok(resumo.includes('Não liste categorias zeradas como "ausência"'));
+  /* categoria zerada é filtrada ANTES do prompt — a IA nunca vê o que não existe */
+  assert.ok(resumo.includes('.filter(([, x]) => x.count > 0)'));
 });
 
 test("card Localização no app: honesto, com ODbL e degradação explicada", () => {
