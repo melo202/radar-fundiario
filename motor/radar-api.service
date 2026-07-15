@@ -1,0 +1,16 @@
+[Unit]
+Description=Radar Fundiario - motor de analise de preco (API interna)
+After=network.target postgresql.service ollama.service
+
+[Service]
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/server.js
+Restart=always
+RestartSec=3
+User=www-data
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

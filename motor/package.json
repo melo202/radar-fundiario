@@ -1,0 +1,14 @@
+{
+  "name": "radar-motor",
+  "private": true,
+  "type": "module",
+  "description": "Motor de análise de preço do Radar Fundiário — Fase 2 (AIProvider + migrações + API interna)",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "pg": "^8.13.1"
+  }
+}
