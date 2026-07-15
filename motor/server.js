@@ -108,9 +108,22 @@ http.createServer(async (req, res) => {
       return json(res, 200, await avaliar(subject));
     }
     if (req.method === "POST" && /^\/motor\/avaliacoes\/[0-9a-f-]{36}\/parecer$/.test(req.url)) {
-      if (!autorizado(req)) return json(res, 401, { erro: "token" }); /* gasta IA */
+      const id = req.url.split("/")[3];
+      /* parecer JÁ gerado é leitura pública (cache por avaliação — gera uma vez, serve sempre) */
+      const jaTem = await pool.query("SELECT result->'parecer' AS parecer FROM valuations WHERE id=$1", [id]);
+      if (jaTem.rowCount && jaTem.rows[0].parecer) return json(res, 200, { id, parecer: jaTem.rows[0].parecer, fromCache: true });
+      /* gerar gasta IA: token OU público com limite apertado (2/min por IP) */
+      if (!autorizado(req) && estourou(req, 2)) return json(res, 429, { erro: "aguarde 1 minuto para gerar outro parecer" });
       const { gerarParecer } = await import("./redacao.js");
-      return json(res, 200, await gerarParecer(req.url.split("/")[3]));
+      return json(res, 200, await gerarParecer(id));
+    }
+    if (req.method === "POST" && req.url === "/motor/localizacao/resumo") {
+      /* gera IA só para coordenada nova (ai_cache) — público com limite apertado */
+      if (!autorizado(req) && estourou(req, 3)) return json(res, 429, { erro: "aguarde 1 minuto" });
+      const { lat, lon } = JSON.parse(await readBody(req) || "{}");
+      if (!isFinite(lat) || !isFinite(lon)) return json(res, 400, { erro: "lat e lon obrigatórios" });
+      const { resumirEntorno } = await import("./resumo-entorno.js");
+      return json(res, 200, await resumirEntorno({ lat, lon }));
     }
     if (req.method === "GET" && /^\/motor\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
       const id = req.url.split("/").pop();

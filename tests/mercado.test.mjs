@@ -37,6 +37,15 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
 });
 
+test("ia na interface: parecer e resumo com rotulagem de origem e degradação explicada", () => {
+  assert.match(html, /function gerarParecerMercado\(id\)/);
+  assert.match(html, /function resumirEntorno\(\)/);
+  assert.ok(html.includes("os valores do texto são conferidos automaticamente contra o resultado"));
+  assert.ok(html.includes("números conferidos automaticamente contra a medição"));
+  assert.ok(html.includes("Resumo automático gerado sem IA a partir dos dados medidos."));
+  assert.ok(html.includes("Os números acima seguem valendo."));
+});
+
 test("mercado: novo imóvel aberto reseta o card e falha de rede degrada com aviso", () => {
   assert.ok(html.includes("mercadoReset(a); /* Mercado (beta)"));
   assert.ok(html.includes("Análise de mercado indisponível agora"));

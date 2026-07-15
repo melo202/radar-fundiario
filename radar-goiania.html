@@ -1259,6 +1259,11 @@
     background:var(--warning-soft);font-size:11.5px;line-height:1.5;color:var(--warning)}
   .dmercado-list{margin:6px 0 0;padding-left:16px;font-size:11.5px;line-height:1.7}
   .dmercado-list a{color:var(--brand);word-break:break-all}
+  .dmercado-parecer{margin-top:var(--space-3)}
+  .dmercado-iabtn{font:600 12px/1 var(--font-ui);padding:8px 14px;border:1px solid var(--brand);border-radius:var(--radius-sm);
+    background:var(--surface);color:var(--brand);cursor:pointer;min-height:32px}
+  .dmercado-parecer-tx{font-size:12.5px;line-height:1.65;color:var(--ink-soft);padding:var(--space-3);border:1px solid var(--line);
+    border-radius:var(--radius-sm);background:var(--surface-soft)}
   .foot{border-top:1px solid var(--line)}
 
   #map{background:#e7ece8}
@@ -6959,7 +6964,24 @@ function renderMercado(d,subject){
     <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
+    ${d.id?`<div class="dmercado-parecer" id="dMercadoParecer"><button type="button" class="dmercado-iabtn" onclick="gerarParecerMercado('${esc(d.id)}')">Ler o parecer da análise</button></div>`:""}
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
+}
+/* Parecer §17 no card: o motor gera UMA vez por avaliação (cache) e a leitura é pública.
+   Os números do texto são garantidos por construção (placeholders) + validador no motor. */
+async function gerarParecerMercado(id){
+  const box=document.getElementById("dMercadoParecer");
+  if(!box)return;
+  box.innerHTML='<div aria-hidden="true"><div class="skel-line w80"></div><div class="skel-line w60" style="margin-top:6px"></div></div><p class="dmercado-hint">Redigindo o parecer sobre os números calculados…</p>';
+  try{
+    const r=await fetch(`${MOTOR_BASE}/motor/avaliacoes/${id}/parecer`,{method:"POST",signal:AbortSignal.timeout(90000)});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.erro||("http "+r.status));
+    box.innerHTML=`<div class="dmercado-parecer-tx">${esc(d.parecer.texto)}</div>
+      <p class="dmercado-hint">Texto redigido por IA sobre os números calculados — os valores do texto são conferidos automaticamente contra o resultado e não podem divergir.</p>`;
+  }catch(e){
+    box.innerHTML=`<p class="dmercado-hint">Parecer indisponível agora (${esc(e.message)}). Os números acima seguem valendo.</p>`;
+  }
 }
 
 /* ---------------- Localização (MVP): entorno objetivo via motor ----------------
@@ -7001,7 +7023,25 @@ function renderLocal(d){
     ${(q.warnings&&q.warnings.length)?`<div class="dmercado-warn">${q.warnings.map(esc).join("<br>")}</div>`:""}
     ${pos.length?`<ul class="dmercado-list">${pos.join("")}</ul>`:'<p class="dmercado-hint">Nenhuma amenidade mapeada nos raios pesquisados.</p>'}
     ${at.length?`<div style="margin-top:8px"><b style="font-size:12px">Pontos de atenção</b><ul class="dmercado-list">${at.join("")}</ul></div>`:""}
+    ${pos.length||at.length?`<div class="dmercado-parecer" id="dLocalResumo"><button type="button" class="dmercado-iabtn" onclick="resumirEntorno()">Resumir o entorno</button></div>`:""}
     <p class="dmercado-hint">Cobertura ${esc(q.coverageConfidence||"?")} · extrato de ${esc(q.extractDate||"?")} · ${esc(q.attribution||"© OpenStreetMap contributors")}.</p>`;
+}
+/* Resumo do entorno: IA explica os dados medidos (números validados contra a medição no
+   motor; se a validação reprovar, o motor devolve um resumo determinístico — nunca some). */
+async function resumirEntorno(){
+  const box=document.getElementById("dLocalResumo"), ll=LOCAL_LL;
+  if(!box||!ll)return;
+  box.innerHTML='<div aria-hidden="true"><div class="skel-line w80"></div><div class="skel-line w60" style="margin-top:6px"></div></div><p class="dmercado-hint">Resumindo o entorno medido…</p>';
+  try{
+    const r=await fetch(`${MOTOR_BASE}/motor/localizacao/resumo`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lat:ll.lat,lon:ll.lng}),signal:AbortSignal.timeout(90000)});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.erro||("http "+r.status));
+    box.innerHTML=`<div class="dmercado-parecer-tx">${esc(d.texto)}</div>
+      <p class="dmercado-hint">${d.modo==="ia"?"Interpretação por IA dos dados medidos acima — números conferidos automaticamente contra a medição.":"Resumo automático gerado sem IA a partir dos dados medidos."}</p>`;
+  }catch(e){
+    box.innerHTML=`<p class="dmercado-hint">Resumo indisponível agora (${esc(e.message)}). As medições acima seguem valendo.</p>`;
+  }
 }
 
 /* LAUDO-MERCADO (curto prazo do roadmap): a ACM entra como SEÇÃO do Relatório de Referência

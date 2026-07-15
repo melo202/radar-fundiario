@@ -23,6 +23,23 @@ export function substituirPlaceholders(texto, ph) {
   return t;
 }
 
+/* Validador genérico de números (resumo do entorno, §12 da spec de localização):
+   todo inteiro citado no texto tem que existir no conjunto permitido (contagens,
+   distâncias e raios medidos). Números por extenso não são cobrados — o risco real
+   é dígito inventado parecer medição. */
+export function numerosDoTexto(texto) {
+  return [...String(texto).matchAll(/\d+(?:[.,]\d+)?/g)].map(m => m[0]);
+}
+export function validarNumeros(texto, permitidos) {
+  const set = new Set(permitidos.map(String));
+  /* variantes aceitas: "1.5" e "1,5"; inteiro cru */
+  const estranhos = numerosDoTexto(texto).filter(n => {
+    const canon = n.replace(",", ".");
+    return !set.has(n) && !set.has(canon) && !set.has(String(parseFloat(canon)));
+  });
+  return { ok: estranhos.length === 0, estranhos: [...new Set(estranhos)] };
+}
+
 /* Após a substituição: (a) não pode sobrar placeholder; (b) todo "R$ ..." do texto
    tem que ser um dos valores permitidos, formatados exatamente pelo nosso fmtBR. */
 export function validarParecer(texto, ph) {
