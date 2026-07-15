@@ -102,6 +102,18 @@ http.createServer(async (req, res) => {
       const { entorno } = await import("./localizacao.js");
       return json(res, 200, await entorno({ lat, lon }));
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/geocodificar")) {
+      /* determinístico (CNEFE local, zero cota): público, mesmo espírito do localizacao */
+      if (estourou(req, 30, "geocodificar")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const u = new URL(req.url, "http://x");
+      if (!u.searchParams.get("rua")) return json(res, 400, { erro: "rua obrigatória" });
+      const { geocodificar } = await import("./geocodificar.js");
+      return json(res, 200, await geocodificar({
+        rua: u.searchParams.get("rua"),
+        numero: u.searchParams.get("numero"),
+        bairro: u.searchParams.get("bairro"),
+      }));
+    }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
       /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */
       if (!autorizado(req) && estourou(req, 10, "avaliar")) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });
