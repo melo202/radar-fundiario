@@ -5,10 +5,14 @@
 import { pool } from "./db.js";
 import { resumo, cercaTukey, normalizaBairro, dedupLeve, pesoComparavel, mediaPonderada, confianca } from "./estatistica.js";
 
-export async function avaliar(subject) {
+/* opts (§14 — revisão do corretor): excluirIds tira comparáveis da amostra por decisão
+   HUMANA registrada; parentId/notaRevisao criam uma VERSÃO nova encadeada (§20) —
+   a avaliação original permanece intacta para sempre. */
+export async function avaliar(subject, opts = {}) {
   const { propertyType, neighborhood, areaM2, bedrooms } = subject || {};
   if (!propertyType || !neighborhood) throw new Error("subject precisa de propertyType e neighborhood");
   if (!(areaM2 > 0)) throw new Error("subject precisa de areaM2 (> 0) para estimar valor total");
+  const excluir = new Set((opts.excluirIds || []).map(String));
 
   /* candidatos: só quem passou na peneira §6, com preço e do mesmo tipo */
   const cand = await pool.query(
@@ -34,8 +38,9 @@ export async function avaliar(subject) {
 
   const alvo = normalizaBairro(neighborhood);
   const comps = [];
-  let foraDoBairro = 0, foraDaFaixaDeArea = 0, semArea = 0;
+  let foraDoBairro = 0, foraDaFaixaDeArea = 0, semArea = 0, excluidosManual = 0;
   for (const r of cand.rows) {
+    if (excluir.has(String(r.id))) { excluidosManual++; continue; } /* decisão do corretor (§14) */
     if (normalizaBairro(r.neighborhood) !== alvo) { foraDoBairro++; continue; }
     const c = r.characteristics || {};
     const area = c.privateAreaM2 ?? c.totalAreaM2 ?? null;
@@ -60,7 +65,7 @@ export async function avaliar(subject) {
     /* §12: amostra insuficiente é INFORMADA, nunca maquiada */
     return { status: "amostra_insuficiente",
       sample: { totalFound, noBairro: comps.length + duplicados.length, aposDedup: principais.length,
-        minimoParaCalcular: 5, idealPlano: 10, foraDoBairro, foraDaFaixaDeArea, semArea },
+        minimoParaCalcular: 5, idealPlano: 10, foraDoBairro, foraDaFaixaDeArea, semArea, excluidosManual },
       warnings: ["Amostra insuficiente para estimativa — colete mais anúncios deste bairro/tipologia."] };
   }
 
@@ -91,7 +96,7 @@ export async function avaliar(subject) {
     probableRange: { minimum: Math.round(rValidos.q1 * areaM2), maximum: Math.round(rValidos.q3 * areaM2) },
     confidence: conf,
     sample: { totalFound, noBairro: comps.length + duplicados.length, duplicadosAgrupados: duplicados.length,
-      totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea },
+      totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea, excluidosManual },
     methods: ["preço/m² por comparável", "dedup leve entre portais", "cerca de Tukey (outliers marcados)",
       "média ponderada (área×tipologia×qualidade×recência)", "faixa provável = IQR × área"],
     assumptions: ["Comparáveis são preços de OFERTA anunciados publicamente — não são transações fechadas.",
@@ -99,10 +104,20 @@ export async function avaliar(subject) {
     warnings: validos.length < 10 ? ["Amostra abaixo do ideal do plano (10+): use como referência preliminar."] : [],
   };
 
-  /* versionamento (§20): cada cálculo é uma linha nova + comparáveis com rastreio completo */
+  /* versionamento (§20): cada cálculo é uma linha nova + comparáveis com rastreio completo.
+     Revisão do corretor (§14) encadeia por parent_id e a nota entra nas assumptions —
+     o parecer e o laudo passam a DECLARAR que houve revisão humana. */
+  if (opts.notaRevisao) result.assumptions = [...result.assumptions, opts.notaRevisao];
+  let versao = 1;
+  if (opts.parentId) {
+    const pai = await pool.query("SELECT version FROM valuations WHERE id=$1", [opts.parentId]);
+    versao = (pai.rows[0]?.version || 0) + 1;
+  }
   const val = await pool.query(
-    "INSERT INTO valuations (subject, status, result, assumptions) VALUES ($1,'calculada',$2,$3) RETURNING id, created_at",
-    [JSON.stringify(subject), JSON.stringify(result), JSON.stringify(result.assumptions)]);
+    `INSERT INTO valuations (subject, status, result, assumptions, parent_id, created_by, version)
+     VALUES ($1,'calculada',$2,$3,$4,$5,$6) RETURNING id, created_at`,
+    [JSON.stringify(subject), JSON.stringify(result), JSON.stringify(result.assumptions),
+      opts.parentId || null, opts.createdBy || null, versao]);
   const valId = val.rows[0].id;
   for (const p of pesos) await pool.query(
     `INSERT INTO valuation_comparables (valuation_id, property_id, total_score, factors, accepted, is_outlier)

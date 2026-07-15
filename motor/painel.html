@@ -80,6 +80,19 @@
     <div class="card">
       <h2>Últimas avaliações</h2>
       <div id="avaliacoes"><div class="skel" style="height:120px"></div></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">Toque numa avaliação para revisar a amostra de comparáveis.</p>
+    </div>
+    <div class="card" id="cardRevisao" hidden>
+      <h2>Revisão da amostra <span id="revId" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div id="revCabeca"></div>
+      <div id="revComps" style="margin-top:10px"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button id="btnRecalc" type="button" disabled>Recalcular sem os excluídos</button>
+        <button id="btnFecharRev" type="button" style="background:transparent;color:var(--muted);border:1px solid var(--linha)">Fechar</button>
+        <span id="revStat" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <div id="revResultado" style="margin-top:12px"></div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:10px">Toda exclusão fica registrada com motivo e autor na avaliação original; o recálculo cria uma VERSÃO nova encadeada — nada é sobrescrito.</p>
     </div>
     <div class="card">
       <h2>Chamadas de IA recentes</h2>
@@ -112,7 +125,7 @@ function render(d){
   const a=d.acervo||{};
   $("kpis").innerHTML=[["anuncios","anúncios coletados"],["imoveis","imóveis extraídos"],["comparaveis","comparáveis válidos"],["enderecos","endereços CNEFE"],["pois","POIs de entorno"]]
     .map(([k,rot])=>`<div class="kpi"><b>${Number(a[k]||0).toLocaleString("pt-BR")}</b><span>${rot}</span></div>`).join("");
-  $("avaliacoes").innerHTML=(d.avaliacoes||[]).length?`<table><tr><th>Quando</th><th>Bairro</th><th>Tipo</th><th>Valor</th><th>Confiança</th></tr>${d.avaliacoes.map(v=>`<tr><td>${dt(v.created_at)}</td><td>${esc(v.bairro)}</td><td>${esc(v.tipo)}</td><td>${brl(v.valor)}</td><td>${esc(v.confianca||v.status)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma avaliação ainda.</p>";
+  $("avaliacoes").innerHTML=(d.avaliacoes||[]).length?`<table><tr><th>Quando</th><th>Bairro</th><th>Tipo</th><th>Valor</th><th>Confiança</th></tr>${d.avaliacoes.map(v=>`<tr data-id="${esc(v.id)}" style="cursor:pointer"><td>${dt(v.created_at)}</td><td>${esc(v.bairro)}</td><td>${esc(v.tipo)}</td><td>${brl(v.valor)}</td><td>${esc(v.confianca||v.status)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma avaliação ainda.</p>";
   $("ia").innerHTML=(d.ia||[]).length?`<table><tr><th>Quando</th><th>Tarefa</th><th>Modelo</th><th>Duração</th><th></th></tr>${d.ia.map(l=>`<tr><td>${dt(l.created_at)}</td><td>${esc(l.task)}</td><td>${esc(l.model)}</td><td>${l.duration_ms!=null?(l.duration_ms/1000).toFixed(1)+" s":"—"}</td><td class="${l.ok?"ok":"falha"}">${l.ok?"ok":"falhou"}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma chamada registrada.</p>";
   $("eventos").innerHTML=(d.eventos||[]).length?`<table><tr><th>Quando</th><th>Entidade</th><th>Ação</th></tr>${d.eventos.map(e=>`<tr><td>${dt(e.created_at)}</td><td>${esc(e.entity)}</td><td>${esc(e.action)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Sem eventos.</p>";
 }
@@ -154,6 +167,71 @@ $("btnRequal").addEventListener("click",async()=>{
     visao();
   }catch{s.textContent="falhou — tente de novo.";}
   b.disabled=false;
+});
+
+/* ---- Revisão da amostra (§14): exclusão com motivo + recálculo versionado ---- */
+let REV={id:null,excluidos:new Map()};
+
+async function carregaRevisao(id){
+  const card=$("cardRevisao");card.hidden=false;
+  $("revId").textContent="· "+id.slice(0,8);
+  $("revCabeca").innerHTML='<div class="skel" style="height:40px"></div>';
+  $("revComps").innerHTML='<div class="skel" style="height:110px"></div>';
+  $("revResultado").innerHTML="";$("revStat").textContent="";
+  REV={id,excluidos:new Map()};
+  card.scrollIntoView({behavior:"smooth",block:"start"});
+  try{
+    const r=await fetch(`/painel/api/avaliacoes/${id}`);if(!r.ok)throw 0;
+    const d=await r.json();
+    const res=d.result||{};
+    $("revCabeca").innerHTML=`<div class="kpis"><div class="kpi"><b>${brl(res.estimatedValue)}</b><span>estimativa (v${d.version||1})</span></div><div class="kpi"><b>${brl(res.probableRange&&res.probableRange.minimum)} – ${brl(res.probableRange&&res.probableRange.maximum)}</b><span>faixa provável</span></div><div class="kpi"><b>${esc((res.confidence&&res.confidence.rotulo)||d.status)}</b><span>confiança</span></div></div>`;
+    const linhas=(d.comparaveis||[]).map(c=>{
+      const ch=c.characteristics||{},pr=c.pricing||{};
+      const area=ch.privateAreaM2||ch.totalAreaM2||"—";
+      const estado=c.manual_change?`excluído pelo corretor (${esc((c.manual_change.motivo||"").slice(0,40))})`:c.is_outlier?"fora da curva (Tukey)":c.accepted?`aceito · peso ${c.total_score!=null?(+c.total_score).toFixed(2):"—"}`:"rejeitado";
+      const podeExcluir=c.accepted&&!c.manual_change;
+      return `<tr data-pid="${esc(c.property_id)}"><td><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.portal)}</a></td><td>${area} m²</td><td>${brl(pr.askingPrice)}</td><td>${esc(c.neighborhood||"")}</td><td class="revEstado">${estado}</td><td>${podeExcluir?'<button type="button" data-acao="alterna" style="padding:5px 10px;font-size:12px">Excluir</button>':""}</td></tr>
+      <tr class="revMotivo" data-pid="${esc(c.property_id)}" hidden><td colspan="6"><input placeholder="Motivo da exclusão (fica registrado na auditoria)" style="width:100%;font:inherit;padding:7px 10px;border:1px solid var(--linha);border-radius:8px"></td></tr>`;
+    }).join("");
+    $("revComps").innerHTML=`<table><tr><th>Fonte</th><th>Área</th><th>Preço</th><th>Bairro</th><th>Situação</th><th></th></tr>${linhas}</table>`;
+  }catch{$("revCabeca").innerHTML="<p style='color:#c0392b;font-size:13px'>Não consegui carregar esta avaliação.</p>";}
+}
+
+$("avaliacoes").addEventListener("click",e=>{
+  const tr=e.target.closest("tr[data-id]");
+  if(tr)carregaRevisao(tr.dataset.id);
+});
+$("btnFecharRev").addEventListener("click",()=>{$("cardRevisao").hidden=true;});
+$("revComps").addEventListener("click",e=>{
+  const b=e.target.closest('button[data-acao="alterna"]');if(!b)return;
+  const tr=b.closest("tr"),pid=tr.dataset.pid;
+  const motivoTr=$("revComps").querySelector(`tr.revMotivo[data-pid="${pid}"]`);
+  if(REV.excluidos.has(pid)){
+    REV.excluidos.delete(pid);b.textContent="Excluir";tr.style.opacity="";motivoTr.hidden=true;
+  }else{
+    REV.excluidos.set(pid,"");b.textContent="Desfazer";tr.style.opacity=".55";motivoTr.hidden=false;motivoTr.querySelector("input").focus();
+  }
+  const n=REV.excluidos.size,btn=$("btnRecalc");
+  btn.disabled=!n;btn.textContent=n?`Recalcular sem ${n} excluído(s)`:"Recalcular sem os excluídos";
+});
+$("btnRecalc").addEventListener("click",async()=>{
+  const btn=$("btnRecalc"),st=$("revStat");
+  const exclusoes=[...REV.excluidos.keys()].map(pid=>{
+    const inp=$("revComps").querySelector(`tr.revMotivo[data-pid="${pid}"] input`);
+    return {propertyId:pid,motivo:(inp&&inp.value.trim())||"sem motivo informado"};
+  });
+  btn.disabled=true;st.textContent="recalculando com a amostra revisada…";
+  try{
+    const r=await fetch(`/painel/api/avaliacoes/${REV.id}/revisar`,{method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRF-Token":CSRF},body:JSON.stringify({exclusoes})});
+    const d=await r.json();if(!r.ok)throw new Error(d.erro||"falha");
+    if(d.status==="amostra_insuficiente"){
+      $("revResultado").innerHTML=`<p style="font-size:13px;color:#c0392b"><b>Amostra insuficiente após as exclusões</b> (${d.sample.aposDedup} restante(s), mínimo 5) — nenhuma versão nova foi criada. A avaliação original segue valendo.</p>`;
+      st.textContent="";btn.disabled=false;return;
+    }
+    $("revResultado").innerHTML=`<div class="kpis"><div class="kpi"><b>${brl(d.result.estimatedValue)}</b><span>nova estimativa (versão registrada)</span></div><div class="kpi"><b>${brl(d.result.probableRange.minimum)} – ${brl(d.result.probableRange.maximum)}</b><span>nova faixa</span></div><div class="kpi"><b>${esc(d.result.confidence.rotulo)}</b><span>confiança</span></div></div><p style="font-size:12px;color:var(--muted);margin-top:8px">Versão nova: ${esc(d.id)} — encadeada à original, com a revisão declarada nas premissas.</p>`;
+    st.textContent="";visao();
+  }catch(e2){st.textContent="falhou: "+(e2.message||"erro");btn.disabled=false;}
 });
 
 visao();

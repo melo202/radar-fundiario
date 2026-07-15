@@ -77,6 +77,22 @@ export async function painel(req, res) {
   if (req.method === "GET" && req.url === "/painel/api/visao") {
     return json(res, 200, Object.assign(await visao(), { csrf: csrfDe(sessao) }));
   }
+  if (req.method === "GET" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
+    /* §14: dossiê de revisão — a avaliação + TODOS os comparáveis com rastreio */
+    const id = req.url.split("/").pop();
+    const v = await pool.query(
+      "SELECT id, subject, status, result, version, parent_id, created_by, created_at FROM valuations WHERE id=$1", [id]);
+    if (!v.rowCount) return json(res, 404, { erro: "avaliação não encontrada" });
+    const comps = await pool.query(
+      `SELECT vc.property_id, vc.total_score, vc.accepted, vc.is_outlier, vc.rejection_reasons, vc.manual_change,
+              p.neighborhood, p.characteristics, p.pricing, l.portal, l.url
+       FROM valuation_comparables vc
+       JOIN properties p ON p.id = vc.property_id
+       JOIN listings l ON l.id = p.listing_id
+       WHERE vc.valuation_id=$1
+       ORDER BY vc.accepted DESC, vc.total_score DESC NULLS LAST`, [id]);
+    return json(res, 200, { ...v.rows[0], comparaveis: comps.rows });
+  }
   /* POSTs autenticados exigem o token CSRF (SEG-04) */
   if (req.method === "POST" && !csrfOk(req, sessao)) return json(res, 403, { erro: "csrf" });
 
@@ -86,6 +102,32 @@ export async function painel(req, res) {
   if (req.method === "POST" && req.url === "/painel/api/requalificar") {
     const { requalificarAcervo } = await import("./requalificar.js");
     return json(res, 200, await requalificarAcervo());
+  }
+  if (req.method === "POST" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}\/revisar$/.test(req.url)) {
+    /* §14: exclusões do corretor SEMPRE registradas (manual_change na avaliação
+       original) + recálculo como VERSÃO nova encadeada — nada é sobrescrito */
+    const id = req.url.split("/")[4];
+    const { exclusoes } = JSON.parse(await readBody(req) || "{}");
+    if (!Array.isArray(exclusoes) || !exclusoes.length) return json(res, 400, { erro: "exclusoes obrigatórias" });
+    const v = await pool.query("SELECT subject, status FROM valuations WHERE id=$1", [id]);
+    if (!v.rowCount) return json(res, 404, { erro: "avaliação não encontrada" });
+    if (v.rows[0].status !== "calculada") return json(res, 400, { erro: "avaliação sem resultado para revisar" });
+    for (const ex of exclusoes) {
+      await pool.query(
+        `UPDATE valuation_comparables SET manual_change=$1 WHERE valuation_id=$2 AND property_id=$3`,
+        [JSON.stringify({ acao: "excluido", motivo: String(ex.motivo || "sem motivo informado").slice(0, 300),
+          por: "corretor-painel", quando: new Date().toISOString() }), id, ex.propertyId]);
+    }
+    const { avaliar } = await import("./avaliacao.js");
+    const novo = await avaliar(v.rows[0].subject, {
+      excluirIds: exclusoes.map(e => e.propertyId),
+      parentId: id, createdBy: "corretor-painel",
+      notaRevisao: `Revisão manual do corretor: ${exclusoes.length} comparável(is) excluído(s) da amostra, com motivo registrado.`,
+    });
+    await pool.query(
+      "INSERT INTO audit_log (entity, entity_id, action, detail, actor) VALUES ('valuations',$1,'revisao-corretor',$2,'corretor-painel')",
+      [id, JSON.stringify({ exclusoes, novaVersao: novo.id || null, status: novo.status })]).catch(() => {});
+    return json(res, 200, novo);
   }
   return json(res, 404, { erro: "rota desconhecida" });
 }
