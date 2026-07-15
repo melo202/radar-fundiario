@@ -150,7 +150,7 @@ O usuário definiu: as avaliações do motor devem sair no **laudo de avaliaçã
 
 - ✅ (15/07) **Curto prazo:** a Análise Comparativa de Mercado entrou como SEÇÃO do Relatório de Referência (`mercadoDocumentoHTML`, presa por chave à inscrição — outro imóvel nunca herda), com rotulagem honesta (ofertas ≠ transações) e id da avaliação auditável. O parecer §17 é gerado no card Mercado (números por construção, validados).
 - ⬜ **PTAM:** permanece suspenso pelo contrato de honestidade (`habilitaPtam()` → false, travado em teste) até existir **verificação profissional real** (CRECI/CNAI verificados — Res. COFECI 1.066/2007). Quando destravar, a ACM do motor vira o núcleo de comparáveis do PTAM (10+ comparáveis, metodologia, mapa, homogeneização §12), com o corretor revisando a amostra (§14) antes da emissão.
-- ⬜ Requisito técnico de caminho: mapa de comparáveis no laudo (depende do geocoding CNEFE §7) e versão do laudo apontando o id da valuation usada (auditoria §16).
+- 🔶 Requisito técnico de caminho (15/07): comparáveis GEOCODIFICADOS pelo CNEFE (endereço extraído do anúncio por regex determinística + casamento de bairro; confiança declarada por precisão), distância real na avaliação/card/laudo e pinos das ofertas no mapa do app ("Ver as ofertas no mapa", origem declarada). Cobertura inicial honesta: 33/429 do acervo têm endereço no texto — cresce a cada varredura noturna. Falta: mapa DENTRO do laudo impresso; id da valuation no laudo já existe.
 
 ### INTELIGÊNCIA DE LOCALIZAÇÃO — exploração registrada (ideia do usuário, 15/07/2026)
 
