@@ -34,7 +34,7 @@ jobs:
           # datasets do app — o mapa 404a sem eles. bairros-goiania.json é obrigatório;
           # bairro-cdbairro.json idem (lookup do Meu Território — fetch em runtime, faltava aqui
           # e o 404 degradava o recurso em produção); os demais copiados só se existirem.
-          cp bairros-goiania.json bairro-cdbairro.json _site/
+          cp bairros-goiania.json bairro-cdbairro.json limite-goiania.json _site/
           for f in logradouros-goiania.json bairros-goiania.report.md; do [ -f "$f" ] && cp "$f" _site/ || true; done
           echo "Arquivos publicados:"; ls -1 _site/
       - uses: actions/configure-pages@v5

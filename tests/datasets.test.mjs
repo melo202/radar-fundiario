@@ -74,6 +74,29 @@ test("bairro-cdbairro.json: 0 chaves órfãs — toda chave existe como feature.
   assert.equal(new Set(Object.values(CDBAIRRO).map((v) => v.cd)).size, 687, "contagem de cds distintos divergiu do snapshot auditado (687)");
 });
 
+// ---------------------------------------------------------------- limite-goiania.json ----------
+
+test("limite-goiania.json: 1 Polygon oficial do IBGE (5208707) dentro da janela de Goiânia", () => {
+  const LIMITE = JSON.parse(readFileSync(raiz("limite-goiania.json"), "utf-8"));
+  assert.equal(LIMITE.type, "FeatureCollection");
+  assert.equal(LIMITE.features.length, 1, "o limite municipal é exatamente 1 feature");
+  const geom = LIMITE.features[0].geometry;
+  assert.ok(["Polygon", "MultiPolygon"].includes(geom.type), `tipo inesperado: ${geom.type}`);
+  let pontos = 0;
+  const anda = (c) => {
+    if (typeof c[0] === "number") {
+      const [lon, lat] = c;
+      assert.ok(lon > -49.6 && lon < -48.95 && lat > -16.95 && lat < -16.35,
+        `coordenada fora da janela de Goiânia: ${lon},${lat}`);
+      pontos++;
+    } else c.forEach(anda);
+  };
+  anda(geom.coordinates);
+  // 518 pontos na malha IBGE 2022 qualidade maxima (2026-07-15) — trava piso p/ acusar
+  // regeneração degradada (qualidade minima tem ~40 pontos e arredonda demais o contorno).
+  assert.ok(pontos >= 400, `malha degradada: ${pontos} pontos (esperado >=400; medido 518)`);
+});
+
 // ---------------------------------------------------------------- logradouros-goiania.json -----
 
 test("logradouros-goiania.json: >9000 registros, todos com nome/tipo/localidades não-vazios (shape)", () => {

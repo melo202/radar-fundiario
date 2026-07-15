@@ -9,7 +9,7 @@
    tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
    nunca cache — dado vivo, e tiles de satélite são pesados demais para
    inchar o storage do PWA. */
-const CACHE = "radar-v11";
+const CACHE = "radar-v12";
 /* CORE precisa existir para a aplicação abrir. Dados auxiliares são best-effort: a ausência
    temporária de um JSON não pode abortar a instalação inteira do PWA. O app já trata degradação
    das camadas opcionais e volta a buscá-las na rede quando disponíveis. */
@@ -25,7 +25,8 @@ const OPTIONAL = [
   "./caixa-goiania.js",
   "./bairros-goiania.json",
   "./logradouros-goiania.json",
-  "./bairro-cdbairro.json"
+  "./bairro-cdbairro.json",
+  "./limite-goiania.json"
 ];
 const CDN = [
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",

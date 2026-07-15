@@ -3876,8 +3876,13 @@ function jsonpOnce(params,url=SVC){
 }
 
 /* ---------------- mapa ---------------- */
+/* G3 (15/07/2026): confinamento a Goiânia. Constante derivada do bbox de limite-goiania.json
+   (IBGE 5208707: lon -49.447..-49.078, lat -16.832..-16.454) com ~15% de folga — não depende
+   do fetch do dataset, então o confinamento vale mesmo offline. minZoom 11 = cidade inteira
+   ainda cabe na tela; viscosity 1.0 = o arrasto esbarra na borda em vez de rebater. */
+const GYN_MAXBOUNDS=[[-16.90,-49.52],[-16.39,-49.01]];
 function initMap(){
-  map=L.map("map",{zoomControl:true}).setView([-16.6799,-49.255],12);
+  map=L.map("map",{zoomControl:true,minZoom:11,maxBounds:GYN_MAXBOUNDS,maxBoundsViscosity:1.0}).setView([-16.6799,-49.255],12);
   streetTile=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
     maxZoom:19, attribution:'© OpenStreetMap · © CARTO'
   }).addTo(map); /* ruas = default no boot */
@@ -3959,10 +3964,41 @@ function setSatelite(on){
      blocker do plan-check 15-02] sem o ci guardado, alternar satélite com o choropleth ligado
      apagaria a cor de todos os lotes (ci===undefined derruba a guarda CHOROPLETH_ON&&ci!=null). */
   if(bairroLayer)bairroLayer.setStyle(baiStyle);
+  /* G2: máscara e contorno do limite municipal seguem o modo — sobre satélite o esmaecido
+     escurece (tinta) e o traço vira claro para não sumir na imagem. */
+  if(limiteMask)limiteMask.setStyle(on?{fillColor:MAP_INK,fillOpacity:.45}:{fillColor:mapTok("--canvas","#f4f6f3"),fillOpacity:.55});
+  if(limiteLine)limiteLine.setStyle({color:on?"#f4f6f3":MAP_BRAND_STRONG});
   restyleLotsChunked();
   try{localStorage.setItem("radar_sat", on?"1":"0");}catch(e){}
 }
 function toggleSatelite(){ setSatelite(!satelliteOn); }
+
+/* ---------------- limite municipal (G2, 15/07/2026) ----------------
+   Fonte: limite-goiania.json (IBGE 5208707 via gerar-limite.py). Duas camadas num pane próprio
+   ABAIXO de bairros (365<370): a máscara "polígono com furo" (anel externo = mundo, furos = anéis
+   do município, fillRule evenodd) esmaece tudo que está fora de Goiânia, e o contorno desenha o
+   limite em brand-strong. interactive:false nas duas — nunca roubam o clique do identificador de
+   ponto. Falha de fetch degrada em silêncio (o confinamento GYN_MAXBOUNDS não depende daqui). */
+let limiteMask=null,limiteLine=null;
+async function loadLimite(){
+  let data;
+  try{
+    const r=await fetch('limite-goiania.json');
+    data=await r.json();
+  }catch(e){console.warn("limite-goiania.json:",e);return;}
+  try{
+    map.createPane("limite").style.zIndex=365;
+    const geom=data.features[0].geometry;
+    const aneis=(geom.type==="MultiPolygon"?geom.coordinates:[geom.coordinates])
+      .map(poly=>poly[0].map(c=>[c[1],c[0]])); /* GeoJSON lon,lat -> Leaflet lat,lon */
+    const MUNDO=[[-89,-179],[-89,179],[89,179],[89,-179]];
+    limiteMask=L.polygon([MUNDO,...aneis],{pane:"limite",stroke:false,fillColor:mapTok("--canvas","#f4f6f3"),
+      fillOpacity:.55,fillRule:"evenodd",interactive:false,bubblingMouseEvents:false}).addTo(map);
+    limiteLine=L.polygon(aneis,{pane:"limite",color:MAP_BRAND_STRONG,weight:2,fill:false,
+      interactive:false,bubblingMouseEvents:false}).addTo(map);
+    if(satelliteOn){limiteMask.setStyle({fillColor:MAP_INK,fillOpacity:.45});limiteLine.setStyle({color:"#f4f6f3"});}
+  }catch(e){console.warn("limite-goiania.json (render):",e);}
+}
 
 /* ---------------- divisas de lote (camada 0): desenha os lotes no zoom próximo ----------------
    hover = tooltip com resumo do cadastro (carregado 1x por lote); clique atravessa
@@ -9066,7 +9102,7 @@ renderCadernoBlock(); /* Fase 16 (16-02, TERR-05): assíncrona (IndexedDB) — n
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
 }else{
-  initMap();setView(isMobile()?"mapa":"busca");initCoach();initOnboard();loadBairros();loadBairroPolys();
+  initMap();setView(isMobile()?"mapa":"busca");initCoach();initOnboard();loadBairros();loadBairroPolys();loadLimite();
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
      '🏦 Ver Oportunidades Caixa' nunca apareceria. O ramo síncrono cobre o caso raro de CAIXA já
