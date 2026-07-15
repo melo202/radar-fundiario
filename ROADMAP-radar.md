@@ -172,6 +172,25 @@ Fonte estudada: repositório `melo202/swisstony-bot` (dashboard Flask com fase d
 - ✅ (15/07) **SEG-06 — Suíte de testes de segurança dedicada** (`tests/seguranca.test.mjs`, espelho do `test_security.py`): lockout/limites, headers presentes, caches com teto, nenhuma query por interpolação de string, painel fechado sem senha.
 - 🔶 (15/07) **SEG-07 — Higiene de segredos:** `.env.example` versionado no repo (documenta as variáveis sem os valores); rotação da senha root do VPS no painel Hostinger (pendência do usuário desde 15/07 — a senha original apareceu no chat).
 
+### REBRAND — "Corretor Inteligente" (decisão do usuário, 15/07/2026)
+
+O produto muda de nome: **Radar Fundiário → Corretor Inteligente** (casa com o domínio corretorinteligente.tech). Kit de marca já estudado (`corretorinteligente_brandkit.zip` na raiz do projeto): logo horizontal (gradiente/flat/mono/branca), símbolo isolado (casa azul-marinho com nós de circuito), ícone de app 1024 e favicon 512, tudo em vetor com texto em curvas. **Paleta do kit:** azul-marinho `#212E40`, verde-petróleo `#088780`, verde-claro `#19A99A`, fundo claro `#F5F8F8`. Tratar como projeto de **designer sênior**, não troca de logo: cada fase abaixo tem aceite visual próprio.
+
+- ⬜ **R1 — Tradução da paleta para os tokens Atlas.** O shell já é 100% token (`--brand/--brand-strong/--brass/--canvas/--ink`): mapear marinho→tinta/estrutura, petróleo→ação/marca, verde-claro→realce, `#F5F8F8`→canvas; conferir contraste AA em TODOS os pares (texto pequeno sobre petróleo é o risco); manter o vermelho-alerta de risco e a simbologia do Plano Diretor intocados; mapa (`mapTok`) herda sozinho.
+- ⬜ **R2 — Marca no produto inteiro.** Logo no cabeçalho e no splash de boot, favicon + ícones PWA (192/512/apple-touch) gerados do kit, `manifest.json`, título das páginas, `index.html` de fallback, tela de login do painel, cabeçalho do Relatório de Referência/Ficha (o laudo é a peça que o cliente do corretor vê — capricho dobrado).
+- ⬜ **R3 — Renomeação nos textos.** "Radar Fundiário" → "Corretor Inteligente" em interface, laudos, README e PWA; decidir o que "radar" continua nomeando (candidato: a própria busca territorial vira "o radar" como recurso). Nenhuma mudança em rota/arquivo que quebre link já publicado sem redirect.
+- ⬜ **R4 — UX didática: ensinar o corretor a usar.** Tour de primeira visita (3–4 passos: buscar → zoom nos lotes → dossiê → laudo), microcopy revisada peça a peça (ex.: "Mais opções" vira **"Ferramentas"**), dicas contextuais na primeira vez que cada recurso aparece, e uma página curta "Como usar" linkada do cabeçalho. Regra: linguagem de corretor, não de sistema.
+- ⬜ **R5 — Motion premium em tudo que não pesar** (lei permanente do produto): transições de entrada do inspetor/cards com stagger, microinterações nos botões primários, skeletons revisados na paleta nova; SEMPRE respeitando `prefers-reduced-motion` e sem custo de frame no mapa.
+- ⬜ **R6 — Mídia e otimização.** Imagens/vídeo de apoio geradas via Higgsfield MCP (hero do estado vazio, passos do tour, `og:image` para compartilhamento, vídeo curto de demonstração), servidas otimizadas (AVIF/WebP, lazy, dimensões fixas anti-CLS); passada de performance (preload de fontes/tiles críticos, defer do que não é primeiro paint) com meta Lighthouse ≥ 90 em performance/acessibilidade.
+
+### ATUALIZAÇÃO CONTÍNUA DO ACERVO (ideia do usuário, 15/07/2026)
+
+Hoje a varredura noturna só DESCOBRE anúncios novos; ninguém revisita os já conhecidos. Para "novos imóveis, novos valores":
+
+- ⬜ **A1 — Revisita dos anúncios conhecidos:** rotina periódica que re-busca URLs já colhidas (respeitando a cota Brave), atualiza `last_seen_at`, grava mudança de preço em `price_history` (a tabela já existe e está subusada) e marca anúncio sumido como possivelmente vendido/retirado — sinal de mercado valioso.
+- ⬜ **A2 — Frescor honesto na avaliação:** o peso de recência (§8) já existe; expor a IDADE da amostra no card Mercado e no laudo ("ofertas coletadas entre X e Y"), e alertar quando a mediana da amostra passar de N dias.
+- ⬜ **A3 — Sinal de variação:** quando um mesmo anúncio muda de preço, registrar o delta e usar como termômetro do bairro (métrica agregada, nunca inferência por imóvel isolado).
+
 ### Pendências humanas (inalteradas)
 
 - ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.
