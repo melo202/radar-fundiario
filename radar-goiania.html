@@ -9599,6 +9599,11 @@ function onbAbrirDireto(idx){ onbAbrir(idx); }
 function bootSplashOff(){
   const s=document.getElementById("bootSplash");
   if(!s)return;
+  /* compasso mínimo de 1,1s (15/07/2026): com cache o app fica pronto em ~300ms e a
+     Cidade Viva nem era vista — o splash segura UM compasso de marca e só então sai.
+     A válvula de 6s continua mandando: nunca prende a tela. */
+  const desde=performance.now();
+  if(desde<1100){setTimeout(bootSplashOff,1100-desde);return;}
   s.classList.add("off");
   setTimeout(()=>s.remove(),400);
 }
