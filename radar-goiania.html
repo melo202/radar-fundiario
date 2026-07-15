@@ -7201,13 +7201,49 @@ async function resumirEntorno(){
 /* LAUDO-MERCADO (curto prazo do roadmap): a ACM entra como SEÇÃO do Relatório de Referência
    quando o corretor já analisou o mercado DESTE imóvel na sessão. Sem análise = sem seção
    (nunca inventa). Leva o id da avaliação para auditoria (§16 do plano do motor). */
+/* Mapa de comparáveis do LAUDO: SVG estático desenhado dos DADOS (nada de tiles no
+   print — imprime perfeito, zero rede, determinístico). Só existe quando o imóvel e ao
+   menos uma oferta têm posição real; os números casam com a lista da seção. */
+function mercadoMapaSVG(m,a){
+  const comps=(m.d.comparaveis||[]);
+  const pts=comps.map((c,i)=>c.lat!=null&&c.lon!=null?{lat:c.lat,lon:c.lon,n:i+1}:null).filter(Boolean);
+  if(!pts.length||!(a&&a.x_coord&&a.y_coord))return "";
+  const llS=toWGS(a.x_coord,a.y_coord),subj={lat:llS[0],lon:llS[1]};
+  const todos=[...pts,subj];
+  let la0=Math.min(...todos.map(p=>p.lat)),la1=Math.max(...todos.map(p=>p.lat));
+  let lo0=Math.min(...todos.map(p=>p.lon)),lo1=Math.max(...todos.map(p=>p.lon));
+  const padLa=Math.max((la1-la0)*.3,.0015),padLo=Math.max((lo1-lo0)*.3,.0015);
+  la0-=padLa;la1+=padLa;lo0-=padLo;lo1+=padLo;
+  const W=640,H=320;
+  const kx=111320*Math.cos((la0+la1)/2*Math.PI/180),ky=110540; /* metros por grau */
+  const wM=(lo1-lo0)*kx,hM=(la1-la0)*ky,escala=Math.min(W/wM,H/hM);
+  const X=lon=>(((lon-lo0)*kx*escala)+(W-wM*escala)/2).toFixed(1);
+  const Y=lat=>(H-(((lat-la0)*ky*escala)+(H-hM*escala)/2)).toFixed(1);
+  /* barra de escala: um comprimento "redondo" perto de 25% da largura */
+  const nice=[100,250,500,1000,2000,5000].find(v=>v*escala>=W*.18)||5000;
+  const barPx=(nice*escala).toFixed(1);
+  const marcas=pts.map(p=>`<circle cx="${X(p.lon)}" cy="${Y(p.lat)}" r="9" fill="#088780" stroke="#fff" stroke-width="1.5"/><text x="${X(p.lon)}" y="${(+Y(p.lat)+3.4).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">${p.n}</text>`).join("");
+  const sx=X(subj.lon),sy=Y(subj.lat);
+  return `<div class="lcard"><h3>Mapa das ofertas utilizadas</h3>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Posição do imóvel avaliado e das ofertas comparáveis">
+      <rect width="${W}" height="${H}" fill="#f2f6f6" rx="10"/>
+      ${marcas}
+      <rect x="${(sx-8).toString()}" y="${(sy-8).toString()}" width="16" height="16" transform="rotate(45 ${sx} ${sy})" fill="#212E40" stroke="#fff" stroke-width="1.6"/>
+      <line x1="18" y1="${H-16}" x2="${18+ +barPx}" y2="${H-16}" stroke="#212E40" stroke-width="2"/>
+      <line x1="18" y1="${H-21}" x2="18" y2="${H-11}" stroke="#212E40" stroke-width="2"/>
+      <line x1="${18+ +barPx}" y1="${H-21}" x2="${18+ +barPx}" y2="${H-11}" stroke="#212E40" stroke-width="2"/>
+      <text x="${18+ +barPx/2}" y="${H-24}" text-anchor="middle" font-size="10" fill="#212E40">${nice>=1000?(nice/1000)+" km":nice+" m"}</text>
+    </svg>
+    <p class="lmiudo">◆ imóvel avaliado · ● ofertas numeradas conforme a lista acima — ${pts.length} de ${comps.length} oferta(s) com posição pelo endereço do anúncio (CNEFE/IBGE, precisão declarada no motor).</p>
+  </div>`;
+}
 function mercadoDocumentoHTML(a){
   const m=MERCADO_LAST;
   if(!m||!m.d||!m.d.result)return "";
   const chave=clean(a.nrinscr)||clean(a.ci);
   if(!chave||m.chave!==chave)return "";
   const r=m.d.result;
-  const linhas=(m.d.comparaveis||[]).map(c=>`<div class="kv"><span>${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}${c.distanciaM!=null?` — a ${fmtDist(c.distanciaM)} do imóvel`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
+  const linhas=(m.d.comparaveis||[]).map((c,i)=>`<div class="kv"><span>${i+1}. ${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}${c.distanciaM!=null?` — a ${fmtDist(c.distanciaM)} do imóvel`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
   return `<div class="lcard"><h3>Análise Comparativa de Mercado — ofertas públicas</h3>
     <p class="lmiudo">Referência de mercado a partir de ofertas anunciadas publicamente, coletadas e tratadas pelo motor do Corretor Inteligente com estatística determinística (deduplicação, cerca de Tukey para atípicos e média ponderada por semelhança). Ofertas não são transações fechadas e esta seção não substitui avaliação profissional.</p>
     <div class="kv"><span>Valor de referência (ofertas)</span><b>${brlC(r.estimatedValue)}</b></div>
@@ -7216,7 +7252,7 @@ function mercadoDocumentoHTML(a){
     <div class="kv"><span>Confiança</span><b>${esc(r.confidence.rotulo)} — ${r.sample.totalAccepted} oferta(s) no cálculo</b></div>
     ${linhas}
     <p class="lmiudo">Avaliação nº ${esc(m.d.id)} (auditável no motor) · consultada em ${esc(m.quando)}.${r.sample&&r.sample.ofertasColetadasEntre?` Ofertas coletadas entre ${fmtDataISO(r.sample.ofertasColetadasEntre.de)} e ${fmtDataISO(r.sample.ofertasColetadasEntre.ate)}.`:""}${(r.warnings&&r.warnings.length)?" "+esc(r.warnings[0]):""}</p>
-  </div>`;
+  </div>${mercadoMapaSVG(m,a)}`;
 }
 
 /* R4 — dica de primeira vez: ensina UMA vez por recurso, nunca repete (localStorage),

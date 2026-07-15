@@ -37,6 +37,19 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
 });
 
+test("laudo-mercado: mapa de comparáveis em SVG estático — dados, não tiles", () => {
+  assert.match(html, /function mercadoMapaSVG\(m,a\)/);
+  /* sem posição real (imóvel E ao menos 1 oferta) o mapa NÃO existe — nunca se inventa */
+  assert.ok(html.includes('if(!pts.length||!(a&&a.x_coord&&a.y_coord))return "";'));
+  assert.ok(html.includes("${mercadoMapaSVG(m,a)}"), "mapa plugado na seção ACM do laudo");
+  /* números do mapa casam com a lista (mesma origem: índice do comparável) */
+  assert.ok(html.includes("`<div class=\"kv\"><span>${i+1}. ${esc(c.portal)}"), "lista numerada");
+  assert.ok(html.includes("ofertas numeradas conforme a lista acima"));
+  /* barra de escala honesta + origem da posição declarada */
+  assert.match(html, /\[100,250,500,1000,2000,5000\]\.find/);
+  assert.ok(html.includes("posição pelo endereço do anúncio (CNEFE/IBGE, precisão declarada no motor)"));
+});
+
 test("ia na interface: parecer e resumo com rotulagem de origem e degradação explicada", () => {
   assert.match(html, /function gerarParecerMercado\(id\)/);
   assert.match(html, /function resumirEntorno\(\)/);
