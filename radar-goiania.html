@@ -7159,7 +7159,17 @@ async function gerarParecerMercado(id){
 let LOCAL_LL=null;
 const LOCAL_HINT='<p class="dmercado-hint">Mede o entorno com dados abertos do OpenStreetMap processados no motor do Corretor Inteligente: contagens e distâncias por categoria, com fonte e data. Não é avaliação de segurança nem de perfil de moradores.</p>';
 function localReset(a,ll){
-  LOCAL_LL=ll||((a&&isFinite(+a.x)&&isFinite(+a.y))?(()=>{try{const w=toWGS(+a.x,+a.y);return {lat:w[0],lng:w[1]};}catch(e){return null;}})():null);
+  /* BUG real (15/07, achado pelo usuário: "da localização não sai nada"): pick() passa
+     a coordenada como ARRAY [lat,lng] e este card lia .lat/.lng de objeto — todo clique
+     acabava em "lat e lon obrigatórios". Normaliza QUALQUER forma; o fallback usava
+     a.x/a.y, campos que não existem no cadastro (é x_coord/y_coord). */
+  let p=null;
+  if(ll){
+    if(Array.isArray(ll)&&isFinite(+ll[0])&&isFinite(+ll[1]))p={lat:+ll[0],lng:+ll[1]};
+    else if(isFinite(+ll.lat)&&isFinite(+ll.lng))p={lat:+ll.lat,lng:+ll.lng};
+  }
+  if(!p&&a&&a.x_coord&&a.y_coord){try{const w=toWGS(+a.x_coord,+a.y_coord);p={lat:w[0],lng:w[1]};}catch(e){}}
+  LOCAL_LL=p;
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
   const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Medir o entorno";delete bt.dataset.rodou;}
 }

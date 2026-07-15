@@ -53,4 +53,7 @@ test("card Localização no app: honesto, com ODbL e degradação explicada", ()
   assert.ok(html.includes("sem o ponto não há entorno para medir"));
   assert.ok(html.includes("Não é avaliação de segurança nem de perfil de moradores."));
   assert.ok(html.includes("localReset(a,ll);"));
+  /* bug real (15/07): pick() manda ARRAY e o card lia objeto — a normalização aceita os dois */
+  assert.ok(html.includes("if(Array.isArray(ll)&&isFinite(+ll[0])&&isFinite(+ll[1]))p={lat:+ll[0],lng:+ll[1]};"));
+  assert.ok(html.includes("a.x_coord&&a.y_coord){try{const w=toWGS(+a.x_coord,+a.y_coord)"), "fallback usa os campos REAIS do cadastro");
 });
