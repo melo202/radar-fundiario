@@ -116,7 +116,7 @@ natural, não uma ruptura.
 |---|---|---|
 | 1 Auditoria | **Este documento** ✅ | — |
 | 2 Estruturação | ✅ **15/07/2026** — VPS KVM4 + Postgres/PostGIS + `motor/` no repo: `AIProvider` desacoplado (env), migração 001 (listings/properties/valuations versionadas/ai_logs/ai_cache/audit), extração §4 com schema, systemd `radar-api` atrás do nginx. **Decisão de custo zero (usuário):** Qwen3 LOCAL via Ollama no próprio VPS (8b rápido, 14b avançado, bge-m3 embeddings) — sem GPU: ~15–60 s por extração (191 tokens ≈ 3,3 tok/s), viável para o desenho fila+lote+cache do plano; cache respondendo em ~8 ms. "Hermes" dispensado (é alternativa, não complemento). | — |
-| 3 Comparáveis | ingestão (fonte decidida em B.13a) + normalização por IA + dedup + geocoding (CNEFE) + pontuação | Fase 2 |
+| 3 Comparáveis | ingestão + normalização por IA + dedup + geocoding (CNEFE) + pontuação. **Fonte decidida (15/07/2026): A como principal** — pesquisa sobre conteúdo público indexado (camada de busca a definir: Brave Search API tem tier gratuito ~2k consultas/mês e é o caminho limpo; SearXNG self-hosted é a alternativa sem cadastro) — **com B (cadastro manual/carteira do corretor) e C (parcerias) como entradas adicionais** pela mesma tabela `listings` (campo `portal` distingue a origem; entradas manuais = portal "manual"). | Fase 2 ✅ |
 | 4 Motor estatístico | mediana ponderada, IQR/MAD, outliers explicados, faixa + confiança, testes | Fase 3 |
 | 5 Laudo | redação por IA a partir do JSON fechado + validação números-texto + mapa de comparáveis + fontes | Fase 4 |
 | 6 Evolução | histórico, ITBI (LAI), calibração regional, hedônica/ML, backtesting | Fases 2–5 |
