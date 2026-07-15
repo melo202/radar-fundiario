@@ -6990,6 +6990,28 @@ function mercadoReset(a){
   MERCADO_A=a;
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
   const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Analisar";}
+  if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
+}
+/* ofertas comparáveis no MAPA (§10): pinos discretos em latão, com distância real ao
+   imóvel quando o motor geocodificou (CNEFE). Camada própria — some a cada imóvel novo. */
+let MERCLAYER=null;
+const fmtDist=m=>m==null?"":(m<1000?`${m} m`:`${(m/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} km`);
+function mercadoNoMapa(){
+  const d=MERCADO_LAST&&MERCADO_LAST.d, a=MERCADO_A;
+  if(!d||!(d.comparaveis||[]).some(c=>c.lat!=null))return;
+  if(!MERCLAYER)MERCLAYER=L.layerGroup().addTo(map);
+  MERCLAYER.clearLayers();
+  const pts=[];
+  for(const c of d.comparaveis){
+    if(c.lat==null)continue;
+    const ll=L.latLng(c.lat,c.lon);pts.push(ll);
+    L.circleMarker(ll,{radius:6,color:MAP_BRASS,weight:2,fillColor:"#fff",fillOpacity:.9,bubblingMouseEvents:false})
+      .bindTooltip(`${esc(c.portal)} · ${c.area} m² · ${brlC(c.preco)}${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""} — oferta pública (posição pelo endereço do anúncio)`)
+      .addTo(MERCLAYER);
+  }
+  if(a&&a.x_coord&&a.y_coord)pts.push(L.latLng(toWGS(a.x_coord,a.y_coord)));
+  if(pts.length)map.fitBounds(L.latLngBounds(pts).pad(.25));
+  if(isMobile())setView("mapa");
 }
 async function analisarMercado(){
   const a=MERCADO_A; if(!a)return;
@@ -6997,6 +7019,9 @@ async function analisarMercado(){
   const area=+a.areaedif;
   if(!(area>0)){body.innerHTML='<p class="dmercado-hint">Este registro não tem área edificada no cadastro — sem área não existe comparação honesta por m².</p>';return;}
   const subject={propertyType:ehAptoProvavel(a)?"apartamento":"casa",neighborhood:clean(a.nmbairro),areaM2:area};
+  /* coordenada do imóvel vai junto: o motor devolve a DISTÂNCIA real de cada oferta
+     geocodificada (fato exposto, nunca peso automático de valor — §10) */
+  if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);subject.lat=ll[0];subject.lon=ll[1];}
   bt.disabled=true; bt.textContent="Analisando…";
   /* esperar tem que PARECER carregando (princípio UX): skeleton no lugar do vazio */
   body.innerHTML='<div class="dmercado-num" aria-hidden="true"><div class="skel-line w40"></div><div class="skel-line w80" style="height:22px;margin:6px 0"></div><div class="skel-line w60"></div></div><p class="dmercado-hint">Comparando com as ofertas públicas do acervo…</p>';
@@ -7021,14 +7046,16 @@ function renderMercado(d,subject){
      A chave prende a análise ao imóvel — laudo de OUTRO imóvel nunca herda esta seção. */
   MERCADO_LAST={chave:clean(MERCADO_A&&MERCADO_A.nrinscr)||clean(MERCADO_A&&MERCADO_A.ci)||null,
     d,quando:new Date().toLocaleDateString("pt-BR")};
-  const comps=(d.comparaveis||[]).map(c=>`<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.portal)}</a> · ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · ${brlC(c.preco)} <small>(${brlC(c.pm2)}/m² · peso ${c.peso})</small></li>`).join("");
+  const comps=(d.comparaveis||[]).map(c=>`<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.portal)}</a> · ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · ${brlC(c.preco)} <small>(${brlC(c.pm2)}/m² · peso ${c.peso}${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""})</small></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
+  const temGeo=(d.comparaveis||[]).some(c=>c.lat!=null);
   body.innerHTML=`
     <div class="dmercado-num"><small>Referência por ofertas públicas</small><b>${brlC(r.estimatedValue)}</b>
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
     <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
+    ${temGeo?`<div class="dmercado-parecer"><button type="button" class="dmercado-iabtn" onclick="mercadoNoMapa()">Ver as ofertas no mapa</button></div>`:""}
     ${d.id?`<div class="dmercado-parecer" id="dMercadoParecer"><button type="button" class="dmercado-iabtn" onclick="gerarParecerMercado('${esc(d.id)}')">Ler o parecer da análise</button></div>`:""}
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
 }
@@ -7118,7 +7145,7 @@ function mercadoDocumentoHTML(a){
   const chave=clean(a.nrinscr)||clean(a.ci);
   if(!chave||m.chave!==chave)return "";
   const r=m.d.result;
-  const linhas=(m.d.comparaveis||[]).map(c=>`<div class="kv"><span>${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
+  const linhas=(m.d.comparaveis||[]).map(c=>`<div class="kv"><span>${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}${c.distanciaM!=null?` — a ${fmtDist(c.distanciaM)} do imóvel`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
   return `<div class="lcard"><h3>Análise Comparativa de Mercado — ofertas públicas</h3>
     <p class="lmiudo">Referência de mercado a partir de ofertas anunciadas publicamente, coletadas e tratadas pelo motor do Radar com estatística determinística (deduplicação, cerca de Tukey para atípicos e média ponderada por semelhança). Ofertas não são transações fechadas e esta seção não substitui avaliação profissional.</p>
     <div class="kv"><span>Valor de referência (ofertas)</span><b>${brlC(r.estimatedValue)}</b></div>

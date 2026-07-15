@@ -37,9 +37,9 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
       const q = avaliarQualidade({ url: a.url, titulo: a.titulo, descricao: a.descricao, extracao: v });
       if (q.comparableGrade) stats.comparaveis++;
       if (q.isCatalogPage) stats.catalogos++;
-      await pool.query(
+      const prop = await pool.query(
         `INSERT INTO properties (listing_id, neighborhood, property_type, characteristics, pricing, quality, extraction)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
         [id, v.neighborhood, v.propertyType,
           JSON.stringify({ privateAreaM2: v.privateAreaM2, totalAreaM2: v.totalAreaM2, bedrooms: v.bedrooms,
             suites: v.suites, bathrooms: v.bathrooms, parkingSpaces: v.parkingSpaces, isFurnished: v.isFurnished }),
@@ -48,6 +48,22 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
           JSON.stringify({ confirmados: v.confirmados, inferidos: v.inferidos, model: ex.model, provider: ex.provider })]);
       if (q.comparableGrade && v.askingPrice) await pool.query(
         "INSERT INTO price_history (listing_id, price) VALUES ($1,$2)", [id, v.askingPrice]);
+      /* geocodificação determinística pelo CNEFE (§10): endereço no texto -> coordenada
+         com precisão declarada; sem endereço casável, o imóvel fica sem geom (honesto) */
+      try {
+        const { geocodificarAnuncio } = await import("./geo-anuncio.js");
+        const geo = await geocodificarAnuncio({ titulo: a.titulo, descricao: a.descricao, neighborhood: v.neighborhood });
+        if (geo) {
+          await pool.query(
+            `UPDATE properties SET geom=ST_SetSRID(ST_MakePoint($1,$2),4326), location_confidence=$3,
+                    extraction = extraction || $4, updated_at=now() WHERE id=$5`,
+            [geo.lon, geo.lat, geo.confidence,
+              JSON.stringify({ geocodificacao: { fonte: "cnefe-2022", precisao: geo.precisao,
+                rua: geo.ruaDetectada, numero: geo.numeroDetectado, localidade: geo.localidadeCnefe } }),
+              prop.rows[0].id]);
+          stats.geocodificados = (stats.geocodificados || 0) + 1;
+        }
+      } catch { /* geocodificação é bônus — nunca derruba a ingestão */ }
       stats.extraidos++;
     } catch (e) {
       stats.falhasExtracao++;

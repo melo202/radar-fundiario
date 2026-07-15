@@ -64,6 +64,33 @@ http.createServer(async (req, res) => {
          ORDER BY p.created_at DESC LIMIT $1`, [lim]);
       return json(res, 200, { total: r2.rowCount, imoveis: r2.rows });
     }
+    if (req.method === "POST" && req.url === "/motor/geocodificar-acervo") {
+      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      /* retroativo e determinístico (CNEFE local, zero IA): tenta dar coordenada a todo
+         imóvel do acervo que ainda não tem geom, a partir do texto bruto do anúncio */
+      const { geocodificarAnuncio } = await import("./geo-anuncio.js");
+      const sem = await pool.query(
+        `SELECT p.id, p.neighborhood, l.raw_title AS titulo, l.raw_description AS descricao
+         FROM properties p JOIN listings l ON l.id = p.listing_id WHERE p.geom IS NULL`);
+      const stats = { total: sem.rowCount, geocodificados: 0, porPrecisao: {} };
+      for (const row of sem.rows) {
+        const geo = await geocodificarAnuncio(row).catch(() => null);
+        if (!geo) continue;
+        await pool.query(
+          `UPDATE properties SET geom=ST_SetSRID(ST_MakePoint($1,$2),4326), location_confidence=$3,
+                  extraction = COALESCE(extraction,'{}'::jsonb) || $4, updated_at=now() WHERE id=$5`,
+          [geo.lon, geo.lat, geo.confidence,
+            JSON.stringify({ geocodificacao: { fonte: "cnefe-2022", precisao: geo.precisao,
+              rua: geo.ruaDetectada, numero: geo.numeroDetectado, localidade: geo.localidadeCnefe } }),
+            row.id]);
+        stats.geocodificados++;
+        stats.porPrecisao[geo.precisao] = (stats.porPrecisao[geo.precisao] || 0) + 1;
+      }
+      await pool.query(
+        "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('properties','*','geocodificacao-acervo',$1)",
+        [JSON.stringify(stats)]).catch(() => {});
+      return json(res, 200, stats);
+    }
     if (req.method === "POST" && req.url === "/motor/requalificar") {
       if (!autorizado(req)) return json(res, 401, { erro: "token" });
       /* retroativo e determinístico — lógica extraída para requalificar.js (o painel

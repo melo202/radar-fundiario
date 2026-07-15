@@ -13,11 +13,24 @@ export async function avaliar(subject) {
   /* candidatos: só quem passou na peneira §6, com preço e do mesmo tipo */
   const cand = await pool.query(
     `SELECT p.id, p.neighborhood, p.characteristics, p.pricing, p.quality,
+            p.location_confidence,
+            ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon,
             l.portal, l.url, l.collected_at
      FROM properties p JOIN listings l ON l.id = p.listing_id
      WHERE (p.quality->>'comparableGrade')::boolean IS TRUE
        AND p.property_type = $1
        AND (p.pricing->>'askingPrice') IS NOT NULL`, [propertyType]);
+
+  /* §10: distância é FATO exposto (rastreabilidade), nunca peso automático de valor —
+     ajuste por localização só entra quando houver correlação MEDIDA, jamais % arbitrário */
+  const sLat = Number(subject.lat), sLon = Number(subject.lon);
+  const temSubjectGeo = isFinite(sLat) && isFinite(sLon);
+  const distM = (lat, lon) => {
+    const R = 6371000, rad = Math.PI / 180;
+    const dLat = (lat - sLat) * rad, dLon = (lon - sLon) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(sLat * rad) * Math.cos(lat * rad) * Math.sin(dLon / 2) ** 2;
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+  };
 
   const alvo = normalizaBairro(neighborhood);
   const comps = [];
@@ -34,6 +47,9 @@ export async function avaliar(subject) {
       area, price, bedrooms: c.bedrooms ?? null,
       completeness: Number(r.quality?.completenessScore ?? 0),
       pm2: price / area,
+      lat: r.lat ?? null, lon: r.lon ?? null,
+      locConfidence: r.location_confidence != null ? Number(r.location_confidence) : null,
+      distanciaM: (temSubjectGeo && r.lat != null) ? distM(r.lat, r.lon) : null,
     });
   }
 
@@ -97,6 +113,7 @@ export async function avaliar(subject) {
 
   return { id: valId, status: "calculada", subject, result,
     comparaveis: pesos.map(p => ({ portal: p.c.portal, url: p.c.url, area: p.c.area, quartos: p.c.bedrooms,
-      preco: p.c.price, pm2: Math.round(p.c.pm2), peso: Math.round(p.peso * 100) / 100 })),
+      preco: p.c.price, pm2: Math.round(p.c.pm2), peso: Math.round(p.peso * 100) / 100,
+      lat: p.c.lat, lon: p.c.lon, distanciaM: p.c.distanciaM, locConfidence: p.c.locConfidence })),
     outliers: outliers.map(o => ({ portal: o.portal, url: o.url, pm2: Math.round(o.pm2), razao: o.razaoOutlier })) };
 }
