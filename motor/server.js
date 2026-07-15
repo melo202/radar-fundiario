@@ -14,13 +14,15 @@ const PORT = 8140;
    leitura e a avaliação determinística direto do navegador. */
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
 const json = (res, code, obj) => { res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, CORS)); res.end(JSON.stringify(obj)); };
-/* rate limit simples por IP p/ rotas públicas de cálculo (sem IA, mas com banco) */
+/* rate limit por IP e POR ROTA (aprendido em produção: balde único fazia uma chamada de
+   avaliação consumir o limite do resumo — cada rota tem seu escopo) */
 const RATE = new Map();
-function estourou(req, limite = 10) {
+function estourou(req, limite = 10, escopo = "geral") {
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
+  const chave = `${escopo}:${ip}`;
   const agora = Date.now();
-  const usos = (RATE.get(ip) || []).filter(t => agora - t < 60000);
-  usos.push(agora); RATE.set(ip, usos);
+  const usos = (RATE.get(chave) || []).filter(t => agora - t < 60000);
+  usos.push(agora); RATE.set(chave, usos);
   if (RATE.size > 5000) RATE.clear(); /* válvula de memória */
   return usos.length > limite;
 }
@@ -93,7 +95,7 @@ http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && req.url.startsWith("/motor/localizacao")) {
       /* determinístico (só PostGIS local): público com o mesmo rate limit do avaliar */
-      if (estourou(req, 20)) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      if (estourou(req, 20, "localizacao")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
       const u = new URL(req.url, "http://x");
       const lat = Number(u.searchParams.get("lat")), lon = Number(u.searchParams.get("lon"));
       if (!isFinite(lat) || !isFinite(lon)) return json(res, 400, { erro: "lat e lon obrigatórios" });
@@ -102,7 +104,7 @@ http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
       /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */
-      if (!autorizado(req) && estourou(req)) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });
+      if (!autorizado(req) && estourou(req, 10, "avaliar")) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });
       const subject = JSON.parse(await readBody(req) || "{}");
       const { avaliar } = await import("./avaliacao.js");
       return json(res, 200, await avaliar(subject));
@@ -113,13 +115,13 @@ http.createServer(async (req, res) => {
       const jaTem = await pool.query("SELECT result->'parecer' AS parecer FROM valuations WHERE id=$1", [id]);
       if (jaTem.rowCount && jaTem.rows[0].parecer) return json(res, 200, { id, parecer: jaTem.rows[0].parecer, fromCache: true });
       /* gerar gasta IA: token OU público com limite apertado (2/min por IP) */
-      if (!autorizado(req) && estourou(req, 2)) return json(res, 429, { erro: "aguarde 1 minuto para gerar outro parecer" });
+      if (!autorizado(req) && estourou(req, 2, "parecer")) return json(res, 429, { erro: "aguarde 1 minuto para gerar outro parecer" });
       const { gerarParecer } = await import("./redacao.js");
       return json(res, 200, await gerarParecer(id));
     }
     if (req.method === "POST" && req.url === "/motor/localizacao/resumo") {
       /* gera IA só para coordenada nova (ai_cache) — público com limite apertado */
-      if (!autorizado(req) && estourou(req, 3)) return json(res, 429, { erro: "aguarde 1 minuto" });
+      if (!autorizado(req) && estourou(req, 3, "resumo")) return json(res, 429, { erro: "aguarde 1 minuto" });
       const { lat, lon } = JSON.parse(await readBody(req) || "{}");
       if (!isFinite(lat) || !isFinite(lon)) return json(res, 400, { erro: "lat e lon obrigatórios" });
       const { resumirEntorno } = await import("./resumo-entorno.js");
