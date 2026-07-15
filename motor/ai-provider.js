@@ -89,7 +89,9 @@ async function chatOnce(p, { system, prompt, tier, schema }) {
   });
   if (!r.ok) throw new Error(`${p.kind} http ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const d = await r.json();
-  const text = p.kind === "ollama" ? d.message?.content : d.choices?.[0]?.message?.content;
+  let text = p.kind === "ollama" ? d.message?.content : d.choices?.[0]?.message?.content;
+  /* qwen3 remoto emite <think></think> mesmo com /no_think — nunca pode vazar para o usuário */
+  if (text) text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
   const evalTokens = p.kind === "ollama" ? d.eval_count : d.usage?.completion_tokens;
   return { text: text || "", evalTokens: evalTokens || null, durationMs: Date.now() - t0, model };
 }

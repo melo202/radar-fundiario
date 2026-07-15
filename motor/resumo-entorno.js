@@ -17,7 +17,11 @@ REGRAS INEGOCIÁVEIS:
   "atencao") quando existirem, sem dramatizar.
 - Se coverageConfidence for "baixa", diga explicitamente que o mapeamento da região é
   incompleto e ausências podem ser lacuna de dados.
-- Não avalie segurança pública nem perfil de moradores. Não afirme valorização.`;
+- Não avalie segurança pública nem perfil de moradores. Não afirme valorização.
+- Não qualifique quantidades das categorias de atenção ("poucos"/"muitos") — apenas
+  aponte a existência e a distância. Não diga que o mapeamento é "completo": no máximo
+  "região bem mapeada" quando a cobertura for alta.
+- Não liste categorias zeradas como "ausência" — omita-as.`;
 
 function resumoDeterministico(d) {
   const c = d.categorias;

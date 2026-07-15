@@ -32,6 +32,17 @@ test("externalidades marcadas como atenção, sem julgamento automático de valo
   assert.equal(SINAL.park, undefined, "amenidade positiva não leva marca");
 });
 
+test("resumo por IA: <think> do qwen remoto nunca vaza e a prosa não inventa juízo", () => {
+  const provider = readFileSync(new URL("../motor/ai-provider.js", import.meta.url), "utf-8");
+  /* bug real de produção: qwen3-32b no Groq devolve <think></think> vazio mesmo com
+     /no_think — o provedor tem que remover o bloco antes de qualquer uso do texto */
+  assert.ok(provider.includes('text.replace(/<think>[\\s\\S]*?<\\/think>/g, "").trim()'));
+  const resumo = readFileSync(new URL("../motor/resumo-entorno.js", import.meta.url), "utf-8");
+  assert.ok(resumo.includes('Não qualifique quantidades das categorias de atenção'));
+  assert.ok(resumo.includes('Não diga que o mapeamento é "completo"'));
+  assert.ok(resumo.includes('Não liste categorias zeradas como "ausência"'));
+});
+
 test("card Localização no app: honesto, com ODbL e degradação explicada", () => {
   const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
   assert.ok(html.includes('id="dLocal"'));
