@@ -3,3 +3,7 @@ __pycache__/
 .claude/
 *.txt
 bairros-goiania.recon.json
+
+# segredos nunca entram no git (o .env real vive so no VPS)
+.env
+motor/.env

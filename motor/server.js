@@ -7,13 +7,14 @@ import { pool } from "./db.js";
 import { aiProvider } from "./ai-provider.js";
 import { extrairAnuncio } from "./extract.js";
 import { ingerir } from "./ingerir.js";
-import { avaliarQualidade } from "./qualidade.js";
 
 const PORT = 8140;
 /* CORS: o app em corretorinteligente.tech (e o Pages de teste) consome as rotas de
    leitura e a avaliação determinística direto do navegador. */
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
-const json = (res, code, obj) => { res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, CORS)); res.end(JSON.stringify(obj)); };
+/* SEG-03: cabeçalhos de segurança em TODA resposta do motor (o nginx cobre o site estático) */
+const SEC = { "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin" };
+const json = (res, code, obj) => { res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, SEC, CORS)); res.end(JSON.stringify(obj)); };
 /* rate limit por IP e POR ROTA (aprendido em produção: balde único fazia uma chamada de
    avaliação consumir o limite do resumo — cada rota tem seu escopo) */
 const RATE = new Map();
@@ -39,6 +40,12 @@ const autorizado = (req) => {
 http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
+    if (req.url === "/painel" || req.url.startsWith("/painel/")) {
+      /* SEG-01/05: painel do corretor — todo o subcaminho vive em painel.js; sem
+         PAINEL_SENHA no .env ele responde o MESMO 404 de rota desconhecida */
+      const { painel } = await import("./painel.js");
+      return painel(req, res);
+    }
     if (req.method === "GET" && req.url === "/motor/health") {
       const db = await pool.query("SELECT count(*)::int AS migracoes FROM schema_migrations").then(r => r.rows[0]).catch(e => ({ erro: e.message }));
       const ia = await fetch((process.env.AI_BASE_URL || "http://localhost:11434") + "/api/version",
@@ -59,27 +66,10 @@ http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && req.url === "/motor/requalificar") {
       if (!autorizado(req)) return json(res, 401, { erro: "token" });
-      /* retroativo e determinístico: recalcula a peneira para TODO o acervo a partir
-         do que está gravado — zero chamadas de IA, zero cota. */
-      const todos = await pool.query(
-        `SELECT p.id, l.url, l.raw_title AS titulo, l.raw_description AS descricao,
-                p.neighborhood, p.property_type, p.characteristics, p.pricing
-         FROM properties p JOIN listings l ON l.id = p.listing_id`);
-      let comparaveis = 0, catalogos = 0;
-      for (const row of todos.rows) {
-        const extracao = Object.assign({ propertyType: row.property_type, neighborhood: row.neighborhood },
-          row.characteristics, row.pricing);
-        const q = avaliarQualidade({ url: row.url, titulo: row.titulo, descricao: row.descricao, extracao });
-        if (q.comparableGrade) comparaveis++;
-        if (q.isCatalogPage) catalogos++;
-        await pool.query("UPDATE properties SET quality=$1, updated_at=now() WHERE id=$2",
-          [JSON.stringify(q), row.id]);
-      }
-      const stats = { total: todos.rowCount, comparaveis, catalogos };
-      await pool.query(
-        "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('properties','*','requalificacao',$1)",
-        [JSON.stringify(stats)]).catch(() => {});
-      return json(res, 200, stats);
+      /* retroativo e determinístico — lógica extraída para requalificar.js (o painel
+         SEG-01 usa a MESMA função; nunca duas implementações da peneira) */
+      const { requalificarAcervo } = await import("./requalificar.js");
+      return json(res, 200, await requalificarAcervo());
     }
     if (req.method === "POST" && req.url === "/motor/extrair") {
       if (!autorizado(req)) return json(res, 401, { erro: "token" });
