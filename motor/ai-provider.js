@@ -34,18 +34,26 @@ const LOCAL = {
     advanced: process.env.AI_MODEL_ADVANCED || "qwen3:14b",
   },
 };
-const REMOTE = process.env.AI_REMOTE_API_KEY ? {
-  kind: "openai",
-  base: (process.env.AI_REMOTE_BASE_URL || "https://integrate.api.nvidia.com/v1").replace(/\/$/, ""),
-  key: process.env.AI_REMOTE_API_KEY,
-  timeoutMs: TIMEOUT_REMOTE_MS,
-  models: {
-    fast: process.env.AI_REMOTE_MODEL_FAST || "meta/llama-3.3-70b-instruct",
-    advanced: process.env.AI_REMOTE_MODEL_ADVANCED || process.env.AI_REMOTE_MODEL_FAST || "meta/llama-3.3-70b-instruct",
-  },
-} : null;
-
-let remoteDeadUntil = 0;
+/* NV1 (estudo NVIDIA Build 15/07/2026): a cadeia aceita DOIS remotos, cada um com o
+   próprio cooldown. O tier decide a ordem — "fast" (extração em massa) prefere o
+   remoto 1 (Groq, ~1,6 s); "advanced" (parecer §17, redação) prefere o remoto 2
+   (GLM-5.2 no free endpoint da NVIDIA: mais lento, topo de linha). O local continua
+   sendo a base eterna no fim de toda ordem. */
+function remotoDoEnv(prefixo, rotulo) {
+  if (!process.env[`${prefixo}_API_KEY`]) return null;
+  return {
+    kind: "openai", rotulo, deadUntil: 0,
+    base: (process.env[`${prefixo}_BASE_URL`] || "https://integrate.api.nvidia.com/v1").replace(/\/$/, ""),
+    key: process.env[`${prefixo}_API_KEY`],
+    timeoutMs: Number(process.env[`${prefixo}_TIMEOUT_MS`] || TIMEOUT_REMOTE_MS),
+    models: {
+      fast: process.env[`${prefixo}_MODEL_FAST`] || "meta/llama-3.3-70b-instruct",
+      advanced: process.env[`${prefixo}_MODEL_ADVANCED`] || process.env[`${prefixo}_MODEL_FAST`] || "meta/llama-3.3-70b-instruct",
+    },
+  };
+}
+const REMOTE = remotoDoEnv("AI_REMOTE", "remoto-1");
+const REMOTE2 = remotoDoEnv("AI_REMOTE2", "remoto-2");
 const hashOf = (o) => createHash("sha256").update(JSON.stringify(o)).digest("hex");
 
 async function chatOnce(p, { system, prompt, tier, schema }) {
@@ -104,9 +112,9 @@ async function logCall(task, model, promptHash, out, ok, error) {
   } catch { /* log nunca derruba a chamada */ }
 }
 
-function chain() {
-  const degraus = [];
-  if (REMOTE && Date.now() >= remoteDeadUntil) degraus.push(REMOTE);
+function chain(tier) {
+  const ordem = tier === "advanced" ? [REMOTE2, REMOTE] : [REMOTE, REMOTE2];
+  const degraus = ordem.filter(p => p && Date.now() >= p.deadUntil);
   degraus.push(LOCAL);
   return degraus;
 }
@@ -127,7 +135,7 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
     if (hit.rows.length) return { fromCache: true, ...hit.rows[0].response };
   }
   let lastErr;
-  for (const p of chain()) {
+  for (const p of chain(tier)) {
     for (let attempt = 0; attempt < 2; attempt++) { /* 1 retry por degrau (§21) */
       try {
         const out = await chatOnce(p, { system, prompt, tier, schema });
@@ -138,7 +146,7 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
           if (!validate(value)) throw new Error("schema inválido: " + ajv.errorsText(validate.errors));
         }
         await logCall(task, out.model, promptHash, out, true, null);
-        const result = { value, model: out.model, provider: p === LOCAL ? "local" : "remote",
+        const result = { value, model: out.model, provider: p === LOCAL ? "local" : p.rotulo,
           evalTokens: out.evalTokens, durationMs: out.durationMs };
         if (cache) await pool.query(
           "INSERT INTO ai_cache (prompt_hash, model, response) VALUES ($1,$2,$3) ON CONFLICT (prompt_hash) DO NOTHING",
@@ -149,9 +157,9 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
         await logCall(task, p.models[tier] || p.models.fast, promptHash, null, false, String(e.message).slice(0, 500));
       }
     }
-    if (p !== LOCAL) { /* remoto esgotou os 2 tiros: cooldown e desce a cadeia */
-      remoteDeadUntil = Date.now() + REMOTE_COOLDOWN_MS;
-      console.warn(`remoto em cooldown por 10 min (${String(lastErr?.message).slice(0, 120)}) — seguindo no local`);
+    if (p !== LOCAL) { /* degrau remoto esgotou os 2 tiros: cooldown SÓ dele e desce */
+      p.deadUntil = Date.now() + REMOTE_COOLDOWN_MS;
+      console.warn(`${p.rotulo} em cooldown por 10 min (${String(lastErr?.message).slice(0, 120)}) — descendo a cadeia`);
     }
   }
   throw lastErr;
@@ -165,6 +173,8 @@ export const aiProvider = {
   status: () => ({
     local: { base: LOCAL.base, models: LOCAL.models },
     remote: REMOTE ? { base: REMOTE.base, models: REMOTE.models,
-      emCooldown: Date.now() < remoteDeadUntil } : null,
+      emCooldown: Date.now() < REMOTE.deadUntil } : null,
+    remote2: REMOTE2 ? { base: REMOTE2.base, models: REMOTE2.models,
+      emCooldown: Date.now() < REMOTE2.deadUntil } : null,
   }),
 };
