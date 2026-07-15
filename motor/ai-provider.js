@@ -63,12 +63,18 @@ async function chatOnce(p, { system, prompt, tier, schema }) {
     if (schema) body.format = schema;
   } else {
     url = `${p.base}/chat/completions`;
+    /* diferente do Ollama (que recebe o schema e decodifica NELE), um servidor
+       OpenAI-compatível genérico só garante "algum JSON" — então o schema tem que ir
+       NO PROMPT, senão o modelo inventa os próprios nomes de campo (bug real pego no
+       1º teste com o Groq: ajv rejeitou e a cadeia caiu para o local). A validação
+       ajv do nosso lado continua sendo a garantia final. */
+    const sys = schema
+      ? system + "\n\nSAÍDA OBRIGATÓRIA: responda SOMENTE com um objeto JSON válido que satisfaça exatamente este JSON Schema (mesmos nomes de campo; use null onde não houver evidência):\n" + JSON.stringify(schema)
+      : system;
     body = {
       model, temperature: 0.1, max_tokens: 2048,
-      messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+      messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
     };
-    /* nem todo servidor OpenAI-compatível aceita json_schema estrito (o da NVIDIA varia
-       por modelo) — pede JSON e valida com ajv do nosso lado, que é a garantia real. */
     if (schema) body.response_format = { type: "json_object" };
   }
   const r = await fetch(url, {
