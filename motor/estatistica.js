@@ -20,12 +20,17 @@ export function cercaTukey(r, k = 1.5) {
   return { inf: r.q1 - k * r.iqr, sup: r.q3 + k * r.iqr };
 }
 
-/* Grafias de portal p/ bairro ("St. Bueno", "Jd. América") — normaliza antes de comparar */
+/* Grafias de portal E DO CADASTRO p/ bairro — normaliza antes de comparar. Bug real de
+   produção (15/07): o cadastro municipal grava "SET BUENO" e o card mandava isso ao
+   motor, que não conhecia "set" → 0 comparáveis para quem clicava (o curl com "Setor
+   Bueno" funcionava e escondeu o furo). */
 export function normalizaBairro(s) {
   return String(s || "").toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/\bst\.?\b/g, "setor").replace(/\bjd\.?\b/g, "jardim")
-    .replace(/\bpq\.?\b/g, "parque").replace(/\bres\.?\b/g, "residencial")
+    .replace(/\bst\.?\b/g, "setor").replace(/\bset\.?\b/g, "setor")
+    .replace(/\bjd\.?\b/g, "jardim").replace(/\bpq\.?\b/g, "parque")
+    .replace(/\bres\.?\b/g, "residencial").replace(/\bvl\.?\b/g, "vila")
+    .replace(/\bcj\.?\b/g, "conjunto").replace(/\bsta\.?\b/g, "santa").replace(/\bsto\.?\b/g, "santo")
     .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
 

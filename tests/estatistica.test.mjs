@@ -26,6 +26,11 @@ test("normalizaBairro unifica grafias de portal", () => {
   assert.equal(normalizaBairro("SETOR BUENO"), "setor bueno");
   assert.equal(normalizaBairro("Jd. América"), "jardim america");
   assert.equal(normalizaBairro("Pq Amazônia"), "parque amazonia");
+  /* bug real de produção (15/07): o CADASTRO grava "SET BUENO" — o card mandava isso
+     ao motor e recebia 0 comparáveis; a forma do cadastro TEM que casar com a do portal */
+  assert.equal(normalizaBairro("SET BUENO"), normalizaBairro("Setor Bueno"));
+  assert.equal(normalizaBairro("VL NOVA"), normalizaBairro("Vila Nova"));
+  assert.equal(normalizaBairro("STA GENOVEVA"), normalizaBairro("Santa Genoveva"));
 });
 
 test("dedup leve agrupa o mesmo imóvel em portais diferentes e fica com o mais completo", () => {

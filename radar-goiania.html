@@ -1711,8 +1711,8 @@
              nos números). Base = OFERTAS públicas anunciadas, nunca transações; a rotulagem honesta
              é obrigatória (contrato de confiança do repo). -->
         <div class="dmercado" id="dMercado">
-          <div class="dmercado-head"><span class="dmercado-title">Mercado — ofertas públicas <em>(beta)</em></span>
-            <button type="button" id="btnMercado" onclick="analisarMercado()">Analisar</button></div>
+          <div class="dmercado-head"><span class="dmercado-title">Quanto vale — análise de mercado <em>(beta)</em></span>
+            <button type="button" id="btnMercado" onclick="analisarMercado()">Calcular valor</button></div>
           <div class="dmercado-body" id="dMercadoBody"></div>
         </div>
 
@@ -1720,8 +1720,8 @@
              processados no motor (contagens + distâncias por categoria, raio próprio de
              cada uma). A IA não participa dos números. ODbL: atribuição obrigatória. -->
         <div class="dmercado" id="dLocal">
-          <div class="dmercado-head"><span class="dmercado-title">Localização — entorno mapeado <em>(beta)</em></span>
-            <button type="button" id="btnLocal" onclick="analisarLocal()">Mapear</button></div>
+          <div class="dmercado-head"><span class="dmercado-title">O que tem por perto — entorno medido <em>(beta)</em></span>
+            <button type="button" id="btnLocal" onclick="analisarLocal()">Medir o entorno</button></div>
           <div class="dmercado-body" id="dLocalBody"></div>
         </div>
         <details class="foot dtecnico">
@@ -7049,7 +7049,7 @@ const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas an
 function mercadoReset(a){
   MERCADO_A=a;
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
-  const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Analisar";}
+  const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Calcular valor";}
   if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
 }
 /* ofertas comparáveis no MAPA (§10): pinos discretos em latão, com distância real ao
@@ -7084,6 +7084,9 @@ function irParaAvaliacao(){
   const body=document.getElementById('dMercadoBody');
   const bt=document.getElementById('btnMercado');
   if(body&&bt&&!bt.disabled&&!body.querySelector('.dmercado-num'))analisarMercado();
+  /* o entorno entra JUNTO (determinístico e barato): um toque preenche valor E localização */
+  const btL=document.getElementById('btnLocal');
+  if(btL&&!btL.disabled&&!btL.dataset.rodou&&LOCAL_LL){btL.dataset.rodou="1";analisarLocal();}
 }
 async function analisarMercado(){
   const a=MERCADO_A; if(!a)return;
@@ -7158,7 +7161,7 @@ const LOCAL_HINT='<p class="dmercado-hint">Mede o entorno com dados abertos do O
 function localReset(a,ll){
   LOCAL_LL=ll||((a&&isFinite(+a.x)&&isFinite(+a.y))?(()=>{try{const w=toWGS(+a.x,+a.y);return {lat:w[0],lng:w[1]};}catch(e){return null;}})():null);
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
-  const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Mapear";}
+  const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Medir o entorno";delete bt.dataset.rodou;}
 }
 async function analisarLocal(){
   const ll=LOCAL_LL, body=document.getElementById("dLocalBody"), bt=document.getElementById("btnLocal");
