@@ -77,6 +77,12 @@ http.createServer(async (req, res) => {
       if (!consulta) return json(res, 400, { erro: "consulta obrigatória" });
       return json(res, 200, await ingerir({ consulta, paginas, tier }));
     }
+    if (req.method === "POST" && req.url === "/motor/varrer") {
+      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      const { bairros, paginas, tier } = JSON.parse(await readBody(req) || "{}");
+      const { varrer } = await import("./varredura.js");
+      return json(res, 200, await varrer({ ...(bairros ? { bairros } : {}), paginas, tier }));
+    }
     json(res, 404, { erro: "rota desconhecida" });
   } catch (e) {
     json(res, 500, { erro: String(e.message).slice(0, 400) });

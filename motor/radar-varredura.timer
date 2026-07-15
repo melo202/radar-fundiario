@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - agenda da varredura noturna (03h30, horario do servidor)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target
