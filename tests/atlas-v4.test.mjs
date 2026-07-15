@@ -47,6 +47,19 @@ test("V4: shell expõe estado global de conexão (chip + banner)", () => {
   assert.match(html, /\.net-banner\{[^}]*background:var\(--danger-soft\)/);
 });
 
+test("UX: splash de boot existe, some quando a UI interage e nunca prende a tela", () => {
+  assert.ok(html.includes('id="bootSplash"'));
+  assert.match(html, /function bootSplashOff\(\)/);
+  assert.ok(html.includes("setTimeout(bootSplashOff,6000)"), "válvula de 6s obrigatória");
+  /* o splash some nos DOIS ramos do boot: sucesso e falha de CDN (erro nunca fica escondido) */
+  assert.equal((html.match(/bootSplashOff\(\); \/\*/g) || []).length, 2);
+  /* index.html (fallback) também não pode ser tela crua de link */
+  const idx = readFileSync(new URL("../index.html", import.meta.url), "utf-8");
+  assert.ok(idx.includes("Abrindo o Radar"), "index é splash, não link cru");
+  assert.ok(idx.includes("location.replace"), "redirecionamento imediato via JS");
+  assert.ok(idx.includes("prefers-reduced-motion"), "splash respeita reduced-motion");
+});
+
 test("V1 (fechamento): camadas territoriais leem a paleta viva do shell", () => {
   assert.match(html, /const mapTok=\(n,fb\)=>\(_MAPTOK\.getPropertyValue\(n\)\.trim\(\)\|\|fb\)/);
   assert.match(html, /const LOT_STYLE=\{pane:"lots",color:MAP_BRAND/);

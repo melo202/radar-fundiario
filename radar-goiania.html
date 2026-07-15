@@ -1233,6 +1233,14 @@
   .empty-explore{margin:var(--space-5) 0 0;padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius-sm);
     background:var(--surface-soft);font-size:12.5px;line-height:1.55;color:var(--ink-soft);text-align:left}
   .empty-explore b{color:var(--ink)}
+  /* Splash de boot — cobre o app até a interface ficar interativa; primeiro paint com marca */
+  #bootSplash{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:18px;background:var(--canvas);opacity:1;transition:opacity var(--motion-base) var(--ease-out)}
+  #bootSplash.off{opacity:0;pointer-events:none}
+  #bootSplash .bs-marca{font:800 21px/1.2 var(--font-ui);letter-spacing:-.01em;color:var(--ink);text-align:center}
+  #bootSplash .bs-marca small{display:block;font:600 10px/1 var(--font-code);letter-spacing:.26em;color:var(--muted);margin-top:6px}
+  #bootSplash .bs-sp{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite}
+
   /* Mercado (beta) — card do motor de preço no dossiê (Território) */
   .dmercado{margin:var(--space-4) 0;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface)}
   .dmercado-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
@@ -1381,6 +1389,13 @@
 </style>
 </head>
 <body>
+<!-- Splash de boot (princípio UX 15/07/2026: nenhuma tela crua; esperar tem que PARECER
+     carregando). Some quando a interface fica interativa (bootSplashOff no init) e tem
+     válvula de 6s — nunca prende a tela, nem com JS quebrado no meio. -->
+<div id="bootSplash" aria-hidden="true">
+  <div class="bs-marca">Radar Fundiário<small>GOIÂNIA · GO</small></div>
+  <div class="bs-sp"></div>
+</div>
 <div class="wrap">
   <header class="atlas-topbar" aria-label="Cabeçalho do Radar Fundiário">
     <div class="atlas-brand" aria-label="Radar Fundiário — Goiânia">
@@ -6903,6 +6918,8 @@ async function analisarMercado(){
   if(!(area>0)){body.innerHTML='<p class="dmercado-hint">Este registro não tem área edificada no cadastro — sem área não existe comparação honesta por m².</p>';return;}
   const subject={propertyType:ehAptoProvavel(a)?"apartamento":"casa",neighborhood:clean(a.nmbairro),areaM2:area};
   bt.disabled=true; bt.textContent="Analisando…";
+  /* esperar tem que PARECER carregando (princípio UX): skeleton no lugar do vazio */
+  body.innerHTML='<div class="dmercado-num" aria-hidden="true"><div class="skel-line w40"></div><div class="skel-line w80" style="height:22px;margin:6px 0"></div><div class="skel-line w60"></div></div><p class="dmercado-hint">Comparando com as ofertas públicas do acervo…</p>';
   try{
     const r=await fetch(MOTOR_BASE+"/motor/avaliar",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(subject),signal:AbortSignal.timeout(30000)});
@@ -9215,14 +9232,24 @@ function onbFechar(){
 function onbAbrirDireto(idx){ onbAbrir(idx); }
 
 /* ---------------- init ---------------- */
+/* splash: some quando a UI fica interativa; válvula de 6s garante que NUNCA prende a tela */
+function bootSplashOff(){
+  const s=document.getElementById("bootSplash");
+  if(!s)return;
+  s.classList.add("off");
+  setTimeout(()=>s.remove(),400);
+}
+setTimeout(bootSplashOff,6000);
 document.body.dataset.view=isMobile()?"mapa":"busca";
 setMode(MODE); /* sincroniza aria-pressed do estado inicial */
 renderSavedBlocks(); /* Fase 10 SALV-01: estado persistido (oportunidades/historico) aparece ao abrir o app */
 renderCadernoBlock(); /* Fase 16 (16-02, TERR-05): assíncrona (IndexedDB) — nunca bloqueia o boot */
 if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
+  bootSplashOff(); /* a mensagem de erro tem que aparecer — splash nunca a esconde */
 }else{
   initMap();setView(isMobile()?"mapa":"busca");initCoach();initOnboard();loadBairros();loadBairroPolys();loadLimite();
+  bootSplashOff(); /* mapa criado e view definida = interface interativa */
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
      '🏦 Ver Oportunidades Caixa' nunca apareceria. O ramo síncrono cobre o caso raro de CAIXA já
