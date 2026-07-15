@@ -131,6 +131,14 @@ http.createServer(async (req, res) => {
         bairro: u.searchParams.get("bairro"),
       }));
     }
+    if (req.method === "POST" && req.url === "/motor/mercado") {
+      /* avaliação AO VIVO: dispara busca nos portais (gasta cota Brave) e avalia.
+         cache de 6h por bairro protege a cota global; rate limit por IP protege o pico */
+      if (!autorizado(req) && estourou(req, 4, "mercado")) return json(res, 429, { erro: "aguarde 1 minuto entre buscas ao vivo" });
+      const subject = JSON.parse(await readBody(req) || "{}");
+      const { avaliarAoVivo } = await import("./mercado-aovivo.js");
+      return json(res, 200, await avaliarAoVivo(subject));
+    }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
       /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */
       if (!autorizado(req) && estourou(req, 10, "avaliar")) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });

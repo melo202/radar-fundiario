@@ -12,7 +12,7 @@ import { avaliarQualidade } from "./qualidade.js";
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
-export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
+export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair = Infinity }) {
   const achados = [];
   for (let p = 0; p < Math.min(paginas, 3); p++) {
     if (p > 0) await dormir(1200); /* Brave free = 1 req/s */
@@ -20,6 +20,9 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
   }
   const stats = { consulta, encontrados: achados.length, novos: 0, jaConhecidos: 0, extraidos: 0, falhasExtracao: 0, comparaveis: 0, catalogos: 0 };
   for (const a of achados) {
+    /* modo ao vivo: extrai só até o teto (evita 30 anúncios × 18s no clique); o resto
+       vira listing conhecido e a varredura noturna completa a extração sem pressa */
+    if (stats.extraidos >= maxExtrair) break;
     const hash = sha(a.titulo + "\n" + a.descricao);
     const ins = await pool.query(
       `INSERT INTO listings (portal, url, raw_title, raw_description, content_hash, last_seen_at)

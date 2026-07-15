@@ -10,7 +10,7 @@ test("mercado: card existe no Território e consome o motor público", () => {
   assert.ok(html.includes('const MOTOR_BASE="https://api.corretorinteligente.tech"'));
   assert.ok(html.includes('id="dMercado"'));
   assert.ok(html.includes('onclick="analisarMercado()"'));
-  assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/avaliar"/);
+  assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/mercado"/);
   /* CSP precisa liberar o host do motor para o fetch */
   assert.ok(html.includes("connect-src 'self' https://api.corretorinteligente.tech"));
 });
@@ -22,7 +22,7 @@ test("mercado: rotulagem honesta obrigatória em todos os caminhos", () => {
   /* sem área edificada não existe comparação honesta por m² */
   assert.ok(html.includes("sem área não existe comparação honesta por m²"));
   /* amostra insuficiente é informada, nunca maquiada */
-  assert.ok(html.includes("Amostra insuficiente</b>"));
+  assert.ok(html.includes("Ainda sem amostra suficiente</b>"));
 });
 
 test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada NESTE imóvel", () => {
@@ -35,6 +35,31 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Análise Comparativa de Mercado — ofertas públicas"));
   assert.ok(html.includes("Ofertas não são transações fechadas e esta seção não substitui avaliação profissional."));
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
+});
+
+test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e não o acervo estático", () => {
+  /* pedido do usuário (15/07): "quando eu clicar em analisar tem que disparar e procurar nos sites" */
+  assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/mercado"/);
+  assert.ok(html.includes("AbortSignal.timeout(120000)"), "timeout largo p/ a coleta ao vivo");
+  assert.ok(html.includes("Procurando anúncios semelhantes na OLX, Zap Imóveis, Viva Real"));
+  const srv = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
+  assert.ok(srv.includes('req.url === "/motor/mercado"'));
+  assert.ok(srv.includes('estourou(req, 4, "mercado")'), "rate limit protege a cota Brave");
+  const ao = readFileSync(new URL("../motor/mercado-aovivo.js", import.meta.url), "utf-8");
+  assert.ok(ao.includes('PORTAIS_AOVIVO = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"]'));
+  assert.ok(ao.includes("CACHE_H = 6"), "cache de 6h por bairro protege a cota global");
+  assert.ok(ao.includes("maxExtrair: restante"), "extração limitada p/ o clique não travar");
+});
+
+test("links e mapa na avaliação: comparáveis clicáveis, atalhos de portal e recorte do mapa", () => {
+  assert.ok(html.includes('class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a>'), "cada comparável leva ao anúncio");
+  assert.match(html, /function linksPortais\(subject\)/);
+  assert.ok(html.includes('["OLX",`https://www.olx.com.br'), "atalho de busca na OLX");
+  assert.ok(html.includes("Ver mais anúncios ao vivo nos portais"));
+  assert.match(html, /function miniMapaOfertas\(comps,subjLL\)/, "recorte do mapa dentro da avaliação");
+  assert.ok(html.includes("${mini}"), "mapa plugado no render do card");
+  /* amostra insuficiente NÃO deixa o corretor na mão — leva aos portais */
+  assert.ok(html.includes("Ainda sem amostra suficiente"));
 });
 
 test("avaliação a 1 toque: ação principal do dossiê leva ao card e dispara sozinha", () => {
@@ -71,6 +96,6 @@ test("ia na interface: parecer e resumo com rotulagem de origem e degradação e
 
 test("mercado: novo imóvel aberto reseta o card e falha de rede degrada com aviso", () => {
   assert.ok(html.includes("mercadoReset(a); /* Mercado (beta)"));
-  assert.ok(html.includes("Análise de mercado indisponível agora"));
+  assert.ok(html.includes("Busca de mercado indisponível agora"));
   assert.ok(html.includes("Os dados cadastrais acima seguem valendo."));
 });

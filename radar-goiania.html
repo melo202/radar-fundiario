@@ -1316,6 +1316,14 @@
     background:var(--surface);color:var(--brand);cursor:pointer;min-height:32px}
   .dmercado-parecer-tx{font-size:12.5px;line-height:1.65;color:var(--ink-soft);padding:var(--space-3);border:1px solid var(--line);
     border-radius:var(--radius-sm);background:var(--surface-soft)}
+  /* "ver na OLX ↗" ao lado de cada comparável + atalhos de busca nos portais */
+  .dmercado-list li{margin-bottom:5px}
+  .dmercado-verlink{display:inline-block;margin-left:4px;font-weight:600;white-space:nowrap;color:var(--brand);word-break:normal}
+  .dmercado-portais{margin-top:var(--space-3);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .dmercado-portais-lbl{flex-basis:100%;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+  .dmercado-portal{font:600 12px/1 var(--font-ui);padding:7px 12px;border:1px solid var(--line-strong);border-radius:99px;
+    background:var(--surface);color:var(--ink-soft);text-decoration:none;min-height:30px;display:inline-flex;align-items:center}
+  .dmercado-portal:hover{border-color:var(--brand);color:var(--brand)}
   .foot{border-top:1px solid var(--line)}
 
   #map{background:#e7ece8}
@@ -7106,23 +7114,68 @@ async function analisarMercado(){
   /* coordenada do imóvel vai junto: o motor devolve a DISTÂNCIA real de cada oferta
      geocodificada (fato exposto, nunca peso automático de valor — §10) */
   if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);subject.lat=ll[0];subject.lon=ll[1];}
-  bt.disabled=true; bt.textContent="Analisando…";
-  /* esperar tem que PARECER carregando (princípio UX): skeleton no lugar do vazio */
-  body.innerHTML='<div class="dmercado-num" aria-hidden="true"><div class="skel-line w40"></div><div class="skel-line w80" style="height:22px;margin:6px 0"></div><div class="skel-line w60"></div></div><p class="dmercado-hint">Comparando com as ofertas públicas do acervo…</p>';
+  bt.disabled=true; bt.textContent="Buscando…";
+  /* esperar tem que PARECER carregando (princípio UX): skeleton + mensagem que roda */
+  body.innerHTML='<div class="dmercado-num" aria-hidden="true"><div class="skel-line w40"></div><div class="skel-line w80" style="height:22px;margin:6px 0"></div><div class="skel-line w60"></div></div><p class="dmercado-hint" id="dMercadoProg">Procurando anúncios semelhantes na OLX, Zap Imóveis, Viva Real…</p>';
+  const msgs=["Procurando anúncios semelhantes na OLX, Zap Imóveis, Viva Real…","Lendo os anúncios e filtrando os comparáveis…","Deduplicando entre portais e calculando o valor…"];
+  let mi=0; const prog=setInterval(()=>{const el=document.getElementById("dMercadoProg");if(el)el.textContent=msgs[(++mi)%msgs.length];},4500);
   try{
-    const r=await fetch(MOTOR_BASE+"/motor/avaliar",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(subject),signal:AbortSignal.timeout(30000)});
+    /* /motor/mercado dispara a busca AO VIVO nos portais e depois avalia (cache de 6h
+       por bairro protege a cota). Timeout largo porque a coleta+extração leva alguns s. */
+    const r=await fetch(MOTOR_BASE+"/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(subject),signal:AbortSignal.timeout(120000)});
     const d=await r.json();
     if(!r.ok)throw new Error(d.erro||("http "+r.status));
     renderMercado(d,subject);
   }catch(e){
-    body.innerHTML=`<p class="dmercado-hint">Análise de mercado indisponível agora (${esc(e.message)}). Os dados cadastrais acima seguem valendo.</p>`;
-  }finally{bt.disabled=false;bt.textContent="Analisar";}
+    body.innerHTML=`<p class="dmercado-hint">Busca de mercado indisponível agora (${esc(e.message)}). Os dados cadastrais acima seguem valendo.</p>${linksPortaisHTML(subject)}`;
+  }finally{clearInterval(prog);bt.disabled=false;bt.textContent="Calcular valor";}
+}
+/* Links diretos de busca nos portais (zero custo, sempre úteis): o corretor clica e vê
+   os anúncios AO VIVO no próprio site, já filtrados pela cidade/tipo. Best-effort — se
+   um portal mudar a URL de busca, ainda cai na página certa da cidade. */
+function linksPortais(subject){
+  const q=encodeURIComponent(`${subject.propertyType} ${subject.neighborhood} goiânia`);
+  const tipo=subject.propertyType==="apartamento"?"apartamentos":"casas";
+  return [
+    ["OLX",`https://www.olx.com.br/imoveis/venda/estado-go/goiania?q=${q}`],
+    ["Zap Imóveis",`https://www.zapimoveis.com.br/venda/${tipo}/go+goiania/`],
+    ["Viva Real",`https://www.vivareal.com.br/venda/goias/goiania/${tipo=="apartamentos"?"apartamento_residencial":"casa_residencial"}/`],
+    ["Chaves na Mão",`https://www.chavesnamao.com.br/imoveis-a-venda/go-goiania/`],
+    ["DF Imóveis",`https://www.dfimoveis.com.br/venda/go/goiania/${tipo}`],
+  ];
+}
+function linksPortaisHTML(subject){
+  const links=linksPortais(subject).map(([nome,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener" class="dmercado-portal">${esc(nome)} ↗</a>`).join("");
+  return `<div class="dmercado-portais"><div class="dmercado-portais-lbl">Ver mais anúncios ao vivo nos portais</div>${links}</div>`;
+}
+/* Recorte do mapa DENTRO da avaliação (pedido do usuário): SVG desenhado dos dados —
+   ◆ imóvel, ● ofertas numeradas conforme a lista. Zero tiles, imprime e some com o card. */
+function miniMapaOfertas(comps,subjLL){
+  const pts=comps.map((c,i)=>c.lat!=null&&c.lon!=null?{lat:c.lat,lon:c.lon,n:i+1}:null).filter(Boolean);
+  if(!pts.length||!subjLL)return "";
+  const todos=[...pts,{lat:subjLL[0],lon:subjLL[1]}];
+  let la0=Math.min(...todos.map(p=>p.lat)),la1=Math.max(...todos.map(p=>p.lat));
+  let lo0=Math.min(...todos.map(p=>p.lon)),lo1=Math.max(...todos.map(p=>p.lon));
+  const pLa=Math.max((la1-la0)*.3,.0015),pLo=Math.max((lo1-lo0)*.3,.0015);
+  la0-=pLa;la1+=pLa;lo0-=pLo;lo1+=pLo;
+  const W=320,H=190,kx=111320*Math.cos((la0+la1)/2*Math.PI/180),ky=110540;
+  const wM=(lo1-lo0)*kx,hM=(la1-la0)*ky,e2=Math.min(W/wM,H/hM);
+  const X=lon=>(((lon-lo0)*kx*e2)+(W-wM*e2)/2).toFixed(1),Y=lat=>(H-(((lat-la0)*ky*e2)+(H-hM*e2)/2)).toFixed(1);
+  const nice=[100,250,500,1000,2000,5000].find(v=>v*e2>=W*.2)||5000,barPx=(nice*e2).toFixed(1);
+  const marcas=pts.map(p=>`<circle cx="${X(p.lon)}" cy="${Y(p.lat)}" r="8" fill="#088780" stroke="#fff" stroke-width="1.4"/><text x="${X(p.lon)}" y="${(+Y(p.lat)+3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">${p.n}</text>`).join("");
+  const sx=X(subjLL[1]),sy=Y(subjLL[0]);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;border-radius:10px;margin-top:6px" role="img" aria-label="Imóvel e ofertas comparáveis">
+    <rect width="${W}" height="${H}" fill="#eef4f4" rx="10"/>${marcas}
+    <rect x="${(sx-7).toString()}" y="${(sy-7).toString()}" width="14" height="14" transform="rotate(45 ${sx} ${sy})" fill="#212E40" stroke="#fff" stroke-width="1.4"/>
+    <line x1="14" y1="${H-12}" x2="${14+ +barPx}" y2="${H-12}" stroke="#212E40" stroke-width="1.8"/>
+    <text x="${14+ +barPx/2}" y="${H-16}" text-anchor="middle" font-size="9" fill="#212E40">${nice>=1000?(nice/1000)+" km":nice+" m"}</text>
+  </svg><p class="dmercado-hint" style="margin-top:4px">◆ este imóvel · ● ofertas numeradas conforme a lista — posição pelo endereço do anúncio (IBGE).</p>`;
 }
 function renderMercado(d,subject){
   const body=document.getElementById("dMercadoBody");
   if(d.status==="amostra_insuficiente"){
-    body.innerHTML=`<p class="dmercado-hint"><b>Amostra insuficiente</b> para ${esc(subject.propertyType)} em ${esc(subject.neighborhood)}: ${d.sample.aposDedup} oferta(s) comparável(is) no acervo (mínimo 5). O motor coleta mais anúncios toda madrugada — tente de novo em alguns dias.</p>`;
+    body.innerHTML=`<p class="dmercado-hint"><b>Ainda sem amostra suficiente</b> para ${esc(subject.propertyType)} em ${esc(subject.neighborhood)}: ${d.sample.aposDedup} oferta(s) comparável(is) encontrada(s) (mínimo 5). A busca ao vivo e a varredura noturna vão engordando o acervo — enquanto isso, veja os anúncios direto nos portais:</p>${linksPortaisHTML(subject)}`;
     return;
   }
   const r=d.result;
@@ -7130,16 +7183,19 @@ function renderMercado(d,subject){
      A chave prende a análise ao imóvel — laudo de OUTRO imóvel nunca herda esta seção. */
   MERCADO_LAST={chave:clean(MERCADO_A&&MERCADO_A.nrinscr)||clean(MERCADO_A&&MERCADO_A.ci)||null,
     d,quando:new Date().toLocaleDateString("pt-BR")};
-  const comps=(d.comparaveis||[]).map(c=>`<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.portal)}</a> · ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · ${brlC(c.preco)} <small>(${brlC(c.pm2)}/m² · peso ${c.peso}${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""})</small></li>`).join("");
+  const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
-  const temGeo=(d.comparaveis||[]).some(c=>c.lat!=null);
+  const subjLL=(MERCADO_A&&MERCADO_A.x_coord&&MERCADO_A.y_coord)?toWGS(MERCADO_A.x_coord,MERCADO_A.y_coord):null;
+  const mini=miniMapaOfertas(d.comparaveis||[],subjLL);
+  const av=d.aoVivo;
   body.innerHTML=`
     <div class="dmercado-num"><small>Referência por ofertas públicas</small><b>${brlC(r.estimatedValue)}</b>
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
-    <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${r.sample.ofertasColetadasEntre?` Ofertas coletadas entre ${fmtDataISO(r.sample.ofertasColetadasEntre.de)} e ${fmtDataISO(r.sample.ofertasColetadasEntre.ate)}.`:""}</div>
+    <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${av&&av.buscou?` Busca ao vivo: ${av.novos||0} anúncio(s) novo(s) coletado(s) agora.`:av?" (usando a coleta recente deste bairro).":""}</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
-    <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
-    ${temGeo?`<div class="dmercado-parecer"><button type="button" class="dmercado-iabtn" onclick="mercadoNoMapa()">Ver as ofertas no mapa</button></div>`:""}
+    ${mini}
+    <details class="foot" open><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
+    ${linksPortaisHTML(subject)}
     ${d.id?`<div class="dmercado-parecer" id="dMercadoParecer"><button type="button" class="dmercado-iabtn" onclick="gerarParecerMercado('${esc(d.id)}')">Ler o parecer da análise</button></div>
     <div class="dmercado-parecer"><a class="dmercado-iabtn" style="text-decoration:none;display:inline-block" href="${MOTOR_BASE}/motor/avaliacoes/${esc(d.id)}/documento" target="_blank" rel="noopener">Abrir o documento da avaliação</a></div>`:""}
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
