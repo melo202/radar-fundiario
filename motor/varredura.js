@@ -17,11 +17,20 @@ export const BAIRROS_PADRAO = [
 
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
+/* Multi-portal (pedido do usuário 15/07: "puxar em vários sites"): a cada noite a
+   varredura mira UM portal com site: (roda a lista ao longo da semana) e uma noite é
+   genérica — mesma cota de 20 buscas/noite, diversidade de fonte no mês. O dedup
+   multi-sinal (§5) é quem garante que o mesmo imóvel em portais diferentes conte 1x. */
+export const PORTAIS_ALVO = ["", "zapimoveis.com.br", "vivareal.com.br", "olx.com.br",
+  "imovelweb.com.br", "chavesnamao.com.br", "dfimoveis.com.br"];
+
 export async function varrer({ bairros = BAIRROS_PADRAO, paginas = 1, tier = "fast" } = {}) {
-  const tipo = (new Date().getDate() % 2 === 0) ? "apartamento" : "casa";
-  const resumo = { tipo, bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
+  const dia = new Date().getDate();
+  const tipo = (dia % 2 === 0) ? "apartamento" : "casa";
+  const portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
+  const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
   for (const bairro of bairros) {
-    const consulta = `"R$" ${tipo} ${bairro} goiania venda m2`;
+    const consulta = `"R$" ${tipo} ${bairro} goiania venda m2${portal ? ` site:${portal}` : ""}`;
     try {
       const s = await ingerir({ consulta, paginas, tier });
       resumo.encontrados += s.encontrados; resumo.novos += s.novos; resumo.extraidos += s.extraidos;

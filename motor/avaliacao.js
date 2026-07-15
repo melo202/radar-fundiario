@@ -112,6 +112,26 @@ export async function avaliar(subject, opts = {}) {
     warnings: validos.length < 10 ? ["Amostra abaixo do ideal do plano (10+): use como referência preliminar."] : [],
   };
 
+  /* Cruzamento com a LOCALIZAÇÃO (pedido do usuário 15/07 + §10 do plano): quando o
+     imóvel tem coordenada, o entorno medido entra no RESULTADO como fato declarado —
+     o documento e o laudo mostram "o que tem na região" junto do valor. NUNCA vira
+     ajuste automático de preço (só com correlação medida, jamais % arbitrário). */
+  if (temSubjectGeo) {
+    try {
+      const { entorno } = await import("./localizacao.js");
+      const d = await entorno({ lat: sLat, lon: sLon });
+      const destaques = Object.values(d.categorias)
+        .filter(x => x.count > 0 && x.sinal !== "atencao")
+        .sort((a, b) => b.count - a.count).slice(0, 8)
+        .map(x => ({ rotulo: x.rotulo, count: x.count, maisProximoM: x.nearestDistanceMeters, raioM: x.raioM }));
+      const atencao = Object.values(d.categorias)
+        .filter(x => x.count > 0 && x.sinal === "atencao")
+        .map(x => ({ rotulo: x.rotulo, maisProximoM: x.nearestDistanceMeters }));
+      result.localizacao = { destaques, atencao,
+        cobertura: d.dataQuality.coverageConfidence, atribuicao: d.dataQuality.attribution };
+    } catch { /* entorno é bônus do resultado — nunca derruba a avaliação */ }
+  }
+
   /* versionamento (§20): cada cálculo é uma linha nova + comparáveis com rastreio completo.
      Revisão do corretor (§14) encadeia por parent_id e a nota entra nas assumptions —
      o parecer e o laudo passam a DECLARAR que houve revisão humana. */
