@@ -6996,6 +6996,7 @@ function mercadoReset(a){
    imóvel quando o motor geocodificou (CNEFE). Camada própria — some a cada imóvel novo. */
 let MERCLAYER=null;
 const fmtDist=m=>m==null?"":(m<1000?`${m} m`:`${(m/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} km`);
+const fmtDataISO=s=>String(s||"").split("-").reverse().join("/"); /* 2026-07-15 -> 15/07/2026 */
 function mercadoNoMapa(){
   const d=MERCADO_LAST&&MERCADO_LAST.d, a=MERCADO_A;
   if(!d||!(d.comparaveis||[]).some(c=>c.lat!=null))return;
@@ -7052,7 +7053,7 @@ function renderMercado(d,subject){
   body.innerHTML=`
     <div class="dmercado-num"><small>Referência por ofertas públicas</small><b>${brlC(r.estimatedValue)}</b>
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
-    <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.</div>
+    <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${r.sample.ofertasColetadasEntre?` Ofertas coletadas entre ${fmtDataISO(r.sample.ofertasColetadasEntre.de)} e ${fmtDataISO(r.sample.ofertasColetadasEntre.ate)}.`:""}</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
     ${temGeo?`<div class="dmercado-parecer"><button type="button" class="dmercado-iabtn" onclick="mercadoNoMapa()">Ver as ofertas no mapa</button></div>`:""}
@@ -7153,7 +7154,7 @@ function mercadoDocumentoHTML(a){
     <div class="kv"><span>R$/m² ponderado</span><b>${brlC(r.estimatedPricePerM2)}</b></div>
     <div class="kv"><span>Confiança</span><b>${esc(r.confidence.rotulo)} — ${r.sample.totalAccepted} oferta(s) no cálculo</b></div>
     ${linhas}
-    <p class="lmiudo">Avaliação nº ${esc(m.d.id)} (auditável no motor) · consultada em ${esc(m.quando)}.${(r.warnings&&r.warnings.length)?" "+esc(r.warnings[0]):""}</p>
+    <p class="lmiudo">Avaliação nº ${esc(m.d.id)} (auditável no motor) · consultada em ${esc(m.quando)}.${r.sample&&r.sample.ofertasColetadasEntre?` Ofertas coletadas entre ${fmtDataISO(r.sample.ofertasColetadasEntre.de)} e ${fmtDataISO(r.sample.ofertasColetadasEntre.ate)}.`:""}${(r.warnings&&r.warnings.length)?" "+esc(r.warnings[0]):""}</p>
   </div>`;
 }
 

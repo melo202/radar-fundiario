@@ -46,7 +46,11 @@ async function visao() {
   const eventos = await pool.query(
     `SELECT entity, action, detail, created_at
      FROM audit_log ORDER BY created_at DESC LIMIT 8`).then(r => r.rows);
-  return { acervo, avaliacoes, ia, eventos };
+  /* A3: mudanças de preço detectadas pelas varreduras — termômetro agregado do mercado */
+  const mudancas = await pool.query(
+    `SELECT detail, created_at FROM audit_log
+     WHERE action='mudanca-preco' ORDER BY created_at DESC LIMIT 6`).then(r => r.rows);
+  return { acervo, avaliacoes, ia, eventos, mudancas };
 }
 
 export async function painel(req, res) {

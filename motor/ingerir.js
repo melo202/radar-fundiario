@@ -30,6 +30,13 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
     const { id, novo } = ins.rows[0];
     if (!novo) { stats.jaConhecidos++; continue; }
     stats.novos++;
+    /* A1 (atualização contínua): mesma URL com conteúdo NOVO = o anúncio mudou desde a
+       última varredura — o preço anterior fica guardado para detectar o delta adiante */
+    const anterior = await pool.query(
+      `SELECT l.id AS listing_id, (p.pricing->>'askingPrice')::numeric AS preco
+       FROM listings l LEFT JOIN properties p ON p.listing_id = l.id
+       WHERE l.portal=$1 AND l.url=$2 AND l.id<>$3
+       ORDER BY l.collected_at DESC LIMIT 1`, [a.portal, a.url, id]).then(r => r.rows[0] || null);
     try {
       const ex = await extrairAnuncio({ titulo: a.titulo, descricao: a.descricao, tier });
       const v = ex.value;
@@ -48,6 +55,15 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast" }) {
           JSON.stringify({ confirmados: v.confirmados, inferidos: v.inferidos, model: ex.model, provider: ex.provider })]);
       if (q.comparableGrade && v.askingPrice) await pool.query(
         "INSERT INTO price_history (listing_id, price) VALUES ($1,$2)", [id, v.askingPrice]);
+      /* A1/A3: preço mudou entre coletas do MESMO anúncio — delta registrado e auditado
+         (termômetro de mercado agregado; nunca inferência automática por imóvel) */
+      if (anterior && anterior.preco != null && v.askingPrice && Number(anterior.preco) !== Number(v.askingPrice)) {
+        stats.mudancasPreco = (stats.mudancasPreco || 0) + 1;
+        await pool.query(
+          "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('listing',$1,'mudanca-preco',$2)",
+          [id, JSON.stringify({ url: a.url, portal: a.portal, de: Number(anterior.preco), para: Number(v.askingPrice),
+            listingAnterior: anterior.listing_id })]).catch(() => {});
+      }
       /* geocodificação determinística pelo CNEFE (§10): endereço no texto -> coordenada
          com precisão declarada; sem endereço casável, o imóvel fica sem geom (honesto) */
       try {

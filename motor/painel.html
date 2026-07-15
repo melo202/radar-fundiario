@@ -103,6 +103,8 @@
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Requalificação é determinística (zero IA, zero cota): recalcula a peneira de qualidade de todo o acervo.</p>
       <button id="btnRequal" type="button">Requalificar acervo</button>
       <span id="requalStat" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
+      <h2 style="margin-top:18px">Mercado em movimento</h2>
+      <div id="mudancas"><div class="skel" style="height:60px"></div></div>
       <h2 style="margin-top:18px">Eventos recentes</h2>
       <div id="eventos"><div class="skel" style="height:90px"></div></div>
     </div>
@@ -128,6 +130,7 @@ function render(d){
   $("avaliacoes").innerHTML=(d.avaliacoes||[]).length?`<table><tr><th>Quando</th><th>Bairro</th><th>Tipo</th><th>Valor</th><th>Confiança</th></tr>${d.avaliacoes.map(v=>`<tr data-id="${esc(v.id)}" style="cursor:pointer"><td>${dt(v.created_at)}</td><td>${esc(v.bairro)}</td><td>${esc(v.tipo)}</td><td>${brl(v.valor)}</td><td>${esc(v.confianca||v.status)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma avaliação ainda.</p>";
   $("ia").innerHTML=(d.ia||[]).length?`<table><tr><th>Quando</th><th>Tarefa</th><th>Modelo</th><th>Duração</th><th></th></tr>${d.ia.map(l=>`<tr><td>${dt(l.created_at)}</td><td>${esc(l.task)}</td><td>${esc(l.model)}</td><td>${l.duration_ms!=null?(l.duration_ms/1000).toFixed(1)+" s":"—"}</td><td class="${l.ok?"ok":"falha"}">${l.ok?"ok":"falhou"}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma chamada registrada.</p>";
   $("eventos").innerHTML=(d.eventos||[]).length?`<table><tr><th>Quando</th><th>Entidade</th><th>Ação</th></tr>${d.eventos.map(e=>`<tr><td>${dt(e.created_at)}</td><td>${esc(e.entity)}</td><td>${esc(e.action)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Sem eventos.</p>";
+  $("mudancas").innerHTML=(d.mudancas||[]).length?`<table><tr><th>Quando</th><th>Portal</th><th>De</th><th>Para</th><th></th></tr>${d.mudancas.map(m=>{const x=m.detail||{};const sobe=Number(x.para)>Number(x.de);return `<tr><td>${dt(m.created_at)}</td><td><a href="${esc(x.url||"#")}" target="_blank" rel="noopener">${esc(x.portal||"")}</a></td><td>${brl(x.de)}</td><td>${brl(x.para)}</td><td class="${sobe?"falha":"ok"}">${sobe?"subiu":"baixou"}</td></tr>`;}).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma mudança de preço detectada ainda — as varreduras noturnas capturam quando o mesmo anúncio reaparece com valor novo.</p>";
 }
 
 async function visao(){

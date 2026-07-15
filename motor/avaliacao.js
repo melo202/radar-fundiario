@@ -89,6 +89,13 @@ export async function avaliar(subject, opts = {}) {
     completudeMedia: validos.reduce((s, c) => s + c.completeness, 0) / validos.length,
   });
 
+  /* A2 (atualização contínua): a IDADE da amostra é dado do resultado — o corretor vê
+     de quando são as ofertas, no card e no laudo, em vez de presumir que são de hoje */
+  const datas = validos.map(c => new Date(c.collectedAt).getTime()).filter(t => isFinite(t));
+  const ofertasColetadasEntre = datas.length
+    ? { de: new Date(Math.min(...datas)).toISOString().slice(0, 10), ate: new Date(Math.max(...datas)).toISOString().slice(0, 10) }
+    : null;
+
   const result = {
     estimatedValue: Math.round(pm2Ponderado * areaM2),
     estimatedPricePerM2: Math.round(pm2Ponderado),
@@ -96,7 +103,8 @@ export async function avaliar(subject, opts = {}) {
     probableRange: { minimum: Math.round(rValidos.q1 * areaM2), maximum: Math.round(rValidos.q3 * areaM2) },
     confidence: conf,
     sample: { totalFound, noBairro: comps.length + duplicados.length, duplicadosAgrupados: duplicados.length,
-      totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea, excluidosManual },
+      totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea,
+      excluidosManual, ofertasColetadasEntre },
     methods: ["preço/m² por comparável", "dedup leve entre portais", "cerca de Tukey (outliers marcados)",
       "média ponderada (área×tipologia×qualidade×recência)", "faixa provável = IQR × área"],
     assumptions: ["Comparáveis são preços de OFERTA anunciados publicamente — não são transações fechadas.",
