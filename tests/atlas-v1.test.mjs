@@ -4,11 +4,13 @@ import { readFileSync } from "node:fs";
 
 const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf8");
 
-test("V1 leva os tokens Atlas Cívico para o app real", () => {
-  for (const token of ["--canvas:#f4f6f3", "--surface:#fff", "--brand:#18513e", "--brass:#95743b", "--atlas-inspector:480px"]) {
+test("V1 leva os tokens do shell para o app real (paleta do kit Corretor Inteligente, R1 15/07/2026)", () => {
+  for (const token of ["--canvas:#F5F8F8", "--surface:#fff", "--brand:#088780", "--ink:#212E40",
+    "--brand-2:#19A99A", "--brass:#95743b", "--atlas-inspector:480px"]) {
     assert.ok(html.includes(token), `token ausente: ${token}`);
   }
-  assert.match(html, /<meta name="theme-color" content="#f4f6f3">/);
+  assert.match(html, /<meta name="theme-color" content="#F5F8F8">/);
+  /* o latão segue FUNCIONAL (atenção/destaque quente) — semântica não é marca */
 });
 
 test("cabeçalho Atlas reutiliza a busca existente em vez de duplicar o motor", () => {

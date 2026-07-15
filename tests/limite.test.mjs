@@ -27,7 +27,7 @@ test("G2: contorno + máscara do limite num pane abaixo de bairros, sem roubar c
 
 test("G2: máscara e contorno seguem o modo satélite", () => {
   assert.match(html, /if\(limiteMask\)limiteMask\.setStyle\(on\?\{fillColor:MAP_INK/);
-  assert.match(html, /if\(limiteLine\)limiteLine\.setStyle\(\{color:on\?"#f4f6f3":MAP_BRAND_STRONG\}\)/);
+  assert.match(html, /if\(limiteLine\)limiteLine\.setStyle\(\{color:on\?"#F5F8F8":MAP_BRAND_STRONG\}\)/);
 });
 
 test("G4: limite publicado no PWA e no deploy curado", () => {

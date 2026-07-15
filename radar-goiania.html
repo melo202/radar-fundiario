@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- CSP: contém o raio de dano de um XSS. JSONP exige o host da prefeitura em script-src; tiles/imagens do CARTO e do Esri (satélite) em img-src. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' https://api.corretorinteligente.tech; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#f4f6f3">
+<meta name="theme-color" content="#F5F8F8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Radar">
@@ -1085,18 +1085,24 @@
      ============================================================ */
   :root{
     color-scheme:light;
-    --canvas:#f4f6f3;
+    /* R1 (rebrand Corretor Inteligente, 15/07/2026): paleta do kit traduzida nos tokens.
+       marinho #212E40 = tinta/estrutura · petróleo #088780 = marca/ação (brand-strong
+       #065f56 quando há texto pequeno em branco: 7,5:1) · verde-claro #19A99A = realce
+       (--brand-2). O latão permanece como cor FUNCIONAL de atenção/destaque quente —
+       semântica não é marca; vermelho-alerta e simbologia do PD intocados. */
+    --canvas:#F5F8F8;
     --surface:#fff;
-    --surface-soft:#f7f9f6;
-    --surface-tint:#eef3ef;
-    --ink:#14231d;
-    --ink-soft:#46574f;
-    --muted:#68776f;
-    --line:#d9e1dc;
-    --line-strong:#c2cec7;
-    --brand:#18513e;
-    --brand-strong:#0f3b2d;
-    --brand-soft:#dcebe3;
+    --surface-soft:#f6f9f9;
+    --surface-tint:#ecf3f2;
+    --ink:#212E40;
+    --ink-soft:#44526b;
+    --muted:#5f6e7e;
+    --line:#d8e1e4;
+    --line-strong:#c1ced3;
+    --brand:#088780;
+    --brand-strong:#065f56;
+    --brand-2:#19A99A;
+    --brand-soft:#dcf0ee;
     --brass:#95743b;
     --brass-soft:#f2eadb;
     --focus:#2e73c7;
@@ -1586,7 +1592,7 @@
          o valor inicial/fallback, nunca dessincroniza de PINO_STYLE. Linhas de Caixa/subutilizado/
          território reusam o dourado de propósito (camadas próprias, fora de PINO_STYLE): sem data-status. -->
     <div id="pinoLegenda" class="pino-legenda" hidden aria-label="Legenda dos pinos no mapa">
-      <span><i class="pl-dot" data-status="bom" style="background:#18513e"></i>Abaixo da mediana cadastral</span>
+      <span><i class="pl-dot" data-status="bom" style="background:#088780"></i>Abaixo da mediana cadastral</span>
       <span><i class="pl-dot" data-status="atencao" style="background:#95743b"></i>Próximo à mediana cadastral</span>
 
       <span><i class="pl-dot" data-status="risco" style="background:#c0392b"></i>Acima da mediana cadastral</span>
@@ -4070,7 +4076,7 @@ function setSatelite(on){
   /* G2: máscara e contorno do limite municipal seguem o modo — sobre satélite o esmaecido
      escurece (tinta) e o traço vira claro para não sumir na imagem. */
   if(limiteMask)limiteMask.setStyle(on?{fillColor:MAP_INK,fillOpacity:.45}:{fillColor:mapTok("--canvas","#f4f6f3"),fillOpacity:.55});
-  if(limiteLine)limiteLine.setStyle({color:on?"#f4f6f3":MAP_BRAND_STRONG});
+  if(limiteLine)limiteLine.setStyle({color:on?"#F5F8F8":MAP_BRAND_STRONG});
   restyleLotsChunked();
   try{localStorage.setItem("radar_sat", on?"1":"0");}catch(e){}
 }
