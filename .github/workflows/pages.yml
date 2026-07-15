@@ -29,8 +29,9 @@ jobs:
       - name: Montar pasta pública só com o app
         run: |
           mkdir _site
-          cp index.html radar-goiania.html caixa-goiania.js sw.js manifest.json \
+          cp index.html radar-goiania.html como-usar.html caixa-goiania.js sw.js manifest.json \
              icon-192.png icon-512.png apple-touch-icon.png README.md _site/
+          mkdir -p _site/marca && cp marca/*.svg marca/*.png _site/marca/
           # datasets do app — o mapa 404a sem eles. bairros-goiania.json é obrigatório;
           # bairro-cdbairro.json idem (lookup do Meu Território — fetch em runtime, faltava aqui
           # e o 404 degradava o recurso em produção); os demais copiados só se existirem.

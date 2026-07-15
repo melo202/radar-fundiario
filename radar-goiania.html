@@ -1561,7 +1561,7 @@
 
     <details class="foot">
       <summary>Fontes &amp; metodologia</summary>
-      <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Corretor Inteligente — a consulta é manual na CND oficial.</div>
+      <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Corretor Inteligente — a consulta é manual na CND oficial. <a href="como-usar.html" target="_blank" rel="noopener">Guia completo: como usar →</a></div>
     </details>
   </aside>
 
@@ -1722,7 +1722,7 @@
         </div>
 
         <details class="maisopcoes">
-          <summary>Mais opções</summary>
+          <summary>Ferramentas</summary>
           <div class="footbody acts" id="dActsMore"></div>
         </details>
 
@@ -1829,7 +1829,7 @@
   <div class="onb" id="onbOverlay" hidden role="dialog" aria-modal="true" aria-label="Como usar o Corretor Inteligente">
     <div class="onb-card">
       <button type="button" class="onb-skip" onclick="onbFechar()">Pular</button>
-      <div class="onb-dots" aria-hidden="true"><span class="on"></span><span></span><span></span></div>
+      <div class="onb-dots" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
       <div class="onb-body" id="onbBody">
         <h2 id="onbTitulo"></h2>
         <p id="onbTexto"></p>
@@ -4002,6 +4002,8 @@ function initMap(){
   map.createPane("bairros").style.zIndex=370; /* abaixo do pane "lots" (380) e do overlayPane (400) */
   map.createPane("zonas").style.zIndex=375; /* Fase 18 (18-03, PD-05): entre bairros(370) e lots(380) — a camada de zonas do PD nunca compete com o hover/hit-area do lote */
   map.on("zoomend",()=>{
+    /* R4: no zoom em que os lotes aparecem, ensina o toque-no-lote UMA vez */
+    if(map.getZoom()>=17)dicaUmaVez("lotes","Neste zoom os lotes aparecem desenhados — toque em um lote para identificar o imóvel.");
     /* F5 D-12: re-aplica o traço/rampa das zonas do PD por zoom às layers JÁ desenhadas — SEM nova
        consulta (preserva ZONALAST/D-05); antes só a malha de bairros re-densificava (zonas congelavam). */
     if(ZONAS_ON)Object.keys(ZONA_LAYERS).forEach(sigla=>{
@@ -7169,7 +7171,17 @@ function mercadoDocumentoHTML(a){
   </div>`;
 }
 
+/* R4 — dica de primeira vez: ensina UMA vez por recurso, nunca repete (localStorage),
+   nunca bloqueia (reusa o toast). Linguagem de corretor, não de sistema. */
+function dicaUmaVez(chave,msg){
+  try{
+    if(localStorage.getItem("ci_dica_"+chave))return;
+    localStorage.setItem("ci_dica_"+chave,"1");
+  }catch(e){return;}
+  setTimeout(()=>toast(msg),600);
+}
 function showDetail(a,ll){
+  dicaUmaVez("dossie","Role o dossiê e veja a aba Território: análise de mercado, entorno medido e Plano Diretor.");
   fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes do #detail abrir (mesmo z-index/DOM depois dele; sem isto ficava visualmente escondido atrás) */
   const d=document.getElementById("detail");
   setDossierView("resumo");
@@ -9401,7 +9413,8 @@ function trapFocaveis(container){
 // Conteúdo dos 3 cartões (copy literal, travado — não reformular)
 const ONB_CARDS=[
   {titulo:"Busque qualquer imóvel", texto:"Digite endereço, quadra/lote, nome do prédio ou inscrição — numa caixa só. O Corretor Inteligente entende o que você quer dizer.", cta:"Próximo"},
-  {titulo:"Entenda os dados disponíveis", texto:"Cada imóvel separa valor venal, posição cadastral, cobertura dos dados e referências indicativas — sem transformar cadastro em promessa de mercado.", cta:"Próximo"},
+  {titulo:"Explore o mapa de Goiânia", texto:"Aproxime o zoom e os LOTES aparecem desenhados — toque num lote para identificar o imóvel na hora. Dá também para tocar num setor ou buscar direto.", cta:"Próximo"},
+  {titulo:"Entenda os dados disponíveis", texto:"Cada imóvel separa valor venal, posição cadastral, cobertura dos dados e referências indicativas — sem transformar cadastro em promessa de mercado. Na aba Território: análise de mercado e entorno medido.", cta:"Próximo"},
   {titulo:"Gere documentos e capte", texto:"Gere ficha ou relatório de apoio em PDF, copie mensagens prontas para o WhatsApp e monte a proposta — tudo pelo Corretor Inteligente.", cta:"Começar"},
 ];
 let onbIdx=0;
