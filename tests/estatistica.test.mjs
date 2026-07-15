@@ -3,7 +3,7 @@
 // que sai do motor é reproduzível.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { quantil, resumo, cercaTukey, normalizaBairro, dedupLeve, pesoComparavel, mediaPonderada, confianca } from "../motor/estatistica.js";
+import { quantil, resumo, cercaTukey, normalizaBairro, dedupLeve, dedupMultiSinal, pesoComparavel, mediaPonderada, confianca } from "../motor/estatistica.js";
 
 test("quantil e resumo: mediana e quartis com interpolação linear", () => {
   assert.equal(quantil([1, 2, 3, 4, 5], 0.5), 3);
@@ -37,6 +37,38 @@ test("dedup leve agrupa o mesmo imóvel em portais diferentes e fica com o mais 
   assert.equal(principais.length, 2);
   assert.equal(duplicados.length, 1);
   assert.ok(principais.find(p => p.id === "b"), "vence o registro mais completo");
+});
+
+test("§5 multi-sinal: pega o que escapava do balde exato — área 90,4 vs 90,6 e preço com taxa", () => {
+  const { principais, duplicados } = dedupMultiSinal([
+    { id: "a", portal: "olx", bedrooms: 3, area: 90.4, price: 690000, completeness: 0.6 },
+    { id: "b", portal: "zap", bedrooms: 3, area: 90.6, price: 697000, completeness: 0.9 }, /* +1% de taxa */
+    { id: "c", portal: "olx", bedrooms: 2, area: 55, price: 365000, completeness: 0.7 },
+  ]);
+  assert.equal(principais.length, 2);
+  assert.equal(duplicados.length, 1);
+  assert.equal(duplicados[0].id, "a", "o menos completo vira duplicado");
+  assert.ok(duplicados[0].razaoDedup.includes("área e preço convergem"), "razão registrada, nunca silenciosa");
+  assert.ok(duplicados[0].razaoDedup.includes("olx ≈ zap"));
+});
+
+test("§5 multi-sinal: posição CNEFE agrupa mesmo com preço diferente entre portais", () => {
+  const { principais, duplicados } = dedupMultiSinal([
+    { id: "a", portal: "olx", bedrooms: 3, area: 90, price: 690000, completeness: 0.9, lat: -16.7081, lon: -49.2723 },
+    { id: "b", portal: "zap", bedrooms: 3, area: 90, price: 725000, completeness: 0.6, lat: -16.70812, lon: -49.27232 }, /* ~3 m; preço 5% maior */
+  ]);
+  assert.equal(principais.length, 1);
+  assert.ok(duplicados[0].razaoDedup.includes("posição (CNEFE)"));
+});
+
+test("§5 multi-sinal: unidades DIFERENTES nunca são agrupadas", () => {
+  const { principais } = dedupMultiSinal([
+    { id: "a", portal: "olx", bedrooms: 3, area: 90, price: 690000, completeness: 0.9 },
+    { id: "b", portal: "zap", bedrooms: 2, area: 90, price: 690000, completeness: 0.9 }, /* tipologia difere */
+    { id: "c", portal: "zap", bedrooms: 3, area: 120, price: 690000, completeness: 0.9 }, /* área difere >2% */
+    { id: "d", portal: "zap", bedrooms: 3, area: 90, price: 780000, completeness: 0.9 }, /* preço 13% e sem coords */
+  ]);
+  assert.equal(principais.length, 4, "nenhum sinal convergiu — ninguém é engolido");
 });
 
 test("peso multiplicativo pune área distante e tipologia diferente, nunca zera por recência", () => {

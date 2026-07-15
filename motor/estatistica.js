@@ -53,6 +53,50 @@ export function dedupLeve(comps) {
   return { principais, duplicados };
 }
 
+/* §5 — dedup MULTI-SINAL: o mesmo imóvel anunciado em portais diferentes muda de roupa
+   (preço com taxa embutida, área arredondada) e escapava do balde exato do dedupLeve
+   (90,4 m² vs 90,6 m² caíam em baldes 90≠91). Dois anúncios são o MESMO imóvel quando
+   sinais INDEPENDENTES convergem:
+   - quartos iguais (ou um dos dois ausente), E
+   - área até 2% de diferença, E
+   - preço até 1,5% OU coordenadas a menos de 40 m (geocodificação CNEFE).
+   Guloso por completude (o mais completo vira o principal) e cada duplicado carrega a
+   RAZÃO do agrupamento — rastreabilidade §16, nunca dedup silencioso. */
+function distanciaM(a, b) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function razaoMesmoImovel(a, b) {
+  if (a.bedrooms != null && b.bedrooms != null && a.bedrooms !== b.bedrooms) return null;
+  if (!(a.area > 0 && b.area > 0)) return null;
+  if (Math.abs(a.area - b.area) / Math.max(a.area, b.area) > 0.02) return null;
+  const precoPerto = a.price > 0 && b.price > 0 &&
+    Math.abs(a.price - b.price) / Math.max(a.price, b.price) <= 0.015;
+  const geoPerto = a.lat != null && b.lat != null && a.lon != null && b.lon != null &&
+    distanciaM(a, b) <= 40;
+  if (precoPerto && geoPerto) return "área, preço e posição convergem";
+  if (precoPerto) return "área e preço convergem";
+  if (geoPerto) return "área e posição (CNEFE) convergem";
+  return null;
+}
+export function dedupMultiSinal(comps) {
+  const ordenados = [...comps].sort((x, y) => (y.completeness ?? 0) - (x.completeness ?? 0));
+  const principais = [], duplicados = [];
+  for (const c of ordenados) {
+    let dono = null, razao = null;
+    for (const p of principais) {
+      razao = razaoMesmoImovel(p, c);
+      if (razao) { dono = p; break; }
+    }
+    if (dono) duplicados.push({ ...c, duplicadoDe: dono.url ?? dono.id ?? null,
+      razaoDedup: `${razao} (${c.portal} ≈ ${dono.portal})` });
+    else principais.push(c);
+  }
+  return { principais, duplicados };
+}
+
 /* §8: peso multiplicativo = comparabilidade × qualidade × recência (0..1 em cada fator) */
 export function pesoComparavel(subject, c, agora = Date.now()) {
   let fArea = 0.7;

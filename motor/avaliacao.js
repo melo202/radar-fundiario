@@ -3,7 +3,7 @@
    100% determinístico e VERSIONADO (nada sobrescreve análise antiga). A IA não
    participa de nenhum número daqui; ela só vai REDIGIR sobre este JSON (§17). */
 import { pool } from "./db.js";
-import { resumo, cercaTukey, normalizaBairro, dedupLeve, pesoComparavel, mediaPonderada, confianca } from "./estatistica.js";
+import { resumo, cercaTukey, normalizaBairro, dedupMultiSinal, pesoComparavel, mediaPonderada, confianca } from "./estatistica.js";
 
 /* opts (§14 — revisão do corretor): excluirIds tira comparáveis da amostra por decisão
    HUMANA registrada; parentId/notaRevisao criam uma VERSÃO nova encadeada (§20) —
@@ -58,7 +58,7 @@ export async function avaliar(subject, opts = {}) {
     });
   }
 
-  const { principais, duplicados } = dedupLeve(comps);
+  const { principais, duplicados } = dedupMultiSinal(comps);
   const totalFound = cand.rows.length;
 
   if (principais.length < 5) {
@@ -105,7 +105,7 @@ export async function avaliar(subject, opts = {}) {
     sample: { totalFound, noBairro: comps.length + duplicados.length, duplicadosAgrupados: duplicados.length,
       totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea,
       excluidosManual, ofertasColetadasEntre },
-    methods: ["preço/m² por comparável", "dedup leve entre portais", "cerca de Tukey (outliers marcados)",
+    methods: ["preço/m² por comparável", "dedup multi-sinal entre portais (área+preço/posição)", "cerca de Tukey (outliers marcados)",
       "média ponderada (área×tipologia×qualidade×recência)", "faixa provável = IQR × área"],
     assumptions: ["Comparáveis são preços de OFERTA anunciados publicamente — não são transações fechadas.",
       "Nenhum ajuste automático de negociação/conservação foi aplicado nesta versão."],
