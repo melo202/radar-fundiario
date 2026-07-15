@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Protótipo — Login "Cidade Viva" · Corretor Inteligente</title>
+<!-- PROTÓTIPO de direção visual (rebrand R2/R4): alternativa ao "fundo Matrix" com o
+     DNA do produto — a malha de Goiânia se desenhando + nós de circuito da marca.
+     Demonstrativo: não autentica, não consulta endpoint de login. Paleta do kit:
+     marinho #212E40 · petróleo #088780 · verde-claro #19A99A · claro #F5F8F8. -->
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#212E40;overflow:hidden;color:#F5F8F8}
+  #ceu{position:fixed;inset:0;display:block}
+  .palco{position:fixed;inset:0;display:grid;place-items:center;padding:20px}
+  .cartao{width:min(400px,92vw);background:rgba(245,248,248,.97);color:#212E40;border-radius:18px;
+    padding:34px 32px 28px;box-shadow:0 24px 80px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25);
+    animation:chega .7s cubic-bezier(.2,.7,.3,1) both .35s}
+  @keyframes chega{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+  .cartao img{width:78%;display:block;margin:0 auto 6px}
+  .cartao .sub{font-size:12.5px;color:#5c6b74;text-align:center;margin-bottom:22px}
+  label{display:block;font-size:12px;font-weight:600;letter-spacing:.4px;color:#3d4c5c;margin-bottom:6px}
+  input{width:100%;font:inherit;padding:11px 13px;border:1.5px solid #d5dde0;border-radius:10px;
+    background:#fff;outline:0;transition:border-color .18s,box-shadow .18s}
+  input:focus{border-color:#088780;box-shadow:0 0 0 3px rgba(8,135,128,.18)}
+  button{width:100%;font:inherit;font-weight:600;margin-top:16px;padding:12px;border:0;border-radius:10px;
+    color:#fff;cursor:pointer;background:linear-gradient(135deg,#088780,#19A99A);
+    transition:filter .18s,transform .18s}
+  button:hover{filter:brightness(1.07)}
+  button:active{transform:scale(.98)}
+  .nota{margin-top:16px;font-size:11px;color:#8494a0;text-align:center}
+  .selo{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:11px;color:rgba(245,248,248,.55)}
+  @media (prefers-reduced-motion:reduce){.cartao{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="ceu" aria-hidden="true"></canvas>
+<div class="palco">
+  <form class="cartao" onsubmit="return false">
+    <img src="marca/corretorinteligente_logo_horizontal_flat.svg" alt="Corretor Inteligente">
+    <div class="sub">Inteligência territorial e de mercado — Goiânia</div>
+    <label for="s">Senha de acesso</label>
+    <input id="s" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button type="submit">Entrar</button>
+    <div class="nota">Protótipo de direção visual — nenhum dado é enviado.</div>
+  </form>
+</div>
+<div class="selo">A malha ao fundo é o limite real de Goiânia (IBGE 5208707) sendo medido.</div>
+
+<script>
+"use strict";
+(async () => {
+  const cv = document.getElementById("ceu"), cx = cv.getContext("2d");
+  const PETROLEO = "#088780", CLARO = "#19A99A";
+  const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, DPR;
+  function mede() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  mede(); addEventListener("resize", () => { mede(); projeta(); });
+
+  /* limite real do município -> caminho na tela (levemente deslocado p/ a direita,
+     deixando o cartão respirar) */
+  let anel = [], caminho = [], compr = 0;
+  try {
+    const gj = await fetch("limite-goiania.json").then(r => r.json());
+    anel = gj.features[0].geometry.coordinates[0];
+  } catch { anel = []; }
+  function projeta() {
+    if (!anel.length) return;
+    const xs = anel.map(p => p[0]), ys = anel.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const escala = Math.min(W * .92 / (x1 - x0), H * .92 / (y1 - y0));
+    const ox = (W - (x1 - x0) * escala) / 2 + W * .06, oy = (H - (y1 - y0) * escala) / 2;
+    caminho = anel.map(([lon, lat]) => [ox + (lon - x0) * escala, oy + (y1 - lat) * escala]);
+    compr = 0;
+    for (let i = 1; i < caminho.length; i++) compr += Math.hypot(caminho[i][0] - caminho[i - 1][0], caminho[i][1] - caminho[i - 1][1]);
+  }
+  projeta();
+
+  /* nós de circuito (eco do símbolo da marca) */
+  const N = Math.min(70, Math.round(W * H / 22000));
+  const nos = Array.from({ length: N }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random() - .5) * .18, vy: (Math.random() - .5) * .18,
+    r: 1.2 + Math.random() * 1.8,
+  }));
+  /* pulsos: "a cidade sendo medida" */
+  const pulsos = [];
+
+  /* webview/pane sem compositor não dispara rAF — detecta e cai para timer de 30 fps */
+  let usaRaf = true, agendado = false, t0 = performance.now();
+  function agenda() {
+    if (agendado || reduz) return; agendado = true;
+    const disparo = () => { agendado = false; quadro(performance.now()); };
+    if (usaRaf) requestAnimationFrame(disparo); else setTimeout(disparo, 33);
+  }
+  setTimeout(() => { if (agendado && usaRaf) { usaRaf = false; agendado = false; agenda(); } }, 600);
+  function quadro(t) {
+    /* o pane/browser pode reportar innerWidth 0 no primeiro instante — mede de novo
+       até a janela existir de verdade (cobre resize também) */
+    if (W !== innerWidth || H !== innerHeight) { mede(); projeta(); }
+    const dt = Math.min(33, t - t0); t0 = t;
+    /* fundo */
+    const g = cx.createRadialGradient(W * .62, H * .45, 80, W * .5, H * .5, Math.max(W, H) * .75);
+    g.addColorStop(0, "#26344a"); g.addColorStop(1, "#1a2433");
+    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+
+    /* contorno de Goiânia se traçando (12 s) e depois respirando */
+    if (caminho.length) {
+      const fase = (t / 12000) % 1.15;
+      const visivel = Math.min(1, fase / 1) * compr;
+      let acum = 0;
+      cx.beginPath(); cx.moveTo(caminho[0][0], caminho[0][1]);
+      for (let i = 1; i < caminho.length && acum < visivel; i++) {
+        acum += Math.hypot(caminho[i][0] - caminho[i - 1][0], caminho[i][1] - caminho[i - 1][1]);
+        cx.lineTo(caminho[i][0], caminho[i][1]);
+      }
+      const respira = .5 + .22 * Math.sin(t / 1400);
+      cx.strokeStyle = PETROLEO; cx.globalAlpha = respira; cx.lineWidth = 1.6;
+      cx.shadowColor = CLARO; cx.shadowBlur = 12;
+      cx.stroke();
+      cx.shadowBlur = 0; cx.globalAlpha = 1;
+    }
+
+    /* nós + ligações */
+    for (const n of nos) {
+      n.x += n.vx * dt / 16; n.y += n.vy * dt / 16;
+      if (n.x < -10) n.x = W + 10; if (n.x > W + 10) n.x = -10;
+      if (n.y < -10) n.y = H + 10; if (n.y > H + 10) n.y = -10;
+    }
+    cx.lineWidth = .7;
+    for (let i = 0; i < nos.length; i++) for (let j = i + 1; j < nos.length; j++) {
+      const a = nos[i], b = nos[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 110) {
+        cx.strokeStyle = `rgba(25,169,154,${(1 - d / 110) * .28})`;
+        cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.stroke();
+      }
+    }
+    for (const n of nos) {
+      cx.fillStyle = "rgba(25,169,154,.75)";
+      cx.beginPath(); cx.arc(n.x, n.y, n.r, 0, 7); cx.fill();
+    }
+
+    /* pulsos ocasionais */
+    if (Math.random() < .012 && pulsos.length < 4 && caminho.length) {
+      const p = caminho[Math.floor(Math.random() * caminho.length)];
+      pulsos.push({ x: p[0] * .55 + W * .5 * .45 * Math.random() + W * .1, y: p[1] * .7 + H * .15 * Math.random(), r: 0 });
+    }
+    for (let i = pulsos.length - 1; i >= 0; i--) {
+      const p = pulsos[i]; p.r += dt * .035;
+      const al = Math.max(0, 1 - p.r / 90);
+      if (!al) { pulsos.splice(i, 1); continue; }
+      cx.strokeStyle = `rgba(8,135,128,${al * .5})`; cx.lineWidth = 1.4;
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.stroke();
+    }
+
+    agenda();
+  }
+  quadro(performance.now());
+})();
+</script>
+</body>
+</html>
