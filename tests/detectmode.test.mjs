@@ -285,6 +285,33 @@ test("detectMode (F5 BUSCA-06) — 't-63 1500' (rua de codigo) -> addr", () => {
   const r = P.detectMode("t-63 1500", COMBO_FIXTURE);
   assert.equal(r.mode, "addr");
   assert.equal(r.numero, "1500");
+  assert.equal(r.rua, "t-63", "o numero de porta nao pode viajar dentro do campo rua (BUSCA-14)");
+});
+
+// F5 BUSCA-14 — o numero de porta era mantido DENTRO do campo rua ("rua s3, 50" -> rua "rua s3, 50"),
+// e ruaCore concatenava os digitos da rua com os do numero (rD "350"), casando a rua errada e
+// derramando o setor inteiro na lista (caso real do usuario, 15/07/2026). Contrato novo: se apos
+// remover o numero final sobra identidade de rua, a rua vai LIMPA; senao ("Rua 135", rua numerada
+// sem numero de porta), o numero E o nome da rua e o campo numero fica vazio.
+test("detectMode (F5 BUSCA-14) — 'rua s3, 50' separa rua limpa e numero de porta", () => {
+  const r = P.detectMode("rua s3, 50", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.rua, "rua s3");
+  assert.equal(r.numero, "50");
+});
+
+test("detectMode (F5 BUSCA-14) — 'Rua 135' e rua NUMERADA: o numero e o nome, porta vazia", () => {
+  const r = P.detectMode("Rua 135", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.rua, "Rua 135");
+  assert.equal(r.numero, "");
+});
+
+test("detectMode (F5 BUSCA-14) — 'quintino bocaiuva, 210' (5b) tambem entrega a rua limpa", () => {
+  const r = P.detectMode("quintino bocaiuva, 210", COMBO_FIXTURE);
+  assert.equal(r.mode, "addr");
+  assert.equal(r.rua, "quintino bocaiuva");
+  assert.equal(r.numero, "210");
 });
 
 // Controles que NAO podem regredir com a regra 5b nova:

@@ -112,6 +112,19 @@ Referências de estrutura, não de cópia visual: [Apple HIG — Layout](https:/
 
 **Aceite:** impossível arrastar para fora da região de Goiânia ou afastar o zoom além da cidade; o limite municipal aparece desenhado e o exterior fica esmaecido; suite completa verde e nenhuma regressão de clique/drill.
 
+### P0 — Busca por endereço precisa (rua + número)
+
+**Diagnóstico (caso real "rua s3, 50", 15/07/2026):** o detector entregava o número de porta DENTRO do campo rua; `ruaCore` concatenava os dígitos ("S3"+"50" → rD "350") e o refino casava rua errada/derramava o setor na lista.
+
+- ✅ **BUSCA-14 (15/07/2026):** número de porta separado da rua nas regras 3 e 5b do `detectMode`, com o caso "Rua 135" (rua numerada SEM porta) preservado via `temIdentidadeRua()`. Testes novos em `detectmode.test.mjs`; validado em runtime.
+- ⬜ **BUSCA-15 — Números com coordenada (CNEFE).** O "mapa público dos números" existe: o CNEFE do IBGE (Censo 2022) tem endereço + número + coordenada por face de quadra, público, e o repo já deriva `logradouros-goiania.json` dele. Evoluir `gerar-logradouros.py` (ou `gerar-numeros.py`) para manter número→coordenada por logradouro, permitindo: (a) validar/ranquear o número digitado, (b) apontar o pino no endereço mesmo quando o cadastro guarda o prédio "S/N", (c) sugerir o número mais próximo quando não existir.
+- ⬜ **BUSCA-16 — Desambiguação de rua homônima.** "Rua S-3" existe em mais de um setor; quando a busca vem sem setor, oferecer chips com os setores que têm a rua (CNEFE `localidades` já traz isso) em vez de exigir o setor às cegas.
+- ⬜ **Item 19 do backlog** (fuzzy: igualdade de dígitos primeiro, substring só como fallback sinalizado) continua válido para o refino fino.
+
+### P1 — Motor Inteligente de Análise de Preço — plano registrado
+
+Especificação completa do usuário + diagnóstico Fase 1 (auditoria) + adaptações de stack em [`MOTOR-PRECO.md`](MOTOR-PRECO.md) (15/07/2026). Princípio idêntico ao do repo: IA nunca produz o preço — motor determinístico e auditável; IA só extrai, explica e redige com validação. Aguardando o VPS (Hostinger) para a Fase 2; modelos via interface `AIProvider` (Groq/OpenAI-compatível como rápido, Claude como premium/fallback — sem GPU não roda Qwen local).
+
 ### P1 — Infra própria (servidor + domínio) — aguardando o servidor do usuário
 
 - ⬜ Proxy CORS próprio para o ArcGIS da prefeitura (fecha o item 14): elimina JSONP, adiciona cache e protege o endpoint frágil. O app estático pode continuar no Pages, apontado pelo domínio.

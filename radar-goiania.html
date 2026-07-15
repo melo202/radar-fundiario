@@ -1919,6 +1919,9 @@ const TIPOVIA=new RegExp("^(?:"+TIPOVIA_WORDS+")\\.?\\s+");
    detectMode) — precisa da flag "i" para casar "Rua"/"rua"/"RUA" sem depender de norm() previo. */
 const TIPOVIA_DETECT=new RegExp("\\b(?:"+TIPOVIA_WORDS+")\\.?\\s+","i");
 const ruaCore=s=>norm(s).replace(/'/g,"").replace(TIPOVIA,"");
+/* F5 BUSCA-14: identidade de rua REAL — core não-vazio e que não seja um tipo de via solto
+   ("Rua" isolado escapa do TIPOVIA, que exige espaço após a palavra). */
+const temIdentidadeRua=s=>{const c=ruaCore(s);return !!c&&!new RegExp("^(?:"+TIPOVIA_WORDS+")\\.?$").test(c);};
 /* termo p/ LIKE server-side: dígitos do input (ou letras, se não houver dígito) — recall ≥ regras de refino do cliente */
 const likeTerm=v=>{const s=norm(v).replace(/'/g,"");const d=s.replace(/\D/g,"");return d||s.replace(/[^A-Z0-9]/g,"");};
 function isGarage(a){return /\b(BOX|GARAG|VAGA|DEPOSITO|DEP\b|SUBSOLO)/.test(norm(a.incompl));}
@@ -2097,8 +2100,19 @@ function detectMode(textoBruto,combo){
   // 3. Endereco — tipo de via explicito, NAO ancorado (TIPOVIA_DETECT, derivado de TIPOVIA)
   const mVia=raw.match(TIPOVIA_DETECT);
   if(mVia){
+    /* F5 BUSCA-14 (15/07/2026): o numero de porta NAO pode viajar dentro do campo rua —
+       ruaCore concatenaria os digitos da rua com os do numero ("rua s3, 50" -> rD "350") e o
+       refino casaria a rua errada / varreria o setor inteiro. Regra: removido o numero final,
+       se ainda sobra identidade de rua (ruaCore nao-vazio), ele era numero de porta e a rua vai
+       LIMPA; se nao sobra ("Rua 135" — rua NUMERADA sem numero de porta), o numero E o nome da
+       rua: rua=raw e numero vazio. O label preserva a frase digitada. */
     const numMatch=raw.match(/\b(\d{1,5})\b\s*$/);
-    return attachSetor({mode:"addr",rua:raw,numero:numMatch?numMatch[1]:"",confidence:"alta",label:`Endereço · ${raw}`});
+    let ruaVal=raw,numVal=numMatch?numMatch[1]:"";
+    if(numMatch){
+      const semNum=raw.slice(0,numMatch.index).replace(/[\s,–-]+$/,"");
+      if(temIdentidadeRua(semNum))ruaVal=semNum;else numVal="";
+    }
+    return attachSetor({mode:"addr",rua:ruaVal,numero:numVal,confidence:"alta",label:`Endereço · ${raw}`});
   }
 
   // 4. Predio — prefixo textual tipico
@@ -2120,11 +2134,14 @@ function detectMode(textoBruto,combo){
      ainda dispara — so "baixa" e bloqueado — e o menu de correcao cobre engano). Com palavra-chave
      de predio (ED/EDF/EDIF/EDIFICIO/RES/RESID/RESIDENCIAL/COND/CONDOMINIO/TORRE/BLOCO/APTO/
      APARTAMENTO) NAO vira addr: cai na regra 6 e segue Predio. Espelha os campos da regra 3
-     (rua=raw completo, numero=numero final) para applyDetectAndSearch/buscar no MODE addr. */
+     (F5 BUSCA-14: rua SEM o numero de porta quando sobra identidade de rua; numero=numero final). */
   const _predioKW=/\b(ED|EDF|EDIF|EDIFICIO|RES|RESID|RESIDENCIAL|COND|CONDOMINIO|TORRE|BLOCO|APTO|APARTAMENTO)\b/;
   const _numFim=raw.match(/\b(\d{1,5})\b\s*$/);
   if(_numFim && /[A-Za-z]/.test(raw) && !_predioKW.test(n)){
-    return attachSetor({mode:"addr",rua:raw,numero:_numFim[1],confidence:"media",label:`Endereço (?) · ${raw}`});
+    let ruaVal=raw;
+    const _semNum=raw.slice(0,_numFim.index).replace(/[\s,–-]+$/,"");
+    if(temIdentidadeRua(_semNum))ruaVal=_semNum;
+    return attachSetor({mode:"addr",rua:ruaVal,numero:_numFim[1],confidence:"media",label:`Endereço (?) · ${raw}`});
   }
 
   // 6. Texto sem numero nem tipo de via — setor ja tentado no passo 0; resta assumir predio (media)
