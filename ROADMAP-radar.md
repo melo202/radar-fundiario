@@ -141,19 +141,22 @@ Decisão de 15/07/2026 (respeita "sem IA no núcleo"): módulo **no servidor**, 
 - ✅ (15/07) Splash de boot com marca + spinner no primeiro paint do app (`#bootSplash`, some quando a UI fica interativa, válvula de 6 s para nunca prender a tela).
 - ✅ (15/07) Raiz do domínio serve o app DIRETO (nginx rewrite) — a página de redirecionamento não aparece mais; e o próprio `index.html` (fallback Pages/offline) virou splash com a marca em vez de link cru.
 - ✅ (15/07) Card Mercado com skeleton shimmer enquanto o motor calcula.
+- ✅ (15/07) Parecer §17 e resumo do entorno nasceram com skeleton + badge de origem (IA conferida vs resumo automático) + degradação explicada — a lei valeu como critério de aceite.
 - ⬜ Auditoria contínua: toda espera nova (fetch, geração de laudo, parecer) nasce com skeleton/spinner/estado de progresso; usar os tokens `--motion-*`/`--ease-out` e respeitar reduced-motion sempre.
 
 ### LAUDO-MERCADO — avaliações do motor no laudo (ideia do usuário, 15/07/2026)
 
 O usuário definiu: as avaliações do motor devem sair no **laudo de avaliação (PTAM e outros)**.
 
-- ⬜ **Curto prazo:** a Análise Comparativa de Mercado (valor, faixa, confiança, ofertas com fonte + parecer §17) entra como SEÇÃO do Relatório de Referência/Ficha existentes, com a rotulagem honesta (ofertas ≠ transações) e a mesma trilha de fontes do card Mercado.
+- ✅ (15/07) **Curto prazo:** a Análise Comparativa de Mercado entrou como SEÇÃO do Relatório de Referência (`mercadoDocumentoHTML`, presa por chave à inscrição — outro imóvel nunca herda), com rotulagem honesta (ofertas ≠ transações) e id da avaliação auditável. O parecer §17 é gerado no card Mercado (números por construção, validados).
 - ⬜ **PTAM:** permanece suspenso pelo contrato de honestidade (`habilitaPtam()` → false, travado em teste) até existir **verificação profissional real** (CRECI/CNAI verificados — Res. COFECI 1.066/2007). Quando destravar, a ACM do motor vira o núcleo de comparáveis do PTAM (10+ comparáveis, metodologia, mapa, homogeneização §12), com o corretor revisando a amostra (§14) antes da emissão.
 - ⬜ Requisito técnico de caminho: mapa de comparáveis no laudo (depende do geocoding CNEFE §7) e versão do laudo apontando o id da valuation usada (auditoria §16).
 
 ### INTELIGÊNCIA DE LOCALIZAÇÃO — exploração registrada (ideia do usuário, 15/07/2026)
 
 Especificação completa + parecer técnico + **prova de cobertura já executada** em [`INTELIGENCIA-LOCALIZACAO.md`](INTELIGENCIA-LOCALIZACAO.md). Resumo da evidência: OSM cobre bem os bairros de mercado (Bueno: 7 supermercados/1 km; Pq. Amazônia: 15 POIs nomeados) e falha na periferia (Vera Cruz: 1 POI); Overpass público é inviável para produção (congestão + espelho devolvendo "zero falso"). **MVP decidido (custo ~zero):** extrato Geofabrik de Goiás → tabela `pois` no PostGIS do VPS (`gerar-pois.py` + timer mensal) → `GET /motor/localizacao` com raio por categoria e `dataQuality` honesto → card "Localização" no Território → IA só explica (pipeline do parecer §17). Sem nota geral na v1; impacto no valor só por correlação medida (§10), nunca % arbitrário. Atribuição ODbL obrigatória.
+
+**✅ MVP NO AR (15/07/2026):** 6.734 POIs no PostGIS, endpoint público com rate limit por rota, card "Localização" no Território e **resumo do entorno por IA** (pipeline §17: whitelist de números medidos + `validarNumeros`, 2 reprovações → texto determinístico). Lições de produção gravadas: `<think>` do qwen remoto é removido no provedor; categoria zerada é filtrada ANTES do prompt (o modelo narrava "ausências" como atenção); pontos de atenção só por sinal medido. Próximos degraus: geocoding CNEFE (§7), locationMetrics nos comparáveis (§10), OSRM/INEP/CNES.
 
 ### Pendências humanas (inalteradas)
 
