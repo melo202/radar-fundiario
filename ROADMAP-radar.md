@@ -211,7 +211,7 @@ Verificado em preview 375×812: busca Q128/L08E no Bueno → 26 unidades, auto-s
 11. ✅ **Filtro de garagem não se aplica à busca por inscrição** (quem busca a inscrição exata de um box quer vê-lo).
 12. ✅ Código morto removido (`data-disp`).
 13. ✅ Retry/backoff nas chamadas JSONP (retry de 900ms no app; backoff exponencial + Retry-After no atualizar-caixa.py — 03/07/2026).
-14. ⬜ **JSONP em si**: aceitável para uso próprio (TLS protege o canal; a confiança é no servidor da prefeitura). Se um dia virar produto: proxy próprio (ex.: Cloudflare Worker gratuito) fazendo o fetch e devolvendo JSON com CORS — elimina execução de script remoto e ainda permite cache.
+14. ✅ **JSONP → proxy próprio (15/07/2026).** Proxy CORS no VPS (`https://api.corretorinteligente.tech/arcgis/...`, systemd `radar-proxy`, whitelist do portalmapa, cache de 10 min) virou o transporte PREFERIDO do app (`arcgisFetch` dentro de `jsonp()`); o JSONP permanece como fallback automático quando o proxy está fora do ar (PROXY_DEAD por sessão). Erro do upstream propaga para o retry histórico sem acionar o fallback. CSP: `connect-src` ganhou o host do proxy. Testes em `tests/proxy.test.mjs`.
 
 ---
 

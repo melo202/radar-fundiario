@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- CSP: contém o raio de dano de um XSS. JSONP exige o host da prefeitura em script-src; tiles/imagens do CARTO e do Esri (satélite) em img-src. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' https://api.corretorinteligente.tech; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#f4f6f3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3870,11 +3870,37 @@ function mStagger(...args){
 let SHEETDRAGY0 = null;
 let SHEETGEN = 0; /* geração do sheet: invalida cleanups async de close obsoletos em open/close rápidos (WR-02) */
 
-/* ---------------- JSONP (evita CORS em arquivo local) ---------------- */
+/* ---------------- transporte ArcGIS: proxy HTTPS próprio com fallback JSONP ----------------
+   Item 14 do roadmap (fechado em 15/07/2026): o transporte PREFERIDO é o proxy do VPS
+   (api.corretorinteligente.tech — CORS liberado, cache de 10 min protegendo o servidor frágil
+   da prefeitura, sem execução de script remoto). O JSONP permanece como fallback automático:
+   proxy fora do ar/bloqueado marca PROXY_DEAD e a sessão segue direto na prefeitura, como
+   sempre funcionou. Erro DE DADOS ({error} do ArcGIS) ou status HTTP repassado do upstream
+   NÃO é culpa do proxy (e.upstream) — propaga para o retry histórico sem acionar o fallback. */
+const ARCGIS_UPSTREAM="https://portalmapa.goiania.go.gov.br";
+const ARCGIS_PROXY="https://api.corretorinteligente.tech/arcgis";
+let PROXY_DEAD=false;
+async function arcgisFetch(params,url){
+  const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
+  const r=await fetch(url.replace(ARCGIS_UPSTREAM,ARCGIS_PROXY)+"?"+qs,{signal:AbortSignal.timeout(30000)});
+  if(!r.ok)throw Object.assign(new Error("upstream http "+r.status),{upstream:true});
+  const d=await r.json();
+  if(d&&d.error)throw Object.assign(new Error(d.error.message||"erro do servidor"),{upstream:true});
+  return d;
+}
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
 async function jsonp(params,retries=1,url=SVC){
   for(;;){
-    try{return await jsonpOnce(params,url);}
+    try{
+      if(!PROXY_DEAD){
+        try{return await arcgisFetch(params,url);}
+        catch(e){
+          if(e.upstream)throw e; /* upstream respondeu — segue o retry normal, ainda via proxy */
+          PROXY_DEAD=true;console.warn("proxy indisponível — sessão segue via JSONP:",e.message);
+        }
+      }
+      return await jsonpOnce(params,url);
+    }
     catch(e){if(retries-->0){await new Promise(r=>setTimeout(r,900));continue;}throw e;}
   }
 }
