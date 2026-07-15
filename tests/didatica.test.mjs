@@ -39,6 +39,23 @@ test("capa Cidade Viva: SÓ na primeira visita, emenda no tour e respeita deep-l
   assert.ok(html.includes("com fonte e limites declarados"), "a capa já apresenta o contrato de honestidade");
 });
 
+test("R6: compartilhar tem cara de produto (Open Graph) e o primeiro paint aperta a mão cedo", () => {
+  assert.ok(html.includes('property="og:title" content="Corretor Inteligente · Goiânia"'));
+  assert.ok(html.includes('property="og:image" content="https://corretorinteligente.tech/marca/og-corretorinteligente.jpg"'));
+  assert.ok(html.includes('name="twitter:card" content="summary_large_image"'));
+  /* a arte existe de verdade no repo (gerada via Higgsfield, 15/07/2026) */
+  const og = readFileSync(new URL("../marca/og-corretorinteligente.jpg", import.meta.url));
+  assert.ok(og.length > 20000, "og-image presente e com peso plausível");
+  for (const host of ["https://cdnjs.cloudflare.com", "https://a.basemaps.cartocdn.com", "https://api.corretorinteligente.tech"]) {
+    assert.ok(html.includes(`<link rel="preconnect" href="${host}"`), `preconnect ausente: ${host}`);
+  }
+});
+
+test("R5: nenhuma sombra ou anel de foco ficou no verde antigo (resíduo fora dos tokens)", () => {
+  assert.ok(!html.includes("rgba(24,81,62"), "sombra/foco do verde Atlas antigo");
+  assert.ok(!html.includes("rgba(20,35,29"), "sombra do ink antigo");
+});
+
 test("R4: página Como usar existe, é honesta e o app aponta para ela", () => {
   assert.ok(html.includes('href="como-usar.html"'), "link no O que o Corretor Inteligente faz");
   assert.ok(guia.includes("<title>Como usar · Corretor Inteligente</title>"));

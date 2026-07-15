@@ -12,6 +12,19 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="marca/favicon_512.png">
+<!-- R6: compartilhamento com cara de produto (WhatsApp/redes leem o Open Graph) -->
+<meta property="og:title" content="Corretor Inteligente · Goiânia">
+<meta property="og:description" content="Inteligência territorial e de mercado: busca cadastral, dossiê do imóvel, análise de preço e laudo — com fonte e limites declarados.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://corretorinteligente.tech/">
+<meta property="og:image" content="https://corretorinteligente.tech/marca/og-corretorinteligente.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="675">
+<meta name="twitter:card" content="summary_large_image">
+<!-- R6: aperto de mão adiantado com os hosts críticos do primeiro paint -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com">
+<link rel="preconnect" href="https://api.corretorinteligente.tech" crossorigin>
 <title>Corretor Inteligente · Goiânia</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous"></script>
@@ -1140,9 +1153,9 @@
     --gold:var(--brass);
     --grid:transparent;
     --elev-0:none;
-    --elev-1:0 1px 2px rgba(20,35,29,.05),0 8px 24px rgba(20,35,29,.06);
-    --elev-2:0 12px 32px rgba(20,35,29,.12);
-    --elev-3:0 18px 52px rgba(20,35,29,.16);
+    --elev-1:0 1px 2px rgba(33,46,64,.05),0 8px 24px rgba(33,46,64,.06);
+    --elev-2:0 12px 32px rgba(33,46,64,.12);
+    --elev-3:0 18px 52px rgba(33,46,64,.16);
   }
   body{overflow:hidden;background:var(--canvas);font-family:var(--font-ui);text-rendering:optimizeLegibility}
   body::before{display:none}
@@ -1163,7 +1176,7 @@
   .atlas-search-trigger{justify-self:center;display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:0 12px 0 16px;
     border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-soft);color:var(--muted);cursor:text;text-align:left;
     transition:background var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast)}
-  .atlas-search-trigger:hover,.atlas-search-trigger[aria-expanded="true"]{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 4px rgba(24,81,62,.08)}
+  .atlas-search-trigger:hover,.atlas-search-trigger[aria-expanded="true"]{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 4px rgba(8,135,128,.14)}
   .atlas-search-trigger svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .atlas-search-copy{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:550}
   .atlas-search-trigger.has-query .atlas-search-copy{color:var(--ink);font-weight:650}
@@ -1191,11 +1204,11 @@
   .pillclose:hover{background:var(--surface-tint);color:var(--ink)}
   .search{padding:20px 24px;border-bottom:1px solid var(--line)}
   select,input,.caixa-input{background:var(--surface-soft);border:1px solid var(--line);border-radius:var(--radius-sm)}
-  select:focus,input:focus,.caixa-input:focus{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 4px rgba(24,81,62,.08)}
+  select:focus,input:focus,.caixa-input:focus{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 4px rgba(8,135,128,.14)}
   .caixa-input{min-height:48px;padding-left:14px}
   .caixa-ic{border-radius:9px}
   .caixa-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .go{min-height:48px;border:1px solid var(--brand);border-radius:var(--radius-sm);background:var(--brand);box-shadow:0 7px 18px rgba(24,81,62,.16)}
+  .go{min-height:48px;border:1px solid var(--brand);border-radius:var(--radius-sm);background:var(--brand);box-shadow:0 7px 18px rgba(8,135,128,.20)}
   .go:hover{background:var(--brand-strong)}
   .hint{margin-top:12px;line-height:1.5}
   .detectchip,.moderow,.combo-list{border-radius:var(--radius-sm)}
@@ -1316,7 +1329,7 @@
     border:1px solid var(--line);border-radius:var(--radius-sm);background:rgba(244,246,243,.94);box-shadow:var(--elev-1);backdrop-filter:blur(14px)}
   .dossier-tabs button{min-width:0;min-height:42px;padding:0 8px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:12px;font-weight:700;box-shadow:none}
   .dossier-tabs button:hover{background:rgba(255,255,255,.72);color:var(--ink)}
-  .dossier-tabs button[aria-selected="true"]{background:var(--surface);color:var(--brand);box-shadow:0 1px 3px rgba(20,35,29,.09)}
+  .dossier-tabs button[aria-selected="true"]{background:var(--surface);color:var(--brand);box-shadow:0 1px 3px rgba(33,46,64,.09)}
   .dossier-view[hidden]{display:none!important}
   .dossier-view{animation:atlas-view-in var(--motion-fast) var(--ease-out)}
   @keyframes atlas-view-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
@@ -1349,7 +1362,7 @@
     .mapwrap{position:relative;inset:auto;grid-column:1/-1;grid-row:2;min-width:0;min-height:0;transition:none}
     body[data-view="busca"] .mapwrap,body:has(.mapwrap>.detail.show) .mapwrap{grid-column:2/3}
     .panel{position:relative;top:auto;left:auto;grid-column:1;grid-row:2;width:auto;max-width:none;max-height:none;min-width:0;min-height:0;
-      border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:12px 0 40px rgba(20,35,29,.05);z-index:700;overflow-y:auto}
+      border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:12px 0 40px rgba(33,46,64,.05);z-index:700;overflow-y:auto}
     body[data-view="busca"] .panel{display:flex}
     /* Depois do primeiro resultado, a busca vira uma barra de refinamento: o formulário manual
        deixa de consumir a maior parte do inspetor e a lista assume o plano principal. */
@@ -1370,7 +1383,7 @@
     #pillClose{display:inline-grid;place-items:center}
     #breadcrumb{top:24px;left:24px;max-width:min(520px,calc(100% - 48px))}
     .detail{position:fixed;inset:var(--atlas-header) auto 0 0;width:var(--atlas-inspector);height:auto;max-height:none;overflow-y:auto;
-      border:0;border-right:1px solid var(--line);border-radius:0;padding:24px 24px 32px;box-shadow:12px 0 40px rgba(20,35,29,.06);z-index:750}
+      border:0;border-right:1px solid var(--line);border-radius:0;padding:24px 24px 32px;box-shadow:12px 0 40px rgba(33,46,64,.06);z-index:750}
     .detail .shead{position:sticky;top:-24px;z-index:8;height:44px;margin:-24px -24px 4px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px)}
     .detail .x{top:8px;right:12px}
     .detail .backlist{top:8px;left:12px}
