@@ -5873,6 +5873,35 @@ function desenharAncoraEnd(d,rua,num,semResultado){
   if(semResultado){map.setView(ll,17);toast("O cadastro não achou o endereço — o alvo dourado marca o ponto dele segundo o IBGE (Censo 2022).");}
   else if(!map.getBounds().contains(ll))map.fitBounds(map.getBounds().extend(ll),{padding:[40,40]});
 }
+/* BUSCA-16 — desambiguação de rua homônima: busca de endereço SEM setor não morre num
+   toast; o CNEFE sabe em quais localidades a rua existe, e cada localidade que casa com
+   um setor do cadastro vira um chip de 1 toque (pickBairro + buscar). Falha do motor
+   cai no comportamento antigo (pedir o setor). */
+async function sugerirSetoresPorRua(rua){
+  try{
+    const d=await buscarAncoraEnd(rua,"");
+    const cands=(d&&d.candidatos)||[];
+    if(!cands.length)return false;
+    const vistos=new Set(),chips=[];
+    for(const c of cands){
+      const loc=norm(clean(c.localidade||""));if(!loc)continue;
+      const hit=COMBO.find(x=>x.search.includes(loc));
+      if(!hit||vistos.has(hit.code))continue;
+      vistos.add(hit.code);
+      chips.push(`<button type="button" data-code="${esc(hit.code)}" onclick="buscarNoSetor(this)">${esc(hit.disp)}</button>`);
+      if(chips.length>=6)break;
+    }
+    if(!chips.length)return false;
+    document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Em qual setor?</div>
+      Essa rua existe em mais de um lugar de Goiânia (IBGE, Censo 2022) — toque no setor para buscar:
+      <div class="chips" style="justify-content:center;margin-top:14px">${chips.join("")}</div></div>`;
+    return true;
+  }catch(e){return false;}
+}
+function buscarNoSetor(btn){
+  pickBairro(btn.dataset.code);
+  buscar();
+}
 async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
@@ -5904,7 +5933,11 @@ async function buscar(){
       const b=document.getElementById("bairro").value;
       const rua=clean(document.getElementById("rua").value);
       const num=clean(document.getElementById("numero").value);
-      if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
+      if(!okB||!b){
+        /* BUSCA-16: sem setor mas com rua, o CNEFE sugere os setores possíveis em chips */
+        if(rua&&await sugerirSetoresPorRua(rua))return;
+        toast("Escolha o setor na lista (digite e clique).");return;
+      }
       if(!rua){toast("Digite a rua/avenida.");return;}
       loading(true,MOTION_MSG.cadastro);
       /* rCore ignora "rua/av/r." e espaços duplicados — o cadastro grava tipo dentro do nome ("R  MARAJO") */

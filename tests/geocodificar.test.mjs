@@ -55,6 +55,19 @@ test("app (BUSCA-15): âncora CNEFE em paralelo, honesta e que nunca quebra a bu
   assert.ok(html.includes("desenharAncoraEnd(d,rua,num,!items.length)"), "sem resultado cadastral ainda ancora o endereço");
 });
 
+test("app (BUSCA-16): rua sem setor vira chips de desambiguação, nunca beco sem saída", () => {
+  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  assert.match(html, /async function sugerirSetoresPorRua\(rua\)/);
+  /* só sugere setor que EXISTE no cadastro (casado com o COMBO) — nunca chip morto */
+  assert.ok(html.includes("COMBO.find(x=>x.search.includes(loc))"));
+  assert.ok(html.includes("Essa rua existe em mais de um lugar de Goiânia (IBGE, Censo 2022)"));
+  /* 1 toque: chip usa o mesmo pickBairro do combo e dispara a busca */
+  assert.ok(html.includes("pickBairro(btn.dataset.code);"));
+  assert.ok(html.includes("if(rua&&await sugerirSetoresPorRua(rua))return;"));
+  /* falha do motor degrada para o comportamento antigo */
+  assert.ok(html.includes('toast("Escolha o setor na lista (digite e clique).");return;'));
+});
+
 test("rota pública com rate limit próprio e loader espelha a normalização", () => {
   const server = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
   assert.ok(server.includes('estourou(req, 30, "geocodificar")'));
