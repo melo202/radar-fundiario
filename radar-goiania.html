@@ -7117,7 +7117,8 @@ function renderMercado(d,subject){
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     <details class="foot"><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
     ${temGeo?`<div class="dmercado-parecer"><button type="button" class="dmercado-iabtn" onclick="mercadoNoMapa()">Ver as ofertas no mapa</button></div>`:""}
-    ${d.id?`<div class="dmercado-parecer" id="dMercadoParecer"><button type="button" class="dmercado-iabtn" onclick="gerarParecerMercado('${esc(d.id)}')">Ler o parecer da análise</button></div>`:""}
+    ${d.id?`<div class="dmercado-parecer" id="dMercadoParecer"><button type="button" class="dmercado-iabtn" onclick="gerarParecerMercado('${esc(d.id)}')">Ler o parecer da análise</button></div>
+    <div class="dmercado-parecer"><a class="dmercado-iabtn" style="text-decoration:none;display:inline-block" href="${MOTOR_BASE}/motor/avaliacoes/${esc(d.id)}/documento" target="_blank" rel="noopener">Abrir o documento da avaliação</a></div>`:""}
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
 }
 /* Parecer §17 no card: o motor gera UMA vez por avaliação (cache) e a leitura é pública.

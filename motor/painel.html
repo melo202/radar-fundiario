@@ -270,7 +270,8 @@ async function carregaRevisao(id){
     const r=await fetch(`/painel/api/avaliacoes/${id}`);if(!r.ok)throw 0;
     const d=await r.json();
     const res=d.result||{};
-    $("revCabeca").innerHTML=`<div class="kpis"><div class="kpi"><b>${brl(res.estimatedValue)}</b><span>estimativa (v${d.version||1})</span></div><div class="kpi"><b>${brl(res.probableRange&&res.probableRange.minimum)} – ${brl(res.probableRange&&res.probableRange.maximum)}</b><span>faixa provável</span></div><div class="kpi"><b>${esc((res.confidence&&res.confidence.rotulo)||d.status)}</b><span>confiança</span></div></div>`;
+    $("revCabeca").innerHTML=`<div class="kpis"><div class="kpi"><b>${brl(res.estimatedValue)}</b><span>estimativa (v${d.version||1})</span></div><div class="kpi"><b>${brl(res.probableRange&&res.probableRange.minimum)} – ${brl(res.probableRange&&res.probableRange.maximum)}</b><span>faixa provável</span></div><div class="kpi"><b>${esc((res.confidence&&res.confidence.rotulo)||d.status)}</b><span>confiança</span></div></div>
+      <p style="margin-top:10px;font-size:13px"><a href="/motor/avaliacoes/${esc(id)}/documento" target="_blank" rel="noopener">Abrir o documento da avaliação →</a></p>`;
     const linhas=(d.comparaveis||[]).map(c=>{
       const ch=c.characteristics||{},pr=c.pricing||{};
       const area=ch.privateAreaM2||ch.totalAreaM2||"—";
