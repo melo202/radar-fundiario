@@ -10,7 +10,20 @@ import { ingerir } from "./ingerir.js";
 import { avaliarQualidade } from "./qualidade.js";
 
 const PORT = 8140;
-const json = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(obj)); };
+/* CORS: o app em corretorinteligente.tech (e o Pages de teste) consome as rotas de
+   leitura e a avaliação determinística direto do navegador. */
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
+const json = (res, code, obj) => { res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, CORS)); res.end(JSON.stringify(obj)); };
+/* rate limit simples por IP p/ rotas públicas de cálculo (sem IA, mas com banco) */
+const RATE = new Map();
+function estourou(req, limite = 10) {
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
+  const agora = Date.now();
+  const usos = (RATE.get(ip) || []).filter(t => agora - t < 60000);
+  usos.push(agora); RATE.set(ip, usos);
+  if (RATE.size > 5000) RATE.clear(); /* válvula de memória */
+  return usos.length > limite;
+}
 const readBody = (req) => new Promise((ok, ko) => {
   let b = ""; req.on("data", c => { b += c; if (b.length > 1e6) { ko(new Error("body grande demais")); req.destroy(); } });
   req.on("end", () => ok(b)); req.on("error", ko);
@@ -23,6 +36,7 @@ const autorizado = (req) => {
 
 http.createServer(async (req, res) => {
   try {
+    if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
     if (req.method === "GET" && req.url === "/motor/health") {
       const db = await pool.query("SELECT count(*)::int AS migracoes FROM schema_migrations").then(r => r.rows[0]).catch(e => ({ erro: e.message }));
       const ia = await fetch((process.env.AI_BASE_URL || "http://localhost:11434") + "/api/version",
@@ -78,10 +92,16 @@ http.createServer(async (req, res) => {
       return json(res, 200, await ingerir({ consulta, paginas, tier }));
     }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
-      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */
+      if (!autorizado(req) && estourou(req)) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });
       const subject = JSON.parse(await readBody(req) || "{}");
       const { avaliar } = await import("./avaliacao.js");
       return json(res, 200, await avaliar(subject));
+    }
+    if (req.method === "POST" && /^\/motor\/avaliacoes\/[0-9a-f-]{36}\/parecer$/.test(req.url)) {
+      if (!autorizado(req)) return json(res, 401, { erro: "token" }); /* gasta IA */
+      const { gerarParecer } = await import("./redacao.js");
+      return json(res, 200, await gerarParecer(req.url.split("/")[3]));
     }
     if (req.method === "GET" && /^\/motor\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
       const id = req.url.split("/").pop();
