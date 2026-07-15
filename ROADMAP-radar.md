@@ -97,6 +97,36 @@ Referências de estrutura, não de cópia visual: [Apple HIG — Layout](https:/
 
 ---
 
+## Próximo ciclo — Território delimitado e produto (planejado em 15/07/2026)
+
+### P0 — Delimitar Goiânia no mapa
+
+**Diagnóstico (estudo de 15/07/2026):** o `L.map` (linha ~3880) não define `maxBounds` nem `minZoom` — o usuário arrasta o mapa para fora da cidade e afasta o zoom até ver o mundo, tudo sem dado. Nada comunica onde Goiânia começa e termina: a malha de bairros (1.206 polígonos urbanos) não é o município (falta a área rural) e some em zoom ≥17.
+
+- ⬜ **G1 — Dado do limite municipal.** Fonte preferida: malha municipal oficial do IBGE (código 5208707), simplificada para ~30–80 KB em WGS84, via script `gerar-limite.py` (padrão dos `gerar-*.py` do repo) → `limite-goiania.json`. Fallback documentado: dissolve de `bairros-goiania.wgs84-raw.json` (cobre só a malha urbana — registrar a diferença por honestidade). Invariantes travados em `tests/datasets.test.mjs`: 1 feature, Polygon/MultiPolygon, bbox plausível de Goiânia.
+- ⬜ **G2 — Contorno + máscara.** Pane próprio abaixo de "bairros" (z<370). Traço do limite em `--brand-strong`; máscara "polígono com furo" (retângulo-mundo − município) esmaecendo o exterior com fill neutro (`--canvas` ~55%), com variante mais escura quando o satélite está ligado (mesmo padrão zoom/sat das zonas). `interactive:false` — nunca rouba o clique do identificador de ponto. Falha de fetch degrada em silêncio (como bairros).
+- ⬜ **G3 — Confinamento.** `maxBounds` = bbox do limite com folga (~15%) + `maxBoundsViscosity:1.0`; `minZoom:11` (cidade inteira cabe na tela). Revisar boot/`resetHome` (linha ~4493) e os `fitBounds` de drill/busca para nunca brigarem com o confinamento; conferir no mobile.
+- ⬜ **G4 — Publicação e testes.** `sw.js`: `limite-goiania.json` no OPTIONAL + bump `radar-v12`. `pages.yml`: incluir na cópia do deploy. Testes de string travando as opções do `L.map`, a camada/máscara e as listas de sw/workflow.
+
+**Aceite:** impossível arrastar para fora da região de Goiânia ou afastar o zoom além da cidade; o limite municipal aparece desenhado e o exterior fica esmaecido; suite completa verde e nenhuma regressão de clique/drill.
+
+### P1 — Infra própria (servidor + domínio) — aguardando o servidor do usuário
+
+- ⬜ Proxy CORS próprio para o ArcGIS da prefeitura (fecha o item 14): elimina JSONP, adiciona cache e protege o endpoint frágil. O app estático pode continuar no Pages, apontado pelo domínio.
+- ⬜ Domínio + HTTPS; decidir onde o estático vive (Pages com domínio próprio vs servir do servidor).
+
+### P1 — Módulo de pesquisa de mercado com IA (isolado do núcleo)
+
+Decisão de 15/07/2026 (respeita "sem IA no núcleo"): módulo **no servidor**, nunca no HTML público (chave de API). Claude API (`claude-opus-4-8`) com as ferramentas nativas `web_search`/`web_fetch`, varredura **mensal em batch** por bairro/tipologia sobre anúncios publicamente indexados (OLX/VivaReal/Zap/ImovelWeb/MySide não têm API pública; scraping direto violaria os termos — a IA pesquisa como uma pessoa pesquisaria). Saída: JSON de âncoras (mediana de **usado** + faixa + fontes + datas) sob a régua de qualidade de 03/07/2026; o app consome como consome a tabela CAIXA, sempre rotulado como estimativa.
+
+### Pendências humanas (inalteradas)
+
+- ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.
+- ⬜ V5 — validação com 8–12 corretores.
+- ⬜ Pedido LAI do ITBI (I8) — destravaria preços de transação reais.
+
+---
+
 ## 0. Fatos validados no endpoint real (base das decisões)
 
 Testes executados em 02/07/2026 direto no ArcGIS da Prefeitura:
