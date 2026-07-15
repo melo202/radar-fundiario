@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - agenda mensal da recarga de POIs
+
+[Timer]
+OnCalendar=*-*-02 04:30:00
+Persistent=true
+RandomizedDelaySec=1800
+
+[Install]
+WantedBy=timers.target

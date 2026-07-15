@@ -1652,6 +1652,15 @@
             <button type="button" id="btnMercado" onclick="analisarMercado()">Analisar</button></div>
           <div class="dmercado-body" id="dMercadoBody"></div>
         </div>
+
+        <!-- Inteligência de Localização (MVP): entorno medido com dados abertos do OSM
+             processados no motor (contagens + distâncias por categoria, raio próprio de
+             cada uma). A IA não participa dos números. ODbL: atribuição obrigatória. -->
+        <div class="dmercado" id="dLocal">
+          <div class="dmercado-head"><span class="dmercado-title">Localização — entorno mapeado <em>(beta)</em></span>
+            <button type="button" id="btnLocal" onclick="analisarLocal()">Mapear</button></div>
+          <div class="dmercado-body" id="dLocalBody"></div>
+        </div>
         <details class="foot dtecnico">
           <summary>Dados técnicos</summary>
           <div class="footbody">
@@ -6953,6 +6962,48 @@ function renderMercado(d,subject){
     <p class="dmercado-hint">${esc((r.assumptions&&r.assumptions[0])||"")} Não substitui avaliação profissional.</p>`;
 }
 
+/* ---------------- Localização (MVP): entorno objetivo via motor ----------------
+   GET /motor/localizacao — contagens e distâncias por categoria vindas do extrato OSM
+   processado LOCALMENTE no VPS (nunca Overpass público). Dado objetivo com fonte, data
+   e confiança de cobertura; a lacuna de mapeamento é declarada, nunca vira "não há nada". */
+let LOCAL_LL=null;
+const LOCAL_HINT='<p class="dmercado-hint">Mede o entorno com dados abertos do OpenStreetMap processados no motor do Radar: contagens e distâncias por categoria, com fonte e data. Não é avaliação de segurança nem de perfil de moradores.</p>';
+function localReset(a,ll){
+  LOCAL_LL=ll||((a&&isFinite(+a.x)&&isFinite(+a.y))?(()=>{try{const w=toWGS(+a.x,+a.y);return {lat:w[0],lng:w[1]};}catch(e){return null;}})():null);
+  const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
+  const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Mapear";}
+}
+async function analisarLocal(){
+  const ll=LOCAL_LL, body=document.getElementById("dLocalBody"), bt=document.getElementById("btnLocal");
+  if(!ll){body.innerHTML='<p class="dmercado-hint">Este registro está sem coordenada no cadastro — sem o ponto não há entorno para medir.</p>';return;}
+  bt.disabled=true; bt.textContent="Mapeando…";
+  body.innerHTML='<div aria-hidden="true"><div class="skel-line w60"></div><div class="skel-line w80" style="margin:6px 0"></div><div class="skel-line w40"></div></div><p class="dmercado-hint">Medindo o entorno…</p>';
+  try{
+    const r=await fetch(`${MOTOR_BASE}/motor/localizacao?lat=${ll.lat}&lon=${ll.lng}`,{signal:AbortSignal.timeout(20000)});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.erro||("http "+r.status));
+    renderLocal(d);
+  }catch(e){
+    body.innerHTML=`<p class="dmercado-hint">Entorno indisponível agora (${esc(e.message)}). Os dados cadastrais seguem valendo.</p>`;
+  }finally{bt.disabled=false;bt.textContent="Mapear";}
+}
+function renderLocal(d){
+  const body=document.getElementById("dLocalBody");
+  const dist=m=>m==null?"":m<1000?` · ${m} m`:` · ${(m/1000).toFixed(1).replace(".",",")} km`;
+  const pos=[],at=[];
+  for(const c of Object.values(d.categorias||{})){
+    if(!c.count)continue;
+    const li=`<li>${esc(c.rotulo)}: <b>${c.count}</b>${dist(c.nearestDistanceMeters)}<small> (raio ${c.raioM>=1000?(c.raioM/1000)+" km":c.raioM+" m"})</small></li>`;
+    (c.sinal==="atencao"?at:pos).push(li);
+  }
+  const q=d.dataQuality||{};
+  body.innerHTML=`
+    ${(q.warnings&&q.warnings.length)?`<div class="dmercado-warn">${q.warnings.map(esc).join("<br>")}</div>`:""}
+    ${pos.length?`<ul class="dmercado-list">${pos.join("")}</ul>`:'<p class="dmercado-hint">Nenhuma amenidade mapeada nos raios pesquisados.</p>'}
+    ${at.length?`<div style="margin-top:8px"><b style="font-size:12px">Pontos de atenção</b><ul class="dmercado-list">${at.join("")}</ul></div>`:""}
+    <p class="dmercado-hint">Cobertura ${esc(q.coverageConfidence||"?")} · extrato de ${esc(q.extractDate||"?")} · ${esc(q.attribution||"© OpenStreetMap contributors")}.</p>`;
+}
+
 /* LAUDO-MERCADO (curto prazo do roadmap): a ACM entra como SEÇÃO do Relatório de Referência
    quando o corretor já analisou o mercado DESTE imóvel na sessão. Sem análise = sem seção
    (nunca inventa). Leva o id da avaliação para auditoria (§16 do plano do motor). */
@@ -6979,6 +7030,7 @@ function showDetail(a,ll){
   const d=document.getElementById("detail");
   setDossierView("resumo");
   mercadoReset(a); /* Mercado (beta): novo imóvel aberto = card limpo apontando para ele */
+  localReset(a,ll); /* Localização (beta): idem, com a coordenada do imóvel aberto */
   const addr=addrDe(a);
   const ci=clean(a.ci), insc=clean(a.nrinscr), ul=unitLabel(a), ed=clean(a.nmedificio);
   a.__consultadoEm=a.__consultadoEm||new Date().toISOString();

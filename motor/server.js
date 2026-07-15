@@ -91,6 +91,15 @@ http.createServer(async (req, res) => {
       if (!consulta) return json(res, 400, { erro: "consulta obrigatória" });
       return json(res, 200, await ingerir({ consulta, paginas, tier }));
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/localizacao")) {
+      /* determinístico (só PostGIS local): público com o mesmo rate limit do avaliar */
+      if (estourou(req, 20)) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const u = new URL(req.url, "http://x");
+      const lat = Number(u.searchParams.get("lat")), lon = Number(u.searchParams.get("lon"));
+      if (!isFinite(lat) || !isFinite(lon)) return json(res, 400, { erro: "lat e lon obrigatórios" });
+      const { entorno } = await import("./localizacao.js");
+      return json(res, 200, await entorno({ lat, lon }));
+    }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
       /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */
       if (!autorizado(req) && estourou(req)) return json(res, 429, { erro: "muitas avaliações — aguarde 1 minuto" });

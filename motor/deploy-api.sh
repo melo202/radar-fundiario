@@ -16,9 +16,12 @@ node migrate.js
 cp radar-api.service /etc/systemd/system/radar-api.service
 cp radar-varredura.service /etc/systemd/system/radar-varredura.service
 cp radar-varredura.timer /etc/systemd/system/radar-varredura.timer
+cp radar-pois.service /etc/systemd/system/radar-pois.service
+cp radar-pois.timer /etc/systemd/system/radar-pois.timer
 systemctl daemon-reload
 systemctl enable --now radar-api >/dev/null 2>&1
 systemctl enable --now radar-varredura.timer >/dev/null 2>&1
+systemctl enable --now radar-pois.timer >/dev/null 2>&1
 systemctl restart radar-api
 sleep 1
 curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"

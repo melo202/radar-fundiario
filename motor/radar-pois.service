@@ -1,0 +1,11 @@
+[Unit]
+Description=Radar Fundiario - recarga mensal dos POIs (OSM/Geofabrik local)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/python3 /opt/radar/api/gerar-pois.py
+User=root
+TimeoutStartSec=1h
