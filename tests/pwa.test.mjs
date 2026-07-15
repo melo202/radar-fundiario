@@ -27,5 +27,5 @@ test("PWA: datasets opcionais não derrubam a instalação inteira", () => {
 });
 
 test("PWA: versão do cache foi incrementada para o limite municipal", () => {
-  assert.match(sw, /const CACHE = "radar-v12"/);
+  assert.match(sw, /const CACHE = "radar-v13"/);
 });

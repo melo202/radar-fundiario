@@ -9,7 +9,7 @@
    tiles de satélite/reference do Esri) NÃO passam por aqui: sempre rede,
    nunca cache — dado vivo, e tiles de satélite são pesados demais para
    inchar o storage do PWA. */
-const CACHE = "radar-v12";
+const CACHE = "radar-v13"; /* v13: ícones e nome do rebrand Corretor Inteligente */
 /* CORE precisa existir para a aplicação abrir. Dados auxiliares são best-effort: a ausência
    temporária de um JSON não pode abortar a instalação inteira do PWA. O app já trata degradação
    das camadas opcionais e volta a buscá-las na rede quando disponíveis. */

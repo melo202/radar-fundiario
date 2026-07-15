@@ -229,7 +229,7 @@ test("analisePredicoTexto(resumo completo, meta completo) contem todos os elemen
     "referência indicativa média",
     "faixa",
     caso.meta.endereco,
-    "Análise gerada pelo Radar Fundiário.",
+    "Análise gerada pelo Corretor Inteligente.",
   ]) {
     assert.ok(texto.includes(trecho), `analisePredicoTexto deveria conter "${trecho}", obteve:\n${texto}`);
   }
@@ -262,7 +262,7 @@ test('analisePredicoTexto(resumo zerado, meta.nome:null) retorna string nao-vazi
   assert.ok(texto.includes("🏢"), "deveria conter o emoji do cabecalho");
   assert.ok(texto.includes("Edifício"), 'deveria conter o fallback "Edifício" quando meta.nome e null');
   assert.ok(texto.includes("0 unidades"), 'deveria conter "0 unidades"');
-  assert.ok(texto.includes("Análise gerada pelo Radar Fundiário."), "deveria conter a assinatura");
+  assert.ok(texto.includes("Análise gerada pelo Corretor Inteligente."), "deveria conter a assinatura");
   assert.ok(!/undefined/i.test(texto), 'nunca deveria conter "undefined"');
   assert.ok(!/NaN/.test(texto), 'nunca deveria conter "NaN"');
   assert.ok(!/\bnull\b/i.test(texto), 'nunca deveria conter "null"');

@@ -4,32 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="refresh" content="0;url=radar-goiania.html">
-<meta name="theme-color" content="#f4f6f3">
-<title>Radar Fundiário · Goiânia</title>
+<meta name="theme-color" content="#F5F8F8">
+<title>Corretor Inteligente · Goiânia</title>
 <style>
   /* Splash de transição — a tela crua de link NUNCA pode aparecer (princípio UX 15/07/2026).
      No domínio o nginx serve o app direto na raiz; este arquivo é o fallback (Pages/offline)
-     e mesmo ele precisa parecer aplicativo. */
+     e mesmo ele precisa parecer aplicativo. Paleta do kit (R1, 15/07/2026). */
   :root{color-scheme:light}
   html,body{height:100%;margin:0}
-  body{display:flex;align-items:center;justify-content:center;background:#f4f6f3;
-    font-family:"Archivo","Segoe UI",system-ui,sans-serif;color:#14231d}
+  body{display:flex;align-items:center;justify-content:center;background:#F5F8F8;
+    font-family:"Archivo","Segoe UI",system-ui,sans-serif;color:#212E40}
   .splash{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+  .logo{width:min(230px,64vw)}
   .marca{font-weight:800;font-size:20px;letter-spacing:-.01em}
-  .marca small{display:block;font-weight:600;font-size:10px;letter-spacing:.24em;color:#68776f;margin-top:4px}
-  .sp{width:30px;height:30px;border:3px solid #d9e1dc;border-top-color:#18513e;border-radius:50%;
+  .marca small{display:block;font-weight:600;font-size:10px;letter-spacing:.24em;color:#5f6e7e;margin-top:4px}
+  .sp{width:30px;height:30px;border:3px solid #d8e1e4;border-top-color:#088780;border-radius:50%;
     animation:g .8s linear infinite}
   @keyframes g{to{transform:rotate(360deg)}}
-  p{font-size:12px;color:#68776f;margin:0}
-  a{color:#18513e}
-  @media (prefers-reduced-motion: reduce){.sp{animation:none;border-top-color:#18513e}}
+  p{font-size:12px;color:#5f6e7e;margin:0}
+  a{color:#088780}
+  @media (prefers-reduced-motion: reduce){.sp{animation:none;border-top-color:#088780}}
 </style>
 </head>
 <body>
 <div class="splash">
-  <div class="marca">Radar Fundiário<small>GOIÂNIA · GO</small></div>
+  <img class="logo" src="marca/corretorinteligente_logo_horizontal_flat.svg" alt=""
+       onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+  <div class="marca" hidden>Corretor Inteligente<small>GOIÂNIA · GO</small></div>
   <div class="sp" aria-hidden="true"></div>
-  <p>Abrindo o Radar…</p>
+  <p>Abrindo o Corretor Inteligente…</p>
   <noscript><p><a href="radar-goiania.html">Toque aqui para abrir</a></p></noscript>
 </div>
 <script>location.replace("radar-goiania.html");</script>

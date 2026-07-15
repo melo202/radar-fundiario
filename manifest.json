@@ -1,7 +1,7 @@
 {
-  "name": "Radar Fundiário · Goiânia",
-  "short_name": "Radar",
-  "description": "Busca de imóveis de Goiânia por quadra e lote sobre o cadastro imobiliário público",
+  "name": "Corretor Inteligente · Goiânia",
+  "short_name": "Corretor",
+  "description": "Inteligência territorial e de mercado de Goiânia: busca cadastral, dossiê, análise de preço e laudo",
   "id": "./",
   "scope": "./",
   "start_url": "./radar-goiania.html",

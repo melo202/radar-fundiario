@@ -45,7 +45,7 @@ test("estimativa segura: não usa área presumida, desconto ou ajuste heurístic
   }
   assert.ok(html.includes("fx.n>=5"), "faixa CAIXA deve exigir amostra mínima no setor");
   assert.ok(html.includes("não representa preço de fechamento"));
-  assert.ok(html.includes("não foi calculado nem validado pelo Radar"));
+  assert.ok(html.includes("não foi calculado nem validado pelo Corretor Inteligente"));
   assert.ok(html.includes("A referência externa e o valor informado ficam separados"));
   assert.ok(html.includes("negocio:0"), "calculadora deve começar sem valor presumido");
   assert.ok(!html.includes("Sugerido pela estimativa; edite pelo preço fechado"));

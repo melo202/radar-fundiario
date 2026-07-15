@@ -55,7 +55,7 @@ test("UX: splash de boot existe, some quando a UI interage e nunca prende a tela
   assert.equal((html.match(/bootSplashOff\(\); \/\*/g) || []).length, 2);
   /* index.html (fallback) também não pode ser tela crua de link */
   const idx = readFileSync(new URL("../index.html", import.meta.url), "utf-8");
-  assert.ok(idx.includes("Abrindo o Radar"), "index é splash, não link cru");
+  assert.ok(idx.includes("Abrindo o Corretor Inteligente"), "index é splash, não link cru");
   assert.ok(idx.includes("location.replace"), "redirecionamento imediato via JS");
   assert.ok(idx.includes("prefers-reduced-motion"), "splash respeita reduced-motion");
 });

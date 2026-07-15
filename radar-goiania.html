@@ -8,10 +8,11 @@
 <meta name="theme-color" content="#F5F8F8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Radar">
+<meta name="apple-mobile-web-app-title" content="Corretor">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Radar Fundiário · Goiânia</title>
+<link rel="icon" type="image/png" sizes="512x512" href="marca/favicon_512.png">
+<title>Corretor Inteligente · Goiânia</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" integrity="sha512-iJs/hgHOlo6Eo8i+nYtuEPa+CZ6E3C2Z0s1LkSuvLtclMQlqmxPjP6XaXDi0Ki6NsUuQ2Zmo0UeFOLSgjbv5+A==" crossorigin="anonymous"></script>
@@ -310,7 +311,7 @@
   .foot[open]>summary::before{content:"▾ "}
   .foot .footbody{margin-top:8px}
 
-  /* Fase 13 DESC-01: "O que o Radar faz" — reusa .foot/.footbody, zero CSS novo na moldura */
+  /* Fase 13 DESC-01: "O que o Corretor Inteligente faz" — reusa .foot/.footbody, zero CSS novo na moldura */
   .oqf-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
   .oqf-lista li{font:500 12px/1.5 "Archivo";color:var(--muted)}
   .oqf-lista li b{color:var(--ink);font-weight:600}
@@ -1153,9 +1154,9 @@
     grid-template-columns:minmax(220px,auto) minmax(300px,720px) minmax(220px,auto);align-items:center;gap:24px;
     min-width:0;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--line)}
   .atlas-brand{display:inline-flex;align-items:center;gap:12px;min-width:0;min-height:44px}
-  .atlas-brandmark{position:relative;display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;
-    color:#fff;background:var(--brand);border-radius:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
-  .atlas-brandmark::after{content:"";width:12px;height:12px;border:1.5px solid currentColor;border-radius:3px;transform:rotate(45deg);opacity:.9}
+  /* R2: a marca do cabeçalho é o símbolo oficial do kit (casa + circuito), não mais o
+     losango desenhado em CSS */
+  .atlas-brandmark{display:block;width:38px;height:38px;flex:0 0 38px;object-fit:contain}
   .atlas-brandcopy{min-width:0}
   .atlas-brandname{display:block;font-size:16px;font-weight:760;letter-spacing:-.02em;white-space:nowrap}
   .atlas-brandplace{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
@@ -1408,15 +1409,15 @@
 <div id="bootSplash" aria-hidden="true">
   <img class="bs-logo" src="marca/corretorinteligente_logo_horizontal_flat.svg" alt=""
        onerror="this.hidden=true;this.nextElementSibling.hidden=false">
-  <div class="bs-marca" hidden>Radar Fundiário<small>GOIÂNIA · GO</small></div>
+  <div class="bs-marca" hidden>Corretor Inteligente<small>GOIÂNIA · GO</small></div>
   <div class="bs-sp"></div>
 </div>
 <div class="wrap">
-  <header class="atlas-topbar" aria-label="Cabeçalho do Radar Fundiário">
-    <div class="atlas-brand" aria-label="Radar Fundiário — Goiânia">
-      <span class="atlas-brandmark" aria-hidden="true"></span>
+  <header class="atlas-topbar" aria-label="Cabeçalho do Corretor Inteligente">
+    <div class="atlas-brand" aria-label="Corretor Inteligente — Goiânia">
+      <img class="atlas-brandmark" src="marca/corretorinteligente_simbolo.svg" alt="" aria-hidden="true">
       <span class="atlas-brandcopy">
-        <span class="atlas-brandname">Radar Fundiário</span>
+        <span class="atlas-brandname">Corretor Inteligente</span>
         <span class="atlas-brandplace">Goiânia · GO</span>
       </span>
     </div>
@@ -1541,10 +1542,10 @@
       </div>
     </div>
 
-    <!-- Fase 13 DESC-01: "O que o Radar faz" — segunda <details class="foot"> irmã, entrada
+    <!-- Fase 13 DESC-01: "O que o Corretor Inteligente faz" — segunda <details class="foot"> irmã, entrada
          discreta de descoberta; cada item chama a AÇÃO REAL (nunca texto explicativo genérico). -->
     <details class="foot" id="oQueFaz">
-      <summary>O que o Radar faz</summary>
+      <summary>O que o Corretor Inteligente faz</summary>
       <div class="footbody">
         <ul class="oqf-lista">
           <li><b>Busca unificada</b> — endereço, quadra/lote, prédio ou inscrição numa caixa só. <button type="button" onclick="focusFirstField()">Buscar agora →</button></li>
@@ -1560,7 +1561,7 @@
 
     <details class="foot">
       <summary>Fontes &amp; metodologia</summary>
-      <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Radar — a consulta é manual na CND oficial.</div>
+      <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Corretor Inteligente — a consulta é manual na CND oficial.</div>
     </details>
   </aside>
 
@@ -1815,7 +1816,7 @@
       <p class="idcheck-lede">Confira os identificadores abaixo. O dossiê será gerado para exatamente este registro cadastral.</p>
       <div class="idcheck-grid" id="idCheckGrid"></div>
       <div class="idcheck-warning" id="idCheckWarning" hidden></div>
-      <p class="idcheck-note">Esta confirmação identifica o item escolhido no Radar; não valida matrícula, titularidade, ônus ou regularidade documental.</p>
+      <p class="idcheck-note">Esta confirmação identifica o item escolhido no Corretor Inteligente; não valida matrícula, titularidade, ônus ou regularidade documental.</p>
       <div class="idcheck-actions">
         <button type="button" class="primary" id="idConfirmBtn" onclick="confirmarIdentidade()">Confirmar e abrir dossiê</button>
         <button type="button" id="idBackBtn" onclick="fecharConfirmacaoIdentidade(true)">Voltar aos resultados</button>
@@ -1825,7 +1826,7 @@
 
   <!-- Fase 13 DESC-01: onboarding 3 cartões — filho direto de <body> (fora de .mapwrap/<aside>),
        precisa aparecer independente de document.body.dataset.view. -->
-  <div class="onb" id="onbOverlay" hidden role="dialog" aria-modal="true" aria-label="Como usar o Radar Fundiário">
+  <div class="onb" id="onbOverlay" hidden role="dialog" aria-modal="true" aria-label="Como usar o Corretor Inteligente">
     <div class="onb-card">
       <button type="button" class="onb-skip" onclick="onbFechar()">Pular</button>
       <div class="onb-dots" aria-hidden="true"><span class="on"></span><span></span><span></span></div>
@@ -2432,7 +2433,7 @@ function zapProprietario(data){
   const pendencias=(d.scoreConf&&d.scoreConf.nivel!=="alta"&&itensConf.length)
     ? ` Recomendo confirmar ${listaE(itensConf)} em uma análise complementar.`
     : "";
-  return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Radar e, pela análise do cadastro e das referências disponíveis, ${faixaFrase}.`+
+  return `Olá! Encontrei seu imóvel ${localTxt(d.bairro)} no Corretor Inteligente e, pela análise do cadastro e das referências disponíveis, ${faixaFrase}.`+
     pendencias+" Podemos conversar?"+assinatura(d.perfil);
 }
 
@@ -2586,7 +2587,7 @@ function histAdd(lista, item, cap){
 }
 
 /* DILIG-01: checklist documental por imóvel. Os estados são marcações LOCAIS do usuário —
-   "conferido" nunca significa validado pelo Radar. A lista é estática e deliberadamente curta:
+   "conferido" nunca significa validado pelo Corretor Inteligente. A lista é estática e deliberadamente curta:
    organiza a diligência sem virar CRM nem tentar substituir cartório/advogado. */
 const DOC_STATUS_ORDEM=["pendente","solicitado","recebido","conferido","nao_aplica"];
 const DOC_STATUS_LBL={
@@ -3150,7 +3151,7 @@ function analisePredicoTexto(resumo,meta){
   let texto="🏢 "+(m.nome||"Edifício")+" — Q "+(m.quadra||"—")+" · L "+(m.lote||"—")+"\n";
   texto+=partes.join(" · ");
   if(m.endereco)texto+="\n\n📍 "+m.endereco;
-  texto+="\nAnálise gerada pelo Radar Fundiário.";
+  texto+="\nAnálise gerada pelo Corretor Inteligente.";
   return texto;
 }
 // Fase 13 VIS-01/PIN-01: mapeia status de EXIBICAO — nunca recalcula score, so aplica as MESMAS
@@ -5304,7 +5305,7 @@ function cadernoAbrirDB(){
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error||new Error("Não foi possível abrir o caderno"));
-    req.onblocked=()=>reject(new Error("Outra aba está usando o caderno — feche as outras abas do Radar e tente de novo."));
+    req.onblocked=()=>reject(new Error("Outra aba está usando o caderno — feche as outras abas do Corretor Inteligente e tente de novo."));
   });
 }
 
@@ -6157,7 +6158,7 @@ function tentarComoPredio(btn){
 }
 
 /* ---------------- referência indicativa (modo seguro da Fase 1) ----------------
-   O Radar não converte mais área fiscal em privativa, não aplica desconto universal de anúncio
+   O Corretor Inteligente não converte mais área fiscal em privativa, não aplica desconto universal de anúncio
    e não usa multiplicador venal genérico. Uma faixa só aparece quando há pelo menos 5 avaliações
    públicas da CAIXA no setor para ancorar a razão valor avaliado/valor venal. A reconstrução com
    transações reais e backtest pertence à Fase 4 do roadmap. */
@@ -6798,10 +6799,10 @@ function trilhaEvidencias(a){
     ?" "+doc.revisoesAtrasadas+" "+(doc.revisoesAtrasadas===1?"revisão local está atrasada.":"revisões locais estão atrasadas.")
     :doc&&doc.revisoesProximas?" "+doc.revisoesProximas+" "+(doc.revisoesProximas===1?"revisão local está próxima.":"revisões locais estão próximas."):"";
   const docDetalhe=doc&&(doc.conferidos||doc.revisoesAtrasadas||doc.revisoesProximas)
-    ?doc.conferidos+"/"+doc.total+" itens marcados como conferidos pelo usuário."+docRevisao+" O Radar não validou os documentos nem calculou prazos legais."
-    :"O Radar não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.";
+    ?doc.conferidos+"/"+doc.total+" itens marcados como conferidos pelo usuário."+docRevisao+" O Corretor Inteligente não validou os documentos nem calculou prazos legais."
+    :"O Corretor Inteligente não consulta matrícula, cadeia dominial, ônus reais ou certidões pessoais.";
   const docData=doc&&doc.updatedAt
-    ?fmtVisita(doc.updatedAt).replace("consultado","marcações atualizadas")+" · validação fora do Radar"
+    ?fmtVisita(doc.updatedAt).replace("consultado","marcações atualizadas")+" · validação fora do Corretor Inteligente"
     :"Fora do escopo desta consulta";
   rows.push({id:"registral",titulo:"Matrícula, titularidade e ônus",status:"off",rotulo:"Não verificado",
     detalhe:docDetalhe,fonte:"Exige Cartório de Registro de Imóveis e certidões oficiais",data:docData});
@@ -6846,7 +6847,7 @@ function checklistDocumentoHTML(a){
       if(it.revisarEm)datas.push("Revisar em: "+dataISOTxt(it.revisarEm));
       return `<div class="kv"><span class="k">${esc(it.titulo)}</span><span class="v">${esc(it.rotulo)}${datas.length?"<br><small>"+esc(datas.join(" · "))+"</small>":""}${it.revisao.rotulo?"<br><small>"+esc(it.revisao.rotulo)+" — data escolhida pelo usuário</small>":""}${proximaAcaoDocumental(it)?"<br><small>Próxima ação: "+esc(proximaAcaoDocumental(it))+"</small>":""}</span></div>`;
     }).join("")}
-    <p class="lmiudo">Estas são marcações e datas locais de preparação. O Radar não examinou autenticidade, vigência, conteúdo, titularidade ou ônus e não calcula prazos legais.</p></div>`;
+    <p class="lmiudo">Estas são marcações e datas locais de preparação. O Corretor Inteligente não examinou autenticidade, vigência, conteúdo, titularidade ou ônus e não calcula prazos legais.</p></div>`;
 }
 function diligenciaDocumentoHTML(a){
   return historicoDocumentoHTML(a)+checklistDocumentoHTML(a);
@@ -6861,7 +6862,7 @@ function montarPacoteDiligencia(){
   if(res.revisoesProximas)situacao.push(res.revisoesProximas+" "+(res.revisoesProximas===1?"revisão próxima":"revisões próximas"));
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · PACOTE DE DILIGÊNCIA</span><span>EMITIDO EM ${hoje}</span></div>
-    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>Pacote de diligência do imóvel</div>
+    <div class="lbrand"><div class="t"><small>Corretor Inteligente · Cadastro Imobiliário de Goiânia</small>Pacote de diligência do imóvel</div>
       <div class="m">Marcações locais do usuário<br>Goiânia/GO · ${hoje}</div></div>
     <div class="lcard"><h3>Imóvel de referência</h3>
       <div class="kv"><span class="k">Endereço</span><span class="v">${esc(addrDe(a))||"—"}</span></div>
@@ -6995,7 +6996,7 @@ function atualizarScores(a, statsR){
 const MOTOR_BASE="https://api.corretorinteligente.tech";
 let MERCADO_A=null;
 let MERCADO_LAST=null; /* última ACM calculada NESTA sessão — alimenta a seção do laudo */
-const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas anunciadas publicamente na web, coletadas e peneiradas pelo motor do Radar. Não são transações e não substituem avaliação profissional.</p>';
+const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas anunciadas publicamente na web, coletadas e peneiradas pelo motor do Corretor Inteligente. Não são transações e não substituem avaliação profissional.</p>';
 function mercadoReset(a){
   MERCADO_A=a;
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
@@ -7092,7 +7093,7 @@ async function gerarParecerMercado(id){
    processado LOCALMENTE no VPS (nunca Overpass público). Dado objetivo com fonte, data
    e confiança de cobertura; a lacuna de mapeamento é declarada, nunca vira "não há nada". */
 let LOCAL_LL=null;
-const LOCAL_HINT='<p class="dmercado-hint">Mede o entorno com dados abertos do OpenStreetMap processados no motor do Radar: contagens e distâncias por categoria, com fonte e data. Não é avaliação de segurança nem de perfil de moradores.</p>';
+const LOCAL_HINT='<p class="dmercado-hint">Mede o entorno com dados abertos do OpenStreetMap processados no motor do Corretor Inteligente: contagens e distâncias por categoria, com fonte e data. Não é avaliação de segurança nem de perfil de moradores.</p>';
 function localReset(a,ll){
   LOCAL_LL=ll||((a&&isFinite(+a.x)&&isFinite(+a.y))?(()=>{try{const w=toWGS(+a.x,+a.y);return {lat:w[0],lng:w[1]};}catch(e){return null;}})():null);
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
@@ -7158,7 +7159,7 @@ function mercadoDocumentoHTML(a){
   const r=m.d.result;
   const linhas=(m.d.comparaveis||[]).map(c=>`<div class="kv"><span>${esc(c.portal)} — ${c.area} m²${c.quartos!=null?`, ${c.quartos} q`:""}${c.distanciaM!=null?` — a ${fmtDist(c.distanciaM)} do imóvel`:""}</span><b>${brlC(c.preco)} <small>(${brlC(c.pm2)}/m²)</small></b></div>`).join("");
   return `<div class="lcard"><h3>Análise Comparativa de Mercado — ofertas públicas</h3>
-    <p class="lmiudo">Referência de mercado a partir de ofertas anunciadas publicamente, coletadas e tratadas pelo motor do Radar com estatística determinística (deduplicação, cerca de Tukey para atípicos e média ponderada por semelhança). Ofertas não são transações fechadas e esta seção não substitui avaliação profissional.</p>
+    <p class="lmiudo">Referência de mercado a partir de ofertas anunciadas publicamente, coletadas e tratadas pelo motor do Corretor Inteligente com estatística determinística (deduplicação, cerca de Tukey para atípicos e média ponderada por semelhança). Ofertas não são transações fechadas e esta seção não substitui avaliação profissional.</p>
     <div class="kv"><span>Valor de referência (ofertas)</span><b>${brlC(r.estimatedValue)}</b></div>
     <div class="kv"><span>Faixa provável</span><b>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)}</b></div>
     <div class="kv"><span>R$/m² ponderado</span><b>${brlC(r.estimatedPricePerM2)}</b></div>
@@ -7357,7 +7358,7 @@ function oppExtras(a){
 }
 
 /* DILIG-01/02: estados locais do checklist e snapshots de consulta. Nenhum documento, nome de
-   proprietário ou certidão é armazenado — só marcações e métricas já exibidas no Radar. */
+   proprietário ou certidão é armazenado — só marcações e métricas já exibidas no Corretor Inteligente. */
 const DOC_CHECK_STORAGE="radar_checklist_documental_v1";
 const HIST_SESSION_ID=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
 function checklistLoadAll(){
@@ -7430,7 +7431,7 @@ function copiarPendenciasDocumentais(){
   const reg=checklistRegistro(DCUR),linhas=pendenciasDocumentaisTexto(reg.estados,reg.datas);
   const cab="Checklist documental — "+(addrDe(DCUR)||clean(DCUR.nrinscr||DCUR.ci)||"imóvel");
   const corpo=linhas.length?linhas.join("\n"):"• Nenhuma pendência aberta nas marcações locais.";
-  copyTexto(cab+"\n"+corpo+"\n\nMarcações de apoio do Radar; confirme documentos, validade e conteúdo nas fontes oficiais.","Pendências documentais copiadas.");
+  copyTexto(cab+"\n"+corpo+"\n\nMarcações de apoio do Corretor Inteligente; confirme documentos, validade e conteúdo nas fontes oficiais.","Pendências documentais copiadas.");
 }
 function renderChecklistDocumental(a){
   const sumEl=document.getElementById("dDocChecklistSummary"),body=document.getElementById("dDocChecklistBody");
@@ -7451,7 +7452,7 @@ function renderChecklistDocumental(a){
     ?'<div class="doc-alert '+(res.revisoesAtrasadas?'has-late':'')+'">'+esc(revResumo.join(" · "))+'. Datas escolhidas pelo usuário; confirme vigência e conteúdo nas fontes oficiais.</div>'
     :'';
   body.innerHTML=
-    '<p class="dilig-note">Organize o que foi solicitado, recebido e conferido. As marcações e datas ficam só neste navegador e não validam autenticidade, vigência, titularidade ou ausência de ônus. Datas escolhidas pelo usuário; o Radar não calcula prazos legais.</p>'+
+    '<p class="dilig-note">Organize o que foi solicitado, recebido e conferido. As marcações e datas ficam só neste navegador e não validam autenticidade, vigência, titularidade ou ausência de ônus. Datas escolhidas pelo usuário; o Corretor Inteligente não calcula prazos legais.</p>'+
     '<div class="doc-progress">'+esc(atualizado)+' · '+res.pendentes+' não iniciados · '+res.naoAplica+' não aplicáveis</div>'+
     alertaHtml+
     '<div class="doc-list">'+res.itens.map(it=>{
@@ -7536,7 +7537,7 @@ function copiarHistoricoComparavel(){
   const a=itens[itens.length-2],b=itens[itens.length-1],mud=a&&b?mudancasHistorico(a,b):[];
   const linhas=mud.length?mud.map(m=>"• "+historicoMudancaTxt(m)):["• Nenhuma mudança observável nos campos acompanhados."];
   copyTexto("Evolução entre consultas — "+(addrDe(DCUR)||clean(DCUR.nrinscr||DCUR.ci))+"\n"+linhas.join("\n")+
-    "\n\nSnapshots locais do Radar; não são preços de mercado, transações ou certidões.","Evolução copiada.");
+    "\n\nSnapshots locais do Corretor Inteligente; não são preços de mercado, transações ou certidões.","Evolução copiada.");
 }
 function apagarHistoricoImovel(){
   if(!DCUR||!confirm("Apagar deste navegador o histórico comparável deste imóvel?"))return;
@@ -8681,7 +8682,7 @@ function montarNeg(){
   }
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · MINUTA PARA CONFERÊNCIA</span><span>EMITIDO EM ${hoje}</span></div>
-    <div class="lbrand"><div class="t"><small>Radar Fundiário · Documentos da Negociação</small>${esc(titulo)}</div>
+    <div class="lbrand"><div class="t"><small>Corretor Inteligente · Documentos da Negociação</small>${esc(titulo)}</div>
       <div class="m">${corretorLinha}</div></div>
     <div class="negclausulas">${clausulasHtml}</div>
     <div class="negdisclaimer-print"><b>ATENÇÃO</b> — ${esc(DISCLAIMER_NEG)}</div>
@@ -8943,7 +8944,7 @@ function montarLaudo(){
   const foraFaixa=est&&LZ.valor&&(LZ.valor<est.lo*0.97||LZ.valor>est.hi*1.03);
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
-    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>${titulo}</div>
+    <div class="lbrand"><div class="t"><small>Corretor Inteligente · Cadastro Imobiliário de Goiânia</small>${titulo}</div>
       <div class="m">${esc(p.nome)}${comCreci?" · CRECI "+esc(p.creci):""}${(p.contato||"").trim()?"<br>"+esc(p.contato):""}<br>Goiânia/GO · ${hoje}</div></div>
 
     <div class="lcard"><h3>Finalidade</h3>
@@ -8963,7 +8964,7 @@ function montarLaudo(){
           <div class="subcard up"><div class="st"><span class="ar">↘</span> Referência inferior</div><div class="sl">Faixa indicativa externa</div><div class="sv">${brl(est.lo)}</div></div>
           <div class="subcard down"><div class="st"><span class="ar">↗</span> Referência superior</div><div class="sl">Faixa indicativa externa</div><div class="sv">${brl(est.hi)}</div></div>
         </div>`:""}</div>`;})()}
-      <p class="lmiudo">Valor declarado pelo usuário; não foi calculado nem validado pelo Radar.</p>
+      <p class="lmiudo">Valor declarado pelo usuário; não foi calculado nem validado pelo Corretor Inteligente.</p>
       ${foraFaixa?`<p class="lmiudo">O valor informado está fora da faixa indicativa externa e requer validação independente antes de uso comercial.</p>`:""}</div>
 
     <div class="lcard"><h3>Referências cadastrais e indicativas</h3>
@@ -8980,7 +8981,7 @@ function montarLaudo(){
 
     ${mercadoDocumentoHTML(a)}
     <div class="lcard"><h3>Metodologia, fontes e ressalvas</h3>
-      <p class="lmiudo">Análise cadastral: estatística robusta (mediana e exclusão de discrepantes pela cerca de Tukey) sobre valores venais da base fiscal pública do Cadastro Imobiliário de Goiânia. Esses registros não são ofertas nem transações. Quando há faixa indicativa, ela é ancorada em pelo menos cinco avaliações públicas da CAIXA no setor e permanece sujeita a diferenças de tipologia, área, conservação e data. O Radar não ajusta automaticamente o valor informado por conservação, área declarada ou posição cadastral.</p>
+      <p class="lmiudo">Análise cadastral: estatística robusta (mediana e exclusão de discrepantes pela cerca de Tukey) sobre valores venais da base fiscal pública do Cadastro Imobiliário de Goiânia. Esses registros não são ofertas nem transações. Quando há faixa indicativa, ela é ancorada em pelo menos cinco avaliações públicas da CAIXA no setor e permanece sujeita a diferenças de tipologia, área, conservação e data. O Corretor Inteligente não ajusta automaticamente o valor informado por conservação, área declarada ou posição cadastral.</p>
       <p class="lmiudo">Ressalvas: não foram examinadas matrícula, certidões ou eventuais ônus reais; referências à situação documental decorrem exclusivamente de declaração do interessado. Áreas e características seguem o cadastro municipal e podem divergir da matrícula. As informações prestadas por terceiros foram assumidas como verdadeiras. Este documento destina-se à finalidade de ${esc(LZ.finalidade).toLowerCase()}, não possui validade automática e não substitui vistoria, laudo de avaliação ou PTAM. O módulo de PTAM permanece suspenso até existir verificação profissional e revisão regulatória.</p>
       ${LZ.docOk===false?`<p class="lmiudo">O interessado declarou pendências na documentação do imóvel — recomenda-se regularização antes de qualquer decisão.</p>`:""}
       <div class="lass"><div class="linha"></div>${esc(p.nome)}${comCreci?" — CRECI "+esc(p.creci):""}${comCnai?" — CNAI "+esc(p.cnai):""}</div></div>
@@ -9034,7 +9035,7 @@ function renderFichaRapida(a,data,fr){
   const hoje=new Date().toLocaleDateString("pt-BR");
   document.getElementById("laudo").innerHTML=`
     <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
-    <div class="lbrand"><div class="t"><small>Radar Fundiário · Cadastro Imobiliário de Goiânia</small>Ficha rápida do imóvel</div>
+    <div class="lbrand"><div class="t"><small>Corretor Inteligente · Cadastro Imobiliário de Goiânia</small>Ficha rápida do imóvel</div>
       <div class="m">${data.perfil?esc(data.perfil.nome)+(data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""):""}<br>Goiânia/GO · ${hoje}</div></div>
     <div class="fr-hero">
       <div class="fr-faixa">${fr.faixaTxt?esc(fr.faixaTxt):"Sem referência indicativa"}</div>
@@ -9057,7 +9058,7 @@ function renderFichaRapida(a,data,fr){
 function imprimirLaudo(){
   const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
   if(standalone){ /* em PWA instalado no iOS, window.print() é no-op */
-    alert("No app instalado na tela inicial, toque no ícone Compartilhar e depois em Imprimir para salvar o PDF (ou abra o Radar no Safari).");
+    alert("No app instalado na tela inicial, toque no ícone Compartilhar e depois em Imprimir para salvar o PDF (ou abra o Corretor Inteligente no Safari).");
     return;
   }
   document.body.classList.add("print-laudo");
@@ -9115,7 +9116,7 @@ function renderCustos(){
     <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
     <span class="clabel">Valor da transação (R$)</span>
     <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
-    <div class="wsub" style="margin:6px 0 0">Informe o valor real da compra e venda. O Radar não preenche este campo com valor venal nem referência indicativa.</div>
+    <div class="wsub" style="margin:6px 0 0">Informe o valor real da compra e venda. O Corretor Inteligente não preenche este campo com valor venal nem referência indicativa.</div>
 
     <div class="cseg">
       <button class="${!CALC.financiado?'on':''}" onclick="CALC.financiado=false;renderCustos()">À vista</button>
@@ -9159,7 +9160,7 @@ function copiarCustos(){
     CALC.financiado?null:"Escritura (tabelião): "+brlExato(escritura),
     "Registro do imóvel: "+brlExato(registro),
     "CUSTO TOTAL: "+brl(total),
-    "— tabelas oficiais TJGO 2026; estimativa, confira na fonte. Radar Fundiário."].filter(Boolean).join("\n");
+    "— tabelas oficiais TJGO 2026; estimativa, confira na fonte. Corretor Inteligente."].filter(Boolean).join("\n");
   /* B-12: via copyTexto — fallback (execCommand) + feedback garantido, nunca falha silenciosa. */
   copyTexto(L,"Resumo copiado — cole no WhatsApp.");
 }
@@ -9399,15 +9400,15 @@ function trapFocaveis(container){
 /* ---------------- Fase 13 DESC-01: onboarding 3 cartões (independente do coach acima) ---------------- */
 // Conteúdo dos 3 cartões (copy literal, travado — não reformular)
 const ONB_CARDS=[
-  {titulo:"Busque qualquer imóvel", texto:"Digite endereço, quadra/lote, nome do prédio ou inscrição — numa caixa só. O Radar entende o que você quer dizer.", cta:"Próximo"},
+  {titulo:"Busque qualquer imóvel", texto:"Digite endereço, quadra/lote, nome do prédio ou inscrição — numa caixa só. O Corretor Inteligente entende o que você quer dizer.", cta:"Próximo"},
   {titulo:"Entenda os dados disponíveis", texto:"Cada imóvel separa valor venal, posição cadastral, cobertura dos dados e referências indicativas — sem transformar cadastro em promessa de mercado.", cta:"Próximo"},
-  {titulo:"Gere documentos e capte", texto:"Gere ficha ou relatório de apoio em PDF, copie mensagens prontas para o WhatsApp e monte a proposta — tudo pelo Radar.", cta:"Começar"},
+  {titulo:"Gere documentos e capte", texto:"Gere ficha ou relatório de apoio em PDF, copie mensagens prontas para o WhatsApp e monte a proposta — tudo pelo Corretor Inteligente.", cta:"Começar"},
 ];
 let onbIdx=0;
 function initOnboard(){
   /* deep-link ?insc= vence o onboarding: 1º acesso via link compartilhado tem que abrir a FICHA
      prometida, não um modal bloqueante por cima — pula o auto-show (o usuário ainda pode ver os
-     cartões depois via "O que o Radar faz"). Fail-open: se der erro, não mostra. */
+     cartões depois via "O que o Corretor Inteligente faz"). Fail-open: se der erro, não mostra. */
   try{ if(new URLSearchParams(location.search).get("insc")) return; }catch(e){ return; }
   let seen="1"; try{seen=localStorage.getItem("radar_onboard");}catch(e){}
   if(!seen) onbAbrir(0);
@@ -9449,7 +9450,7 @@ function onbFechar(){
      reentrância, guarda acima), garante que o foco não se perde no <body>. */
   if(document.activeElement===document.body){ const p=document.getElementById("atlasSearchTrigger")||document.getElementById("searchPill"); if(p) p.focus(); }
 }
-// "O que o Radar faz" -> reabre o onboarding NO CARTÃO relevante, sem checar radar_onboard
+// "O que o Corretor Inteligente faz" -> reabre o onboarding NO CARTÃO relevante, sem checar radar_onboard
 // (reentrada manual — nunca conta como "1ª exibição")
 function onbAbrirDireto(idx){ onbAbrir(idx); }
 
