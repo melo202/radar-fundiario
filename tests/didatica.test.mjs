@@ -67,6 +67,14 @@ test("MOB-01: controles do Leaflet nunca flutuam por cima das sheets (X de fecha
   assert.match(html, /\.detail\{[^}]*z-index:500/, "sheets seguem acima (500) dos controles (450)");
 });
 
+test("MOB-02: capa hidden ESCONDE de verdade e o canvas não captura toque", () => {
+  /* bug latente achado ao caçar o X: #capaViva{display:grid} vencia o [hidden] do
+     navegador e a capa continuava capturando todo toque na 2ª visita */
+  assert.ok(html.includes("#capaViva[hidden]{display:none!important}"));
+  assert.ok(html.includes("#capaCeu{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}"));
+  assert.ok(html.includes("#bootCeu{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}"));
+});
+
 test("R4: página Como usar existe, é honesta e o app aponta para ela", () => {
   assert.ok(html.includes('href="como-usar.html"'), "link no O que o Corretor Inteligente faz");
   assert.ok(guia.includes("<title>Como usar · Corretor Inteligente</title>"));
