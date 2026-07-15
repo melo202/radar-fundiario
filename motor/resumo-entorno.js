@@ -12,7 +12,8 @@ em português impecável, 1 parágrafo (4 a 6 frases), tom profissional e sóbri
 REGRAS INEGOCIÁVEIS:
 - Use SOMENTE os dados do JSON. Não invente estabelecimentos, qualidades ou distâncias.
 - Cite as contagens e distâncias dos destaques (são dados conferidos) — um resumo sem
-  números é vago demais. Só cite números que estejam LITERALMENTE no JSON.
+  números é vago demais. Só cite números que estejam LITERALMENTE no JSON, e SEMPRE em
+  algarismos, nunca por extenso (por extenso escapa da conferência automática).
 - Comece pelos pontos fortes. Pontos de atenção são EXCLUSIVAMENTE as categorias com
   sinal "atencao" no JSON — nunca trate amenidade (transporte, comércio, serviço) como
   atenção nem julgue a quantidade de nada como insuficiente.

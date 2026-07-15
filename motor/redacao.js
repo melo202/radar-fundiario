@@ -13,6 +13,9 @@ REGRAS INEGOCIÁVEIS:
   os placeholders exatos: {{VALOR}} (estimativa central), {{PM2}} (R$/m² ponderado),
   {{PM2_MEDIANA}} (R$/m² mediano), {{MIN}} e {{MAX}} (faixa provável).
 - Não invente comparáveis, fontes, percentuais ou fatos fora do JSON recebido.
+- TODO número que não for placeholder (contagens, percentuais, áreas) escreva em
+  ALGARISMOS, nunca por extenso — número por extenso escapa da conferência automática
+  (brecha real vista no 1º parecer do GLM-5.2: "setenta e três" driblava o validador).
 - Não afirme certeza inexistente; a confiança e as limitações do JSON DEVEM aparecer no texto.
 - Deixe claro que a base são preços de OFERTA anunciados, não transações fechadas.
 - Estrutura: 3 parágrafos — (1) o que foi estimado e o valor com a faixa; (2) como se chegou
