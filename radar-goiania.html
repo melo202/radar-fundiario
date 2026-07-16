@@ -9477,9 +9477,13 @@ function entornoDestaque(){
     .sort((p,q)=>p.nearestDistanceMeters-q.nearestDistanceMeters)[0];
   return top?`${top.rotulo.replace(/s$/,"").toLowerCase()} a ${top.nearestDistanceMeters} m`:null;
 }
+/* divulgação pede nome de bairro BONITO ("Setor Bueno", não "SET BUENO" do cadastro)
+   e área redonda — displayName é o mesmo do combo de busca */
+const mktBairro=a=>{try{return displayName(clean(a.nmbairro))||clean(a.nmbairro);}catch(e){return clean(a.nmbairro);}};
+const mktArea=a=>+a.areaedif>0?`${Math.round(+a.areaedif).toLocaleString("pt-BR")} m²`:null;
 function legendasMkt(){
-  const a=MKT.a,bairro=clean(a.nmbairro),tipo=ehAptoProvavel(a)?"Apartamento":"Imóvel";
-  const area=+a.areaedif>0?`${a.areaedif} m²`:null;
+  const a=MKT.a,bairro=mktBairro(a),tipo=ehAptoProvavel(a)?"Apartamento":"Imóvel";
+  const area=mktArea(a);
   const ent=entornoDestaque();
   const preco=MKT.preco>0?brl(MKT.preco):null;
   const link=`https://corretorinteligente.tech/?insc=${encodeURIComponent(clean(a.nrinscr)||clean(a.ci))}`;
@@ -9522,11 +9526,11 @@ function desenhaMkt(){
   x.font="800 78px Archivo,sans-serif";x.fillStyle="#F5F8F8";
   x.fillText(ehAptoProvavel(a)?"APARTAMENTO":"IMÓVEL",W/2,midY);
   x.font="800 62px Archivo,sans-serif";x.fillStyle="#19A99A";
-  x.fillText(clean(a.nmbairro).toUpperCase(),W/2,midY+82);
+  x.fillText(mktBairro(a).toUpperCase(),W/2,midY+82);
   let y=midY+170;
   if(MKT.frase){x.font="500 44px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.92)";x.fillText(MKT.frase,W/2,y);y+=64;}
   const specs=[];
-  if(+a.areaedif>0)specs.push(`${a.areaedif} m² de área construída`);
+  const areaTx=mktArea(a);if(areaTx)specs.push(`${areaTx} de área construída`);
   const ent=entornoDestaque();if(ent)specs.push(ent[0].toUpperCase()+ent.slice(1));
   x.font="400 38px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.72)";
   specs.forEach(s=>{x.fillText(s,W/2,y);y+=56;});
