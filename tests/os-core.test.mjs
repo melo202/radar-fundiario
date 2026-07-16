@@ -69,4 +69,5 @@ test("OS-01: rotas privadas usam sessão existente e POSTs continuam sob CSRF", 
   assert.ok(panel.includes('!csrfOk(req, sessao)'));
   assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf('/painel/api/os/captura/confirmar'));
   assert.ok(app.includes('headers["X-CSRF-Token"]=state.csrf'));
+  assert.ok(app.includes('if(mutating&&!state.csrf)'), "POST não corre antes do token CSRF chegar");
 });
