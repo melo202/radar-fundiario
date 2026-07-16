@@ -377,3 +377,6 @@ Toda calibração de mercado (tabela por bairro, futuros ajustes) segue:
 - Tráfego de terceiros bate direto na API da prefeitura — mais um motivo para não divulgar.
 
 **Passos:** criar repo → `git push` → renomear (ou copiar) `radar-goiania.html` para `index.html` → Settings ▸ Pages ▸ Deploy from branch ▸ `master` / root.
+
+## Corretor Inteligente OS — novo braço (16/07/2026)
+O usuário escreveu o plano completo do "sistema operacional do corretor" (multitenant, carteira privada, tela Hoje, captura universal, NBA determinístico). A reflexão estratégica, os conflitos com regras vigentes (D1-D4), os ADRs, o sequenciamento com gates de negócio e o mapeamento do que já existe estão em **ROADMAP-OS.md** — fonte da verdade do novo braço. Branch futura: agent/corretor-inteligente-os (a ultrapremium congela features e vira base recuperável; só bugfix).
