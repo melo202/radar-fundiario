@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null}};
+const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos"};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -32,7 +32,40 @@ async function loadToday(force=false){if(state.loaded.today&&!force)return;const
 function renderActions(actions){const target=$("todayActions");if(!actions.length)return empty(target,"Seu dia está limpo","Quando houver prazo, oportunidade ou cadastro incompleto, a próxima ação aparecerá aqui.");target.replaceChildren(...actions.map(a=>{const action=el("button",{class:"card-action",type:"button",text:a.actionLabel||"Abrir"});if(a.source==="task")action.addEventListener("click",()=>completeTask(a.id,action));else if(a.entityType==="inventory_property"&&a.entityId)action.addEventListener("click",()=>openProperty(a.entityId));else action.addEventListener("click",()=>switchView(a.entityType==="inventory_property"?"portfolio":"relationships"));return el("article",{class:"action-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:a.title}),el("p",{text:a.reason})]),badge(a.priority)]),el("div",{class:"meta"},[el("span",{text:date(a.dueAt)}),el("span",{text:a.source==="property_gap"?"Cadastro progressivo":a.source==="opportunity"?"Oportunidade":"Tarefa"})]),action]);}));}
 async function completeTask(id,button){button.disabled=true;button.textContent="Concluindo…";try{await api(`/painel/api/os/tarefas/${id}/concluir`,{method:"POST",body:"{}"});toast("Tarefa concluída.");state.loaded.today=false;await loadToday(true);}catch(e){toast(e.message);button.disabled=false;button.textContent="Marcar como concluída";}}
 
-async function loadPortfolio(){if(state.loaded.portfolio)return;const target=$("portfolioList");skeletons(target);try{const data=await api("/painel/api/os/carteira");state.loaded.portfolio=true;const rows=data.properties||[];if(!rows.length)return empty(target,"Sua carteira ainda está vazia","Capture o primeiro imóvel por texto. Ele nascerá como prospecção e ganhará detalhes progressivamente.");target.replaceChildren(...rows.map(p=>{const abrir=el("button",{class:"card-action secondary",type:"button",text:"Abrir dossiê"});abrir.addEventListener("click",()=>openProperty(p.id));return el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:p.title||"Imóvel"}),el("p",{text:[p.neighborhood,p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:stageLabel(p.capture_stage)})]),el("div",{class:"meta"},[el("span",{text:money(p.asking_price)}),el("span",{text:`${p.pending_tasks||0} pendência(s)`}),el("span",{text:`${p.open_opportunities||0} oportunidade(s)`})]),abrir]);}));}catch(e){errorCard(target,e);}}
+/* Filtros rápidos da Carteira (item 15 do plano): determinísticos e EXPLICADOS —
+   "parado" tem definição pública (sem interessado aberto e sem movimento há 14 dias),
+   nunca um julgamento opaco. Contagem em cada filtro; vazio explica o critério. */
+const PARADO_DIAS=14;
+const FILTROS_CARTEIRA=[
+  ["todos","Todos",()=>true,"Capture o primeiro imóvel por texto ou voz. Ele nascerá como prospecção e ganhará detalhes progressivamente."],
+  ["prospeccao","Prospecção",p=>["prospect","visited"].includes(p.capture_stage),"Nenhum imóvel em prospecção ou visitado."],
+  ["captados","Captados",p=>p.capture_stage==="captured","Nenhum imóvel captado ainda — avance o estágio no dossiê quando a autorização sair."],
+  ["divulgacao","Em divulgação",p=>["ready_to_publish","qualified"].includes(p.capture_stage),"Nenhum imóvel pronto para divulgar ou qualificado."],
+  ["interessados","Com interessados",p=>p.open_opportunities>0,"Nenhum imóvel com oportunidade aberta — registre interessados no dossiê."],
+  ["pendencias","Com pendências",p=>p.pending_tasks>0,"Nenhuma pendência aberta na carteira. Cadastros em dia."],
+  ["parados","Parados",p=>!(p.open_opportunities>0)&&!["sold","rented"].includes(p.capture_stage)&&(Date.now()-new Date(p.updated_at||p.created_at).getTime())>PARADO_DIAS*86400000,`Nenhum imóvel parado — parado aqui é quem está sem interessado aberto e sem movimento há mais de ${PARADO_DIAS} dias.`],
+  ["desfecho","Vendidos/alugados",p=>["sold","rented"].includes(p.capture_stage),"Nenhum desfecho registrado ainda — eles ficam guardados aqui."],
+];
+function propertyCard(p){
+  const abrir=el("button",{class:"card-action secondary",type:"button",text:"Abrir dossiê"});
+  abrir.addEventListener("click",()=>openProperty(p.id));
+  return el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:p.title||"Imóvel"}),el("p",{text:[p.neighborhood,p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:stageLabel(p.capture_stage)})]),el("div",{class:"meta"},[el("span",{text:money(p.asking_price)}),el("span",{text:`${p.pending_tasks||0} pendência(s)`}),el("span",{text:`${p.open_opportunities||0} oportunidade(s)`})]),abrir]);
+}
+function renderPortfolio(){
+  const rows=state.portfolioRows||[];
+  $("portfolioFilters").replaceChildren(...FILTROS_CARTEIRA.map(([id,rotulo,pred])=>{
+    const n=rows.filter(pred).length;
+    const b=el("button",{class:"tab"+(state.portfolioFilter===id?" is-active":""),type:"button",text:`${rotulo} (${n})`});
+    b.addEventListener("click",()=>{state.portfolioFilter=id;renderPortfolio();});
+    return b;
+  }));
+  const alvo=$("portfolioList");
+  const [,,pred,vazio]=FILTROS_CARTEIRA.find(f=>f[0]===state.portfolioFilter)||FILTROS_CARTEIRA[0];
+  const filtrados=rows.filter(pred);
+  if(!filtrados.length)return empty(alvo,rows.length?"Nada neste filtro":"Sua carteira ainda está vazia",vazio);
+  alvo.replaceChildren(...filtrados.map(propertyCard));
+}
+async function loadPortfolio(){if(state.loaded.portfolio)return;const target=$("portfolioList");skeletons(target);try{const data=await api("/painel/api/os/carteira");state.loaded.portfolio=true;state.portfolioRows=data.properties||[];renderPortfolio();}catch(e){errorCard(target,e);}}
 const stageLabel=s=>({prospect:"Prospecção",visited:"Visitado",captured:"Captado",ready_to_publish:"Pronto para divulgar",qualified:"Qualificado",inactive:"Inativo",sold:"Vendido",rented:"Alugado"})[s]||s;
 
 async function loadRelationships(){if(state.loaded.relationships)return;const target=$("relationshipsList");skeletons(target);try{const data=await api("/painel/api/os/relacionamentos");state.loaded.relationships=true;const rows=data.contacts||[];if(!rows.length)return empty(target,"Nenhum relacionamento registrado","Proprietários e clientes aparecerão aqui quando forem capturados ou vinculados a uma oportunidade.");target.replaceChildren(...rows.map(c=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:c.name}),el("p",{text:[typeLabel(c.type),c.phone?`Telefone final ${String(c.phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:`${c.open_opportunities||0} aberta(s)`})]),el("div",{class:"meta"},[el("span",{text:c.last_interaction_at?`Última interação: ${date(c.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:c.source||"cadastro"})])])));}catch(e){errorCard(target,e);}}

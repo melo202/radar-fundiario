@@ -324,7 +324,7 @@ export async function listarCarteira() {
   const org = await garantirOrganizacao();
   const r = await db.query(
     `SELECT p.id,p.title,p.capture_stage,p.status,p.transaction_type,p.property_type,p.neighborhood,
-            p.asking_price,p.characteristics,p.created_at,c.name AS owner_name,
+            p.asking_price,p.characteristics,p.created_at,p.updated_at,c.name AS owner_name,
             (SELECT count(*)::int FROM opportunities o WHERE o.inventory_property_id=p.id AND o.stage NOT IN ('fechado','perdido')) AS open_opportunities,
             (SELECT count(*)::int FROM tasks t WHERE t.related_entity_type='inventory_property' AND t.related_entity_id=p.id AND t.status IN ('pendente','em_andamento','adiada')) AS pending_tasks
      FROM inventory_properties p LEFT JOIN contacts c ON c.id=p.owner_contact_id
