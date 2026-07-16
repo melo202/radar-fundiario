@@ -3,8 +3,16 @@ const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationsh
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
+  const mutating=options.method&&options.method!=="GET";
+  if(mutating&&!state.csrf){
+    const seed=await fetch("/painel/api/os/hoje",{credentials:"same-origin"});
+    const seedBody=await seed.json().catch(()=>({}));
+    if(seed.status===401){location.href="/painel";throw new Error("Sessão encerrada.");}
+    if(!seed.ok||!seedBody.csrf)throw new Error(seedBody.erro||"Não foi possível iniciar a ação com segurança.");
+    state.csrf=seedBody.csrf;
+  }
   const headers={"Content-Type":"application/json",...(options.headers||{})};
-  if(options.method&&options.method!=="GET") headers["X-CSRF-Token"]=state.csrf;
+  if(mutating) headers["X-CSRF-Token"]=state.csrf;
   const r=await fetch(url,{credentials:"same-origin",...options,headers});
   let body={};try{body=await r.json();}catch{}
   if(r.status===401){location.href="/painel";throw new Error("Sessão encerrada.");}
