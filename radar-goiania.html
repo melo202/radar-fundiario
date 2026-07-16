@@ -6110,6 +6110,23 @@ async function buscar(){
       /* se o setor escolhido não tem o prédio, tenta a cidade inteira */
       if(!all.length&&b)all=await fetchWhere(`vlvenal>0 AND ${likes}`);
       items=all.filter(a=>{const n=norm(a.nmedificio);return toks.every(t=>n.includes(t));});
+      /* BUSCA-ESPACO (achado do usuário 16/07: "uptown" não achava "UP TOWN"): o cadastro
+         grafa nome de prédio com espaços imprevisíveis. Se a busca por palavras zera, refaz
+         IGNORANDO espaços: LIKE com % entre cada letra no servidor (REPLACE() no WHERE o
+         ArcGIS da prefeitura recusa — testado, 400; o padrão espalhado voltou 307 registros
+         = só as unidades do UP TOWN) + confirmação exata no cliente comparando tudo sem
+         espaço. Mínimo 4 letras para o padrão não virar arrastão. */
+      if(!items.length){
+        const sq=toks.join("").replace(/[^A-Z0-9]/g,"");
+        if(sq.length>=4){
+          loading(true,"nada com essas palavras — tentando sem espaços…");
+          const likeSq=`UPPER(nmedificio) LIKE '%${sq.split("").join("%")}%'`;
+          let all2=await fetchWhere((b?`cdbairro=${+b} AND `:"")+`vlvenal>0 AND ${likeSq}`,10);
+          if(!all2.length&&b)all2=await fetchWhere(`vlvenal>0 AND ${likeSq}`,10);
+          items=all2.filter(a=>norm(a.nmedificio).replace(/[^A-Z0-9]/g,"").includes(sq));
+          if(items.length)aviso=`Encontrado ignorando espaços — no cadastro este prédio está grafado "${clean(items[0].nmedificio)}".`;
+        }
+      }
     }else{ // ql
       const okB=resolveBairro();
       const b=document.getElementById("bairro").value;
