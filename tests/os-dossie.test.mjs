@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   montarAtualizacaoImovel, rotuloEvento, idValido, ESTAGIOS_CAPTACAO, TEMPERATURAS,
+  montarAtualizacaoOportunidade, ESTAGIOS_OPORTUNIDADE, OBJECOES_PERDA,
 } from "../motor/os-core.js";
 
 const atual = {
@@ -49,6 +50,41 @@ test("D-1: histórico legível — evento de domínio vira frase de corretor", (
   assert.equal(rotuloEvento({ event_type: "property.created", payload: { missingCount: 3 } }),
     "Imóvel criado pela captura universal — 3 pendência(s) gerada(s)");
   assert.equal(rotuloEvento({ event_type: "algo.exotico", payload: {} }), "algo.exotico", "evento desconhecido nunca quebra a linha do tempo");
+});
+
+/* ---------------- D-2: funil ---------------- */
+const opAtual = { stage: "novo_interessado", temperature: "morno", next_action_at: null, loss_reason: null };
+
+test("D-2: estágio só no vocabulário oficial — 9 passos, do interessado ao desfecho", () => {
+  assert.equal(ESTAGIOS_OPORTUNIDADE.length, 9);
+  assert.equal(montarAtualizacaoOportunidade(opAtual, { stage: "estagio_4" }).erro, "Estágio desconhecido.");
+  const ok = montarAtualizacaoOportunidade(opAtual, { stage: "visita_agendada" });
+  assert.equal(ok.updates.stage, "visita_agendada");
+});
+
+test("D-2: perder SEM objeção tipificada é proibido — a objeção ensina o funil", () => {
+  assert.ok(montarAtualizacaoOportunidade(opAtual, { stage: "perdido" }).erro);
+  assert.ok(montarAtualizacaoOportunidade(opAtual, { stage: "perdido", lossReason: "achismo" }).erro);
+  const ok = montarAtualizacaoOportunidade(opAtual, { stage: "perdido", lossReason: "preco" });
+  assert.equal(ok.updates.loss_reason, "preco");
+  assert.equal(OBJECOES_PERDA.length, 8);
+});
+
+test("D-2: reabrir um perdido limpa o motivo; data do próximo passo só como YYYY-MM-DD", () => {
+  const reaberto = montarAtualizacaoOportunidade({ ...opAtual, stage: "perdido", loss_reason: "preco" }, { stage: "negociando" });
+  assert.equal(reaberto.updates.loss_reason, null);
+  const comData = montarAtualizacaoOportunidade(opAtual, { nextActionAt: "2026-07-20" });
+  assert.equal(comData.updates.next_action_at, "2026-07-20");
+  assert.ok(!("next_action_at" in montarAtualizacaoOportunidade(opAtual, { nextActionAt: "amanhã" }).updates), "data inválida sem data anterior: nada muda");
+  assert.equal(montarAtualizacaoOportunidade({ ...opAtual, next_action_at: "2026-07-18" }, { nextActionAt: "amanhã" }).updates.next_action_at, null, "data inválida com data anterior: limpa, nunca vira lixo");
+});
+
+test("D-2: linha do tempo do funil em linguagem de corretor", () => {
+  assert.equal(rotuloEvento({ event_type: "opportunity.stage_changed", payload: { contactName: "Marina", de: "visitou", para: "proposta" } }),
+    "Marina avançou: Visitou → Proposta");
+  assert.equal(rotuloEvento({ event_type: "opportunity.won", payload: { contactName: "Marina" } }), "Negócio fechado com Marina 🎉");
+  assert.equal(rotuloEvento({ event_type: "opportunity.lost", payload: { contactName: "João", motivo: "sem_retorno" } }),
+    "João perdido — motivo: parou de responder");
 });
 
 test("D-1: id de imóvel só passa como uuid estrito", () => {

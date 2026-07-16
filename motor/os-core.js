@@ -393,9 +393,95 @@ export function rotuloEvento(ev) {
     case "property.price_changed": return `Preço: ${brl(p.de)} → ${brl(p.para)}`;
     case "contact.created": return p.type === "proprietario" ? "Proprietário registrado" : "Contato registrado";
     case "opportunity.created": return `Novo interessado${p.contactName ? `: ${p.contactName}` : ""} (${p.temperature || "morno"})`;
+    case "opportunity.stage_changed": return `${p.contactName || "Interessado"} avançou: ${ROTULO_ESTAGIO[p.de] || p.de} → ${ROTULO_ESTAGIO[p.para] || p.para}`;
+    case "opportunity.won": return `Negócio fechado com ${p.contactName || "o interessado"} 🎉`;
+    case "opportunity.lost": return `${p.contactName || "Interessado"} perdido — motivo: ${ROTULO_OBJECAO[p.motivo] || p.motivo || "não informado"}`;
+    case "opportunity.updated": return `Oportunidade${p.contactName ? ` de ${p.contactName}` : ""} atualizada: ${(p.campos || []).join(", ")}`;
     case "task.completed": return `Concluído: ${p.title || "tarefa"}`;
     default: return t || "evento";
   }
+}
+
+/* ---------------- D-2: funil — a oportunidade CAMINHA pelo dossiê ---------------- */
+export const ESTAGIOS_OPORTUNIDADE = ["novo_interessado", "em_qualificacao", "imovel_apresentado", "visita_agendada", "visitou", "negociando", "proposta", "fechado", "perdido"];
+export const ROTULO_ESTAGIO = {
+  novo_interessado: "Novo interessado", em_qualificacao: "Em qualificação", imovel_apresentado: "Imóvel apresentado",
+  visita_agendada: "Visita agendada", visitou: "Visitou", negociando: "Negociando", proposta: "Proposta",
+  fechado: "Fechado", perdido: "Perdido",
+};
+/* objeções tipificadas (vocabulário do FU-1/ImobRadar): perder SEM motivo não ensina nada */
+export const OBJECOES_PERDA = ["preco", "financiamento", "documentacao", "localizacao", "caracteristicas", "comprou_outro", "desistiu", "sem_retorno"];
+export const ROTULO_OBJECAO = {
+  preco: "preço", financiamento: "financiamento", documentacao: "documentação", localizacao: "localização",
+  caracteristicas: "características do imóvel", comprou_outro: "comprou outro", desistiu: "desistiu da compra", sem_retorno: "parou de responder",
+};
+const dia = (v) => v ? new Date(v).toISOString().slice(0, 10) : null;
+
+/* pura: whitelist do funil. Regras: estágio só no vocabulário; "perdido" EXIGE objeção
+   tipificada; reabrir um perdido limpa o motivo; datas só como YYYY-MM-DD. */
+export function montarAtualizacaoOportunidade(atual, campos) {
+  const c = campos || {};
+  const updates = {};
+  const changes = [];
+  if ("stage" in c && c.stage !== atual.stage) {
+    if (!ESTAGIOS_OPORTUNIDADE.includes(c.stage)) return { erro: "Estágio desconhecido." };
+    if (c.stage === "perdido" && !OBJECOES_PERDA.includes(c.lossReason))
+      return { erro: "Para marcar como perdido, escolha o motivo — é a objeção que ensina o funil." };
+    updates.stage = c.stage;
+    changes.push({ campo: "stage", de: atual.stage, para: c.stage });
+    if (c.stage === "perdido") updates.loss_reason = c.lossReason;
+    else if (atual.loss_reason) updates.loss_reason = null;
+  }
+  if ("temperature" in c && TEMPERATURAS.includes(c.temperature) && c.temperature !== atual.temperature) {
+    updates.temperature = c.temperature;
+    changes.push({ campo: "temperature", de: atual.temperature, para: c.temperature });
+  }
+  if ("nextActionAt" in c) {
+    const v = String(c.nextActionAt || "").slice(0, 10);
+    const novo = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+    const antigo = dia(atual.next_action_at);
+    if (novo !== antigo) { updates.next_action_at = novo; changes.push({ campo: "next_action_at", de: antigo, para: novo }); }
+  }
+  return { updates, changes };
+}
+
+export async function atualizarOportunidade(id, campos) {
+  if (!idValido(id)) return { ok: false, erro: "oportunidade inválida" };
+  const db = await banco();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const org = await garantirOrganizacao(client);
+    const atualQ = await client.query(
+      `SELECT o.*, c.name AS contact_name FROM opportunities o JOIN contacts c ON c.id=o.contact_id
+       WHERE o.id=$1 AND o.organization_id=$2 FOR UPDATE OF o`, [id, org.id]);
+    if (!atualQ.rowCount) { await client.query("ROLLBACK"); return { ok: false, erro: "oportunidade não encontrada" }; }
+    const atual = atualQ.rows[0];
+    const monta = montarAtualizacaoOportunidade(atual, campos);
+    if (monta.erro) { await client.query("ROLLBACK"); return { ok: false, erro: monta.erro }; }
+    const { updates, changes } = monta;
+    if (!Object.keys(updates).length) { await client.query("ROLLBACK"); return { ok: true, semMudanca: true }; }
+    updates.last_interaction_at = new Date(); /* mexer no funil É uma interação */
+    const sets = []; const vals = []; let i = 1;
+    for (const [col, v] of Object.entries(updates)) { sets.push(`${col}=$${i++}`); vals.push(v); }
+    vals.push(id, org.id);
+    await client.query(
+      `UPDATE opportunities SET ${sets.join(",")},updated_at=now() WHERE id=$${i++} AND organization_id=$${i}`, vals);
+    const base = { inventoryPropertyId: atual.inventory_property_id, contactName: atual.contact_name };
+    const st = changes.find(x => x.campo === "stage");
+    if (st) {
+      const tipo = st.para === "fechado" ? "opportunity.won" : st.para === "perdido" ? "opportunity.lost" : "opportunity.stage_changed";
+      await registrarEvento(client, org.id, tipo, "opportunity", id,
+        { ...base, de: st.de, para: st.para, motivo: updates.loss_reason || null });
+    }
+    const outros = changes.filter(x => x.campo !== "stage").map(x => x.campo);
+    if (outros.length && !st) await registrarEvento(client, org.id, "opportunity.updated", "opportunity", id, { ...base, campos: outros });
+    await client.query("COMMIT");
+    return { ok: true, changes };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally { client.release(); }
 }
 
 /* encontra por telefone ou cria o contato — vínculo sempre EXPLÍCITO e com evento */
@@ -431,6 +517,7 @@ export async function dossieImovel(id) {
        ORDER BY (status IN ('concluida','cancelada')), due_at ASC NULLS LAST LIMIT 40`, [org.id, id]),
     db.query(
       `SELECT o.id,o.stage,o.temperature,o.origin,o.created_at,o.last_interaction_at,
+              o.next_action_at,o.loss_reason,
               c.name AS contact_name, c.phone AS contact_phone
        FROM opportunities o JOIN contacts c ON c.id=o.contact_id
        WHERE o.organization_id=$1 AND o.inventory_property_id=$2

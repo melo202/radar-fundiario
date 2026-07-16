@@ -191,6 +191,12 @@ export async function painel(req, res) {
     const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
     return json(res, r.ok ? 200 : 400, r);
   }
+  if (req.method === "POST" && /^\/painel\/api\/os\/oportunidades\/[0-9a-f-]{36}\/atualizar$/.test(req.url)) {
+    /* D-2: funil — estágio/temperatura/próximo passo; "perdido" exige objeção tipificada */
+    const { atualizarOportunidade } = await import("./os-core.js");
+    const r = await atualizarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
+    return json(res, r.ok ? 200 : 400, r);
+  }
 
   /* SV-1: criar/atualizar o acompanhamento que o CLIENTE vê em /acompanhe/<token> */
   if (req.method === "POST" && req.url === "/painel/api/vendas") {

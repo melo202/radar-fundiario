@@ -48,6 +48,35 @@ async function confirmCapture(){if(!state.preview)return;const button=$("confirm
 
 /* ---------------- D-1: dossiê do imóvel (Visão geral · Comercial · Arquivos · Histórico) ---------------- */
 const tempLabel=t=>({quente:"🔥 Quente",morno:"Morno",frio:"Frio"})[t]||t;
+const OPP_STAGES=[["novo_interessado","Novo interessado"],["em_qualificacao","Em qualificação"],["imovel_apresentado","Imóvel apresentado"],["visita_agendada","Visita agendada"],["visitou","Visitou"],["negociando","Negociando"],["proposta","Proposta"],["fechado","Fechado"],["perdido","Perdido"]];
+const OBJECOES=[["preco","Preço"],["financiamento","Financiamento"],["documentacao","Documentação"],["localizacao","Localização"],["caracteristicas","Características do imóvel"],["comprou_outro","Comprou outro"],["desistiu","Desistiu da compra"],["sem_retorno","Parou de responder"]];
+const oppStageLabel=s=>(OPP_STAGES.find(x=>x[0]===s)||[])[1]||s;
+/* D-2: o interessado CAMINHA pelo funil dentro do dossiê — perdido exige objeção tipificada */
+function oppCard(o){
+  const fechado=o.stage==="fechado",perdido=o.stage==="perdido";
+  const head=el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:o.contact_name}),el("p",{text:[oppStageLabel(o.stage),perdido&&o.loss_reason?`motivo: ${(OBJECOES.find(x=>x[0]===o.loss_reason)||[])[1]||o.loss_reason}`:null,o.contact_phone?`tel. final ${String(o.contact_phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:fechado?"badge":perdido?"badge critical":o.temperature==="quente"?"badge high":"badge",text:fechado?"🎉 Fechado":perdido?"Perdido":tempLabel(o.temperature)})]);
+  const meta=el("div",{class:"meta"},[el("span",{text:`Desde ${date(o.created_at)}`}),el("span",{text:o.last_interaction_at?`Última interação: ${date(o.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:o.next_action_at?`Próximo passo: ${date(o.next_action_at)}`:"Sem próximo passo marcado"})]);
+  const form=el("form",{class:"os-form"});
+  const stage=el("select",{class:"os-select"});OPP_STAGES.forEach(([v,l])=>stage.append(el("option",{value:v,text:l,selected:o.stage===v})));
+  const temp=el("select",{class:"os-select"});[["quente","🔥 Quente"],["morno","Morno"],["frio","Frio"]].forEach(([v,l])=>temp.append(el("option",{value:v,text:l,selected:o.temperature===v})));
+  const prox=el("input",{class:"os-input",type:"date",value:o.next_action_at?String(o.next_action_at).slice(0,10):""});
+  const motivoWrap=el("div",{hidden:o.stage!=="perdido"});
+  const motivo=el("select",{class:"os-select"});OBJECOES.forEach(([v,l])=>motivo.append(el("option",{value:v,text:l,selected:o.loss_reason===v})));
+  motivoWrap.append(el("label",{text:"Por que perdeu? (a objeção ensina o funil)"}),motivo);
+  stage.addEventListener("change",()=>{motivoWrap.hidden=stage.value!=="perdido";});
+  const btn=el("button",{class:"card-action secondary",type:"submit",text:"Salvar andamento"});
+  form.append(el("label",{text:"Estágio"}),stage,el("label",{text:"Temperatura"}),temp,el("label",{text:"Próximo passo (data)"}),prox,motivoWrap,btn);
+  form.addEventListener("submit",ev=>{ev.preventDefault();saveOpportunity(o.id,{stage:stage.value,temperature:temp.value,nextActionAt:prox.value,lossReason:stage.value==="perdido"?motivo.value:undefined},btn);});
+  return el("article",{class:"entity-card"},[head,meta,form]);
+}
+async function saveOpportunity(id,dados,btn){
+  btn.disabled=true;btn.textContent="Salvando…";
+  try{
+    const r=await api(`/painel/api/os/oportunidades/${id}/atualizar`,{method:"POST",body:JSON.stringify(dados)});
+    toast(r.semMudanca?"Nada mudou no funil.":dados.stage==="fechado"?"Negócio fechado — parabéns! 🎉":"Funil atualizado.");
+    invalidateLists();await loadProperty();
+  }catch(e){toast(e.message);btn.disabled=false;btn.textContent="Salvar andamento";}
+}
 const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
 function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
 function openProperty(id){state.property={id,data:null,tab:"geral",mercado:null};switchView("property");loadProperty();}
@@ -87,7 +116,7 @@ function renderPropTab(){
       pend.length?el("div",{},[el("p",{class:"eyebrow",text:`Pendências (${pend.length})`}),el("div",{class:"stack"},pendCards)]):el("div",{class:"empty-card"},[el("h3",{text:"Nenhuma pendência aberta"}),el("p",{text:"O cadastro deste imóvel está em dia para o estágio atual."})]),
       el("article",{class:"entity-card"},[el("h3",{text:"Completar cadastro"}),el("p",{text:"Pendências que a atualização resolver se concluem sozinhas."}),form]));
   }else if(state.property.tab==="comercial"){
-    const ops=(d.opportunities||[]).map(o=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:o.contact_name}),el("p",{text:[({novo_interessado:"Novo interessado",em_qualificacao:"Em qualificação",imovel_apresentado:"Imóvel apresentado",visita_agendada:"Visita agendada",visitou:"Visitou",negociando:"Negociando",proposta:"Proposta",fechado:"Fechado",perdido:"Perdido"})[o.stage]||o.stage,o.contact_phone?`tel. final ${String(o.contact_phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:o.temperature==="quente"?"badge high":"badge",text:tempLabel(o.temperature)})]),el("div",{class:"meta"},[el("span",{text:`Desde ${date(o.created_at)}`}),el("span",{text:o.last_interaction_at?`Última interação: ${date(o.last_interaction_at)}`:"Sem interação registrada"})])]));
+    const ops=(d.opportunities||[]).map(o=>oppCard(o));
     const form=el("form",{class:"os-form"});
     const nome=el("input",{class:"os-input",name:"name",placeholder:"Nome do interessado"});
     const tel=el("input",{class:"os-input",name:"phone",inputMode:"tel",placeholder:"Telefone (opcional)"});
