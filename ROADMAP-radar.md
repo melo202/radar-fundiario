@@ -127,8 +127,8 @@ Especificação completa do usuário + diagnóstico Fase 1 (auditoria) + adapta�
 
 ### P1 — Infra própria (servidor + domínio) — aguardando o servidor do usuário
 
-- ⬜ Proxy CORS próprio para o ArcGIS da prefeitura (fecha o item 14): elimina JSONP, adiciona cache e protege o endpoint frágil. O app estático pode continuar no Pages, apontado pelo domínio.
-- ⬜ Domínio + HTTPS; decidir onde o estático vive (Pages com domínio próprio vs servir do servidor).
+- ✅ (15/07) Proxy CORS próprio para o ArcGIS da prefeitura (fechou o item 14): elimina JSONP, adiciona cache e protege o endpoint frágil. O app estático pode continuar no Pages, apontado pelo domínio.
+- ✅ (15/07) Domínio + HTTPS (corretorinteligente.tech no VPS, TLS auto-renovável); decidido onde o estático vive (Pages com domínio próprio vs servir do servidor).
 
 ### P1 — Módulo de pesquisa de mercado com IA (isolado do núcleo)
 
@@ -204,7 +204,7 @@ O produto muda de nome: **Radar Fundiário → Corretor Inteligente** (casa com 
 
 Hoje a varredura noturna só DESCOBRE anúncios novos; ninguém revisita os já conhecidos. Para "novos imóveis, novos valores":
 
-- ⬜ **A1 — Revisita dos anúncios conhecidos:** rotina periódica que re-busca URLs já colhidas (respeitando a cota Brave), atualiza `last_seen_at`, grava mudança de preço em `price_history` (a tabela já existe e está subusada) e marca anúncio sumido como possivelmente vendido/retirado — sinal de mercado valioso.
+- ✅ (15/07) **A1 — Revisita dos anúncios conhecidos** (pelas varreduras + busca ao vivo: delta de preço em price_history + auditoria mudanca-preco). Plano original: rotina periódica que re-busca URLs já colhidas (respeitando a cota Brave), atualiza `last_seen_at`, grava mudança de preço em `price_history` (a tabela já existe e está subusada) e marca anúncio sumido como possivelmente vendido/retirado — sinal de mercado valioso.
 - ✅ (15/07) **A2 — Frescor honesto na avaliação:** ofertasColetadasEntre no resultado; card Mercado e laudo declaram o período da amostra. Verificado ao vivo. Alerta de amostra velha: o peso de recência (§8) já existe; expor a IDADE da amostra no card Mercado e no laudo ("ofertas coletadas entre X e Y"), e alertar quando a mediana da amostra passar de N dias.
 - ✅ (15/07) **A3 — Sinal de variação:** painel ganhou o bloco "Mercado em movimento" (subiu/baixou por anúncio, agregado, com fonte); popula conforme as varreduras capturam mudanças. Métrica por bairro: quando um mesmo anúncio muda de preço, registrar o delta e usar como termômetro do bairro (métrica agregada, nunca inferência por imóvel isolado).
 
