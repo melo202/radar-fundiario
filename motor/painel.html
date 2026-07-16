@@ -107,6 +107,17 @@
       <p style="font-size:11.5px;color:var(--muted);margin-top:10px">Toda exclusão fica registrada com motivo e autor na avaliação original; o recálculo cria uma VERSÃO nova encadeada — nada é sobrescrito.</p>
     </div>
     <div class="card">
+      <h2>Vendas — acompanhamento do cliente</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Crie um link e o cliente acompanha a compra como rastreio de encomenda (menos "e aí, como tá?"). Use um <b>apelido do imóvel</b> ("Apto Bueno 302") — <b>nunca o nome do cliente</b>: nenhum dado pessoal vai ao servidor.</p>
+      <form id="formVenda" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="vApelido" placeholder="Apelido do imóvel (ex.: Apto Bueno 302)" required maxlength="60" style="flex:1;min-width:200px;font:inherit;padding:9px 12px;border:1px solid var(--linha);border-radius:9px">
+        <input id="vCorretor" placeholder="Seu nome · CRECI (aparece na página)" maxlength="80" style="flex:1;min-width:200px;font:inherit;padding:9px 12px;border:1px solid var(--linha);border-radius:9px">
+        <button type="submit">Criar link</button>
+      </form>
+      <span id="vendaStat" style="font-size:13px;color:var(--muted)"></span>
+      <div id="vendas" style="margin-top:14px"><div class="skel" style="height:60px"></div></div>
+    </div>
+    <div class="card">
       <h2>Chamadas de IA recentes</h2>
       <div id="ia"><div class="skel" style="height:120px"></div></div>
     </div>
@@ -216,6 +227,7 @@ function render(d){
   $("avaliacoes").innerHTML=(d.avaliacoes||[]).length?`<table><tr><th>Quando</th><th>Bairro</th><th>Tipo</th><th>Valor</th><th>Confiança</th></tr>${d.avaliacoes.map(v=>`<tr data-id="${esc(v.id)}" style="cursor:pointer"><td>${dt(v.created_at)}</td><td>${esc(v.bairro)}</td><td>${esc(v.tipo)}</td><td>${brl(v.valor)}</td><td>${esc(v.confianca||v.status)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma avaliação ainda.</p>";
   $("ia").innerHTML=(d.ia||[]).length?`<table><tr><th>Quando</th><th>Tarefa</th><th>Modelo</th><th>Duração</th><th></th></tr>${d.ia.map(l=>`<tr><td>${dt(l.created_at)}</td><td>${esc(l.task)}</td><td>${esc(l.model)}</td><td>${l.duration_ms!=null?(l.duration_ms/1000).toFixed(1)+" s":"—"}</td><td class="${l.ok?"ok":"falha"}">${l.ok?"ok":"falhou"}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma chamada registrada.</p>";
   $("eventos").innerHTML=(d.eventos||[]).length?`<table><tr><th>Quando</th><th>Entidade</th><th>Ação</th></tr>${d.eventos.map(e=>`<tr><td>${dt(e.created_at)}</td><td>${esc(e.entity)}</td><td>${esc(e.action)}</td></tr>`).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Sem eventos.</p>";
+  vendasCarrega(); /* SV-1: própria rota — a visão geral não espera as vendas */
   $("mudancas").innerHTML=(d.mudancas||[]).length?`<table><tr><th>Quando</th><th>Portal</th><th>De</th><th>Para</th><th></th></tr>${d.mudancas.map(m=>{const x=m.detail||{};const sobe=Number(x.para)>Number(x.de);return `<tr><td>${dt(m.created_at)}</td><td><a href="${esc(x.url||"#")}" target="_blank" rel="noopener">${esc(x.portal||"")}</a></td><td>${brl(x.de)}</td><td>${brl(x.para)}</td><td class="${sobe?"falha":"ok"}">${sobe?"subiu":"baixou"}</td></tr>`;}).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma mudança de preço detectada ainda — as varreduras noturnas capturam quando o mesmo anúncio reaparece com valor novo.</p>";
 }
 
@@ -256,6 +268,78 @@ $("btnRequal").addEventListener("click",async()=>{
     visao();
   }catch{s.textContent="falhou — tente de novo.";}
   b.disabled=false;
+});
+
+/* ---- SV-1: vendas em acompanhamento (o cliente vê /acompanhe/<token>) ---- */
+const ETAPAS=[["proposta","Proposta aceita"],["documentacao","Documentação e certidões"],["itbi","ITBI pago"],["cartorio","Escritura assinada"],["registro","Registro concluído"]];
+const copia=async(tx,ok)=>{try{await navigator.clipboard.writeText(tx);$("vendaStat").textContent=ok;}catch{prompt("Copie:",tx);}};
+/* SV-2 no clique: espelho da mensagem do servidor (mensagemEtapa) para copiar sem gravar nada */
+function msgVenda(v){
+  const link=`https://corretorinteligente.tech/acompanhe/${v.token}`;
+  const feitas=v.etapas.filter(e=>e.em);
+  if(!feitas.length)return `Olá! Criei uma página para você acompanhar cada etapa da compra do ${v.apelido}, em tempo real, como um rastreio de encomenda: ${link}`;
+  const u=feitas[feitas.length-1],rot=(ETAPAS.find(e=>e[0]===u.id)||[])[1]||u.id;
+  const prox=ETAPAS.find(e=>!v.etapas.find(x=>x.id===e[0]).em);
+  return `Boa notícia! O processo do ${v.apelido} avançou: ✅ ${rot} (${u.em.split("-").reverse().join("/")}).`+(u.obs?` ${u.obs}.`:"")+(prox?` Próxima etapa: ${prox[1]}.`:" Processo concluído — parabéns! 🎉")+`\nAcompanhe tudo aqui: ${link}`;
+}
+function renderVendas(vs){
+  $("vendas").innerHTML=(vs||[]).length?vs.map(v=>{
+    const n=v.etapas.filter(e=>e.em).length;
+    const prox=ETAPAS.find(e=>!v.etapas.find(x=>x.id===e[0]).em);
+    return `<div data-token="${esc(v.token)}" style="border:1px solid var(--linha);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b>${esc(v.apelido)}</b>
+        <span style="font-size:12px;color:${n===5?"var(--brand)":"var(--muted)"}">${n===5?"✓ concluída":n+" de 5 etapas"}</span>
+        <a href="/acompanhe/${esc(v.token)}" target="_blank" rel="noopener" style="font-size:12.5px">ver como o cliente ↗</a>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;align-items:center">
+        ${prox?`<input data-campo="obs" placeholder="Observação da etapa (opcional, o cliente lê)" maxlength="200" style="flex:1;min-width:180px;font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--linha);border-radius:8px">
+        <button type="button" data-acao="marcar" data-etapa="${prox[0]}" style="padding:6px 12px;font-size:12.5px">✓ ${esc(prox[1])}</button>`:""}
+        ${n?`<button type="button" data-acao="desfazer" style="padding:6px 12px;font-size:12.5px;background:transparent;color:var(--muted);border:1px solid var(--linha)">desfazer última</button>`:""}
+        <button type="button" data-acao="link" style="padding:6px 12px;font-size:12.5px;background:transparent;color:var(--brand-strong);border:1px solid var(--linha)">⧉ link</button>
+        <button type="button" data-acao="whats" style="padding:6px 12px;font-size:12.5px;background:transparent;color:var(--brand-strong);border:1px solid var(--linha)">⧉ mensagem p/ WhatsApp</button>
+        <button type="button" data-acao="apagar" style="padding:6px 12px;font-size:12.5px;background:transparent;color:#c0392b;border:1px solid var(--linha)">apagar</button>
+      </div></div>`;
+  }).join(""):"<p style='color:var(--muted);font-size:13px'>Nenhuma venda em acompanhamento — crie o primeiro link acima.</p>";
+  $("vendas").dataset.raw=JSON.stringify(vs||[]);
+}
+async function vendasCarrega(){
+  try{const r=await fetch("/painel/api/vendas");if(!r.ok)throw 0;renderVendas((await r.json()).vendas);}
+  catch{$("vendas").innerHTML="<p style='color:var(--muted);font-size:13px'>Não consegui carregar as vendas.</p>";}
+}
+$("formVenda").addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  try{
+    const r=await fetch("/painel/api/vendas",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":CSRF},
+      body:JSON.stringify({apelido:$("vApelido").value,corretor:$("vCorretor").value})});
+    const d=await r.json();if(!r.ok)throw new Error(d.erro||"falha");
+    $("vApelido").value="";
+    copia(d.mensagem,"Link criado — a mensagem de boas-vindas já está copiada, é só colar no WhatsApp do cliente.");
+    vendasCarrega();
+  }catch(e2){$("vendaStat").textContent=e2.message;}
+});
+$("vendas").addEventListener("click",async e=>{
+  const b=e.target.closest("button[data-acao]");if(!b)return;
+  const box=b.closest("div[data-token]"),token=box.dataset.token;
+  const vs=JSON.parse($("vendas").dataset.raw||"[]"),v=vs.find(x=>x.token===token);
+  const acao=b.dataset.acao;
+  if(acao==="link")return copia(`https://corretorinteligente.tech/acompanhe/${token}`,"Link copiado.");
+  if(acao==="whats")return copia(msgVenda(v),"Mensagem copiada — cole no WhatsApp do cliente.");
+  if(acao==="apagar"&&!confirm(`Apagar o acompanhamento "${v.apelido}"? O link do cliente deixa de existir.`))return;
+  b.disabled=true;
+  try{
+    let r;
+    if(acao==="apagar")r=await fetch(`/painel/api/vendas/${token}/excluir`,{method:"POST",headers:{"X-CSRF-Token":CSRF}});
+    else{
+      const etapa=acao==="desfazer"?v.etapas.filter(x=>x.em).slice(-1)[0].id:b.dataset.etapa;
+      const obs=acao==="marcar"?(box.querySelector('input[data-campo="obs"]')||{}).value||"":"";
+      r=await fetch(`/painel/api/vendas/${token}/etapa`,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":CSRF},
+        body:JSON.stringify({etapa,obs,desfazer:acao==="desfazer"})});
+    }
+    const d=await r.json();if(!r.ok)throw new Error(d.erro||"falha");
+    if(acao==="marcar")copia(d.mensagem,"Etapa marcada — a mensagem de atualização já está copiada, é só colar no WhatsApp.");
+    vendasCarrega();
+  }catch(e2){$("vendaStat").textContent=e2.message;b.disabled=false;}
 });
 
 /* ---- Revisão da amostra (§14): exclusão com motivo + recálculo versionado ---- */

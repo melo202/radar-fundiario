@@ -46,6 +46,18 @@ http.createServer(async (req, res) => {
       const { painel } = await import("./painel.js");
       return painel(req, res);
     }
+    if (req.method === "GET" && req.url.startsWith("/acompanhe/")) {
+      /* SV-1: página pública do CLIENTE (o nginx do domínio principal aponta para cá).
+         Token aleatório é a única chave; sem listagem; HTML com noindex. Rate limit
+         próprio — página de leitura, nunca gasta cota. */
+      const { buscarVenda, paginaAcompanheHTML, paginaNaoEncontradaHTML } = await import("./vendas.js");
+      if (estourou(req, 30, "acompanhe")) return json(res, 429, { erro: "muitas consultas — tente em 1 minuto" });
+      const venda = await buscarVenda(decodeURIComponent(req.url.slice("/acompanhe/".length)).replace(/\/+$/, ""));
+      res.writeHead(venda ? 200 : 404, Object.assign({ "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src https://corretorinteligente.tech" }, SEC));
+      return res.end(venda ? paginaAcompanheHTML(venda) : paginaNaoEncontradaHTML());
+    }
     if (req.method === "GET" && req.url === "/motor/health") {
       const db = await pool.query("SELECT count(*)::int AS migracoes FROM schema_migrations").then(r => r.rows[0]).catch(e => ({ erro: e.message }));
       const ia = await fetch((process.env.AI_BASE_URL || "http://localhost:11434") + "/api/version",

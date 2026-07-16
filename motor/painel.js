@@ -107,8 +107,34 @@ export async function painel(req, res) {
        ORDER BY vc.accepted DESC, vc.total_score DESC NULLS LAST`, [id]);
     return json(res, 200, { ...v.rows[0], comparaveis: comps.rows });
   }
+  if (req.method === "GET" && req.url === "/painel/api/vendas") {
+    /* SV-1: vendas em acompanhamento (sem PII — apelido + etapas apenas) */
+    const { listarVendas } = await import("./vendas.js");
+    return json(res, 200, { vendas: await listarVendas() });
+  }
   /* POSTs autenticados exigem o token CSRF (SEG-04) */
   if (req.method === "POST" && !csrfOk(req, sessao)) return json(res, 403, { erro: "csrf" });
+
+  /* SV-1: criar/atualizar o acompanhamento que o CLIENTE vê em /acompanhe/<token> */
+  if (req.method === "POST" && req.url === "/painel/api/vendas") {
+    const { criarVenda, mensagemEtapa, buscarVenda } = await import("./vendas.js");
+    const { apelido, corretor } = JSON.parse(await readBody(req) || "{}");
+    const r = await criarVenda(apelido, corretor);
+    if (r.erro) return json(res, 400, r);
+    return json(res, 200, { token: r.token, mensagem: mensagemEtapa(await buscarVenda(r.token)) });
+  }
+  if (req.method === "POST" && /^\/painel\/api\/vendas\/[A-Za-z0-9_-]{16}\/etapa$/.test(req.url)) {
+    const { marcarEtapa, mensagemEtapa, buscarVenda } = await import("./vendas.js");
+    const token = req.url.split("/")[4];
+    const { etapa, obs, desfazer } = JSON.parse(await readBody(req) || "{}");
+    const r = await marcarEtapa(token, etapa, obs, !!desfazer);
+    if (r.erro) return json(res, 400, r);
+    return json(res, 200, { ok: true, mensagem: mensagemEtapa(await buscarVenda(token)) });
+  }
+  if (req.method === "POST" && /^\/painel\/api\/vendas\/[A-Za-z0-9_-]{16}\/excluir$/.test(req.url)) {
+    const { excluirVenda } = await import("./vendas.js");
+    return json(res, 200, await excluirVenda(req.url.split("/")[4]));
+  }
 
   if (req.method === "POST" && req.url === "/painel/sair") {
     return json(res, 200, { ok: true }, { "Set-Cookie": cookieLimpa() });
