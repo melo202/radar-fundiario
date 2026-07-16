@@ -49,6 +49,7 @@ test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e nã
   assert.ok(ao.includes('PORTAIS_AOVIVO = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"]'));
   assert.ok(ao.includes("CACHE_H = 6"), "cache de 6h por bairro protege a cota global");
   assert.ok(ao.includes("maxExtrair: restante"), "extração limitada p/ o clique não travar");
+  assert.ok(ao.includes("TETO_EXTRACAO = 5"), "teto otimizado (15/07): o clique não espera mais que o necessário");
 });
 
 test("links e mapa na avaliação: comparáveis clicáveis, atalhos de portal e recorte do mapa", () => {

@@ -12,7 +12,10 @@ import { normalizaBairro } from "./estatistica.js";
 
 const PORTAIS_AOVIVO = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"];
 const CACHE_H = 6;
-const TETO_EXTRACAO = 10; /* por clique, somando os portais */
+/* teto por clique (15/07, "sempre otimizar"): 5 corta o pior caso pela metade — o
+   clique traz o suficiente para engordar a amostra AGORA e a varredura noturna extrai
+   o resto dos listings já coletados, sem ninguém esperando na frente da tela */
+const TETO_EXTRACAO = 5;
 
 export async function avaliarAoVivo(subject) {
   const bairro = subject.neighborhood, tipo = subject.propertyType;
