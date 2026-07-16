@@ -30,7 +30,11 @@ def num(v):
 
 def main():
     print(f"Baixando {URL} ...", flush=True)
-    urllib.request.urlretrieve(URL, ARQ + ".tmp")
+    # o servidor da FIPE responde 403 ao User-Agent padrão do urllib (curl passa) —
+    # identificar-se como navegador comum resolve
+    req = urllib.request.Request(URL, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) CorretorInteligente/1.0"})
+    with urllib.request.urlopen(req, timeout=120) as r, open(ARQ + ".tmp", "wb") as f:
+        f.write(r.read())
     os.replace(ARQ + ".tmp", ARQ)
 
     import openpyxl
