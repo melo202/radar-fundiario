@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Corretor Inteligente · Seu dia</title>
+  <link rel="stylesheet" href="/painel/os.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/painel/os" aria-label="Corretor Inteligente — início">
+      <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_horizontal_flat.svg" alt="Corretor Inteligente">
+    </a>
+    <a class="radar-link" href="/" target="_blank" rel="noopener">Abrir Radar</a>
+  </header>
+
+  <main class="shell" id="main">
+    <section class="view is-active" data-view="today" aria-labelledby="todayTitle">
+      <div class="hero">
+        <p class="eyebrow">Seu dia</p>
+        <h1 id="todayTitle">Estas são as coisas que merecem sua atenção hoje.</h1>
+        <p id="todaySummary" class="hero-copy">Organizando suas próximas ações…</p>
+      </div>
+      <div class="count-grid" id="todayCounts" aria-label="Resumo operacional"></div>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Próximas ações</p>
+          <h2>O que fazer agora</h2>
+        </div>
+        <button class="text-button" type="button" id="refreshToday">Atualizar</button>
+      </div>
+      <div class="stack" id="todayActions" aria-live="polite"></div>
+    </section>
+
+    <section class="view" data-view="portfolio" aria-labelledby="portfolioTitle" hidden>
+      <div class="hero compact">
+        <p class="eyebrow">Carteira</p>
+        <h1 id="portfolioTitle">Imóveis em contexto, não em planilhas.</h1>
+        <p class="hero-copy">Cada imóvel mostra estágio, proprietário, oportunidades e pendências.</p>
+      </div>
+      <div class="stack" id="portfolioList" aria-live="polite"></div>
+    </section>
+
+    <section class="view" data-view="relationships" aria-labelledby="relationshipsTitle" hidden>
+      <div class="hero compact">
+        <p class="eyebrow">Relacionamentos</p>
+        <h1 id="relationshipsTitle">Pessoas, preferências e negociações.</h1>
+        <p class="hero-copy">O histórico comercial deve sobreviver à troca de aparelho e de navegador.</p>
+      </div>
+      <div class="stack" id="relationshipsList" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <button type="button" class="nav-item is-active" data-target="today" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌂</span><span>Hoje</span>
+    </button>
+    <button type="button" class="nav-item" data-target="portfolio">
+      <span class="nav-icon" aria-hidden="true">▱</span><span>Carteira</span>
+    </button>
+    <button type="button" class="capture-button" id="openCapture" aria-haspopup="dialog">
+      <span aria-hidden="true">＋</span><span>Capturar</span>
+    </button>
+    <button type="button" class="nav-item" data-target="relationships">
+      <span class="nav-icon" aria-hidden="true">◌</span><span>Relações</span>
+    </button>
+    <a class="nav-item" href="/painel">
+      <span class="nav-icon" aria-hidden="true">⋯</span><span>Painel</span>
+    </a>
+  </nav>
+
+  <dialog id="captureDialog" class="capture-dialog" aria-labelledby="captureTitle">
+    <form method="dialog" class="dialog-head">
+      <div>
+        <p class="eyebrow">Captura universal</p>
+        <h2 id="captureTitle">Fale como você falaria com uma assistente.</h2>
+      </div>
+      <button type="submit" class="icon-button" aria-label="Fechar">×</button>
+    </form>
+    <div class="dialog-body">
+      <label for="captureText">Descreva o que aconteceu</label>
+      <textarea id="captureText" rows="5" placeholder="Ex.: Captei uma casa no Jardins, quatro quartos, proprietário quer 2,3 milhões e aceita permuta."></textarea>
+      <p class="field-help">Nada será salvo antes da sua confirmação.</p>
+      <button type="button" class="primary-button" id="interpretCapture">Interpretar cadastro</button>
+      <div id="captureStatus" class="status" role="status" aria-live="polite"></div>
+      <section id="capturePreview" class="preview" hidden aria-label="Prévia do cadastro">
+        <div id="previewFields" class="preview-fields"></div>
+        <div>
+          <p class="eyebrow">Ainda falta</p>
+          <ul id="previewMissing" class="missing-list"></ul>
+        </div>
+        <button type="button" class="primary-button" id="confirmCapture">Confirmar e criar imóvel</button>
+      </section>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/painel/os.js" defer></script>
+</body>
+</html>
