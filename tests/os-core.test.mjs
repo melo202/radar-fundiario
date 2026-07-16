@@ -49,6 +49,10 @@ test("OS-01: domínio privado não reutiliza o acervo público de comparáveis",
   assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS contacts"));
   assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS domain_events"));
   assert.ok(!migration.includes("ALTER TABLE properties"));
+  assert.ok(migration.includes("temperature"), "temperatura qualitativa preserva o vocabulário comercial");
+  assert.ok(!migration.includes("probability"), "sem falsa precisão antes de dados históricos");
+  assert.ok(!migration.includes("CREATE TABLE IF NOT EXISTS recommendations"), "recomendações persistidas ficam para a fase com interface");
+  assert.ok(!migration.includes("CREATE TABLE IF NOT EXISTS approvals"), "aprovações ficam para a fase que realmente as usa");
   assert.match(migration, /organization_id uuid NOT NULL REFERENCES organizations/);
 });
 
