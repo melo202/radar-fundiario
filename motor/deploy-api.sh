@@ -3,8 +3,11 @@
 # Roda NO SERVIDOR: bash /opt/radar/repo/motor/deploy-api.sh
 set -euo pipefail
 cd /opt/radar/repo
-git fetch -q origin agent/radar-ultrapremium
-git reset -q --hard origin/agent/radar-ultrapremium
+# OS-02 (16/07/2026): a hospedagem acompanha a branch do Corretor Inteligente OS —
+# a ultrapremium fica congelada como base recuperável (só bugfix).
+git fetch -q origin agent/corretor-inteligente-os
+git checkout -q agent/corretor-inteligente-os 2>/dev/null || git checkout -qb agent/corretor-inteligente-os origin/agent/corretor-inteligente-os
+git reset -q --hard origin/agent/corretor-inteligente-os
 mkdir -p /opt/radar/api
 cp -r motor/. /opt/radar/api/
 cp limite-goiania.json /opt/radar/api/ # fundo Cidade Viva do login do painel
