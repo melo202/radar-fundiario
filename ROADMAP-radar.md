@@ -223,6 +223,8 @@ O produto hoje cobre da BUSCA ao DOCUMENTO. As três ideias fecham o ciclo do co
 
 Ordem sugerida: **FU-1 → MK-1 → SV-1** (follow-up é dor diária; marketing gera visibilidade; status precisa do painel que já existe).
 
+**GARIMPO DO IMOBRADAR (16/07/2026 — repo privado melo202/imobradar, estudado com autorização):** o usuário JÁ construiu um SaaS de gestão comercial (Next.js+Supabase: leads, visitas, follow-ups, propostas, alertas, performance). O que aproveitamos no FU-1 é o MODELO DE DOMÍNIO maduro, não o código (stack diferente): (a) pipeline de lead com 8+ estágios e TEMPERATURA (quente/morno/frio); (b) visita com FEEDBACK estruturado (gostou/não gostou/quer negociar) e OBJEÇÕES tipificadas (preço, localização, tamanho, acabamento, documentação, condomínio, financiamento) — ouro para o corretor saber POR QUE não fechou; (c) follow-up TIPADO (ligar, WhatsApp, enviar imóveis, confirmar visita, cobrar proposta) com status vencido; (d) MOTOR DE ALERTAS com regras parametrizadas que se AUTO-RESOLVEM quando a condição sara: lead novo sem contato em X horas, lead quente sem próxima ação, follow-up vencido, visita sem feedback, proposta parada X dias — é o ''vendas em risco''. DECISÃO ESTRATÉGICA registrada: o FU-1 local-first nasce com ESTE vocabulário (etiquetas em PT), e quando o multitenant chegar, o ImobRadar é o candidato natural a virar o ''modo equipe/imobiliária'' do Corretor Inteligente — os dois produtos se encaixam (CI = imóvel/avaliação; IR = operação comercial).
+
 ### Pendências humanas (inalteradas)
 
 - ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.
