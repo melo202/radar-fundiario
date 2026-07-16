@@ -7185,7 +7185,7 @@ function renderMercado(d,subject){
      A chave prende a análise ao imóvel — laudo de OUTRO imóvel nunca herda esta seção. */
   MERCADO_LAST={chave:clean(MERCADO_A&&MERCADO_A.nrinscr)||clean(MERCADO_A&&MERCADO_A.ci)||null,
     d,quando:new Date().toLocaleDateString("pt-BR")};
-  const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
+  const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""}${c.deVizinho?` · <i>${esc(c.bairro)}</i>`:""})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
   const subjLL=(MERCADO_A&&MERCADO_A.x_coord&&MERCADO_A.y_coord)?toWGS(MERCADO_A.x_coord,MERCADO_A.y_coord):null;
   const mini=miniMapaOfertas(d.comparaveis||[],subjLL);

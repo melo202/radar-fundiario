@@ -37,6 +37,23 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
 });
 
+test("amostra ampliada: bairro sem 5 ofertas amplia para VIZINHOS por distância real — e declara", () => {
+  /* report do usuário (16/07): "não consegui fazer laudo" — testes na periferia, onde o
+     bairro sozinho nunca junta 5 ofertas */
+  const av = readFileSync(new URL("../motor/avaliacao.js", import.meta.url), "utf-8");
+  assert.ok(av.includes("centroidesLocalidades"), "vizinhança por centroides do CNEFE, não lista chutada");
+  assert.ok(av.includes("distM(c.lat, c.lon) <= 2500"), "raio de 2,5 km entre centros de bairro");
+  assert.ok(av.includes('perto.some(L => localidadeCasa(L, r.neighborhood)) ? "vizinho" : null'));
+  assert.ok(av.includes("Amostra AMPLIADA para bairros vizinhos"), "premissa declarada no resultado");
+  assert.ok(av.includes("os preços podem refletir padrões diferentes do micro-local"), "aviso honesto");
+  assert.ok(av.includes("Amostra insuficiente mesmo ampliando"), "insuficiência pós-ampliação também é declarada");
+  /* card mostra o bairro da oferta vizinha; documento ganha coluna Bairro + nota */
+  assert.ok(html.includes("c.deVizinho?` · <i>${esc(c.bairro)}</i>`"));
+  const doc = readFileSync(new URL("../motor/documento.js", import.meta.url), "utf-8");
+  assert.ok(doc.includes("<th>Bairro</th>"));
+  assert.ok(doc.includes("Amostra ampliada para bairros vizinhos"));
+});
+
 test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e não o acervo estático", () => {
   /* pedido do usuário (15/07): "quando eu clicar em analisar tem que disparar e procurar nos sites" */
   assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/mercado"/);

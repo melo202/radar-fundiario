@@ -9,7 +9,7 @@ const src = (p) => readFileSync(new URL(p, import.meta.url), "utf-8");
 test("motor: exclusão manual filtra a amostra e é contada à parte (nunca silenciosa)", () => {
   const av = src("../motor/avaliacao.js");
   assert.ok(av.includes('if (excluir.has(String(r.id))) { excluidosManual++; continue; }'));
-  assert.ok(av.includes("excluidosManual },"), "contagem exposta no sample");
+  assert.ok(av.includes("excluidosManual, ofertasColetadasEntre"), "contagem exposta no sample");
 });
 
 test("motor: recálculo revisado é VERSÃO encadeada com a revisão declarada nas premissas", () => {

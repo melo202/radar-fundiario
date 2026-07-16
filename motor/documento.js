@@ -50,7 +50,7 @@ export async function documentoDaAvaliacao(id) {
   const v = q.rows[0], r = v.result || {}, s = v.subject || {}, amostra = r.sample || {};
   const comps = await pool.query(
     `SELECT vc.total_score, vc.accepted, vc.is_outlier, vc.rejection_reasons, vc.manual_change,
-            p.characteristics, p.pricing, l.portal, l.url,
+            p.characteristics, p.pricing, p.neighborhood, l.portal, l.url,
             ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon
      FROM valuation_comparables vc
      JOIN properties p ON p.id = vc.property_id
@@ -69,6 +69,7 @@ export async function documentoDaAvaliacao(id) {
     const area = ch.privateAreaM2 || ch.totalAreaM2 || null;
     const pm2 = area > 0 && pr.askingPrice > 0 ? Math.round(pr.askingPrice / area) : null;
     return `<tr><td class="num">${i + 1}</td><td><a href="${esc(c.url)}" rel="noopener">${esc(c.portal)}</a></td>
+      <td>${esc(c.neighborhood || "—")}</td>
       <td>${area ?? "—"} m²</td><td>${ch.bedrooms ?? "—"}</td>
       <td>${brl(pr.askingPrice)}</td><td>${pm2 ? brl(pm2) : "—"}/m²</td>
       <td>${c.total_score != null ? (+c.total_score).toFixed(2) : "—"}</td></tr>`;
@@ -172,7 +173,8 @@ ${r.indiceMercado ? `<p class="mini" style="margin-top:6px"><b>${esc(r.indiceMer
 ${locHTML}
 
 <h2>Ofertas aceitas no cálculo (${aceitos.length})</h2>
-<table><tr><th></th><th>Fonte</th><th>Área</th><th>Quartos</th><th>Preço anunciado</th><th>R$/m²</th><th>Peso</th></tr>${linhas}</table>
+<table><tr><th></th><th>Fonte</th><th>Bairro</th><th>Área</th><th>Quartos</th><th>Preço anunciado</th><th>R$/m²</th><th>Peso</th></tr>${linhas}</table>
+${amostra.amostraAmpliada ? `<p class="mini"><b>Amostra ampliada para bairros vizinhos</b> (raio ~2,5 km — IBGE/CNEFE): o bairro do imóvel tinha ${amostra.noBairro ?? "—"} oferta(s). Incluídos: ${(amostra.amostraAmpliada.bairrosVizinhos || []).map(esc).join(", ")}.</p>` : ""}
 ${periodo ? `<p class="mini">Ofertas coletadas entre ${dataBR(periodo.de)} e ${dataBR(periodo.ate)}.</p>` : ""}
 
 ${svgMapa ? `<h2>Mapa — imóvel e ofertas</h2>${svgMapa}
