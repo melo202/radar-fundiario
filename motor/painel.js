@@ -9,6 +9,10 @@ import {
 } from "./auth.js";
 
 const HTML = readFileSync(new URL("./painel.html", import.meta.url), "utf-8");
+/* OS-01: shell operacional isolado; o painel técnico legado continua intacto. */
+const OS_HTML = readFileSync(new URL("./os.html", import.meta.url), "utf-8");
+const OS_CSS = readFileSync(new URL("./os.css", import.meta.url), "utf-8");
+const OS_JS = readFileSync(new URL("./os-app.js", import.meta.url), "utf-8");
 /* SEG-03 no que o Node serve; o nginx cobre o restante do site */
 const SEC = {
   "X-Frame-Options": "DENY",
@@ -16,6 +20,7 @@ const SEC = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 const CSP = "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://corretorinteligente.tech; connect-src 'self'";
+const OS_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://corretorinteligente.tech; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'";
 
 const json = (res, code, obj, extra = {}) => {
   res.writeHead(code, Object.assign({ "Content-Type": "application/json; charset=utf-8" }, SEC, extra));
@@ -88,8 +93,37 @@ export async function painel(req, res) {
   const sessao = sessaoDe(req);
   if (!sessao) return json(res, 401, { erro: "entre com a senha" });
 
+  /* OS-01: aplicação operacional protegida pela mesma sessão do painel durante a fase alpha. */
+  if (req.method === "GET" && req.url === "/painel/os") {
+    res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": OS_CSP, "Cache-Control": "no-store" }, SEC));
+    return res.end(OS_HTML);
+  }
+  if (req.method === "GET" && req.url === "/painel/os.css") {
+    res.writeHead(200, Object.assign({ "Content-Type": "text/css; charset=utf-8",
+      "Cache-Control": "no-store" }, SEC));
+    return res.end(OS_CSS);
+  }
+  if (req.method === "GET" && req.url === "/painel/os.js") {
+    res.writeHead(200, Object.assign({ "Content-Type": "application/javascript; charset=utf-8",
+      "Cache-Control": "no-store" }, SEC));
+    return res.end(OS_JS);
+  }
+
   if (req.method === "GET" && req.url === "/painel/api/visao") {
     return json(res, 200, Object.assign(await visao(), { csrf: csrfDe(sessao) }));
+  }
+  if (req.method === "GET" && req.url === "/painel/api/os/hoje") {
+    const { visaoHoje } = await import("./os-core.js");
+    return json(res, 200, Object.assign(await visaoHoje(), { csrf: csrfDe(sessao) }));
+  }
+  if (req.method === "GET" && req.url === "/painel/api/os/carteira") {
+    const { listarCarteira } = await import("./os-core.js");
+    return json(res, 200, await listarCarteira());
+  }
+  if (req.method === "GET" && req.url === "/painel/api/os/relacionamentos") {
+    const { listarRelacionamentos } = await import("./os-core.js");
+    return json(res, 200, await listarRelacionamentos());
   }
   if (req.method === "GET" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
     /* §14: dossiê de revisão — a avaliação + TODOS os comparáveis com rastreio */
@@ -114,6 +148,24 @@ export async function painel(req, res) {
   }
   /* POSTs autenticados exigem o token CSRF (SEG-04) */
   if (req.method === "POST" && !csrfOk(req, sessao)) return json(res, 403, { erro: "csrf" });
+
+  /* OS-01: captura em duas etapas — interpretar não persiste; confirmar cria o cadastro. */
+  if (req.method === "POST" && req.url === "/painel/api/os/captura/interpretar") {
+    const { interpretarCaptura } = await import("./os-core.js");
+    const { text } = JSON.parse(await readBody(req) || "{}");
+    const r = interpretarCaptura(text);
+    return json(res, r.ok ? 200 : 400, r);
+  }
+  if (req.method === "POST" && req.url === "/painel/api/os/captura/confirmar") {
+    const { confirmarCaptura } = await import("./os-core.js");
+    const r = await confirmarCaptura(JSON.parse(await readBody(req) || "{}"));
+    return json(res, r.ok ? 200 : 400, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/tarefas\/[0-9a-f-]{36}\/concluir$/.test(req.url)) {
+    const { concluirTarefa } = await import("./os-core.js");
+    const r = await concluirTarefa(req.url.split("/")[5]);
+    return json(res, r.ok ? 200 : 404, r);
+  }
 
   /* SV-1: criar/atualizar o acompanhamento que o CLIENTE vê em /acompanhe/<token> */
   if (req.method === "POST" && req.url === "/painel/api/vendas") {
