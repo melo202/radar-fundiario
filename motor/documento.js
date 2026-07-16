@@ -167,6 +167,7 @@ ${r.estimatedValue ? `
   <div class="hv menor"><span>Confiança declarada</span><b>${esc(r.confidence?.rotulo || "—")}</b></div>
 </div>
 <p class="mini">${(r.confidence?.fatores || []).map(esc).join(" · ")}</p>
+${r.indiceMercado ? `<p class="mini" style="margin-top:6px"><b>${esc(r.indiceMercado.fonte)}</b> — Goiânia/venda, ref. ${esc(r.indiceMercado.referencia)}: ${r.indiceMercado.variacaoMensal != null ? (r.indiceMercado.variacaoMensal >= 0 ? "+" : "") + (r.indiceMercado.variacaoMensal * 100).toFixed(1) + "% no mês" : ""} · ${r.indiceMercado.variacao12m != null ? (r.indiceMercado.variacao12m >= 0 ? "+" : "") + (r.indiceMercado.variacao12m * 100).toFixed(1) + "% em 12 meses" : ""}${r.indiceMercado.precoM2MedioCidade ? ` · média da cidade ${brl(r.indiceMercado.precoM2MedioCidade)}/m²` : ""} — <i>${esc(r.indiceMercado.nota)}</i>.</p>` : ""}
 
 ${locHTML}
 

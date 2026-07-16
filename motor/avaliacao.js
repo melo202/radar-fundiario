@@ -132,6 +132,26 @@ export async function avaliar(subject, opts = {}) {
     } catch { /* entorno é bônus do resultado — nunca derruba a avaliação */ }
   }
 
+  /* Índice ABERTO da cidade (FipeZap) como referência ROTULADA — contexto no card e no
+     documento; NUNCA entra no cálculo (regra do roadmap: só com correlação medida). */
+  try {
+    const idx = await pool.query(
+      `SELECT referencia, variacao_mensal, variacao_12m, preco_m2_medio
+       FROM indices_mercado WHERE fonte='fipezap' AND cidade='Goiânia' AND operacao='venda'
+       ORDER BY referencia DESC LIMIT 1`);
+    if (idx.rowCount) {
+      const i = idx.rows[0];
+      result.indiceMercado = {
+        fonte: "Índice FipeZap (FIPE/ZAP, dado aberto)", cidade: "Goiânia", operacao: "venda",
+        referencia: i.referencia.toISOString().slice(0, 7),
+        variacaoMensal: i.variacao_mensal != null ? Number(i.variacao_mensal) : null,
+        variacao12m: i.variacao_12m != null ? Number(i.variacao_12m) : null,
+        precoM2MedioCidade: i.preco_m2_medio != null ? Math.round(Number(i.preco_m2_medio)) : null,
+        nota: "referência de contexto da cidade — fora do cálculo desta avaliação",
+      };
+    }
+  } catch { /* índice é contexto — nunca derruba a avaliação */ }
+
   /* versionamento (§20): cada cálculo é uma linha nova + comparáveis com rastreio completo.
      Revisão do corretor (§14) encadeia por parent_id e a nota entra nas assumptions —
      o parecer e o laudo passam a DECLARAR que houve revisão humana. */

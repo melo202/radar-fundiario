@@ -1,0 +1,9 @@
+[Unit]
+Description=Corretor Inteligente - FipeZap todo dia 05 (o indice sai no inicio do mes)
+
+[Timer]
+OnCalendar=*-*-05 04:10:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

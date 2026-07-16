@@ -7074,6 +7074,8 @@ function mercadoReset(a){
 let MERCLAYER=null;
 const fmtDist=m=>m==null?"":(m<1000?`${m} m`:`${(m/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} km`);
 const fmtDataISO=s=>String(s||"").split("-").reverse().join("/"); /* 2026-07-15 -> 15/07/2026 */
+const fmtPct=f=>f==null?"—":((f>=0?"+":"")+(f*100).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%");
+const fmtMesRef=s=>{const [a,m]=String(s||"").split("-");return m?`${m}/${a}`:s;} /* 2026-06 -> 06/2026 */
 function mercadoNoMapa(){
   const d=MERCADO_LAST&&MERCADO_LAST.d, a=MERCADO_A;
   if(!d||!(d.comparaveis||[]).some(c=>c.lat!=null))return;
@@ -7193,6 +7195,7 @@ function renderMercado(d,subject){
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
     <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${av&&av.buscou?` Busca ao vivo: ${av.novos||0} anúncio(s) novo(s) coletado(s) agora.`:av?" (usando a coleta recente deste bairro).":""}</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
+    ${r.indiceMercado?`<p class="dmercado-hint" style="margin-top:8px"><b>Índice FipeZap</b> (Goiânia, venda, ref. ${fmtMesRef(r.indiceMercado.referencia)}): ${fmtPct(r.indiceMercado.variacaoMensal)} no mês · ${fmtPct(r.indiceMercado.variacao12m)} em 12 meses${r.indiceMercado.precoM2MedioCidade?` · média da cidade ${brlC(r.indiceMercado.precoM2MedioCidade)}/m²`:""} — contexto da cidade, fora do cálculo.</p>`:""}
     ${mini}
     <details class="foot" open><summary>Ofertas usadas no cálculo (${(d.comparaveis||[]).length})</summary><div class="footbody"><ul class="dmercado-list">${comps}</ul>${outs?`<div style="margin-top:8px"><b>Fora da curva:</b><ul class="dmercado-list">${outs}</ul></div>`:""}</div></details>
     ${linksPortaisHTML(subject)}
