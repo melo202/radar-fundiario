@@ -11,8 +11,8 @@ test("NV1: dois degraus remotos vindos do env, cada um com cooldown PRÓPRIO", (
   assert.ok(src.includes('remotoDoEnv("AI_REMOTE", "remoto-1")'));
   assert.ok(src.includes('remotoDoEnv("AI_REMOTE2", "remoto-2")'));
   assert.ok(src.includes("deadUntil: 0"), "cooldown vive no próprio degrau");
-  assert.ok(src.includes("p.deadUntil = Date.now() + REMOTE_COOLDOWN_MS"),
-    "falha derruba SÓ o degrau que falhou, nunca a cadeia inteira");
+  assert.ok(src.includes("p.deadUntil = Date.now() + (eh429 ? 65_000 : REMOTE_COOLDOWN_MS)"),
+    "falha derruba SÓ o degrau que falhou, nunca a cadeia inteira — e proporcional à causa");
   assert.ok(!src.includes("remoteDeadUntil"), "cooldown global antigo removido");
 });
 
