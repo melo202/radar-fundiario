@@ -1343,6 +1343,11 @@
   .lead-nota{margin-top:6px;font-size:11.5px;color:var(--ink-soft)}
   .lead-form{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
   .lead-backup{border:0;background:transparent;color:var(--brand);cursor:pointer;font-size:11px;padding:0}
+  /* MK-1: prévia do card + legendas */
+  .mkt-prev{display:block;width:100%;max-width:420px;margin:14px auto 8px;border-radius:14px;box-shadow:var(--elev-2)}
+  .mkt-leg{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-top:8px;background:var(--surface-soft)}
+  .mkt-leg-t{font:700 11px var(--font-ui);text-transform:uppercase;letter-spacing:.08em;color:var(--brand-strong);margin-bottom:4px}
+  .mkt-leg pre{white-space:pre-wrap;font:12.5px/1.55 var(--font-ui);margin:0 0 8px;color:var(--ink-soft)}
   .foot{border-top:1px solid var(--line)}
 
   #map{background:#e7ece8}
@@ -2033,6 +2038,17 @@
     <button class="calcx" onclick="fecharCustos()" aria-label="Fechar">×</button>
   </div>
   <div class="calcbody" id="calcBody"></div>
+</div>
+
+<!-- MK-1 (16/07/2026): material de divulgação — card de imagem desenhado NO APARELHO
+     (canvas, zero servidor) + legendas determinísticas com os dados reais do imóvel.
+     O preço é o DO CORRETOR (digitado) — divulgação nunca cita o valor do motor. -->
+<div class="calc" id="mkt" hidden role="dialog" aria-modal="true" aria-label="Material de divulgação">
+  <div class="calctop">
+    <div class="calch">Material de divulgação</div>
+    <button class="calcx" onclick="fecharMkt()" aria-label="Fechar">×</button>
+  </div>
+  <div class="calcbody" id="mktBody"></div>
 </div>
 
 <script>
@@ -7265,6 +7281,7 @@ function localReset(a,ll){
   }
   if(!p&&a&&a.x_coord&&a.y_coord){try{const w=toWGS(+a.x_coord,+a.y_coord);p={lat:w[0],lng:w[1]};}catch(e){}}
   LOCAL_LL=p;
+  LOCAL_LAST=null; /* MK-1: medição do imóvel anterior nunca vaza para a divulgação deste */
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
   const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Medir o entorno";delete bt.dataset.rodou;}
 }
@@ -7282,7 +7299,9 @@ async function analisarLocal(){
     body.innerHTML=`<p class="dmercado-hint">Entorno indisponível agora (${esc(e.message)}). Os dados cadastrais seguem valendo.</p>`;
   }finally{bt.disabled=false;bt.textContent="Mapear";}
 }
+let LOCAL_LAST=null; /* última medição de entorno DESTA ficha — alimenta o material de divulgação */
 function renderLocal(d){
+  LOCAL_LAST=d;
   const body=document.getElementById("dLocalBody");
   const dist=m=>m==null?"":m<1000?` · ${m} m`:` · ${(m/1000).toFixed(1).replace(".",",")} km`;
   const pos=[],at=[];
@@ -7582,6 +7601,7 @@ function showDetail(a,ll){
     <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">Salvar no caderno</button>
     <button type="button" onclick="copyInsc(this)">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">Calcular custos de compra (ITBI + cartório)</button>
+    <button type="button" onclick="abrirMkt()">Gerar material de divulgação</button>
     <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink(this)" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
     ${mapLinks}
@@ -9407,6 +9427,127 @@ function abrirCustos(){
   renderCustos();
 }
 function fecharCustos(){const calc=document.getElementById("calc");calc.hidden=true;CALC=null;untrapFocus(calc);}
+
+/* ---------------- MK-1: material de divulgação (16/07/2026) ----------------
+   Card de imagem desenhado NO APARELHO (canvas 1080², zero servidor) + legendas em 3
+   tons preenchidas com os DADOS REAIS (determinístico — post nunca sai com número
+   inventado). O preço é o DO CORRETOR, digitado; divulgação não cita o valor do motor.
+   Contato (nome/CRECI/tel) fica lembrado em ci_perfil, local como tudo que é pessoal. */
+let MKT=null;
+const MKT_LOGO=new Image();MKT_LOGO.onload=()=>{if(MKT)desenhaMkt();};MKT_LOGO.src="marca/corretorinteligente_logo_branca.svg";
+function abrirMkt(){
+  const a=DCUR;if(!a)return;
+  let perfil={};try{perfil=JSON.parse(localStorage.getItem("ci_perfil")||"{}");}catch(e){}
+  MKT={a,formato:"post",preco:0,frase:"",contato:perfil.contato||""};
+  const m=document.getElementById("mkt");m.hidden=false;trapFocus(m);
+  renderMkt();
+}
+function fecharMkt(){const m=document.getElementById("mkt");m.hidden=true;MKT=null;untrapFocus(m);}
+function renderMkt(){
+  if(!MKT)return;
+  document.getElementById("mktBody").innerHTML=`
+    <div class="wsub" style="margin:0 0 8px">${esc(clean(MKT.a.nmedificio))?esc(clean(MKT.a.nmedificio))+" · ":""}Q ${esc(clean(MKT.a.nrquadra))||"—"} · L ${esc(clean(MKT.a.nrlote))||"—"} · ${esc(clean(MKT.a.nmbairro))}</div>
+    <div class="cseg">
+      <button class="${MKT.formato==="post"?"on":""}" onclick="MKT.formato='post';renderMkt()">Post 1080×1080</button>
+      <button class="${MKT.formato==="story"?"on":""}" onclick="MKT.formato='story';renderMkt()">Story 1080×1920</button>
+    </div>
+    <span class="clabel">Preço de venda (R$) — o SEU preço de anúncio</span>
+    <input class="cinput" inputmode="numeric" value="${MKT.preco?MKT.preco.toLocaleString("pt-BR"):""}" oninput="mktCampo(this,'preco')">
+    <span class="clabel">Frase de destaque (opcional)</span>
+    <input class="cinput" maxlength="60" placeholder="ex.: 3 quartos com suíte e varanda gourmet" value="${esc(MKT.frase)}" oninput="mktCampo(this,'frase')">
+    <span class="clabel">Seu contato (nome · CRECI · telefone)</span>
+    <input class="cinput" maxlength="60" placeholder="ex.: Bruno Melo · CRECI 12345 · (62) 9 9999-0000" value="${esc(MKT.contato)}" oninput="mktCampo(this,'contato')">
+    <canvas id="mktCanvas" class="mkt-prev" aria-label="Prévia do card de divulgação"></canvas>
+    <button class="cmini" style="border-color:var(--accent);color:var(--accent)" onclick="baixarMkt()">⬇ Baixar imagem PNG</button>
+    <div class="clabel" style="margin-top:14px">Legendas prontas (dados reais, nunca inventados)</div>
+    ${[0,1,2].map(i=>`<div class="mkt-leg"><div class="mkt-leg-t" id="mktLegT${i}"></div><pre id="mktLeg${i}"></pre><button class="cmini" onclick="copiarLegenda(${i})">⧉ Copiar legenda</button></div>`).join("")}
+    <div class="cnote">Imagem e legendas gerados no seu aparelho com os dados do cadastro${LOCAL_LAST?" e do entorno medido":""}. O preço divulgado é o informado por você — a referência do motor pertence à avaliação, não ao anúncio.</div>`;
+  atualizaMkt();
+}
+function mktCampo(el,campo){
+  if(!MKT)return;
+  if(campo==="preco"){MKT.preco=parseInt(el.value.replace(/\D/g,""),10)||0;el.value=MKT.preco?MKT.preco.toLocaleString("pt-BR"):"";}
+  else MKT[campo]=el.value;
+  if(campo==="contato"){try{localStorage.setItem("ci_perfil",JSON.stringify({contato:MKT.contato}));}catch(e){}}
+  atualizaMkt(); /* cirúrgico: nunca re-renderiza o modal digitando (lição CUSTOS-01) */
+}
+function entornoDestaque(){
+  const d=LOCAL_LAST;if(!d||!d.categorias)return null;
+  const top=Object.values(d.categorias).filter(c=>c.count>0&&c.sinal!=="atencao"&&c.nearestDistanceMeters!=null)
+    .sort((p,q)=>p.nearestDistanceMeters-q.nearestDistanceMeters)[0];
+  return top?`${top.rotulo.replace(/s$/,"").toLowerCase()} a ${top.nearestDistanceMeters} m`:null;
+}
+function legendasMkt(){
+  const a=MKT.a,bairro=clean(a.nmbairro),tipo=ehAptoProvavel(a)?"Apartamento":"Imóvel";
+  const area=+a.areaedif>0?`${a.areaedif} m²`:null;
+  const ent=entornoDestaque();
+  const preco=MKT.preco>0?brl(MKT.preco):null;
+  const link=`https://corretorinteligente.tech/?insc=${encodeURIComponent(clean(a.nrinscr)||clean(a.ci))}`;
+  const tags=`#imoveis #goiania #${bairro.toLowerCase().replace(/\W+/g,"")} #corretordeimoveis${ehAptoProvavel(a)?" #apartamento":" #casa"}`;
+  const fim=`${MKT.contato?MKT.contato+"\n":""}Ficha completa: ${link}\n${tags}`;
+  return [
+    ["Institucional",`${tipo} no ${bairro}${area?`, ${area} de área construída`:""}${MKT.frase?` — ${MKT.frase}`:""}.${ent?` A poucos passos do essencial: ${ent}.`:""}${preco?` Valor: ${preco}.`:""} Agende sua visita.\n${fim}`],
+    ["Urgência",`🔥 Oportunidade no ${bairro}! ${tipo}${area?` de ${area}`:""}${preco?` por ${preco}`:""}${MKT.frase?` — ${MKT.frase}`:""}.${ent?` E ainda: ${ent}.`:""} Me chame antes que saia!\n${fim}`],
+    ["História",`Imagine a rotina no ${bairro}${ent?`, com ${ent.replace(" a "," a apenas ")}`:""}. Este ${tipo.toLowerCase()}${area?` de ${area}`:""} pode ser o próximo capítulo da sua família${preco?` — ${preco}`:""}. Vem conhecer.\n${fim}`],
+  ];
+}
+function atualizaMkt(){
+  if(!MKT)return;
+  legendasMkt().forEach(([t,l],i)=>{
+    const et=document.getElementById("mktLegT"+i),el=document.getElementById("mktLeg"+i);
+    if(et)et.textContent=t;if(el)el.textContent=l;
+  });
+  desenhaMkt();
+}
+function desenhaMkt(){
+  const cv=document.getElementById("mktCanvas");if(!cv||!MKT)return;
+  const story=MKT.formato==="story",W=1080,H=story?1920:1080;
+  cv.width=W;cv.height=H;
+  const x=cv.getContext("2d");
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#26344a");g.addColorStop(1,"#1a2433");
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  /* nós de circuito determinísticos (reproduzível — sem aleatório) */
+  const nos=[[90,140],[980,220],[160,H-300],[920,H-430],[540,95],[80,H*0.5],[1000,H*0.62]];
+  x.strokeStyle="rgba(25,169,154,.22)";x.lineWidth=2;
+  x.beginPath();x.moveTo(90,140);x.lineTo(540,95);x.lineTo(980,220);x.stroke();
+  x.beginPath();x.moveTo(160,H-300);x.lineTo(920,H-430);x.stroke();
+  x.fillStyle="rgba(25,169,154,.55)";
+  for(const[px,py]of nos){x.beginPath();x.arc(px,py,6,0,7);x.fill();}
+  if(MKT_LOGO.complete&&MKT_LOGO.naturalWidth){
+    const lw=400,lh=lw*MKT_LOGO.naturalHeight/MKT_LOGO.naturalWidth;
+    x.drawImage(MKT_LOGO,W/2-lw/2,story?130:80,lw,lh);
+  }
+  const a=MKT.a,midY=story?760:470;
+  x.textAlign="center";
+  x.font="800 78px Archivo,sans-serif";x.fillStyle="#F5F8F8";
+  x.fillText(ehAptoProvavel(a)?"APARTAMENTO":"IMÓVEL",W/2,midY);
+  x.font="800 62px Archivo,sans-serif";x.fillStyle="#19A99A";
+  x.fillText(clean(a.nmbairro).toUpperCase(),W/2,midY+82);
+  let y=midY+170;
+  if(MKT.frase){x.font="500 44px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.92)";x.fillText(MKT.frase,W/2,y);y+=64;}
+  const specs=[];
+  if(+a.areaedif>0)specs.push(`${a.areaedif} m² de área construída`);
+  const ent=entornoDestaque();if(ent)specs.push(ent[0].toUpperCase()+ent.slice(1));
+  x.font="400 38px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.72)";
+  specs.forEach(s=>{x.fillText(s,W/2,y);y+=56;});
+  if(MKT.preco>0){
+    x.font="800 104px Archivo,sans-serif";x.fillStyle="#F5F8F8";
+    x.fillText(brl(MKT.preco),W/2,story?H-520:H-280);
+  }
+  x.fillStyle="rgba(245,248,248,.10)";x.fillRect(0,H-150,W,150);
+  x.font="600 34px Archivo,sans-serif";x.fillStyle="#F5F8F8";
+  x.fillText(MKT.contato||"Seu corretor de confiança",W/2,H-88);
+  x.font="400 28px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.55)";
+  x.fillText("corretorinteligente.tech",W/2,H-40);
+}
+function copiarLegenda(i){const l=legendasMkt()[i];if(l)copyTexto(l[1],`Legenda "${l[0]}" copiada.`);}
+function baixarMkt(){
+  const cv=document.getElementById("mktCanvas");if(!cv)return;
+  const el=document.createElement("a");
+  el.download=`divulgacao-${MKT.formato}-${(clean(MKT.a.nmbairro)||"imovel").toLowerCase().replace(/\W+/g,"-")}.png`;
+  el.href=cv.toDataURL("image/png");el.click();
+  toast("Imagem baixada — pronta para postar.");
+}
 function renderCustos(){
   if(!CALC)return;
   const a=CALC.a;
