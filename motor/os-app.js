@@ -40,8 +40,34 @@ const typeLabel=t=>({proprietario:"Proprietário",comprador:"Comprador",locatari
 
 function switchView(name){document.querySelectorAll(".view").forEach(v=>{const active=v.dataset.view===name;v.hidden=!active;v.classList.toggle("is-active",active);});document.querySelectorAll(".nav-item[data-target]").forEach(b=>{const active=b.dataset.target===name;b.classList.toggle("is-active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});if(name==="today")loadToday();if(name==="portfolio")loadPortfolio();if(name==="relationships")loadRelationships();scrollTo({top:0,behavior:"smooth"});}
 
+/* ---------------- D-4: captura por VOZ (Web Speech API, custo zero) ----------------
+   A voz só PREENCHE o texto — interpretar e confirmar continuam manuais: nada é salvo
+   sem confirmação, nem falando. Sem suporte (ex.: iOS antigo), o botão nem aparece. */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,ouvindo=false;
+function vozStatus(t){const s=$("voiceStatus");if(s)s.textContent=t;}
+function vozParar(){ouvindo=false;if(rec){try{rec.stop();}catch{}}const b=$("voiceToggle");if(b){b.textContent="🎤 Falar em vez de digitar";b.classList.remove("is-listening");}vozStatus("");}
+function vozIniciar(){
+  rec=new SR();rec.lang="pt-BR";rec.continuous=true;rec.interimResults=true;
+  rec.onresult=ev=>{
+    let interim="";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const r=ev.results[i];
+      if(r.isFinal){const tx=r[0].transcript.trim();if(tx){const ta=$("captureText");ta.value=(ta.value.trim()+" "+tx).trim();}}
+      else interim+=r[0].transcript;
+    }
+    vozStatus(interim?`Ouvindo: “${interim.trim()}”`:"Ouvindo… fale naturalmente.");
+  };
+  rec.onerror=ev=>{vozParar();vozStatus(ev.error==="not-allowed"?"Microfone sem permissão — libere nas configurações do navegador e tente de novo.":"A voz falhou agora — digite normalmente que funciona igual.");};
+  rec.onend=()=>{if(ouvindo){try{rec.start();}catch{vozParar();}}}; /* Chrome corta sozinho em pausas — religa até o corretor mandar parar */
+  ouvindo=true;rec.start();
+  const b=$("voiceToggle");b.textContent="■ Parar de ouvir";b.classList.add("is-listening");
+  vozStatus("Ouvindo… fale naturalmente.");
+}
+if(SR){const b=$("voiceToggle");b.hidden=false;b.addEventListener("click",()=>ouvindo?vozParar():vozIniciar());$("captureDialog").addEventListener("close",vozParar);}
+
 function openCapture(){const d=$("captureDialog");$("captureStatus").textContent="";$("capturePreview").hidden=true;state.preview=null;d.showModal();setTimeout(()=>$("captureText").focus(),50);}
-async function interpretCapture(){const text=$("captureText").value.trim();const button=$("interpretCapture");button.disabled=true;button.textContent="Interpretando…";$("captureStatus").className="status";try{const data=await api("/painel/api/os/captura/interpretar",{method:"POST",body:JSON.stringify({text})});state.preview=data;renderPreview(data);$("captureStatus").textContent="Confira os dados. Nada foi salvo ainda.";}catch(e){$("captureStatus").className="status error";$("captureStatus").textContent=e.message;}finally{button.disabled=false;button.textContent="Interpretar cadastro";}}
+async function interpretCapture(){if(ouvindo)vozParar();const text=$("captureText").value.trim();const button=$("interpretCapture");button.disabled=true;button.textContent="Interpretando…";$("captureStatus").className="status";try{const data=await api("/painel/api/os/captura/interpretar",{method:"POST",body:JSON.stringify({text})});state.preview=data;renderPreview(data);$("captureStatus").textContent="Confira os dados. Nada foi salvo ainda.";}catch(e){$("captureStatus").className="status error";$("captureStatus").textContent=e.message;}finally{button.disabled=false;button.textContent="Interpretar cadastro";}}
 function renderPreview(data){const p=data.property||{},o=data.owner||{};const fields=[["Tipo",typeLabelProperty(p.propertyType)],["Bairro",p.neighborhood||"A confirmar"],["Quartos",p.bedrooms??"A confirmar"],["Preço",money(p.askingPrice)],["Proprietário",o.name||"A confirmar"],["Permuta",p.acceptsSwap?"Aceita":"Não informada"]];$("previewFields").replaceChildren(...fields.map(([l,v])=>el("div",{class:"preview-field"},[el("small",{text:l}),el("strong",{text:String(v)})])));$("previewMissing").replaceChildren(...(data.missing||[]).map(x=>el("li",{text:x})));$("capturePreview").hidden=false;}
 const typeLabelProperty=t=>({apartamento:"Apartamento",casa:"Casa",terreno:"Terreno",galpao:"Galpão",sala_comercial:"Sala comercial",fazenda:"Fazenda",loja:"Loja"})[t]||"A confirmar";
 async function confirmCapture(){if(!state.preview)return;const button=$("confirmCapture");button.disabled=true;button.textContent="Criando imóvel…";try{const data=await api("/painel/api/os/captura/confirmar",{method:"POST",body:JSON.stringify(state.preview)});$("captureDialog").close();$("captureText").value="";state.preview=null;state.loaded.today=false;state.loaded.portfolio=false;toast(`${data.property.title} criado. Próximos passos preparados.`);switchView("today");await loadToday(true);}catch(e){$("captureStatus").className="status error";$("captureStatus").textContent=e.message;}finally{button.disabled=false;button.textContent="Confirmar e criar imóvel";}}

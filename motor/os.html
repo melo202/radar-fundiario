@@ -94,7 +94,11 @@
     <div class="dialog-body">
       <label for="captureText">Descreva o que aconteceu</label>
       <textarea id="captureText" rows="5" placeholder="Ex.: Captei uma casa no Jardins, quatro quartos, proprietário quer 2,3 milhões e aceita permuta."></textarea>
-      <p class="field-help">Nada será salvo antes da sua confirmação.</p>
+      <div class="voice-row">
+        <button type="button" class="card-action secondary" id="voiceToggle" hidden>🎤 Falar em vez de digitar</button>
+        <span id="voiceStatus" class="field-help" role="status" aria-live="polite"></span>
+      </div>
+      <p class="field-help">Nada será salvo antes da sua confirmação — nem falando, nem digitando.</p>
       <button type="button" class="primary-button" id="interpretCapture">Interpretar cadastro</button>
       <div id="captureStatus" class="status" role="status" aria-live="polite"></div>
       <section id="capturePreview" class="preview" hidden aria-label="Prévia do cadastro">

@@ -59,7 +59,7 @@ test("OS-01: domínio privado não reutiliza o acervo público de comparáveis",
 test("OS-01: shell tem somente a navegação principal combinada", () => {
   for (const label of ["Hoje", "Carteira", "Relacionamentos", "Capturar"]) assert.ok(html.includes(label));
   assert.ok(html.includes("Estas são as coisas que merecem sua atenção hoje."));
-  assert.ok(html.includes("Nada será salvo antes da sua confirmação."));
+  assert.ok(html.includes("Nada será salvo antes da sua confirmação — nem falando, nem digitando."));
   assert.ok(!html.includes("Dashboard"));
 });
 
