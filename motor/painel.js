@@ -8,7 +8,15 @@ import {
   sessaoDe, csrfDe, csrfOk, bloqueado, registraFalha, tentativasRestantes,
 } from "./auth.js";
 
-const HTML = readFileSync(new URL("./painel.html", import.meta.url), "utf-8");
+const HTML_BASE = readFileSync(new URL("./painel.html", import.meta.url), "utf-8");
+/* OS-01: o braço operacional precisa ser descoberto sem conhecer uma URL secreta. A injeção
+   é deliberadamente isolada do painel.html legado para manter a base ultrapremium intacta. */
+const HTML = HTML_BASE.replace("<main>", `<main>
+    <div class="card" style="border-color:#9edbd5;background:linear-gradient(135deg,#fff,#effaf8)">
+      <h2>Corretor Inteligente OS — alpha</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Abra a nova experiência orientada ao seu dia: Hoje, Carteira, Relacionamentos e Captura universal.</p>
+      <a href="/painel/os" style="display:inline-block;text-decoration:none;font-weight:700;background:linear-gradient(135deg,#088780,#19A99A);color:#fff;border-radius:9px;padding:10px 16px">Abrir meu dia</a>
+    </div>`);
 /* OS-01: shell operacional isolado; o painel técnico legado continua intacto. */
 const OS_HTML = readFileSync(new URL("./os.html", import.meta.url), "utf-8");
 const OS_CSS = readFileSync(new URL("./os.css", import.meta.url), "utf-8");
