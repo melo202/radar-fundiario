@@ -1324,6 +1324,25 @@
   .dmercado-portal{font:600 12px/1 var(--font-ui);padding:7px 12px;border:1px solid var(--line-strong);border-radius:99px;
     background:var(--surface);color:var(--ink-soft);text-decoration:none;min-height:30px;display:inline-flex;align-items:center}
   .dmercado-portal:hover{border-color:var(--brand);color:var(--brand)}
+  /* FU-1: interessados/follow-up (vocabulário ImobRadar) */
+  .lead-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+  .lead-topo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+  .lead-temp{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;letter-spacing:.02em}
+  .lead-temp.t-quente{background:#fdeae4;color:#a83b38}
+  .lead-temp.t-morno{background:var(--brass-soft);color:var(--brass)}
+  .lead-temp.t-frio{background:var(--surface-tint);color:var(--muted)}
+  .lead-zap{font-size:11.5px;font-weight:650;color:var(--brand);text-decoration:none}
+  .lead-x{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:17px;cursor:pointer;min-width:32px;min-height:32px}
+  .lead-linha{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .lead-linha select,.lead-linha input{font:12px var(--font-ui);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0;flex:1 1 130px}
+  .lead-feito{font:600 11.5px var(--font-ui);padding:6px 10px;border:1px solid var(--brand);border-radius:8px;background:var(--brand-soft);color:var(--brand-strong);cursor:pointer}
+  .lead-obj{margin-top:6px;font-size:11px;color:var(--muted);display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .lead-obj .obj{font:11px var(--font-ui);padding:3px 9px;border:1px solid var(--line);border-radius:99px;background:var(--surface);cursor:pointer;color:var(--ink-soft)}
+  .lead-obj .obj.on{border-color:var(--brass);background:var(--brass-soft);color:var(--brass)}
+  .lead-venc{margin-top:6px;font-size:11.5px;color:#a83b38;background:#fdeae4;border-radius:8px;padding:6px 10px}
+  .lead-nota{margin-top:6px;font-size:11.5px;color:var(--ink-soft)}
+  .lead-form{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
+  .lead-backup{border:0;background:transparent;color:var(--brand);cursor:pointer;font-size:11px;padding:0}
   .foot{border-top:1px solid var(--line)}
 
   #map{background:#e7ece8}
@@ -1774,6 +1793,14 @@
         <details class="devidence dchecklist" id="dDocChecklist">
           <summary><span>Checklist documental</span><span class="devidence-summary" id="dDocChecklistSummary"></span></summary>
           <div class="dilig-body" id="dDocChecklistBody"></div>
+        </details>
+
+        <!-- FU-1 (16/07/2026): Interessados/follow-up LOCAL-FIRST — vocabulário garimpado
+             do ImobRadar do usuário (temperatura, estágios, objeções, follow-up tipado).
+             PII (nome/telefone) vive SÓ neste navegador, como o caderno — nada no servidor. -->
+        <details class="devidence" id="dLeads">
+          <summary><span>Interessados — follow-up</span><span class="devidence-summary" id="dLeadsSummary"></span></summary>
+          <div class="dilig-body" id="dLeadsBody"></div>
         </details>
 
         <!-- Fase 17 (17-02, TERR-06): bloco de diff de cadastro entre visitas — estático, hidden por
@@ -7347,6 +7374,101 @@ function mercadoDocumentoHTML(a){
   </div>${mercadoMapaSVG(m,a)}`;
 }
 
+/* ---------------- FU-1 — Interessados/follow-up LOCAL-FIRST (16/07/2026) ----------------
+   Vocabulário garimpado do ImobRadar do usuário: temperatura, pipeline de estágios,
+   follow-up tipado com vencimento e objeções de visita. PII (nome/telefone) fica SÓ
+   neste navegador (localStorage), como o caderno — promessa "nenhum nome é armazenado"
+   continua valendo para o servidor. Sem multitenant, sem sync. */
+const LEAD_ESTAGIOS=[["novo","Novo contato"],["contato","Contatado"],["visita-marcada","Visita marcada"],["visita-feita","Visita feita"],["proposta","Proposta enviada"],["negociacao","Negociação"],["fechado","Fechado ✓"],["perdido","Perdido"]];
+const LEAD_TEMPS=[["quente","🔥 Quente"],["morno","Morno"],["frio","Frio"]];
+const FU_TIPOS=[["ligar","Ligar"],["whatsapp","Chamar no WhatsApp"],["enviar-imoveis","Enviar mais imóveis"],["confirmar-visita","Confirmar a visita"],["cobrar-proposta","Cobrar resposta da proposta"]];
+const LEAD_OBJECOES=[["preco","preço"],["localizacao","localização"],["tamanho","tamanho"],["acabamento","acabamento"],["documentacao","documentação"],["condominio","condomínio"],["financiamento","financiamento"]];
+const rotuloDe=(tab,k)=>{const p=tab.find(x=>x[0]===k);return p?p[1]:k;};
+function lerLeads(){try{return JSON.parse(localStorage.getItem("ci_leads")||"[]");}catch(e){return[];}}
+function salvarLeads(ls){try{localStorage.setItem("ci_leads",JSON.stringify(ls));}catch(e){}}
+let LEADS_CHAVE=null,LEADS_ROTULO="";
+const hojeISO=()=>new Date().toISOString().slice(0,10);
+const fuVencido=l=>l.followup&&l.followup.em&&l.followup.em<=hojeISO()&&!["fechado","perdido"].includes(l.estagio);
+function leadsReset(a){
+  LEADS_CHAVE=clean(a.nrinscr)||clean(a.ci)||null;
+  LEADS_ROTULO=`${clean(a.nmedificio)?clean(a.nmedificio)+" · ":""}Q ${clean(a.nrquadra)||"—"} L ${clean(a.nrlote)||"—"} · ${clean(a.nmbairro)}`;
+  leadsRender();
+}
+function leadsRender(){
+  const body=document.getElementById("dLeadsBody"),sum=document.getElementById("dLeadsSummary");
+  if(!body)return;
+  const todos=lerLeads(),meus=todos.filter(l=>l.imovel&&l.imovel.chave===LEADS_CHAVE);
+  const ativos=meus.filter(l=>!["fechado","perdido"].includes(l.estagio));
+  const vencidos=meus.filter(fuVencido).length;
+  if(sum)sum.textContent=meus.length?`${ativos.length} ativo(s)${vencidos?` · ${vencidos} follow-up vencido(s)`:""}`:"";
+  const cards=meus.map(l=>{
+    const venc=fuVencido(l);
+    const tel=String(l.telefone||"").replace(/\D/g,"");
+    const zapMsg=encodeURIComponent(`Olá${l.nome?" "+l.nome.split(" ")[0]:""}! Sobre o imóvel ${LEADS_ROTULO}: `);
+    return `<div class="lead-card" data-id="${esc(l.id)}">
+      <div class="lead-topo"><b>${esc(l.nome||"(sem nome)")}</b>
+        <span class="lead-temp t-${esc(l.temperatura)}">${esc(rotuloDe(LEAD_TEMPS,l.temperatura))}</span>
+        ${tel?`<a class="lead-zap" href="https://wa.me/55${esc(tel)}?text=${zapMsg}" target="_blank" rel="noopener">WhatsApp ↗</a>`:""}
+        <button type="button" class="lead-x" data-acao="excluir" aria-label="Excluir interessado">×</button></div>
+      <div class="lead-linha">
+        <select data-campo="estagio">${LEAD_ESTAGIOS.map(([k,r])=>`<option value="${k}"${l.estagio===k?" selected":""}>${r}</option>`).join("")}</select>
+        <select data-campo="temperatura">${LEAD_TEMPS.map(([k,r])=>`<option value="${k}"${l.temperatura===k?" selected":""}>${r}</option>`).join("")}</select>
+      </div>
+      ${l.estagio==="visita-feita"?`<div class="lead-obj">Objeções: ${LEAD_OBJECOES.map(([k,r])=>`<button type="button" class="obj${(l.objecoes||[]).includes(k)?" on":""}" data-obj="${k}">${r}</button>`).join("")}</div>`:""}
+      <div class="lead-linha">
+        <select data-campo="fu-tipo"><option value="">— próximo follow-up —</option>${FU_TIPOS.map(([k,r])=>`<option value="${k}"${l.followup&&l.followup.tipo===k?" selected":""}>${r}</option>`).join("")}</select>
+        <input type="date" data-campo="fu-data" value="${esc(l.followup&&l.followup.em||"")}">
+        ${l.followup&&l.followup.em?`<button type="button" class="lead-feito" data-acao="feito">Feito ✓</button>`:""}
+      </div>
+      ${venc?`<div class="lead-venc">Follow-up ${rotuloDe(FU_TIPOS,l.followup.tipo)||""} venceu ${fmtDataISO(l.followup.em)} — o interessado esfria sem retorno.</div>`:""}
+      ${l.nota?`<div class="lead-nota">${esc(l.nota)}</div>`:""}
+    </div>`;}).join("");
+  body.innerHTML=`${cards||'<p class="dmercado-hint">Nenhum interessado registrado neste imóvel. Registrar leva 20 segundos — e o follow-up com data te lembra na abertura do app.</p>'}
+    <div class="lead-form">
+      <div class="lead-linha"><input id="leadNome" placeholder="Nome do interessado"><input id="leadTel" inputmode="tel" placeholder="Telefone (WhatsApp)"></div>
+      <div class="lead-linha"><input id="leadNota" placeholder="Nota (opcional)"><button type="button" class="dmercado-iabtn" onclick="leadAdicionar()">Adicionar interessado</button></div>
+    </div>
+    <p class="dmercado-hint">Dados guardados só neste navegador (como o caderno) — nada vai ao servidor. <button type="button" class="lead-backup" onclick="leadsBackup()">copiar backup ⧉</button></p>`;
+}
+function leadAdicionar(){
+  const nome=clean(document.getElementById("leadNome").value),tel=clean(document.getElementById("leadTel").value);
+  if(!nome&&!tel){toast("Preencha ao menos o nome ou o telefone.");return;}
+  const ls=lerLeads();
+  ls.push({id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),
+    imovel:{chave:LEADS_CHAVE,rotulo:LEADS_ROTULO},nome,telefone:tel,
+    nota:clean(document.getElementById("leadNota").value),
+    temperatura:"morno",estagio:"novo",objecoes:[],followup:null,
+    criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString()});
+  salvarLeads(ls);leadsRender();toast("Interessado registrado — defina o próximo follow-up.");
+}
+function leadsBackup(){copyTexto(JSON.stringify(lerLeads(),null,1),"Backup dos interessados copiado (JSON).");}
+function avisoFollowups(){
+  const n=lerLeads().filter(fuVencido).length;
+  if(n)setTimeout(()=>toast(`${n} follow-up(s) vencendo — abra o imóvel e veja em Interessados (Diligência).`),2600);
+}
+/* delegação: nunca texto do usuário dentro de onclick (lição A-04) */
+document.addEventListener("change",ev=>{
+  const card=ev.target.closest&&ev.target.closest(".lead-card");if(!card)return;
+  const ls=lerLeads(),l=ls.find(x=>x.id===card.dataset.id);if(!l)return;
+  const campo=ev.target.dataset.campo;
+  if(campo==="estagio")l.estagio=ev.target.value;
+  else if(campo==="temperatura")l.temperatura=ev.target.value;
+  else if(campo==="fu-tipo"){l.followup=ev.target.value?{tipo:ev.target.value,em:(l.followup&&l.followup.em)||hojeISO()}:null;}
+  else if(campo==="fu-data"){if(ev.target.value){l.followup=l.followup||{tipo:"ligar"};l.followup.em=ev.target.value;}else l.followup=null;}
+  else return;
+  l.atualizadoEm=new Date().toISOString();salvarLeads(ls);leadsRender();
+});
+document.addEventListener("click",ev=>{
+  const card=ev.target.closest&&ev.target.closest(".lead-card");if(!card)return;
+  const ls=lerLeads(),i=ls.findIndex(x=>x.id===card.dataset.id);if(i<0)return;
+  if(ev.target.dataset.acao==="excluir"){if(!confirm("Excluir este interessado?"))return;ls.splice(i,1);}
+  else if(ev.target.dataset.acao==="feito"){ls[i].followup=null;ls[i].atualizadoEm=new Date().toISOString();toast("Follow-up concluído — defina o próximo.");}
+  else if(ev.target.dataset.obj){const o=ls[i].objecoes||[];const k=ev.target.dataset.obj;
+    ls[i].objecoes=o.includes(k)?o.filter(x=>x!==k):[...o,k];ls[i].atualizadoEm=new Date().toISOString();}
+  else return;
+  salvarLeads(ls);leadsRender();
+});
+
 /* R4 — dica de primeira vez: ensina UMA vez por recurso, nunca repete (localStorage),
    nunca bloqueia (reusa o toast). Linguagem de corretor, não de sistema. */
 function dicaUmaVez(chave,msg){
@@ -7363,6 +7485,7 @@ function showDetail(a,ll){
   setDossierView("resumo");
   mercadoReset(a); /* Mercado (beta): novo imóvel aberto = card limpo apontando para ele */
   localReset(a,ll); /* Localização (beta): idem, com a coordenada do imóvel aberto */
+  leadsReset(a); /* FU-1: interessados/follow-up deste imóvel (local-first) */
   const addr=addrDe(a);
   const ci=clean(a.ci), insc=clean(a.nrinscr), ul=unitLabel(a), ed=clean(a.nmedificio);
   a.__consultadoEm=a.__consultadoEm||new Date().toISOString();
@@ -9773,7 +9896,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
   bootSplashOff(); /* a mensagem de erro tem que aparecer — splash nunca a esconde */
 }else{
-  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();loadBairros();loadBairroPolys();loadLimite();
+  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();avisoFollowups();loadBairros();loadBairroPolys();loadLimite();
   bootSplashOff(); /* mapa criado e view definida = interface interativa */
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
