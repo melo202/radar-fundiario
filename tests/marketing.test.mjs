@@ -28,6 +28,20 @@ test("MK-1: legendas em 3 tons com dados reais + entorno medido como argumento d
   assert.ok(html.includes('onclick="copiarLegenda('), "copiar em 1 toque");
 });
 
+test("AREA-APTO: metragem de apartamento nunca sai do cadastro cru — privativa declarada e lembrada", () => {
+  /* areaedif de UNIDADE é a área TOTAL (privativa + comum + vaga); divulgação e avaliação
+     usam a PRIVATIVA declarada pelo corretor, lembrada no aparelho (ci_privativa) */
+  assert.match(html, /const mktArea=\(\)=>MKT&&MKT\.area>0/, "área divulgada vem do campo do modal");
+  assert.ok(!html.includes("const mktArea=a=>+a.areaedif"), "nunca mais o areaedif cru em material público");
+  assert.ok(html.includes('mktAreaRot=a=>ehAptoProvavel(a)?"privativos"'), "rótulo honesto por tipo");
+  assert.ok(html.includes('localStorage.setItem("ci_privativa"'), "privativa lembrada só no aparelho");
+  assert.ok(html.includes("os anúncios dos portais usam a <b>privativa</b>"), "avaliação pede a privativa antes de comparar");
+  assert.match(html, /const area=isU\?privGet\(a\):\+a\.areaedif/, "motor recebe a privativa para unidade");
+  assert.ok(html.includes("privativa:ehAptoProvavel(LZ.a)?privGet(LZ.a):null"), "laudo herda a privativa lembrada");
+  assert.ok(html.includes("A privativa não pode passar da área total do cadastro"), "guarda: privativa ≤ total do cadastro");
+  assert.ok(html.includes('onclick="mercadoTrocarArea()"'), "área usada é visível e trocável no resultado");
+});
+
 test("MK-1: digitação cirúrgica (lição CUSTOS-01) e contato lembrado localmente", () => {
   assert.ok(html.includes("atualizaMkt(); /* cirúrgico: nunca re-renderiza o modal digitando"));
   assert.ok(!/oninput="[^"]*renderMkt/.test(html), "nenhum input re-renderiza o modal");

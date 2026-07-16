@@ -7106,6 +7106,16 @@ const MOTOR_BASE="https://api.corretorinteligente.tech";
 let MERCADO_A=null;
 let MERCADO_LAST=null; /* última ACM calculada NESTA sessão — alimenta a seção do laudo */
 const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas anunciadas publicamente na web, coletadas e peneiradas pelo motor do Corretor Inteligente. Não são transações e não substituem avaliação profissional.</p>';
+/* AREA-APTO (auditoria 16/07 — achado do usuário: "metragem saindo errado em apartamento"):
+   para UNIDADE, o areaedif do cadastro é a área TOTAL (privativa + fração comum + vaga);
+   anúncio de portal e material de divulgação usam a PRIVATIVA. Comparar total com privativa
+   inflava a estimativa (o motor filtra comparáveis por 0,5×–2× da área e multiplica o R$/m²
+   pela área enviada). A privativa é DECLARADA pelo corretor uma vez e lembrada neste aparelho
+   (ci_privativa, por inscrição) — NUNCA convertida por fator inventado (regra da honestidade).
+   Avaliação, divulgação (MK-1) e laudo leem o MESMO registro. */
+const privKey=a=>clean(a&&a.nrinscr)||clean(a&&a.ci)||"";
+function privGet(a){try{const v=+(JSON.parse(localStorage.getItem("ci_privativa")||"{}")[privKey(a)]);return v>0?v:null;}catch(e){return null;}}
+function privSet(a,v){try{const m=JSON.parse(localStorage.getItem("ci_privativa")||"{}");const k=privKey(a);if(!k)return;if(+v>0)m[k]=+v;else delete m[k];localStorage.setItem("ci_privativa",JSON.stringify(m));}catch(e){}}
 function mercadoReset(a){
   MERCADO_A=a;
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
@@ -7153,9 +7163,18 @@ function irParaAvaliacao(){
 async function analisarMercado(){
   const a=MERCADO_A; if(!a)return;
   const body=document.getElementById("dMercadoBody"), bt=document.getElementById("btnMercado");
-  const area=+a.areaedif;
+  const isU=ehAptoProvavel(a);
+  /* AREA-APTO: unidade compara pela PRIVATIVA declarada; total do cadastro fica fora da conta */
+  const area=isU?privGet(a):+a.areaedif;
+  if(isU&&!(area>0)){
+    body.innerHTML=`<p class="dmercado-hint">Para apartamento, o cadastro traz a área <b>TOTAL</b>${+a.areaedif>0?` — aqui, ${Math.round(a.areaedif)} m², com área comum e vaga`:""} — e os anúncios dos portais usam a <b>privativa</b>. Comparar uma com a outra inflaria o valor. Informe a privativa (fica lembrada neste aparelho):</p>
+      <input class="cinput" id="mercadoPriv" inputmode="numeric" placeholder="ex.: 84" style="margin-top:8px">
+      <button class="cmini" style="margin-top:8px;border-color:var(--accent);color:var(--accent)" onclick="mercadoUsarPriv()">Usar esta área e calcular</button>`;
+    document.getElementById("mercadoPriv").focus();
+    return;
+  }
   if(!(area>0)){body.innerHTML='<p class="dmercado-hint">Este registro não tem área edificada no cadastro — sem área não existe comparação honesta por m².</p>';return;}
-  const subject={propertyType:ehAptoProvavel(a)?"apartamento":"casa",neighborhood:clean(a.nmbairro),areaM2:area};
+  const subject={propertyType:isU?"apartamento":"casa",neighborhood:clean(a.nmbairro),areaM2:area};
   /* coordenada do imóvel vai junto: o motor devolve a DISTÂNCIA real de cada oferta
      geocodificada (fato exposto, nunca peso automático de valor — §10) */
   if(a.x_coord&&a.y_coord){const ll=toWGS(a.x_coord,a.y_coord);subject.lat=ll[0];subject.lon=ll[1];}
@@ -7176,6 +7195,16 @@ async function analisarMercado(){
     body.innerHTML=`<p class="dmercado-hint">Busca de mercado indisponível agora (${esc(e.message)}). Os dados cadastrais acima seguem valendo.</p>${linksPortaisHTML(subject)}`;
   }finally{clearInterval(prog);bt.disabled=false;bt.textContent="Calcular valor";}
 }
+/* AREA-APTO: confirma/salva a privativa digitada e refaz a análise; a troca posterior
+   sai do link "alterar área" no resultado (zera o registro e volta ao pedido). */
+function mercadoUsarPriv(){
+  const a=MERCADO_A,el=document.getElementById("mercadoPriv");if(!a||!el)return;
+  const v=parseInt(String(el.value).replace(/\D/g,""),10)||0;
+  if(!(v>0)){toast("Informe a área privativa em m².");return;}
+  if(+a.areaedif>0&&v>+a.areaedif){toast(`A privativa não pode passar da área total do cadastro (${Math.round(a.areaedif)} m²).`);return;}
+  privSet(a,v);analisarMercado();
+}
+function mercadoTrocarArea(){if(!MERCADO_A)return;privSet(MERCADO_A,0);analisarMercado();}
 /* Links diretos de busca nos portais (zero custo, sempre úteis): o corretor clica e vê
    os anúncios AO VIVO no próprio site, já filtrados pela cidade/tipo. Best-effort — se
    um portal mudar a URL de busca, ainda cai na página certa da cidade. */
@@ -7236,6 +7265,7 @@ function renderMercado(d,subject){
   body.innerHTML=`
     <div class="dmercado-num"><small>Referência por ofertas públicas</small><b>${brlC(r.estimatedValue)}</b>
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
+    ${ehAptoProvavel(MERCADO_A||{})?`<p class="dmercado-hint">Comparado pela área <b>privativa informada de ${subject.areaM2} m²</b> — a total do cadastro (com comum e vaga) fica fora da conta. <button type="button" onclick="mercadoTrocarArea()" style="background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-decoration:underline;font:inherit">alterar área</button></p>`:""}
     <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${av&&av.buscou?` Busca ao vivo: ${av.novos||0} anúncio(s) novo(s) coletado(s) agora.`:av?" (usando a coleta recente deste bairro).":""}</div>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     ${r.indiceMercado?`<p class="dmercado-hint" style="margin-top:8px"><b>Índice FipeZap</b> (Goiânia, venda, ref. ${fmtMesRef(r.indiceMercado.referencia)}): ${fmtPct(r.indiceMercado.variacaoMensal)} no mês · ${fmtPct(r.indiceMercado.variacao12m)} em 12 meses${r.indiceMercado.precoM2MedioCidade?` · média da cidade ${brlC(r.indiceMercado.precoM2MedioCidade)}/m²`:""} — contexto da cidade, fora do cálculo.</p>`:""}
@@ -8684,7 +8714,9 @@ function finEscolherDoc(tipoDoc){
   delete LZ.fase;
   const hojeISO=new Date().toISOString().slice(0,10);
   Object.assign(LZ,{step:0,conserv:"Bom",difs:[],obs:"",valor:null,fotos:[],comps:null,
-    vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",privativa:null,docOk:undefined});
+    vistoria:false,dataVist:hojeISO,solicitante:"",finalidade:"Venda / compra",
+    privativa:ehAptoProvavel(LZ.a)?privGet(LZ.a):null, /* AREA-APTO: lembrada de avaliação/divulgação */
+    docOk:undefined});
   const wf=document.querySelector("#wiz .wfoot");if(wf)wf.style.display="";
   const lz0=LZ; /* captura a instância: promise antiga não grava no wizard de outro imóvel */
   getComps(LZ.a).then(g=>{if(LZ===lz0){
@@ -9135,7 +9167,7 @@ function wizRender(){
         ${g&&g.res&&g.res.n>=3?`<br><br>Amostra cadastral: <b>${g.res.n} registros fiscais semelhantes</b> em ${g.radius} m · mediana venal ${brl(g.res.med)}/m²`:(g===null?"":"<br><br>⏳ analisando a amostra cadastral…")}</div>
       ${isUw?`<span class="wlabel">Área privativa declarada (m²) — opcional</span>
       <input class="winput" inputmode="numeric" placeholder="ex.: 84 — o cadastro traz a área TOTAL (${a.areaedif?Math.round(a.areaedif)+" m²":"?"}), com comum e vaga"
-        value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null" onchange="wizRender()">`:""}
+        value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null" onchange="if(ehAptoProvavel(LZ.a))privSet(LZ.a,LZ.privativa||0);wizRender()">`:""}
       <span class="wlabel">Valor informado pelo usuário (R$)</span>
       <input class="winput" inputmode="numeric" value="${LZ.valor!=null?LZ.valor:""}" oninput="LZ.valor=parseInt(this.value.replace(/\\D/g,''),10)||null">
       <span class="wlabel">Observações (opcional)</span>
@@ -9178,7 +9210,7 @@ function wizRender(){
           return it.resolvido
             ?`<div class="checkitem is-ok"><span class="checkitem-txt">✓ ${esc(it.texto)}</span></div>`
             :`<div class="checkitem"><span class="checkitem-txt">${esc(it.texto)}</span>
-                <input class="winput checkitem-input" inputmode="numeric" placeholder="ex.: 84 m²" value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null;wizRender()"></div>`;
+                <input class="winput checkitem-input" inputmode="numeric" placeholder="ex.: 84 m²" value="${LZ.privativa||""}" oninput="LZ.privativa=parseInt(this.value.replace(/\\D/g,''),10)||null;if(ehAptoProvavel(LZ.a))privSet(LZ.a,LZ.privativa||0);wizRender()"></div>`;
         }
         if(it.id==="conservacao"){
           return `<div class="checkitem is-ok"><span class="checkitem-txt">✓ ${esc(it.texto)}</span></div>`;
@@ -9438,7 +9470,9 @@ const MKT_LOGO=new Image();MKT_LOGO.onload=()=>{if(MKT)desenhaMkt();};MKT_LOGO.s
 function abrirMkt(){
   const a=DCUR;if(!a)return;
   let perfil={};try{perfil=JSON.parse(localStorage.getItem("ci_perfil")||"{}");}catch(e){}
-  MKT={a,formato:"post",preco:0,frase:"",contato:perfil.contato||""};
+  /* AREA-APTO: apto anuncia pela PRIVATIVA (lembrada em ci_privativa); casa pela construída */
+  MKT={a,formato:"post",preco:0,frase:"",contato:perfil.contato||"",
+    area:ehAptoProvavel(a)?(privGet(a)||0):(Math.round(+a.areaedif)||0)};
   const m=document.getElementById("mkt");m.hidden=false;trapFocus(m);
   renderMkt();
 }
@@ -9453,6 +9487,8 @@ function renderMkt(){
     </div>
     <span class="clabel">Preço de venda (R$) — o SEU preço de anúncio</span>
     <input class="cinput" inputmode="numeric" value="${MKT.preco?MKT.preco.toLocaleString("pt-BR"):""}" oninput="mktCampo(this,'preco')">
+    <span class="clabel">Área do anúncio (m²)${ehAptoProvavel(MKT.a)?" — a privativa":""}</span>
+    <input class="cinput" inputmode="numeric" value="${MKT.area||""}" placeholder="${ehAptoProvavel(MKT.a)?(+MKT.a.areaedif>0?`o cadastro traz a TOTAL (${Math.round(MKT.a.areaedif)} m², c/ comum e vaga) — anuncie a privativa`:"área privativa do anúncio"):"ex.: 120"}" oninput="mktCampo(this,'area')">
     <span class="clabel">Frase de destaque (opcional)</span>
     <input class="cinput" maxlength="60" placeholder="ex.: 3 quartos com suíte e varanda gourmet" value="${esc(MKT.frase)}" oninput="mktCampo(this,'frase')">
     <span class="clabel">Seu contato (nome · CRECI · telefone)</span>
@@ -9467,6 +9503,12 @@ function renderMkt(){
 function mktCampo(el,campo){
   if(!MKT)return;
   if(campo==="preco"){MKT.preco=parseInt(el.value.replace(/\D/g,""),10)||0;el.value=MKT.preco?MKT.preco.toLocaleString("pt-BR"):"";}
+  else if(campo==="area"){
+    const v=parseInt(el.value.replace(/\D/g,""),10)||0;
+    if(ehAptoProvavel(MKT.a)&&+MKT.a.areaedif>0&&v>+MKT.a.areaedif){toast(`A privativa não pode passar da área total do cadastro (${Math.round(MKT.a.areaedif)} m²).`);el.value=MKT.area||"";return;}
+    MKT.area=v;
+    if(ehAptoProvavel(MKT.a))privSet(MKT.a,v); /* AREA-APTO: avaliação e laudo leem o mesmo registro */
+  }
   else MKT[campo]=el.value;
   if(campo==="contato"){try{localStorage.setItem("ci_perfil",JSON.stringify({contato:MKT.contato}));}catch(e){}}
   atualizaMkt(); /* cirúrgico: nunca re-renderiza o modal digitando (lição CUSTOS-01) */
@@ -9480,17 +9522,21 @@ function entornoDestaque(){
 /* divulgação pede nome de bairro BONITO ("Setor Bueno", não "SET BUENO" do cadastro)
    e área redonda — displayName é o mesmo do combo de busca */
 const mktBairro=a=>{try{return displayName(clean(a.nmbairro))||clean(a.nmbairro);}catch(e){return clean(a.nmbairro);}};
-const mktArea=a=>+a.areaedif>0?`${Math.round(+a.areaedif).toLocaleString("pt-BR")} m²`:null;
+/* AREA-APTO: a área divulgada é a do CAMPO do modal — privativa p/ apto (lembrada),
+   construída do cadastro p/ casa (editável). O areaedif cru de unidade (TOTAL, c/ comum
+   e vaga) NUNCA vai para material público. Sem área declarada → o material sai sem área. */
+const mktArea=()=>MKT&&MKT.area>0?`${MKT.area.toLocaleString("pt-BR")} m²`:null;
+const mktAreaRot=a=>ehAptoProvavel(a)?"privativos":"de área construída";
 function legendasMkt(){
   const a=MKT.a,bairro=mktBairro(a),tipo=ehAptoProvavel(a)?"Apartamento":"Imóvel";
-  const area=mktArea(a);
+  const area=mktArea();
   const ent=entornoDestaque();
   const preco=MKT.preco>0?brl(MKT.preco):null;
   const link=`https://corretorinteligente.tech/?insc=${encodeURIComponent(clean(a.nrinscr)||clean(a.ci))}`;
   const tags=`#imoveis #goiania #${bairro.toLowerCase().replace(/\W+/g,"")} #corretordeimoveis${ehAptoProvavel(a)?" #apartamento":" #casa"}`;
   const fim=`${MKT.contato?MKT.contato+"\n":""}Ficha completa: ${link}\n${tags}`;
   return [
-    ["Institucional",`${tipo} no ${bairro}${area?`, ${area} de área construída`:""}${MKT.frase?` — ${MKT.frase}`:""}.${ent?` A poucos passos do essencial: ${ent}.`:""}${preco?` Valor: ${preco}.`:""} Agende sua visita.\n${fim}`],
+    ["Institucional",`${tipo} no ${bairro}${area?`, ${area} ${mktAreaRot(a)}`:""}${MKT.frase?` — ${MKT.frase}`:""}.${ent?` A poucos passos do essencial: ${ent}.`:""}${preco?` Valor: ${preco}.`:""} Agende sua visita.\n${fim}`],
     ["Urgência",`🔥 Oportunidade no ${bairro}! ${tipo}${area?` de ${area}`:""}${preco?` por ${preco}`:""}${MKT.frase?` — ${MKT.frase}`:""}.${ent?` E ainda: ${ent}.`:""} Me chame antes que saia!\n${fim}`],
     ["História",`Imagine a rotina no ${bairro}${ent?`, com ${ent.replace(" a "," a apenas ")}`:""}. Este ${tipo.toLowerCase()}${area?` de ${area}`:""} pode ser o próximo capítulo da sua família${preco?` — ${preco}`:""}. Vem conhecer.\n${fim}`],
   ];
@@ -9530,7 +9576,7 @@ function desenhaMkt(){
   let y=midY+170;
   if(MKT.frase){x.font="500 44px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.92)";x.fillText(MKT.frase,W/2,y);y+=64;}
   const specs=[];
-  const areaTx=mktArea(a);if(areaTx)specs.push(`${areaTx} de área construída`);
+  const areaTx=mktArea();if(areaTx)specs.push(`${areaTx} ${mktAreaRot(a)}`);
   const ent=entornoDestaque();if(ent)specs.push(ent[0].toUpperCase()+ent.slice(1));
   x.font="400 38px Archivo,sans-serif";x.fillStyle="rgba(245,248,248,.72)";
   specs.forEach(s=>{x.fillText(s,W/2,y);y+=56;});
