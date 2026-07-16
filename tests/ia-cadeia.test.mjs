@@ -26,6 +26,20 @@ test("NV1: timeout configurável por degrau (GLM é mais lento que o Groq)", () 
   assert.ok(src.includes("_TIMEOUT_MS`] || TIMEOUT_REMOTE_MS"));
 });
 
+test("PERF: max_tokens declarado por tarefa e 429 respeitando o 'try again' do Groq", () => {
+  /* diagnóstico real (15/07): o Groq debita o max_tokens RESERVADO da cota TPM — 2048
+     fixos = 2 extrações/min; o 429 vinha com "try again in 250ms" e nós descíamos
+     para o local de 19s em vez de esperar 250ms */
+  assert.ok(src.includes("max_tokens: maxTokens || 2048"));
+  assert.ok(src.includes('r.status === 429 && p.kind === "openai"'));
+  assert.match(src, /try again in \(/, "espera o tempo que o provedor pediu");
+  assert.ok(src.includes("Math.min("), "espera com teto — nunca trava a fila");
+  const ex = readFileSync(new URL("../motor/extract.js", import.meta.url), "utf-8");
+  assert.ok(ex.includes("maxTokens: 500"), "extração declara o que precisa (~200 de saída)");
+  const re = readFileSync(new URL("../motor/resumo-entorno.js", import.meta.url), "utf-8");
+  assert.ok(re.includes("maxTokens: 400"), "resumo idem");
+});
+
 test("NV1: status expõe os dois remotos e o resultado identifica o degrau servidor", () => {
   assert.ok(src.includes("remote2: REMOTE2 ?"));
   assert.ok(src.includes('provider: p === LOCAL ? "local" : p.rotulo'));

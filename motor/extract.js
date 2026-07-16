@@ -49,6 +49,9 @@ export async function extrairAnuncio({ titulo, descricao, tier = "fast" }) {
     task: "extracao-anuncio",
     tier,
     system: SYSTEM,
+    /* saída real da extração é ~200 tokens — declarar 500 (folga) em vez dos 2048
+       padrão triplica quantas extrações cabem na cota por minuto do Groq */
+    maxTokens: 500,
     prompt: `TÍTULO: ${titulo || "(sem título)"}\n\nDESCRIÇÃO:\n${descricao || "(sem descrição)"}`,
   }, EXTRACAO_SCHEMA);
 }

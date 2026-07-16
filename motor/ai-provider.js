@@ -56,7 +56,7 @@ const REMOTE = remotoDoEnv("AI_REMOTE", "remoto-1");
 const REMOTE2 = remotoDoEnv("AI_REMOTE2", "remoto-2");
 const hashOf = (o) => createHash("sha256").update(JSON.stringify(o)).digest("hex");
 
-async function chatOnce(p, { system, prompt, tier, schema }) {
+async function chatOnce(p, { system, prompt, tier, schema, maxTokens }) {
   const model = p.models[tier] || p.models.fast;
   const t0 = Date.now();
   let body, url;
@@ -82,19 +82,33 @@ async function chatOnce(p, { system, prompt, tier, schema }) {
     /* Qwen3 servido remoto raciocina por padrão e queima o TPM gratuito à toa em tarefa
        de extração — o /no_think da família Qwen3 desliga isso. */
     if (/qwen/i.test(model)) sys += "\n/no_think";
+    /* PERF (15/07, diagnóstico real): o Groq debita max_tokens RESERVADO da cota TPM —
+       2048 fixos faziam cada extração "custar" ~2.850 tokens (limite 6k/min = 2 por
+       minuto → 429 → cooldown → tudo caía no local de 19s). Cada tarefa declara o que
+       realmente precisa. */
     body = {
-      model, temperature: 0.1, max_tokens: 2048,
+      model, temperature: 0.1, max_tokens: maxTokens || 2048,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
     };
     if (schema) body.response_format = { type: "json_object" };
   }
-  const r = await fetch(url, {
+  const doFetch = () => fetch(url, {
     method: "POST",
     headers: Object.assign({ "Content-Type": "application/json" },
       p.key ? { Authorization: `Bearer ${p.key}` } : {}),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(p.timeoutMs),
   });
+  let r = await doFetch();
+  /* 429 educado: o Groq DIZ quanto esperar ("try again in 250ms") — esperar esse tanto
+     e refazer 1x resolve rajadas curtas sem derrubar o degrau em cooldown de 10 min */
+  if (r.status === 429 && p.kind === "openai") {
+    const txt = await r.text();
+    const ms = Number((txt.match(/try again in (\d+(?:\.\d+)?)\s*m?s/i) || [])[1]) || 1500;
+    const espera = Math.min(/in \d+(?:\.\d+)?s/i.test(txt) ? ms * 1000 : ms, 5000) + 200;
+    await new Promise(ok => setTimeout(ok, espera));
+    r = await doFetch();
+  }
   if (!r.ok) throw new Error(`${p.kind} http ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const d = await r.json();
   let text = p.kind === "ollama" ? d.message?.content : d.choices?.[0]?.message?.content;
@@ -127,7 +141,7 @@ function parseJsonLoose(text) {
   throw new Error("resposta sem JSON");
 }
 
-async function run({ task, system, prompt, tier = "fast", schema = null, cache = true }) {
+async function run({ task, system, prompt, tier = "fast", schema = null, cache = true, maxTokens = null }) {
   /* hash pelo CONTEÚDO: um acerto de cache vale independentemente do provedor que gerou */
   const promptHash = hashOf({ system, prompt, schema, tier });
   if (cache) {
@@ -138,7 +152,7 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
   for (const p of chain(tier)) {
     for (let attempt = 0; attempt < 2; attempt++) { /* 1 retry por degrau (§21) */
       try {
-        const out = await chatOnce(p, { system, prompt, tier, schema });
+        const out = await chatOnce(p, { system, prompt, tier, schema, maxTokens });
         let value = out.text;
         if (schema) {
           value = parseJsonLoose(out.text);

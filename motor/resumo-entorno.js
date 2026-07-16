@@ -58,7 +58,7 @@ export async function resumirEntorno({ lat, lon }) {
   for (let tentativa = 0; tentativa < 2 && texto == null; tentativa++) {
     try {
       const g = await aiProvider.generateText({
-        task: "resumo-entorno", tier: "fast",
+        task: "resumo-entorno", tier: "fast", maxTokens: 400,
         system: SYSTEM + (problema ? `\n\nATENÇÃO: tentativa anterior rejeitada (${problema}). Cite menos números.` : ""),
         prompt: JSON.stringify(payload),
       });
