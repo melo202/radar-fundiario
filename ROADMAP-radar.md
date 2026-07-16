@@ -208,6 +208,21 @@ Hoje a varredura noturna só DESCOBRE anúncios novos; ninguém revisita os já 
 - ✅ (15/07) **A2 — Frescor honesto na avaliação:** ofertasColetadasEntre no resultado; card Mercado e laudo declaram o período da amostra. Verificado ao vivo. Alerta de amostra velha: o peso de recência (§8) já existe; expor a IDADE da amostra no card Mercado e no laudo ("ofertas coletadas entre X e Y"), e alertar quando a mediana da amostra passar de N dias.
 - ✅ (15/07) **A3 — Sinal de variação:** painel ganhou o bloco "Mercado em movimento" (subiu/baixou por anúncio, agregado, com fonte); popula conforme as varreduras capturam mudanças. Métrica por bairro: quando um mesmo anúncio muda de preço, registrar o delta e usar como termômetro do bairro (métrica agregada, nunca inferência por imóvel isolado).
 
+### CICLO COMERCIAL — marketing, follow-up e pós-venda (ideias do usuário, 16/07/2026)
+
+O produto hoje cobre da BUSCA ao DOCUMENTO. As três ideias fecham o ciclo do corretor: captar (marketing) → conduzir (follow-up) → entregar (status para o cliente). Reflexão registrada antes de codar:
+
+**Decisão de arquitetura que amarra as três:** enquanto não houver contas de corretor (multitenant, adiado de propósito), TODO dado de pessoa (lead, cliente, telefone) é **local-first** — vive só no navegador do corretor, como o caderno e a diligência já fazem ("nenhum nome é armazenado" é promessa publicada). O que precisar de servidor (página de status compartilhável) usa token anônimo e apelido, nunca PII. Quando o multitenant chegar, tudo migra com dono.
+
+- ⬜ **MK-1 — Aba/ferramenta Marketing no dossiê.** "Gerar material de divulgação" a partir do imóvel aberto: (a) **card de imagem** (1080×1080 e stories 1080×1920) desenhado em canvas LOCAL — dados do imóvel + mini-mapa + paleta/logo da marca + QR/link do imóvel — download PNG na hora, zero servidor; (b) **legendas prontas** em 3 tons (institucional, urgência, storytelling) redigidas pela IA **com os números validados pela nossa infra §17** (nunca preço inventado em post!), + hashtags locais; (c) variações por canal (Instagram, WhatsApp status, Facebook). Higgsfield entra depois para fundos/artes premium (R6 já tem o pipeline).
+- ⬜ **MK-2 — Kit do imóvel:** um clique junta card + legenda + link + documento da avaliação num "pacote de divulgação" copiável.
+- ⬜ **FU-1 — Follow-up (CRM-lite) local-first.** No dossiê, "Interessados": nome/telefone/nota + estágio (contato → visita → proposta → fechado/perdido) + **próximo follow-up com data** — mesmo padrão de datas locais e alertas que o checklist de diligência já usa (na abertura do app: "3 follow-ups vencendo hoje"). Lista geral em "Meus imóveis" cruzando salvos × interessados. Sem servidor, sem PII fora do aparelho — exportável/importável em JSON para backup.
+- ⬜ **FU-2 — Atalhos de ação:** WhatsApp com mensagem pronta contextual ao estágio (pós-visita, cobrança de proposta), registrar contato feito em 1 toque.
+- ⬜ **SV-1 — Status da venda para o CLIENTE.** Página pública `corretorinteligente.tech/acompanhe/<token>` (token aleatório, criada pelo corretor no painel): linha do tempo das etapas (proposta aceita → documentação → ITBI → cartório → registro concluído) com data e observação por etapa, marca do Corretor Inteligente + espaço para o nome/CRECI do corretor. **Sem PII do cliente no servidor**: o imóvel aparece por apelido escolhido pelo corretor ("Apto Bueno 302"). O corretor atualiza pelo painel; o cliente acompanha como rastreio de encomenda — é ferramenta de encantamento e reduz o "e aí, como tá?".
+- ⬜ **SV-2 — Notificação de etapa:** botão "copiar mensagem de atualização" para o corretor mandar no WhatsApp do cliente a cada mudança (ativo, não automático — sem armazenar contato).
+
+Ordem sugerida: **FU-1 → MK-1 → SV-1** (follow-up é dor diária; marketing gera visibilidade; status precisa do painel que já existe).
+
 ### Pendências humanas (inalteradas)
 
 - ⬜ Teste tátil em iPhone/Android reais (V1/V4) — site premium já no ar para isso.
