@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   montarAtualizacaoImovel, rotuloEvento, idValido, ESTAGIOS_CAPTACAO, TEMPERATURAS,
-  montarAtualizacaoOportunidade, ESTAGIOS_OPORTUNIDADE, OBJECOES_PERDA,
+  montarAtualizacaoOportunidade, ESTAGIOS_OPORTUNIDADE, OBJECOES_PERDA, mensagemFunil,
 } from "../motor/os-core.js";
 
 const atual = {
@@ -85,6 +85,32 @@ test("D-2: linha do tempo do funil em linguagem de corretor", () => {
   assert.equal(rotuloEvento({ event_type: "opportunity.won", payload: { contactName: "Marina" } }), "Negócio fechado com Marina 🎉");
   assert.equal(rotuloEvento({ event_type: "opportunity.lost", payload: { contactName: "João", motivo: "sem_retorno" } }),
     "João perdido — motivo: parou de responder");
+});
+
+/* ---------------- D-3 (FU-2 no OS): mensagem pronta por estágio ---------------- */
+const imovelFx = { title: "Apartamento · Setor Bueno", asking_price: 940000 };
+
+test("D-3: TODO estágio tem mensagem — nunca vazia, sempre com primeiro nome e imóvel quando cabem", () => {
+  for (const stage of ESTAGIOS_OPORTUNIDADE) {
+    const m = mensagemFunil({ stage, contact_name: "Marina Prospect" }, imovelFx);
+    assert.ok(m.length > 40, `${stage}: mensagem curta demais`);
+    assert.ok(m.includes("Marina"), `${stage}: sem o primeiro nome`);
+    assert.ok(!m.includes("Prospect"), `${stage}: sobrenome não vai na mensagem`);
+  }
+});
+
+test("D-3: a mensagem é conversa, não anúncio — preço NUNCA entra", () => {
+  for (const stage of ESTAGIOS_OPORTUNIDADE) {
+    const m = mensagemFunil({ stage, contact_name: "Marina" }, imovelFx);
+    assert.ok(!/R\$|940/.test(m), `${stage}: preço vazou para a mensagem`);
+  }
+});
+
+test("D-3: visita agendada confirma a DATA do próximo passo; perdido deixa a porta aberta", () => {
+  const visita = mensagemFunil({ stage: "visita_agendada", contact_name: "Marina", next_action_at: "2026-07-18T12:00:00Z" }, imovelFx);
+  assert.ok(visita.includes("18/07"), visita);
+  const perdido = mensagemFunil({ stage: "perdido", contact_name: "Marina" }, imovelFx);
+  assert.ok(perdido.includes("primeira pessoa a saber"), "perdido de hoje é cliente de amanhã");
 });
 
 test("D-1: id de imóvel só passa como uuid estrito", () => {

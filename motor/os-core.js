@@ -397,6 +397,7 @@ export function rotuloEvento(ev) {
     case "opportunity.won": return `Negócio fechado com ${p.contactName || "o interessado"} 🎉`;
     case "opportunity.lost": return `${p.contactName || "Interessado"} perdido — motivo: ${ROTULO_OBJECAO[p.motivo] || p.motivo || "não informado"}`;
     case "opportunity.updated": return `Oportunidade${p.contactName ? ` de ${p.contactName}` : ""} atualizada: ${(p.campos || []).join(", ")}`;
+    case "opportunity.contacted": return `Contato registrado${p.contactName ? ` com ${p.contactName}` : ""}`;
     case "task.completed": return `Concluído: ${p.title || "tarefa"}`;
     default: return t || "evento";
   }
@@ -484,6 +485,49 @@ export async function atualizarOportunidade(id, campos) {
   } finally { client.release(); }
 }
 
+/* ---------------- D-3 (FU-2 no OS): mensagem pronta contextual ao estágio ----------------
+   Padrão SV-2: a mensagem nasce PRONTA mas quem envia é o CORRETOR (copiar/abrir WhatsApp) —
+   nunca automática. Determinística, com os dados da carteira (o preço citado seria o DO
+   corretor; optamos por nem citar preço: mensagem é conversa, não anúncio). */
+const primeiroNome = (s) => String(s || "").trim().split(/\s+/)[0] || "";
+const diaBR = (v) => v ? new Date(v).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null;
+export function mensagemFunil(op, imovel) {
+  const nome = primeiroNome(op?.contact_name);
+  const ola = nome ? `Olá, ${nome}!` : "Olá!";
+  const t = limparTexto(imovel?.title, 80) || "o imóvel";
+  const dt = diaBR(op?.next_action_at);
+  switch (op?.stage) {
+    case "novo_interessado": return `${ola} Obrigado pelo interesse no ${t}. Posso te passar os detalhes e, se fizer sentido, já deixamos uma visita combinada. Qual o melhor horário para conversarmos?`;
+    case "em_qualificacao": return `${ola} Para eu te apresentar o imóvel certo, me conta: o que não pode faltar para você — e o que descartaria de cara?`;
+    case "imovel_apresentado": return `${ola} Ficou alguma dúvida sobre o ${t}? Se quiser, agendo uma visita sem compromisso — vendo pessoalmente, a conversa fica outra.`;
+    case "visita_agendada": return `${ola} Confirmando nossa visita ao ${t}${dt ? ` no dia ${dt}` : ""}. Qualquer imprevisto me avisa que remarcamos sem problema. Até lá!`;
+    case "visitou": return `${ola} Obrigado pela visita ao ${t}! O que mais te agradou — e o que pesou contra? Seu retorno me ajuda a te atender melhor e, se for o caso, já preparo uma proposta.`;
+    case "negociando": return `${ola} Seguimos na negociação do ${t}. Estou à disposição para aparar qualquer ponto — condição, prazo ou documentação. Vamos fechar essa conta juntos?`;
+    case "proposta": return `${ola} Sobre a proposta do ${t}: conseguiu avaliar? Se algum ponto travou, me diz que eu vejo o que dá para ajustar antes que o imóvel receba outra oferta.`;
+    case "fechado": return `${ola} Parabéns pelo negócio! 🎉 Agora acompanho você em cada etapa até o registro — vou te mandando as atualizações.`;
+    case "perdido": return `${ola} Obrigado pela conversa até aqui! Vou ficar de olho em opções com o seu perfil — se algo mudar, você será a primeira pessoa a saber.`;
+    default: return `${ola} Podemos conversar sobre o ${t}?`;
+  }
+}
+
+/* "registrei contato" em 1 toque: só atualiza a interação e registra o evento —
+   o conteúdo da conversa fica no WhatsApp do corretor, não aqui */
+export async function registrarContatoOportunidade(id) {
+  if (!idValido(id)) return { ok: false, erro: "oportunidade inválida" };
+  const db = await banco();
+  const org = await garantirOrganizacao();
+  const r = await db.query(
+    `UPDATE opportunities o SET last_interaction_at=now(),updated_at=now()
+     FROM contacts c WHERE o.id=$1 AND o.organization_id=$2 AND c.id=o.contact_id
+     RETURNING o.id, o.inventory_property_id, c.name AS contact_name`, [id, org.id]);
+  if (!r.rowCount) return { ok: false, erro: "oportunidade não encontrada" };
+  await db.query(
+    `INSERT INTO domain_events (organization_id,event_type,entity_type,entity_id,payload,source)
+     VALUES ($1,'opportunity.contacted','opportunity',$2,$3,'corretor-os')`,
+    [org.id, id, JSON.stringify({ contactName: r.rows[0].contact_name, inventoryPropertyId: r.rows[0].inventory_property_id })]);
+  return { ok: true };
+}
+
 /* encontra por telefone ou cria o contato — vínculo sempre EXPLÍCITO e com evento */
 async function vincularContato(client, orgId, { name, phone, type, source }) {
   const tel = normalizarTelefone(phone);
@@ -529,7 +573,9 @@ export async function dossieImovel(id) {
        ORDER BY occurred_at DESC LIMIT 60`, [org.id, id]),
   ]);
   return {
-    ok: true, property: p.rows[0], tasks: tarefas.rows, opportunities: oportunidades.rows,
+    ok: true, property: p.rows[0], tasks: tarefas.rows,
+    /* D-3: cada interessado já vem com a mensagem PRONTA do estágio — quem envia é o corretor */
+    opportunities: oportunidades.rows.map(o => ({ ...o, mensagem: mensagemFunil(o, p.rows[0]) })),
     events: eventos.rows.map(e => ({ ...e, rotulo: rotuloEvento(e) })),
   };
 }

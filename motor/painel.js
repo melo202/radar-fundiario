@@ -191,6 +191,12 @@ export async function painel(req, res) {
     const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
     return json(res, r.ok ? 200 : 400, r);
   }
+  if (req.method === "POST" && /^\/painel\/api\/os\/oportunidades\/[0-9a-f-]{36}\/contato$/.test(req.url)) {
+    /* D-3: "registrei contato" em 1 toque — só a data da interação; a conversa fica no WhatsApp */
+    const { registrarContatoOportunidade } = await import("./os-core.js");
+    const r = await registrarContatoOportunidade(req.url.split("/")[5]);
+    return json(res, r.ok ? 200 : 404, r);
+  }
   if (req.method === "POST" && /^\/painel\/api\/os\/oportunidades\/[0-9a-f-]{36}\/atualizar$/.test(req.url)) {
     /* D-2: funil — estágio/temperatura/próximo passo; "perdido" exige objeção tipificada */
     const { atualizarOportunidade } = await import("./os-core.js");

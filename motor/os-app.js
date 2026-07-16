@@ -67,7 +67,24 @@ function oppCard(o){
   const btn=el("button",{class:"card-action secondary",type:"submit",text:"Salvar andamento"});
   form.append(el("label",{text:"Estágio"}),stage,el("label",{text:"Temperatura"}),temp,el("label",{text:"Próximo passo (data)"}),prox,motivoWrap,btn);
   form.addEventListener("submit",ev=>{ev.preventDefault();saveOpportunity(o.id,{stage:stage.value,temperature:temp.value,nextActionAt:prox.value,lossReason:stage.value==="perdido"?motivo.value:undefined},btn);});
-  return el("article",{class:"entity-card"},[head,meta,form]);
+  /* D-3 (FU-2): mensagem PRONTA do estágio — copiar ou abrir o WhatsApp; quem envia é você */
+  const acoes=el("div",{class:"opp-actions"});
+  if(o.mensagem){
+    const msgBox=el("details",{class:"opp-msg"},[el("summary",{text:"Mensagem pronta para este estágio"}),el("p",{text:o.mensagem})]);
+    const copiar=el("button",{class:"card-action secondary",type:"button",text:"⧉ Copiar mensagem"});
+    copiar.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(o.mensagem);toast("Mensagem copiada — cole no WhatsApp. Depois toque em ✓ Registrei contato.");}catch{prompt("Copie:",o.mensagem);}});
+    acoes.append(msgBox,copiar);
+    if(o.contact_phone)acoes.append(el("a",{class:"card-action secondary as-link",href:`https://wa.me/${String(o.contact_phone).replace(/\D/g,"")}?text=${encodeURIComponent(o.mensagem)}`,target:"_blank",rel:"noopener",text:"Abrir no WhatsApp ↗"}));
+  }
+  const contato=el("button",{class:"card-action secondary",type:"button",text:"✓ Registrei contato"});
+  contato.addEventListener("click",()=>markContacted(o.id,contato));
+  acoes.append(contato);
+  return el("article",{class:"entity-card"},[head,meta,acoes,form]);
+}
+async function markContacted(id,btn){
+  btn.disabled=true;btn.textContent="Registrando…";
+  try{await api(`/painel/api/os/oportunidades/${id}/contato`,{method:"POST",body:"{}"});toast("Contato registrado — o Hoje deixa de cobrar por 3 dias.");invalidateLists();await loadProperty();}
+  catch(e){toast(e.message);btn.disabled=false;btn.textContent="✓ Registrei contato";}
 }
 async function saveOpportunity(id,dados,btn){
   btn.disabled=true;btn.textContent="Salvando…";
