@@ -9304,7 +9304,7 @@ function renderCustos(){
   document.getElementById("calcBody").innerHTML=`
     <div class="wsub" style="margin:0 0 4px">${esc(a.nmedificio)?esc(a.nmedificio)+" · ":""}Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"} · ${esc(a.nmbairro)}</div>
     <span class="clabel">Valor da transação (R$)</span>
-    <input class="cinput" inputmode="numeric" value="${CALC.negocio||""}" oninput="CALC.negocio=parseInt(this.value.replace(/\\D/g,''),10)||0;renderCustos()">
+    <input class="cinput" inputmode="numeric" value="${CALC.negocio?CALC.negocio.toLocaleString("pt-BR"):""}" oninput="custoInput(this)">
     <div class="wsub" style="margin:6px 0 0">Informe o valor real da compra e venda. O Corretor Inteligente não preenche este campo com valor venal nem referência indicativa.</div>
 
     <div class="cseg">
@@ -9315,27 +9315,54 @@ function renderCustos(){
 
     <div class="crow exato">
       <div class="ck">ITBI (2%)<small>Sobre o valor declarado (STJ Tema 1.113), não o venal</small></div>
-      <div class="cv">${brlExato(itbi)}</div>
+      <div class="cv" id="cvItbi">${brlExato(itbi)}</div>
     </div>
-    ${abaixoVenal?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> abaixo do venal (${brl(CALC.venal)}). O Tema 1.113/STJ garante o ITBI sobre o valor real, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode exigir contestação.</div>`:""}
+    <div id="cvAviso">${abaixoVenal?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> abaixo do venal (${brl(CALC.venal)}). O Tema 1.113/STJ garante o ITBI sobre o valor real, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode exigir contestação.</div>`:""}</div>
     ${CALC.financiado?"":`<div class="crow exato">
       <div class="ck">Escritura pública (tabelião)<small>Tabela TJGO 2026 · dispensada no financiamento</small></div>
-      <div class="cv">${brlExato(escritura)}</div>
+      <div class="cv" id="cvEscritura">${brlExato(escritura)}</div>
     </div>`}
     <div class="crow exato">
       <div class="ck">Registro do imóvel<small>Tabela oficial RI-GO 2026 (item 76)</small></div>
-      <div class="cv">${brlExato(registro)}</div>
+      <div class="cv" id="cvRegistro">${brlExato(registro)}</div>
     </div>
 
     <div class="crow total">
       <div class="ck">Custo total de aquisição</div>
-      <div class="cv">${temValor?brl(total):"—"}</div>
+      <div class="cv" id="cvTotal">${temValor?brl(total):"—"}</div>
     </div>
-    <div class="wsub" style="margin:6px 2px 0">${temValor?`Custos além do preço: <b>${brl(custos)}</b> (${pct.toFixed(1).replace(".",",")}% do valor).`:"Preencha o valor da transação para calcular os custos."}</div>
+    <div class="wsub" style="margin:6px 2px 0" id="cvResumo">${temValor?`Custos além do preço: <b>${brl(custos)}</b> (${pct.toFixed(1).replace(".",",")}% do valor).`:"Preencha o valor da transação para calcular os custos."}</div>
 
     <button class="cmini" style="border-color:var(--accent);color:var(--accent)" onclick="copiarCustos()">⧉ Copiar resumo para o cliente</button>
     <a class="cmini" href="${linkCartorio}" target="_blank" rel="noopener">Conferir na tabela oficial do cartório ↗</a>
     <div class="cnote">Valores das <b>tabelas oficiais TJGO 2026</b> (Prov. 179/2025): ITBI 2% municipal, escritura (notas) e registro (RI-GO) por faixa de valor. Pequenas taxas de protocolo/certidões e a avaliação bancária no financiamento não estão inclusas. Estimativa — confira na fonte antes de fechar.</div>`;
+}
+/* BUG real (16/07, report do usuário: "o número digitando tá bugando"): o oninput
+   chamava renderCustos(), que reconstruía o MODAL INTEIRO — inclusive o próprio input,
+   que perdia foco/teclado a cada dígito. Agora a digitação só atualiza os VALORES
+   (atualizarCustos), o input fica intacto e ainda ganha máscara de milhar. */
+function custoInput(el){
+  if(!CALC)return;
+  CALC.negocio=parseInt(el.value.replace(/\D/g,""),10)||0;
+  el.value=CALC.negocio?CALC.negocio.toLocaleString("pt-BR"):"";
+  atualizarCustos();
+}
+function atualizarCustos(){
+  if(!CALC)return;
+  const v=CALC.negocio||0, temValor=v>0;
+  const itbi=temValor?v*0.02:null;
+  const escritura=temValor?(CALC.financiado?0:emolumento(ESCRITURA_GO,v)):null;
+  const registro=Number.isFinite(v)&&temValor?emolumento(REGISTRO_GO,v):null;
+  const cart=temValor?escritura+registro:null;
+  const total=temValor?v+itbi+cart:null;
+  const custos=temValor?itbi+cart:null;
+  const põe=(id,txt)=>{const e=document.getElementById(id);if(e)e.innerHTML=txt;};
+  põe("cvItbi",brlExato(itbi));
+  põe("cvEscritura",brlExato(escritura));
+  põe("cvRegistro",brlExato(registro));
+  põe("cvTotal",temValor?brl(total):"—");
+  põe("cvResumo",temValor?`Custos além do preço: <b>${brl(custos)}</b> (${(custos/v*100).toFixed(1).replace(".",",")}% do valor).`:"Preencha o valor da transação para calcular os custos.");
+  põe("cvAviso",temValor&&v<(CALC.venal||0)?`<div class="wsub" style="margin:8px 0 0;color:var(--accent)"><b>Atenção:</b> abaixo do venal (${brl(CALC.venal)}). O Tema 1.113/STJ garante o ITBI sobre o valor real, mas a Prefeitura de Goiânia costuma emitir a guia sobre o venal — pode exigir contestação.</div>`:"");
 }
 function copiarCustos(){
   if(!CALC)return;

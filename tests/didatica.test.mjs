@@ -75,6 +75,18 @@ test("MOB-02: capa hidden ESCONDE de verdade e o canvas não captura toque", () 
   assert.ok(html.includes("#bootCeu{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}"));
 });
 
+test("CUSTOS-01: digitar o valor do ITBI não reconstrói o modal — foco preservado + máscara", () => {
+  /* report do usuário (16/07): o oninput re-renderizava o modal inteiro e o input
+     perdia o foco/teclado a cada dígito */
+  assert.ok(html.includes('oninput="custoInput(this)"'));
+  assert.ok(!/oninput="[^"]*renderCustos/.test(html), "nenhum input re-renderiza o modal ao digitar (botões podem)");
+  assert.match(html, /function custoInput\(el\)[\s\S]{0,300}toLocaleString\("pt-BR"\)/, "máscara de milhar ao digitar");
+  assert.match(html, /function atualizarCustos\(\)[\s\S]{0,900}põe\("cvItbi"/, "atualização cirúrgica dos valores");
+  for (const id of ["cvItbi", "cvRegistro", "cvTotal", "cvResumo", "cvAviso"]) {
+    assert.ok(html.includes(`id="${id}"`), `alvo cirúrgico ausente: ${id}`);
+  }
+});
+
 test("R4: página Como usar existe, é honesta e o app aponta para ela", () => {
   assert.ok(html.includes('href="como-usar.html"'), "link no O que o Corretor Inteligente faz");
   assert.ok(guia.includes("<title>Como usar · Corretor Inteligente</title>"));
