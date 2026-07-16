@@ -1,4 +1,4 @@
--- 006-corretor-os: fundação operacional do Corretor Inteligente OS.
+-- 006-corretor-os: primeira fatia operacional do Corretor Inteligente OS.
 -- Mantém o domínio público de mercado (listings/properties/valuations) separado da
 -- carteira privada do corretor (inventory_properties/contacts/opportunities).
 
@@ -128,7 +128,8 @@ CREATE TABLE IF NOT EXISTS opportunities (
                         CHECK (stage IN ('novo_interessado','em_qualificacao','imovel_apresentado','visita_agendada','visitou','negociando','proposta','fechado','perdido')),
   origin                text,
   estimated_value       numeric,
-  probability           numeric CHECK (probability IS NULL OR (probability >= 0 AND probability <= 1)),
+  temperature           text NOT NULL DEFAULT 'morno'
+                        CHECK (temperature IN ('quente','morno','frio')),
   last_interaction_at   timestamptz,
   next_action_at        timestamptz,
   loss_reason           text,
@@ -177,44 +178,3 @@ CREATE INDEX IF NOT EXISTS domain_events_org_time_idx
   ON domain_events (organization_id, occurred_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS domain_events_org_idempotency_uidx
   ON domain_events (organization_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS recommendations (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  user_id         uuid REFERENCES app_users(id),
-  entity_type     text,
-  entity_id       uuid,
-  type            text NOT NULL,
-  title           text NOT NULL,
-  reason          text NOT NULL,
-  evidence        jsonb NOT NULL DEFAULT '[]'::jsonb,
-  confidence      numeric CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
-  impact          integer NOT NULL DEFAULT 1 CHECK (impact BETWEEN 1 AND 5),
-  urgency         integer NOT NULL DEFAULT 1 CHECK (urgency BETWEEN 1 AND 5),
-  effort          integer NOT NULL DEFAULT 1 CHECK (effort BETWEEN 1 AND 5),
-  status          text NOT NULL DEFAULT 'pendente'
-                  CHECK (status IN ('pendente','aceita','rejeitada','expirada','executada')),
-  expires_at      timestamptz,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS recommendations_org_status_idx
-  ON recommendations (organization_id, status, created_at DESC);
-
-CREATE TABLE IF NOT EXISTS approvals (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  action_type     text NOT NULL,
-  entity_type     text,
-  entity_id       uuid,
-  requested_by    uuid REFERENCES app_users(id),
-  approved_by     uuid REFERENCES app_users(id),
-  status          text NOT NULL DEFAULT 'pendente'
-                  CHECK (status IN ('pendente','aprovada','rejeitada','cancelada','executada')),
-  request_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
-  result_payload  jsonb,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  decided_at      timestamptz
-);
-CREATE INDEX IF NOT EXISTS approvals_org_status_idx
-  ON approvals (organization_id, status, created_at DESC);
