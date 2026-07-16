@@ -34,10 +34,10 @@ Nasce na migração `006-corretor-os.sql`:
 - `opportunities`
 - `tasks`
 - `domain_events`
-- `recommendations`
-- `approvals`
 
 Toda linha privada possui `organization_id`. Nesta alpha, a sessão do painel acessa uma organização padrão. Isso é uma ponte temporária; autenticação individual e isolamento por organização continuam obrigatórios antes do uso comercial.
+
+`recommendations`, `approvals`, visitas, propostas e documentos privados não foram criados antecipadamente. Eles entram somente na fase em que houver interface, regra de segurança e teste de uso para essas entidades. Oportunidades usam temperatura qualitativa — quente, morno ou frio — em vez de uma probabilidade numérica sem base histórica.
 
 ## Primeira vertical slice
 
@@ -95,13 +95,14 @@ A branch isola o desenvolvimento. O novo shell não substitui a aplicação prin
 ## Próximos passos
 
 1. autenticação individual;
-2. organização real por usuário;
+2. organização real por usuário e Row-Level Security;
 3. importação do backup local de interessados;
 4. edição de imóvel e contato;
-5. oportunidades e modo visita;
-6. timeline do dossiê;
-7. matching explicável;
-8. relatório automático por eventos.
+5. oportunidades e timeline do dossiê;
+6. teste de hábito com corretores reais;
+7. recomendações persistidas e fila de aprovações somente quando houver interface e feedback;
+8. matching explicável;
+9. modo visita e relatório automático por eventos.
 
 ## Critério de honestidade
 
