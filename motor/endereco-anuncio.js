@@ -10,7 +10,10 @@ const TIPO_VIA = "rua|avenida|av|alameda|al|travessa|tv|pra[çc]a|p[çc]|rodovia
 /* localidade do CNEFE ("BELA VISTA") casa com o bairro do anúncio ("Setor Bela Vista")?
    Por token SIGNIFICATIVO — palavras genéricas de bairro nunca casam sozinhas. */
 const GENERICOS = new Set(["setor", "jardim", "vila", "parque", "residencial", "st", "jd",
-  "bairro", "conjunto", "cj", "loteamento", "chacara", "chacaras", "de", "do", "da", "dos", "das"]);
+  "bairro", "conjunto", "cj", "loteamento", "chacara", "chacaras", "de", "do", "da", "dos", "das",
+  /* nome da cidade e numerais romanos NUNCA identificam bairro sozinhos (bug real:
+     "Goiânia II" casava com qualquer localidade que tivesse "goiania" no nome) */
+  "goiania", "go", "ii", "iii", "iv"]);
 const tokensSig = (s) => semAcento(String(s || "")).toLowerCase().split(/[^a-z0-9]+/)
   .filter(t => t.length > 1 && !GENERICOS.has(t));
 export function localidadeCasa(localidade, neighborhood) {

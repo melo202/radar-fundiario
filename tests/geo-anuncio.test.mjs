@@ -29,6 +29,9 @@ test("localidade do CNEFE casa com o bairro do anúncio por token significativo"
   assert.equal(localidadeCasa("SETOR OESTE", "Setor Bueno"), false);
   /* genéricos sozinhos nunca casam ("SETOR" ∩ "Setor Leste" = nada significativo) */
   assert.equal(localidadeCasa("SETOR", "Setor Bueno"), false);
+  /* bug real (16/07): "goiânia" e numerais romanos não identificam bairro sozinhos */
+  assert.equal(localidadeCasa("VILA GOIANIA", "Goiânia II"), false);
+  assert.equal(localidadeCasa("SETOR SUL II", "Vila Brasília II"), false);
 });
 
 test("§10: distância é fato exposto, nunca peso automático de valor", () => {
