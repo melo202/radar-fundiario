@@ -165,3 +165,14 @@ nosso premium local se justifica pelo motor territorial. Persona 4 (CRECI-GO/SEC
 1. F0 completa (branch, baseline, ARQUITETURA-OS.md, ADRs, flags, shell /app no ar).
 2. Spike ADR-001 (auth) com relatório de RAM/complexidade no nosso VPS.
 3. Enquanto isso (humano): G1 — roteiro de entrevista V5 que eu preparo, você aplica.
+
+---
+
+## Diário de execução
+
+### 16/07/2026 — F0 + primeira fatia vertical NO AR (pelo usuário + agente)
+O usuário criou a branch **agent/corretor-inteligente-os** e implementou a primeira fatia: migração **006-corretor-os.sql** (organizations, users, members, contacts, preferences, inventory_properties, opportunities, tasks, domain_events — schema por fase, sem recommendations/approvals antecipadas; temperatura qualitativa no lugar de probability, como decidido no item 5.2), **os-core.js** (extração determinística da captura com confiança por campo + NBA por regras testáveis + transação no confirmar + eventos de domínio), shell móvel **/painel/os** (Hoje·Carteira·Relacionamentos·Capturar, protegido pela sessão do painel na alpha), rotas /painel/api/os/* (sessão+CSRF), CORRETOR-INTELIGENTE-OS.md. Bug real achado nos testes: "950 mil" lido como 950 milhões (ordem das unidades) — corrigido.
+
+Agente (mesmo dia): suíte completa **473/473** na branch; **hospedagem virada** — deploy-api.sh (commit 6e724b1) e /opt/radar/deploy-app.sh apontam para a OS (repo do VPS era single-branch: precisou git remote set-branches --add); migração 006 aplicada em produção; verificado ao vivo: card "OS — alpha" no painel, /painel/os e APIs respondem 401 sem sessão, app principal e /acompanhe intactos. **A ultrapremium está oficialmente congelada (só bugfix).**
+
+Próximos passos da alpha (ordem do plano, item 35): captura por voz (Web Speech) e foto; dossiê do imóvel da carteira (4 abas) integrando Radar/avaliação; oportunidades ganham UI (hoje só alimentam o Hoje); depois GATE G1 (3–5 corretores) antes da Fase 1 (auth real, ADR-001).
