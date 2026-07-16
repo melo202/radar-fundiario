@@ -133,6 +133,12 @@ export async function painel(req, res) {
     const { listarRelacionamentos } = await import("./os-core.js");
     return json(res, 200, await listarRelacionamentos());
   }
+  if (req.method === "GET" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}$/.test(req.url)) {
+    /* D-1: dossiê do imóvel da carteira — Visão geral · Comercial · Arquivos · Histórico */
+    const { dossieImovel } = await import("./os-core.js");
+    const r = await dossieImovel(req.url.split("/").pop());
+    return json(res, r.ok ? 200 : 404, r);
+  }
   if (req.method === "GET" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
     /* §14: dossiê de revisão — a avaliação + TODOS os comparáveis com rastreio */
     const id = req.url.split("/").pop();
@@ -173,6 +179,17 @@ export async function painel(req, res) {
     const { concluirTarefa } = await import("./os-core.js");
     const r = await concluirTarefa(req.url.split("/")[5]);
     return json(res, r.ok ? 200 : 404, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/atualizar$/.test(req.url)) {
+    /* D-1: whitelist no os-core decide o que pode mudar; pendências resolvidas se fecham sozinhas */
+    const { atualizarImovel } = await import("./os-core.js");
+    const r = await atualizarImovel(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
+    return json(res, r.ok ? 200 : 400, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/oportunidade$/.test(req.url)) {
+    const { criarOportunidade } = await import("./os-core.js");
+    const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
+    return json(res, r.ok ? 200 : 400, r);
   }
 
   /* SV-1: criar/atualizar o acompanhamento que o CLIENTE vê em /acompanhe/<token> */

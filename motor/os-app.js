@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false}};
+const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null}};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -29,10 +29,10 @@ function toast(message){const t=$("toast");t.textContent=message;t.hidden=false;
 function badge(priority){const labels={baixa:"Baixa",normal:"Normal",alta:"Atenção",critica:"Crítica"};const cls=priority==="critica"?"badge critical":priority==="alta"?"badge high":"badge";return el("span",{class:cls,text:labels[priority]||"Ação"});}
 
 async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;const c=data.counts||{};const cards=[[c.tasks||0,"ações pendentes"],[c.properties||0,"imóveis na carteira"],[c.contacts||0,"relacionamentos"],[c.opportunities||0,"oportunidades abertas"]];$("todayCounts").replaceChildren(...cards.map(([v,l])=>el("div",{class:"count-card"},[el("strong",{text:String(v)}),el("span",{text:l})])));$("todaySummary").textContent=data.actions?.length?`Há ${data.actions.length} item(ns) priorizado(s). O que está funcionando bem não ocupa espaço.`:"Nenhuma pendência crítica agora. Use Capturar para registrar o próximo movimento.";renderActions(data.actions||[]);}catch(e){errorCard(target,e);}}
-function renderActions(actions){const target=$("todayActions");if(!actions.length)return empty(target,"Seu dia está limpo","Quando houver prazo, oportunidade ou cadastro incompleto, a próxima ação aparecerá aqui.");target.replaceChildren(...actions.map(a=>{const action=el("button",{class:"card-action",type:"button",text:a.actionLabel||"Abrir"});if(a.source==="task")action.addEventListener("click",()=>completeTask(a.id,action));else action.addEventListener("click",()=>switchView(a.entityType==="inventory_property"?"portfolio":"relationships"));return el("article",{class:"action-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:a.title}),el("p",{text:a.reason})]),badge(a.priority)]),el("div",{class:"meta"},[el("span",{text:date(a.dueAt)}),el("span",{text:a.source==="property_gap"?"Cadastro progressivo":a.source==="opportunity"?"Oportunidade":"Tarefa"})]),action]);}));}
+function renderActions(actions){const target=$("todayActions");if(!actions.length)return empty(target,"Seu dia está limpo","Quando houver prazo, oportunidade ou cadastro incompleto, a próxima ação aparecerá aqui.");target.replaceChildren(...actions.map(a=>{const action=el("button",{class:"card-action",type:"button",text:a.actionLabel||"Abrir"});if(a.source==="task")action.addEventListener("click",()=>completeTask(a.id,action));else if(a.entityType==="inventory_property"&&a.entityId)action.addEventListener("click",()=>openProperty(a.entityId));else action.addEventListener("click",()=>switchView(a.entityType==="inventory_property"?"portfolio":"relationships"));return el("article",{class:"action-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:a.title}),el("p",{text:a.reason})]),badge(a.priority)]),el("div",{class:"meta"},[el("span",{text:date(a.dueAt)}),el("span",{text:a.source==="property_gap"?"Cadastro progressivo":a.source==="opportunity"?"Oportunidade":"Tarefa"})]),action]);}));}
 async function completeTask(id,button){button.disabled=true;button.textContent="Concluindo…";try{await api(`/painel/api/os/tarefas/${id}/concluir`,{method:"POST",body:"{}"});toast("Tarefa concluída.");state.loaded.today=false;await loadToday(true);}catch(e){toast(e.message);button.disabled=false;button.textContent="Marcar como concluída";}}
 
-async function loadPortfolio(){if(state.loaded.portfolio)return;const target=$("portfolioList");skeletons(target);try{const data=await api("/painel/api/os/carteira");state.loaded.portfolio=true;const rows=data.properties||[];if(!rows.length)return empty(target,"Sua carteira ainda está vazia","Capture o primeiro imóvel por texto. Ele nascerá como prospecção e ganhará detalhes progressivamente.");target.replaceChildren(...rows.map(p=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:p.title||"Imóvel"}),el("p",{text:[p.neighborhood,p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:stageLabel(p.capture_stage)})]),el("div",{class:"meta"},[el("span",{text:money(p.asking_price)}),el("span",{text:`${p.pending_tasks||0} pendência(s)`}),el("span",{text:`${p.open_opportunities||0} oportunidade(s)`})])])));}catch(e){errorCard(target,e);}}
+async function loadPortfolio(){if(state.loaded.portfolio)return;const target=$("portfolioList");skeletons(target);try{const data=await api("/painel/api/os/carteira");state.loaded.portfolio=true;const rows=data.properties||[];if(!rows.length)return empty(target,"Sua carteira ainda está vazia","Capture o primeiro imóvel por texto. Ele nascerá como prospecção e ganhará detalhes progressivamente.");target.replaceChildren(...rows.map(p=>{const abrir=el("button",{class:"card-action secondary",type:"button",text:"Abrir dossiê"});abrir.addEventListener("click",()=>openProperty(p.id));return el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:p.title||"Imóvel"}),el("p",{text:[p.neighborhood,p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:stageLabel(p.capture_stage)})]),el("div",{class:"meta"},[el("span",{text:money(p.asking_price)}),el("span",{text:`${p.pending_tasks||0} pendência(s)`}),el("span",{text:`${p.open_opportunities||0} oportunidade(s)`})]),abrir]);}));}catch(e){errorCard(target,e);}}
 const stageLabel=s=>({prospect:"Prospecção",visited:"Visitado",captured:"Captado",ready_to_publish:"Pronto para divulgar",qualified:"Qualificado",inactive:"Inativo",sold:"Vendido",rented:"Alugado"})[s]||s;
 
 async function loadRelationships(){if(state.loaded.relationships)return;const target=$("relationshipsList");skeletons(target);try{const data=await api("/painel/api/os/relacionamentos");state.loaded.relationships=true;const rows=data.contacts||[];if(!rows.length)return empty(target,"Nenhum relacionamento registrado","Proprietários e clientes aparecerão aqui quando forem capturados ou vinculados a uma oportunidade.");target.replaceChildren(...rows.map(c=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:c.name}),el("p",{text:[typeLabel(c.type),c.phone?`Telefone final ${String(c.phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:`${c.open_opportunities||0} aberta(s)`})]),el("div",{class:"meta"},[el("span",{text:c.last_interaction_at?`Última interação: ${date(c.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:c.source||"cadastro"})])])));}catch(e){errorCard(target,e);}}
@@ -45,6 +45,105 @@ async function interpretCapture(){const text=$("captureText").value.trim();const
 function renderPreview(data){const p=data.property||{},o=data.owner||{};const fields=[["Tipo",typeLabelProperty(p.propertyType)],["Bairro",p.neighborhood||"A confirmar"],["Quartos",p.bedrooms??"A confirmar"],["Preço",money(p.askingPrice)],["Proprietário",o.name||"A confirmar"],["Permuta",p.acceptsSwap?"Aceita":"Não informada"]];$("previewFields").replaceChildren(...fields.map(([l,v])=>el("div",{class:"preview-field"},[el("small",{text:l}),el("strong",{text:String(v)})])));$("previewMissing").replaceChildren(...(data.missing||[]).map(x=>el("li",{text:x})));$("capturePreview").hidden=false;}
 const typeLabelProperty=t=>({apartamento:"Apartamento",casa:"Casa",terreno:"Terreno",galpao:"Galpão",sala_comercial:"Sala comercial",fazenda:"Fazenda",loja:"Loja"})[t]||"A confirmar";
 async function confirmCapture(){if(!state.preview)return;const button=$("confirmCapture");button.disabled=true;button.textContent="Criando imóvel…";try{const data=await api("/painel/api/os/captura/confirmar",{method:"POST",body:JSON.stringify(state.preview)});$("captureDialog").close();$("captureText").value="";state.preview=null;state.loaded.today=false;state.loaded.portfolio=false;toast(`${data.property.title} criado. Próximos passos preparados.`);switchView("today");await loadToday(true);}catch(e){$("captureStatus").className="status error";$("captureStatus").textContent=e.message;}finally{button.disabled=false;button.textContent="Confirmar e criar imóvel";}}
+
+/* ---------------- D-1: dossiê do imóvel (Visão geral · Comercial · Arquivos · Histórico) ---------------- */
+const tempLabel=t=>({quente:"🔥 Quente",morno:"Morno",frio:"Frio"})[t]||t;
+const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
+function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
+function openProperty(id){state.property={id,data:null,tab:"geral",mercado:null};switchView("property");loadProperty();}
+async function loadProperty(){const body=$("propBody");skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${state.property.id}`);state.property.data=data;renderPropHead();renderPropTab();}catch(e){errorCard(body,e);}}
+function renderPropHead(){const p=state.property.data.property;$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}));}
+function setTab(tab){state.property.tab=tab;document.querySelectorAll("#propTabs .tab").forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle("is-active",on);b.setAttribute("aria-selected",String(on));});renderPropTab();}
+function fieldCell(label,value){return el("div",{class:"field-cell"},[el("small",{text:label}),el("strong",{text:String(value)})]);}
+
+function renderPropTab(){
+  const d=state.property.data;if(!d)return;
+  const p=d.property,ch=p.characteristics||{},body=$("propBody");
+  if(state.property.tab==="geral"){
+    const pend=(d.tasks||[]).filter(t=>!["concluida","cancelada"].includes(t.status));
+    const grid=el("div",{class:"field-grid"},[
+      fieldCell("Tipo",typeLabelProperty(p.property_type)),fieldCell("Bairro",p.neighborhood||"A confirmar"),
+      fieldCell("Quartos",ch.bedrooms??"A confirmar"),fieldCell("Área (m²)",ch.areaM2??"A confirmar"),
+      fieldCell("Preço pedido",money(p.asking_price)),fieldCell("Permuta",(p.commercial_conditions||{}).acceptsSwap?"Aceita":"Não informada"),
+      fieldCell("Proprietário",p.owner_name||"A vincular"),fieldCell("Telefone",p.owner_phone?`final ${String(p.owner_phone).slice(-4)}`:"A confirmar"),
+    ]);
+    const pendCards=pend.map(t=>{const btn=el("button",{class:"card-action secondary",type:"button",text:"Marcar como resolvida"});btn.addEventListener("click",()=>completePropTask(t.id,btn));return el("article",{class:"action-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:t.title}),el("p",{text:`Prazo: ${date(t.due_at)}`})]),badge(t.priority)]),btn]);});
+    const form=el("form",{class:"os-form",id:"propForm"});
+    form.append(
+      el("label",{text:"Bairro"}),el("input",{class:"os-input",name:"neighborhood",value:p.neighborhood||"",placeholder:"ex.: Setor Bueno"}),
+      el("label",{text:"Endereço (rua e número)"}),el("input",{class:"os-input",name:"address",value:p.address||"",placeholder:"ex.: Rua T-37, 1000"}),
+      el("label",{text:"Preço pedido (R$)"}),el("input",{class:"os-input",name:"askingPrice",inputMode:"numeric",value:p.asking_price!=null?String(Math.round(p.asking_price)):"",placeholder:"ex.: 890000"}),
+      el("label",{text:"Quartos"}),el("input",{class:"os-input",name:"bedrooms",inputMode:"numeric",value:ch.bedrooms??"",placeholder:"ex.: 3"}),
+      el("label",{text:"Área (m²)"+(p.property_type==="apartamento"?" — privativa":"")}),el("input",{class:"os-input",name:"areaM2",inputMode:"numeric",value:ch.areaM2??"",placeholder:p.property_type==="apartamento"?"a privativa do anúncio, nunca a total do condomínio":"ex.: 220"}),
+      el("label",{text:"Estágio da captação"}),(()=>{const s=el("select",{class:"os-select",name:"captureStage"});stageOpts.forEach(([v,l])=>s.append(el("option",{value:v,text:l,selected:p.capture_stage===v})));return s;})());
+    if(!p.owner_contact_id)form.append(
+      el("label",{text:"Proprietário (nome)"}),el("input",{class:"os-input",name:"ownerName",placeholder:"vincular agora evita perder o contato"}),
+      el("label",{text:"Proprietário (telefone)"}),el("input",{class:"os-input",name:"ownerPhone",inputMode:"tel",placeholder:"ex.: (62) 9 9999-0000"}));
+    const save=el("button",{class:"primary-button",type:"submit",text:"Salvar alterações"});
+    form.append(save);
+    form.addEventListener("submit",ev=>{ev.preventDefault();saveProperty(form,save);});
+    body.replaceChildren(
+      el("article",{class:"entity-card"},[el("h3",{text:"Dados do imóvel"}),grid]),
+      pend.length?el("div",{},[el("p",{class:"eyebrow",text:`Pendências (${pend.length})`}),el("div",{class:"stack"},pendCards)]):el("div",{class:"empty-card"},[el("h3",{text:"Nenhuma pendência aberta"}),el("p",{text:"O cadastro deste imóvel está em dia para o estágio atual."})]),
+      el("article",{class:"entity-card"},[el("h3",{text:"Completar cadastro"}),el("p",{text:"Pendências que a atualização resolver se concluem sozinhas."}),form]));
+  }else if(state.property.tab==="comercial"){
+    const ops=(d.opportunities||[]).map(o=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:o.contact_name}),el("p",{text:[({novo_interessado:"Novo interessado",em_qualificacao:"Em qualificação",imovel_apresentado:"Imóvel apresentado",visita_agendada:"Visita agendada",visitou:"Visitou",negociando:"Negociando",proposta:"Proposta",fechado:"Fechado",perdido:"Perdido"})[o.stage]||o.stage,o.contact_phone?`tel. final ${String(o.contact_phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:o.temperature==="quente"?"badge high":"badge",text:tempLabel(o.temperature)})]),el("div",{class:"meta"},[el("span",{text:`Desde ${date(o.created_at)}`}),el("span",{text:o.last_interaction_at?`Última interação: ${date(o.last_interaction_at)}`:"Sem interação registrada"})])]));
+    const form=el("form",{class:"os-form"});
+    const nome=el("input",{class:"os-input",name:"name",placeholder:"Nome do interessado"});
+    const tel=el("input",{class:"os-input",name:"phone",inputMode:"tel",placeholder:"Telefone (opcional)"});
+    const temp=el("select",{class:"os-select",name:"temperature"});[["quente","🔥 Quente"],["morno","Morno"],["frio","Frio"]].forEach(([v,l])=>temp.append(el("option",{value:v,text:l,selected:v==="morno"})));
+    const btn=el("button",{class:"primary-button",type:"submit",text:"Registrar interessado"});
+    form.append(el("label",{text:"Nome"}),nome,el("label",{text:"Telefone"}),tel,el("label",{text:"Temperatura"}),temp,btn);
+    form.addEventListener("submit",ev=>{ev.preventDefault();addOpportunity({name:nome.value,phone:tel.value,temperature:temp.value},btn);});
+    body.replaceChildren(
+      el("article",{class:"entity-card",id:"mercadoCard"},[el("h3",{text:"Referência de mercado"}),el("p",{text:"Compara com ofertas anunciadas publicamente (OLX, Zap, Viva Real). Ofertas não são transações e não substituem avaliação profissional."}),mercadoAcao(p,ch)]),
+      ops.length?el("div",{},[el("p",{class:"eyebrow",text:`Interessados (${ops.length})`}),el("div",{class:"stack"},ops)]):el("div",{class:"empty-card"},[el("h3",{text:"Nenhum interessado registrado"}),el("p",{text:"Registre abaixo quem demonstrou interesse — a oportunidade passa a ser cobrada na tela Hoje."})]),
+      el("article",{class:"entity-card"},[el("h3",{text:"Novo interessado"}),form]));
+    if(state.property.mercado)renderMercado(state.property.mercado);
+  }else if(state.property.tab==="arquivos"){
+    body.replaceChildren(el("div",{class:"empty-card"},[el("h3",{text:"Fotos e documentos chegam na Fase 8"}),el("p",{text:"Arquivos entram com versão, aprovação e compartilhamento controlado — documento sensível não se improvisa. Até lá, mantenha fotos e PDFs no seu aparelho."})]));
+  }else{
+    const evs=(d.events||[]);
+    body.replaceChildren(evs.length?el("div",{class:"entity-card"},[el("div",{class:"timeline"},evs.map(e=>el("div",{class:"timeline-item"},[el("time",{text:new Date(e.occurred_at).toLocaleString("pt-BR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}),el("p",{text:e.rotulo})])))]):el("div",{class:"empty-card"},[el("h3",{text:"Sem eventos ainda"}),el("p",{text:"Cada mudança relevante deste imóvel ficará registrada aqui, com data — a linha do tempo é a prova do seu trabalho."})]));
+  }
+}
+function mercadoAcao(p,ch){
+  const pronto=["apartamento","casa"].includes(p.property_type)&&p.neighborhood&&ch.areaM2>0;
+  if(!pronto){const faltas=[];if(!["apartamento","casa"].includes(p.property_type))faltas.push("referência disponível para apartamento e casa");if(!p.neighborhood)faltas.push("confirme o bairro");if(!(ch.areaM2>0))faltas.push("informe a área na Visão geral");return el("p",{class:"field-help",text:`Para buscar: ${faltas.join(" · ")}.`});}
+  const btn=el("button",{class:"card-action",type:"button",text:"Buscar referência agora"});
+  btn.addEventListener("click",()=>buscarMercadoRef(btn));
+  return btn;
+}
+async function buscarMercadoRef(btn){
+  const p=state.property.data.property,ch=p.characteristics||{};
+  btn.disabled=true;btn.textContent="Buscando nos portais… (até 2 min)";
+  try{
+    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2)}),signal:AbortSignal.timeout(120000)});
+    const d=await r.json();if(!r.ok)throw new Error(d.erro||"busca indisponível agora");
+    state.property.mercado=d;renderMercado(d);
+  }catch(e){btn.disabled=false;btn.textContent="Buscar referência agora";toast(e.message);}
+}
+function renderMercado(d){
+  const card=$("mercadoCard");if(!card)return;
+  if(d.status==="amostra_insuficiente"){card.append(el("p",{class:"field-help",text:`Ainda sem amostra suficiente para comparar (${d.sample?.aposDedup??0} oferta(s), mínimo 5). O acervo engorda a cada varredura noturna.`}));return;}
+  const r=d.result;if(!r)return;
+  card.querySelector(".mercado-num")?.remove();
+  card.append(el("div",{class:"mercado-num"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) no cálculo · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:" — referência por OFERTAS públicas; a avaliação completa mora no Radar."})]));
+}
+async function saveProperty(form,btn){
+  btn.disabled=true;btn.textContent="Salvando…";
+  const f=new FormData(form);const campos={};
+  for(const k of ["neighborhood","address","askingPrice","bedrooms","areaM2","captureStage","ownerName","ownerPhone"]){if(f.has(k))campos[k]=String(f.get(k)).trim();}
+  try{
+    const r=await api(`/painel/api/os/imoveis/${state.property.id}/atualizar`,{method:"POST",body:JSON.stringify(campos)});
+    toast(r.semMudanca?"Nada para salvar — os dados já estavam assim.":"Cadastro atualizado.");
+    invalidateLists();await loadProperty();
+  }catch(e){toast(e.message);btn.disabled=false;btn.textContent="Salvar alterações";}
+}
+async function completePropTask(id,btn){btn.disabled=true;btn.textContent="Concluindo…";try{await api(`/painel/api/os/tarefas/${id}/concluir`,{method:"POST",body:"{}"});toast("Pendência resolvida.");invalidateLists();await loadProperty();}catch(e){toast(e.message);btn.disabled=false;btn.textContent="Marcar como resolvida";}}
+async function addOpportunity(dados,btn){btn.disabled=true;btn.textContent="Registrando…";try{await api(`/painel/api/os/imoveis/${state.property.id}/oportunidade`,{method:"POST",body:JSON.stringify(dados)});toast("Interessado registrado — a tela Hoje passa a cobrar o retorno.");invalidateLists();state.property.tab="comercial";await loadProperty();}catch(e){toast(e.message);btn.disabled=false;btn.textContent="Registrar interessado";}}
+document.querySelectorAll("#propTabs .tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+$("propBack").addEventListener("click",()=>switchView("portfolio"));
 
 document.querySelectorAll(".nav-item[data-target]").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.target)));
 $("openCapture").addEventListener("click",openCapture);$("interpretCapture").addEventListener("click",interpretCapture);$("confirmCapture").addEventListener("click",confirmCapture);$("refreshToday").addEventListener("click",()=>loadToday(true));

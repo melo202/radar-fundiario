@@ -345,6 +345,184 @@ export async function listarRelacionamentos() {
   return { organization: org, contacts: r.rows };
 }
 
+/* ---------------- D-1: dossiê do imóvel da carteira ----------------
+   Quatro abas (Visão geral · Comercial · Arquivos · Histórico). As decisões de
+   O QUE pode mudar (whitelist) e de COMO um evento vira frase são funções PURAS —
+   testáveis sem banco, no padrão da casa. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const idValido = (v) => UUID_RE.test(String(v || ""));
+export const ESTAGIOS_CAPTACAO = ["prospect", "visited", "captured", "ready_to_publish", "qualified", "inactive", "sold", "rented"];
+export const TEMPERATURAS = ["quente", "morno", "frio"];
+
+/* pura: whitelist de atualização + diff por campo. Coluna fora da lista NUNCA entra
+   (injeção de coluna impossível); characteristics preserva o que já existia. */
+export function montarAtualizacaoImovel(atual, campos) {
+  const c = campos || {};
+  const updates = {};
+  const changes = [];
+  const poe = (campo, novo, antigo) => {
+    if (novo !== (antigo ?? null)) { updates[campo] = novo; changes.push({ campo, de: antigo ?? null, para: novo }); }
+  };
+  if ("neighborhood" in c) poe("neighborhood", limparTexto(c.neighborhood, 80) || null, atual.neighborhood);
+  if ("address" in c) poe("address", limparTexto(c.address, 160) || null, atual.address);
+  if ("askingPrice" in c) {
+    const v = Number(String(c.askingPrice).replace(/\D/g, "") || c.askingPrice);
+    poe("asking_price", Number.isFinite(v) && v > 0 ? Math.round(v) : null,
+      atual.asking_price == null ? null : Number(atual.asking_price));
+  }
+  if ("captureStage" in c && ESTAGIOS_CAPTACAO.includes(c.captureStage)) poe("capture_stage", c.captureStage, atual.capture_stage);
+  const ch = { ...(atual.characteristics || {}) };
+  let chMudou = false;
+  const poeCh = (chave, novo) => {
+    if (novo !== (ch[chave] ?? null)) { changes.push({ campo: chave, de: ch[chave] ?? null, para: novo }); ch[chave] = novo; chMudou = true; }
+  };
+  if ("bedrooms" in c) { const v = Number.parseInt(c.bedrooms, 10); poeCh("bedrooms", Number.isInteger(v) && v > 0 ? v : null); }
+  if ("areaM2" in c) { const v = Number(c.areaM2); poeCh("areaM2", Number.isFinite(v) && v > 0 ? Math.round(v) : null); }
+  if (chMudou) updates.characteristics = ch;
+  return { updates, changes };
+}
+
+/* pura: evento de domínio → frase que o corretor lê na aba Histórico */
+export function rotuloEvento(ev) {
+  const t = ev?.event_type || "";
+  const p = ev?.payload || {};
+  const brl = (v) => v == null ? "sem preço" : "R$ " + Number(v).toLocaleString("pt-BR");
+  switch (t) {
+    case "property.created": return `Imóvel criado pela captura universal${p.missingCount ? ` — ${p.missingCount} pendência(s) gerada(s)` : ""}`;
+    case "property.updated": return `Cadastro atualizado: ${(p.campos || []).join(", ") || "dados do imóvel"}`;
+    case "property.price_changed": return `Preço: ${brl(p.de)} → ${brl(p.para)}`;
+    case "contact.created": return p.type === "proprietario" ? "Proprietário registrado" : "Contato registrado";
+    case "opportunity.created": return `Novo interessado${p.contactName ? `: ${p.contactName}` : ""} (${p.temperature || "morno"})`;
+    case "task.completed": return `Concluído: ${p.title || "tarefa"}`;
+    default: return t || "evento";
+  }
+}
+
+/* encontra por telefone ou cria o contato — vínculo sempre EXPLÍCITO e com evento */
+async function vincularContato(client, orgId, { name, phone, type, source }) {
+  const tel = normalizarTelefone(phone);
+  const nome = limparTexto(name, 100);
+  if (!nome && !tel) return null;
+  if (tel) {
+    const ex = await client.query(
+      "SELECT id FROM contacts WHERE organization_id=$1 AND phone=$2 AND status<>'arquivado' LIMIT 1", [orgId, tel]);
+    if (ex.rows[0]) return ex.rows[0].id;
+  }
+  const c = await client.query(
+    "INSERT INTO contacts (organization_id,type,name,phone,source) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+    [orgId, type, nome || (type === "proprietario" ? "Proprietário a identificar" : "Interessado a identificar"), tel, source]);
+  await registrarEvento(client, orgId, "contact.created", "contact", c.rows[0].id, { type, source });
+  return c.rows[0].id;
+}
+
+export async function dossieImovel(id) {
+  if (!idValido(id)) return { ok: false, erro: "imóvel inválido" };
+  const db = await banco();
+  const org = await garantirOrganizacao();
+  const p = await db.query(
+    `SELECT p.*, c.name AS owner_name, c.phone AS owner_phone
+     FROM inventory_properties p LEFT JOIN contacts c ON c.id=p.owner_contact_id
+     WHERE p.id=$1 AND p.organization_id=$2`, [id, org.id]);
+  if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
+  const [tarefas, oportunidades, eventos] = await Promise.all([
+    db.query(
+      `SELECT id,title,type,due_at,priority,status,completed_at FROM tasks
+       WHERE organization_id=$1 AND related_entity_type='inventory_property' AND related_entity_id=$2
+       ORDER BY (status IN ('concluida','cancelada')), due_at ASC NULLS LAST LIMIT 40`, [org.id, id]),
+    db.query(
+      `SELECT o.id,o.stage,o.temperature,o.origin,o.created_at,o.last_interaction_at,
+              c.name AS contact_name, c.phone AS contact_phone
+       FROM opportunities o JOIN contacts c ON c.id=o.contact_id
+       WHERE o.organization_id=$1 AND o.inventory_property_id=$2
+       ORDER BY o.updated_at DESC LIMIT 30`, [org.id, id]),
+    db.query(
+      `SELECT event_type,payload,source,occurred_at FROM domain_events
+       WHERE organization_id=$1 AND ((entity_type='inventory_property' AND entity_id=$2)
+         OR payload->>'inventoryPropertyId'=$2::text)
+       ORDER BY occurred_at DESC LIMIT 60`, [org.id, id]),
+  ]);
+  return {
+    ok: true, property: p.rows[0], tasks: tarefas.rows, opportunities: oportunidades.rows,
+    events: eventos.rows.map(e => ({ ...e, rotulo: rotuloEvento(e) })),
+  };
+}
+
+export async function atualizarImovel(id, campos) {
+  if (!idValido(id)) return { ok: false, erro: "imóvel inválido" };
+  const db = await banco();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const org = await garantirOrganizacao(client);
+    const atualQ = await client.query(
+      "SELECT * FROM inventory_properties WHERE id=$1 AND organization_id=$2 FOR UPDATE", [id, org.id]);
+    if (!atualQ.rowCount) { await client.query("ROLLBACK"); return { ok: false, erro: "imóvel não encontrado" }; }
+    const atual = atualQ.rows[0];
+    const { updates, changes } = montarAtualizacaoImovel(atual, campos);
+    /* proprietário: só vincula quando ainda não há um — trocar dono é decisão maior, não edição */
+    if ((campos?.ownerName || campos?.ownerPhone) && !atual.owner_contact_id) {
+      const ownerId = await vincularContato(client, org.id,
+        { name: campos.ownerName, phone: campos.ownerPhone, type: "proprietario", source: "dossie" });
+      if (ownerId) { updates.owner_contact_id = ownerId; changes.push({ campo: "proprietario", de: null, para: limparTexto(campos.ownerName, 100) || "telefone" }); }
+    }
+    if (!Object.keys(updates).length) { await client.query("ROLLBACK"); return { ok: true, semMudanca: true }; }
+    const sets = []; const vals = []; let i = 1;
+    for (const [col, v] of Object.entries(updates)) { sets.push(`${col}=$${i++}`); vals.push(col === "characteristics" ? JSON.stringify(v) : v); }
+    vals.push(id, org.id);
+    await client.query(
+      `UPDATE inventory_properties SET ${sets.join(",")},updated_at=now() WHERE id=$${i++} AND organization_id=$${i}`, vals);
+    const preco = changes.find(x => x.campo === "asking_price");
+    if (preco) await registrarEvento(client, org.id, "property.price_changed", "inventory_property", id, { de: preco.de, para: preco.para });
+    const outros = changes.filter(x => x.campo !== "asking_price").map(x => x.campo);
+    if (outros.length) await registrarEvento(client, org.id, "property.updated", "inventory_property", id, { campos: outros });
+    /* pendências que a atualização RESOLVEU se concluem sozinhas — o corretor nunca
+       fecha manualmente uma tarefa que o próprio cadastro já respondeu */
+    const final = { ...atual, ...updates };
+    const resolvidos = [];
+    if (final.asking_price != null) resolvidos.push("preco_pendente");
+    if (final.neighborhood) resolvidos.push("cadastro_incompleto");
+    if (final.owner_contact_id) resolvidos.push("proprietario_pendente");
+    if (resolvidos.length) await client.query(
+      `UPDATE tasks SET status='concluida',completed_at=now(),updated_at=now()
+       WHERE organization_id=$1 AND related_entity_type='inventory_property' AND related_entity_id=$2
+         AND type=ANY($3) AND status IN ('pendente','em_andamento','adiada')`, [org.id, id, resolvidos]);
+    await client.query("COMMIT");
+    return { ok: true, changes };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally { client.release(); }
+}
+
+export async function criarOportunidade(propertyId, dados) {
+  if (!idValido(propertyId)) return { ok: false, erro: "imóvel inválido" };
+  const nome = limparTexto(dados?.name, 100);
+  const tel = normalizarTelefone(dados?.phone);
+  if (!nome && !tel) return { ok: false, erro: "Informe nome ou telefone do interessado." };
+  const temp = TEMPERATURAS.includes(dados?.temperature) ? dados.temperature : "morno";
+  const db = await banco();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const org = await garantirOrganizacao(client);
+    const prop = await client.query(
+      "SELECT id FROM inventory_properties WHERE id=$1 AND organization_id=$2", [propertyId, org.id]);
+    if (!prop.rowCount) { await client.query("ROLLBACK"); return { ok: false, erro: "imóvel não encontrado" }; }
+    const contactId = await vincularContato(client, org.id, { name: nome, phone: tel, type: "comprador", source: "dossie" });
+    const o = await client.query(
+      `INSERT INTO opportunities (organization_id,contact_id,inventory_property_id,stage,origin,temperature,last_interaction_at)
+       VALUES ($1,$2,$3,'novo_interessado','dossie',$4,now()) RETURNING id,stage,temperature,created_at`,
+      [org.id, contactId, propertyId, temp]);
+    await registrarEvento(client, org.id, "opportunity.created", "opportunity", o.rows[0].id,
+      { inventoryPropertyId: propertyId, contactName: nome || null, temperature: temp });
+    await client.query("COMMIT");
+    return { ok: true, opportunity: o.rows[0] };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally { client.release(); }
+}
+
 export async function concluirTarefa(id) {
   const db = await banco();
   const org = await garantirOrganizacao();

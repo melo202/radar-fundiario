@@ -50,6 +50,28 @@ textarea{width:100%;resize:vertical;border:1px solid #ccd8da;border-radius:14px;
 .status{min-height:20px;margin-top:10px;color:var(--muted);font-size:13px}.status.error{color:var(--danger)}
 .preview{margin-top:12px;padding:15px;border-radius:16px;background:var(--canvas);border:1px solid var(--line);display:grid;gap:16px}.preview[hidden]{display:none}.preview-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.preview-field{padding:10px;border-radius:11px;background:#fff;border:1px solid var(--line)}.preview-field small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.preview-field strong{display:block;margin-top:4px;font-size:14px}.missing-list{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13px}.missing-list li+li{margin-top:4px}
 .toast{position:fixed;z-index:50;left:50%;bottom:calc(94px + var(--safe-bottom));transform:translateX(-50%);width:min(420px,calc(100% - 28px));background:var(--navy);color:#fff;padding:12px 15px;border-radius:13px;text-align:center;font-size:13px;box-shadow:var(--shadow)}
+/* D-1: dossiê do imóvel */
+.back-button{padding:10px 2px;margin-top:4px}
+.tabs{display:flex;gap:6px;margin:0 0 14px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:13px;font-weight:750;border-radius:999px;padding:9px 15px}
+.tab.is-active{background:var(--navy);border-color:var(--navy);color:#fff}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.field-cell{padding:11px;border-radius:11px;background:var(--canvas);border:1px solid var(--line)}
+.field-cell small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.field-cell strong{display:block;margin-top:4px;font-size:14px;overflow-wrap:anywhere}
+.os-form{display:grid;gap:10px;margin-top:14px}
+.os-form label{font-size:12px;font-weight:800}
+.os-input,.os-select{width:100%;border:1px solid #ccd8da;border-radius:12px;padding:11px 13px;background:#fff;color:var(--ink);font:inherit;outline:none}
+.os-input:focus,.os-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(8,135,128,.12)}
+.timeline{display:grid;gap:0}
+.timeline-item{position:relative;padding:0 0 18px 24px;border-left:2px solid var(--line);margin-left:8px}
+.timeline-item:last-child{padding-bottom:2px;border-left-color:transparent}
+.timeline-item::before{content:"";position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--brand);border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.timeline-item time{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.timeline-item p{margin:3px 0 0;font-size:14px;line-height:1.4}
+.mercado-num{padding:14px;border-radius:14px;background:var(--brand-soft);border:1px solid #bfe5df}
+.mercado-num strong{display:block;font-size:22px;color:var(--brand-strong)}
+.mercado-num span{font-size:12.5px;color:var(--muted)}
 @keyframes shimmer{to{background-position:-200% 0}}@keyframes view-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media(min-width:700px){.count-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.shell{padding-top:34px}.bottom-nav{border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0}.action-card,.entity-card{padding:20px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

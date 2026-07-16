@@ -50,6 +50,19 @@
       </div>
       <div class="stack" id="relationshipsList" aria-live="polite"></div>
     </section>
+    <section class="view" data-view="property" aria-labelledby="propTitle" hidden>
+      <button type="button" class="text-button back-button" id="propBack">← Voltar à carteira</button>
+      <div class="hero compact" id="propHead">
+        <h1 id="propTitle">Imóvel</h1>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Seções do imóvel" id="propTabs">
+        <button type="button" role="tab" data-tab="geral" class="tab is-active" aria-selected="true">Visão geral</button>
+        <button type="button" role="tab" data-tab="comercial" class="tab" aria-selected="false">Comercial</button>
+        <button type="button" role="tab" data-tab="arquivos" class="tab" aria-selected="false">Arquivos</button>
+        <button type="button" role="tab" data-tab="historico" class="tab" aria-selected="false">Histórico</button>
+      </div>
+      <div class="stack" id="propBody" aria-live="polite"></div>
+    </section>
   </main>
 
   <nav class="bottom-nav" aria-label="Navegação principal">
