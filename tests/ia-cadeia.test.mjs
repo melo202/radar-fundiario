@@ -40,6 +40,11 @@ test("PERF: max_tokens declarado por tarefa e 429 respeitando o 'try again' do G
   assert.ok(re.includes("maxTokens: 400"), "resumo idem");
 });
 
+test("PERF: cooldown proporcional — 429 (cota/min) derruba o degrau por 65s, não 10min", () => {
+  assert.ok(src.includes('const eh429 = /429/.test(String(lastErr?.message));'));
+  assert.ok(src.includes("eh429 ? 65_000 : REMOTE_COOLDOWN_MS"));
+});
+
 test("NV1: status expõe os dois remotos e o resultado identifica o degrau servidor", () => {
   assert.ok(src.includes("remote2: REMOTE2 ?"));
   assert.ok(src.includes('provider: p === LOCAL ? "local" : p.rotulo'));

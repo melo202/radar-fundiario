@@ -171,9 +171,13 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
         await logCall(task, p.models[tier] || p.models.fast, promptHash, null, false, String(e.message).slice(0, 500));
       }
     }
-    if (p !== LOCAL) { /* degrau remoto esgotou os 2 tiros: cooldown SÓ dele e desce */
-      p.deadUntil = Date.now() + REMOTE_COOLDOWN_MS;
-      console.warn(`${p.rotulo} em cooldown por 10 min (${String(lastErr?.message).slice(0, 120)}) — descendo a cadeia`);
+    if (p !== LOCAL) { /* degrau remoto esgotou os 2 tiros: cooldown SÓ dele e desce.
+      429 = cota POR MINUTO estourada (renova em 60s) — castigo de 65s, não de 10 min
+      (achado da varredura de erros de 15/07: um clique cheio derrubava o Groq por
+      10 min e as extrações seguintes caíam no local de 19s sem necessidade). */
+      const eh429 = /429/.test(String(lastErr?.message));
+      p.deadUntil = Date.now() + (eh429 ? 65_000 : REMOTE_COOLDOWN_MS);
+      console.warn(`${p.rotulo} em cooldown por ${eh429 ? "65s (cota/min)" : "10 min"} (${String(lastErr?.message).slice(0, 120)}) — descendo a cadeia`);
     }
   }
   throw lastErr;
