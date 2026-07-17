@@ -97,6 +97,13 @@ Nenhum player brasileiro cruza lance com índice próprio auditável de R$/m² p
 
 ## 2. Fases de implementação
 
+> **F1 ENTREGUE E NO AR (17/07/2026)** — verificado em produção: runner local baixou 205
+> imóveis de Goiânia (142 geocodificados), POST ao VPS ingeriu 205 (evento `imovel-novo`),
+> mapa consome `/motor/oportunidades` com desconto real (ex.: apto Setor Bueno **42,8%
+> abaixo da mediana do bairro**, 17 ofertas) e aviso por modalidade no popup; painel ganhou
+> "Oportunidades em movimento". 523 testes. **Falta só o passo manual do usuário**: preencher
+> o token e registrar a Tarefa Agendada (ver `runner-caixa/README.md`) para virar diário.
+
 - **F1 — Caixa de ponta a ponta** (maior valor, 80% do código já existe):
   runner residencial (download + POST) → endpoint `/motor/ingestao/caixa` (token) →
   migração 008 → parse/diff/geocodificação no VPS → eventos no audit_log → endpoint
