@@ -59,11 +59,18 @@ async function visao() {
   const eventos = await pool.query(
     `SELECT entity, action, detail, created_at
      FROM audit_log ORDER BY created_at DESC LIMIT 8`).then(r => r.rows);
-  /* A3: mudanças de preço detectadas pelas varreduras — termômetro agregado do mercado */
+  /* A3: mudanças de preço detectadas pelas varreduras — termômetro agregado do mercado.
+     Só entram as VERIFICADAS (identidade portal+external_id, ambas as coletas
+     comparáveis, salto ≤50%); as antigas por URL de catálogo foram invalidadas 17/07. */
   const mudancas = await pool.query(
     `SELECT detail, created_at FROM audit_log
-     WHERE action='mudanca-preco' ORDER BY created_at DESC LIMIT 6`).then(r => r.rows);
-  return { acervo, avaliacoes, ia, eventos, mudancas };
+     WHERE action='mudanca-preco' AND (detail->>'verificada')::boolean IS TRUE
+       AND detail->>'invalidada' IS NULL
+     ORDER BY created_at DESC LIMIT 6`).then(r => r.rows);
+  const suspeitas = await pool.query(
+    `SELECT count(*)::int AS n FROM audit_log WHERE action='mudanca-preco-suspeita'`)
+    .then(r => r.rows[0].n);
+  return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas };
 }
 
 export async function painel(req, res) {

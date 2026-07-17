@@ -2,8 +2,9 @@
    Decide: (a) isso é um anúncio de imóvel individual ou uma página-catálogo de
    portal? (b) o registro tem o mínimo para servir de comparável (preço confiável
    + tamanho ou tipologia + localização)? Nada aqui apaga dado: só classifica,
-   com as razões gravadas. Módulo puro (zero dependências) para ser testado na
-   suíte do repo com node:test. */
+   com as razões gravadas. Módulo puro (só depende de outro módulo puro, a
+   identidade canônica) para ser testado na suíte do repo com node:test. */
+import { identidadeAnuncio } from "./identidade-anuncio.js";
 
 const CAMPOS_CHAVE = ["propertyType", "neighborhood", "privateAreaM2", "totalAreaM2",
   "bedrooms", "suites", "bathrooms", "parkingSpaces", "askingPrice"];
@@ -21,6 +22,14 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
   try { path = new URL(url).pathname; } catch { }
   if (path && !/\d{5,}/.test(path) && /(venda|aluguel|imoveis|apartamentos|casas)/i.test(path)) {
     sinais++; razoes.push("URL de categoria sem id de anúncio");
+  }
+  /* identidade canônica (17/07): nos portais cujo padrão de id conhecemos (OLX, Viva,
+     Zap…), URL sem id É catálogo — sinal decisivo. A auditoria de 17/07 mostrou o
+     estrago: snippet de catálogo com preço+área de UMA unidade passava por comparável
+     e sujava o índice do bairro e o termômetro de mudanças. */
+  const idt = identidadeAnuncio(url);
+  if (idt.portalConhecido && !idt.externalId) {
+    sinais += 2; razoes.push("portal com padrão de id conhecido e URL sem id (catálogo certo)");
   }
   const semDadosDeUnidade = e.askingPrice == null && e.privateAreaM2 == null && e.totalAreaM2 == null;
   if (semDadosDeUnidade) { sinais++; razoes.push("sem preço nem área individuais"); }

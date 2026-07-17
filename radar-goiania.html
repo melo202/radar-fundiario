@@ -7138,6 +7138,32 @@ function mercadoReset(a){
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
   const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Calcular valor";}
   if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
+  estimativaImediata(a); /* Mercado em Movimento 17/07: o valor do bairro chega SOZINHO */
+}
+/* ESTIMATIVA IMEDIATA (projeto Mercado em Movimento, 17/07): assim que o imóvel abre,
+   o valor pelo índice do bairro aparece sem clique e sem espera — mediana de R$/m² do
+   acervo alimentado pela varredura diária (GET /motor/estimativa: determinístico, zero
+   IA, zero busca ao vivo). O "Calcular valor" segue sendo a avaliação completa, com
+   comparáveis nomeados e laudo. Falha aqui é silêncio: a estimativa é bônus. */
+async function estimativaImediata(a){
+  const body=document.getElementById("dMercadoBody"); if(!body||!a)return;
+  const isU=ehAptoProvavel(a);
+  const area=isU?privGet(a):+a.areaedif; /* AREA-APTO: unidade só com a privativa declarada */
+  const bairro=clean(a.nmbairro);
+  if(!(area>0)||!bairro)return; /* sem área e bairro honestos não existe R$/m² automático */
+  try{
+    const r=await fetch(`${MOTOR_BASE}/motor/estimativa?bairro=${encodeURIComponent(bairro)}&tipo=${isU?"apartamento":"casa"}&areaM2=${area}`,{signal:AbortSignal.timeout(12000)});
+    const d=await r.json();
+    if(!r.ok||!d.disponivel||MERCADO_A!==a)return; /* imóvel já trocou? descarta em silêncio */
+    const el=document.createElement("div");
+    el.className="dmercado-num";
+    el.style.cssText="margin-bottom:10px";
+    el.innerHTML=`<div style="font-size:12px;color:#5b6b6a">Estimativa imediata pelo bairro (automática)</div>
+      <div style="font-size:22px;font-weight:700">${brlC(d.valorEstimado)}</div>
+      <div style="font-size:12px;color:#5b6b6a">faixa ${brlC(d.faixa.de)} – ${brlC(d.faixa.ate)} · ${brlC(d.pm2Mediana)}/m² · ${d.amostra.n} oferta(s) no bairro · confiança ${esc(d.confianca.rotulo)}</div>
+      <div style="font-size:11px;color:#8a9695;margin-top:2px">Mediana do acervo diário de ofertas anunciadas — não são transações; o botão abaixo faz a avaliação completa.</div>`;
+    body.prepend(el);
+  }catch(e){/* bônus: nunca atrapalha o card */}
 }
 /* ofertas comparáveis no MAPA (§10): pinos discretos em latão, com distância real ao
    imóvel quando o motor geocodificou (CNEFE). Camada própria — some a cada imóvel novo. */

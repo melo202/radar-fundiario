@@ -143,6 +143,24 @@ http.createServer(async (req, res) => {
         bairro: u.searchParams.get("bairro"),
       }));
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/estimativa")) {
+      /* estimativa IMEDIATA pelo índice de bairro (Mercado em Movimento 17/07):
+         determinístico, só banco+cache — é o valor que o mapa mostra na hora */
+      if (estourou(req, 30, "estimativa")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const u = new URL(req.url, "http://x");
+      const { estimar } = await import("./indice-bairro.js");
+      return json(res, 200, await estimar({
+        bairro: u.searchParams.get("bairro"),
+        tipo: u.searchParams.get("tipo"),
+        areaM2: u.searchParams.get("areaM2"),
+      }));
+    }
+    if (req.method === "GET" && req.url.startsWith("/motor/mercado/bairros")) {
+      /* índice completo (painel/mapa): mediana de R$/m² por bairro+tipo, deduplicado */
+      if (estourou(req, 10, "indice-bairros")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const { indiceBairros } = await import("./indice-bairro.js");
+      return json(res, 200, { indice: await indiceBairros() });
+    }
     if (req.method === "POST" && req.url === "/motor/mercado") {
       /* avaliação AO VIVO: dispara busca nos portais (gasta cota Brave) e avalia.
          cache de 6h por bairro protege a cota global; rate limit por IP protege o pico */

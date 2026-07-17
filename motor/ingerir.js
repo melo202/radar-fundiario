@@ -8,6 +8,7 @@ import { pool } from "./db.js";
 import { buscarWeb } from "./busca-web.js";
 import { extrairAnuncio } from "./extract.js";
 import { avaliarQualidade } from "./qualidade.js";
+import { identidadeAnuncio } from "./identidade-anuncio.js";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
@@ -24,22 +25,28 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
        vira listing conhecido e a varredura noturna completa a extração sem pressa */
     if (stats.extraidos >= maxExtrair) break;
     const hash = sha(a.titulo + "\n" + a.descricao);
+    /* identidade canônica (17/07): o id que o portal dá ao anúncio na URL — é ela,
+       nunca a URL bruta, que ancora histórico de preço e dedup entre subdomínios */
+    const idt = identidadeAnuncio(a.url);
     const ins = await pool.query(
-      `INSERT INTO listings (portal, url, raw_title, raw_description, content_hash, last_seen_at)
-       VALUES ($1,$2,$3,$4,$5,now())
-       ON CONFLICT (portal, url, content_hash) DO UPDATE SET last_seen_at = now()
+      `INSERT INTO listings (portal, url, raw_title, raw_description, content_hash, external_id, last_seen_at)
+       VALUES ($1,$2,$3,$4,$5,$6,now())
+       ON CONFLICT (portal, url, content_hash) DO UPDATE SET last_seen_at = now(), external_id = EXCLUDED.external_id
        RETURNING id, (xmax = 0) AS novo`,
-      [a.portal, a.url, a.titulo, a.descricao, hash]);
+      [a.portal, a.url, a.titulo, a.descricao, hash, idt.externalId]);
     const { id, novo } = ins.rows[0];
     if (!novo) { stats.jaConhecidos++; continue; }
     stats.novos++;
-    /* A1 (atualização contínua): mesma URL com conteúdo NOVO = o anúncio mudou desde a
-       última varredura — o preço anterior fica guardado para detectar o delta adiante */
-    const anterior = await pool.query(
+    /* A1 (atualização contínua): o MESMO anúncio (portal + id) reaparecendo com conteúdo
+       novo = mudou desde a última varredura. A coleta anterior só conta se foi um
+       comparável de verdade (peneira §6) — página-catálogo não tem "preço anterior";
+       era exatamente esse o bug que inventava saltos de R$ 78 mil -> R$ 1,73 mi. */
+    const anterior = idt.externalId ? await pool.query(
       `SELECT l.id AS listing_id, (p.pricing->>'askingPrice')::numeric AS preco
-       FROM listings l LEFT JOIN properties p ON p.listing_id = l.id
-       WHERE l.portal=$1 AND l.url=$2 AND l.id<>$3
-       ORDER BY l.collected_at DESC LIMIT 1`, [a.portal, a.url, id]).then(r => r.rows[0] || null);
+       FROM listings l JOIN properties p ON p.listing_id = l.id
+       WHERE l.external_id=$1 AND (l.portal=$2 OR l.portal LIKE '%.' || $2) AND l.id<>$3
+         AND (p.quality->>'comparableGrade')::boolean IS TRUE
+       ORDER BY l.collected_at DESC LIMIT 1`, [idt.externalId, idt.portalRaiz, id]).then(r => r.rows[0] || null) : null;
     try {
       const ex = await extrairAnuncio({ titulo: a.titulo, descricao: a.descricao, tier });
       const v = ex.value;
@@ -58,14 +65,26 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
           JSON.stringify({ confirmados: v.confirmados, inferidos: v.inferidos, model: ex.model, provider: ex.provider })]);
       if (q.comparableGrade && v.askingPrice) await pool.query(
         "INSERT INTO price_history (listing_id, price) VALUES ($1,$2)", [id, v.askingPrice]);
-      /* A1/A3: preço mudou entre coletas do MESMO anúncio — delta registrado e auditado
-         (termômetro de mercado agregado; nunca inferência automática por imóvel) */
-      if (anterior && anterior.preco != null && v.askingPrice && Number(anterior.preco) !== Number(v.askingPrice)) {
-        stats.mudancasPreco = (stats.mudancasPreco || 0) + 1;
+      /* A1/A3: preço mudou entre coletas do MESMO anúncio (portal + external_id, ambas
+         comparáveis pela peneira) — delta registrado e auditado (termômetro agregado;
+         nunca inferência automática por imóvel). Salto acima de 50% não é repique de
+         mercado: é unidade trocada no anúncio ou erro de extração — vai para a fila de
+         suspeitas, fora do termômetro. */
+      if (anterior && anterior.preco != null && v.askingPrice && q.comparableGrade &&
+          Number(anterior.preco) !== Number(v.askingPrice)) {
+        const de = Number(anterior.preco), para = Number(v.askingPrice);
+        const variacao = Math.abs(para - de) / Math.max(de, para);
+        const verificada = variacao <= 0.5;
+        if (verificada) stats.mudancasPreco = (stats.mudancasPreco || 0) + 1;
+        else stats.mudancasSuspeitas = (stats.mudancasSuspeitas || 0) + 1;
         await pool.query(
-          "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('listing',$1,'mudanca-preco',$2)",
-          [id, JSON.stringify({ url: a.url, portal: a.portal, de: Number(anterior.preco), para: Number(v.askingPrice),
-            listingAnterior: anterior.listing_id })]).catch(() => {});
+          `INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('listing',$1,$2,$3)`,
+          [id, verificada ? "mudanca-preco" : "mudanca-preco-suspeita",
+            JSON.stringify({ url: a.url, portal: a.portal, externalId: idt.externalId, verificada,
+              de, para, variacaoPct: Math.round(variacao * 1000) / 10,
+              bairro: v.neighborhood, tipo: v.propertyType,
+              area: v.privateAreaM2 ?? v.totalAreaM2 ?? null,
+              listingAnterior: anterior.listing_id })]).catch(() => {});
       }
       /* geocodificação determinística pelo CNEFE (§10): endereço no texto -> coordenada
          com precisão declarada; sem endereço casável, o imóvel fica sem geom (honesto) */
