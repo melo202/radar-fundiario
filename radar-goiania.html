@@ -675,6 +675,11 @@
   .cxp .dc{display:inline-block;background:var(--lot);color:#fff;font:700 10px/1 "JetBrains Mono";padding:3px 5px;border-radius:2px}
   .cxp .ap{color:var(--muted);font-size:10.5px}
   .cxp a{color:var(--accent);font-weight:700}
+  .cxp-bairro{font:600 12px/1.35 "Archivo";margin:4px 0;padding:5px 7px;background:rgba(8,135,128,.08);border-radius:4px}
+  .cxp-bairro b{color:var(--accent)}
+  .cxp-nota{display:block;font:500 10.5px/1.35 "Archivo";color:var(--muted)}
+  .cxp-dc-lbl{font:600 9.5px/1 "JetBrains Mono"}
+  .cxp-aviso{font:600 10.5px/1.4 "Archivo";color:var(--lot);margin-top:4px}
   /* .dlaudo/.laudobtn/.custosbtn (bloco fixo pré-Fase 9) removidos — absorvidos pela Lei da
      Tela em #dActsPrim/#dActsMore (Fase 9, FICHA-01); confirmado sem referência no HTML. */
   /* calculadora de custos (overlay) */
@@ -9772,13 +9777,22 @@ function initCaixa(){
    "📓 Este imóvel está no seu território salvo." depois do endereço e antes do preço (mesma ordem
    de prioridade "onde fica -> o que é especial -> preço", UI-SPEC §4). */
 function caixaPopup(i,noTerr){
+  /* desconto REAL vs mediana de OFERTAS do bairro (índice próprio, oferta ≠ transação) —
+     a régua que nenhum concorrente tem; só aparece quando a API traz amostra suficiente */
+  const db=i.descontoBairro;
+  const descBairro=db&&db.disponivel!==false&&db.pctAbaixoDaMediana!=null
+    ?`<div class="cxp-bairro">${db.pctAbaixoDaMediana>0?`<b>${db.pctAbaixoDaMediana.toLocaleString("pt-BR")}% abaixo</b> da mediana do bairro`:`${Math.abs(db.pctAbaixoDaMediana).toLocaleString("pt-BR")}% acima da mediana do bairro`} <span class="cxp-nota">(${brlC(db.pm2MedianaBairro)}/m² · ${db.nOfertas} ofertas anunciadas, não transações)</span></div>`:"";
+  /* 1º aviso da modalidade — o mais decisivo; o resto fica no link do edital/Caixa */
+  const av=i.aviso&&i.aviso.avisos&&i.aviso.avisos.length?`<div class="cxp-aviso">⚠ ${esc(i.aviso.avisos[0])}</div>`:"";
   return `<div class="cxp">
     <div class="tt">${esc(i.t)} — ${esc(i.b)}</div>
     <div>${esc(i.e)}</div>
     ${noTerr?'<div class="cxp-terr">Este imóvel está no seu território salvo.</div>':""}
-    <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}%</span>`:""}</div>
-    <div>Laudo de avaliação: <b>${brl(i.a)}</b></div>
+    ${descBairro}
+    <div class="pr">${brl(i.p)} ${i.d?`<span class="dc">−${String(i.d).replace(".",",")}% vs avaliação Caixa</span>`:""}</div>
+    <div>Avaliação da Caixa: <b>${brl(i.a)}</b>${i.ar?` · ${Math.round(i.ar)} m²`:""}</div>
     <div>${esc(i.m)}</div>
+    ${av}
     ${i.pr!=="q"?'<div class="ap">pino aproximado</div>':""}
     ${/^https:\/\//.test(i.u||"")?`<a href="${esc(i.u)}" target="_blank" rel="noopener">ver na Caixa ↗</a>`:""}
   </div>`;
@@ -10150,7 +10164,18 @@ if(!window.L||!window.proj4){
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
      '🏦 Ver Oportunidades Caixa' nunca apareceria. O ramo síncrono cobre o caso raro de CAIXA já
      presente (ex.: file:// com cache quente); initCaixa continua idempotente/guardada. */
-  if(window.CAIXA)initCaixa();else document.addEventListener("DOMContentLoaded",initCaixa);
+  /* Oportunidades (projeto 17/07): a lista da Caixa passa a vir da API (fresca, diária,
+     com desconto vs índice e avisos por modalidade). O caixa-goiania.js estático é o
+     FALLBACK — se a API falhar, o mapa segue com o último snapshot. bootCaixa roda no
+     DOMContentLoaded (depois do defer do estático), então a API sobrepõe o estático. */
+  const bootCaixa=async()=>{
+    try{
+      const r=await fetch(MOTOR_BASE+"/motor/oportunidades",{signal:AbortSignal.timeout(8000)});
+      if(r.ok){const d=await r.json();if(d&&d.imoveis&&d.imoveis.length)window.CAIXA={gerado:d.gerado,fonte:d.fonte,imoveis:d.imoveis,fatores:(window.CAIXA&&window.CAIXA.fatores)||{}};}
+    }catch(e){/* fallback: mantém o caixa-goiania.js estático */}
+    initCaixa();
+  };
+  if(document.readyState!=="loading")bootCaixa();else document.addEventListener("DOMContentLoaded",bootCaixa);
   /* deep-link ?insc= (BUSCA-09): so depende de map (initMap, sincrona) — NAO espera loadBairros
      (insc nao usa COMBO/setor). Erro (inscricao nao encontrada) reusa o toast/estado vazio de finish(). */
   const inscParam=new URLSearchParams(location.search).get("insc");
