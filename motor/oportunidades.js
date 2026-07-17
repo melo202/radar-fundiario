@@ -213,6 +213,8 @@ export async function listarOportunidades() {
     indiceBairros(),
   ]);
   const porChave = new Map(indice.map(e => [`${e.bairro}|${e.tipo}`, e]));
+  /* gerado_em é DATE; o mapa (initCaixa) espera ISO 'YYYY-MM-DD' para Date.parse+split */
+  const isoData = (d) => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
   let gerado = null;
   const imoveis = r.rows.map(o => {
     if (o.gerado_em && (!gerado || o.gerado_em > gerado)) gerado = o.gerado_em;
@@ -231,7 +233,7 @@ export async function listarOportunidades() {
       aviso: avisosDaModalidade(o.modalidade),
     };
   });
-  return { gerado: gerado ? String(gerado) : null,
+  return { gerado: gerado ? isoData(gerado) : null,
     fonte: "Lista oficial de imóveis da CAIXA (venda-imoveis.caixa.gov.br), atualizada diariamente",
     imoveis };
 }
