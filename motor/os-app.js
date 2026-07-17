@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos"};
+const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false}};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -247,6 +247,33 @@ async function saveProperty(form,btn){
 }
 async function completePropTask(id,btn){btn.disabled=true;btn.textContent="Concluindo…";try{await api(`/painel/api/os/tarefas/${id}/concluir`,{method:"POST",body:"{}"});toast("Pendência resolvida.");invalidateLists();await loadProperty();}catch(e){toast(e.message);btn.disabled=false;btn.textContent="Marcar como resolvida";}}
 async function addOpportunity(dados,btn){btn.disabled=true;btn.textContent="Registrando…";try{await api(`/painel/api/os/imoveis/${state.property.id}/oportunidade`,{method:"POST",body:JSON.stringify(dados)});toast("Interessado registrado — a tela Hoje passa a cobrar o retorno.");invalidateLists();state.property.tab="comercial";await loadProperty();}catch(e){toast(e.message);btn.disabled=false;btn.textContent="Registrar interessado";}}
+
+/* Assistente privado: sessão geral criada sob demanda. Modelos e ferramentas nunca aparecem na UX. */
+function appendAssistantMessage(role,text,extra=""){
+  const target=$("assistantMessages");target.querySelector(".assistant-empty")?.remove();
+  const message=el("div",{class:`assistant-message ${role} ${extra}`.trim(),text});target.append(message);target.scrollTop=target.scrollHeight;return message;
+}
+function openAssistant(){const dialog=$("assistantDialog");dialog.showModal();setTimeout(()=>$("assistantInput").focus(),50);}
+async function ensureAssistantSession(){
+  if(state.assistant.sessionId)return state.assistant.sessionId;
+  const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify({objectType:"general",title:"Meu dia"})});
+  state.assistant.sessionId=result.session.id;return result.session.id;
+}
+async function submitAssistant(event){
+  event?.preventDefault();if(state.assistant.busy)return;
+  const input=$("assistantInput"),text=input.value.trim();if(!text)return;
+  state.assistant.busy=true;$("sendAssistant").disabled=true;input.disabled=true;appendAssistantMessage("user",text);input.value="";
+  const waiting=appendAssistantMessage("assistant","Analisando apenas o contexto necessário…","waiting");
+  try{
+    const sessionId=await ensureAssistantSession();
+    const result=await api(`/painel/api/os/assistente/sessoes/${sessionId}/mensagens`,{method:"POST",body:JSON.stringify({message:text})});
+    waiting.classList.remove("waiting");waiting.textContent=result.reply;
+  }catch(error){waiting.classList.remove("waiting");waiting.textContent=`Não foi possível responder agora. ${error.message}`;}
+  finally{state.assistant.busy=false;$("sendAssistant").disabled=false;input.disabled=false;input.focus();$("assistantMessages").scrollTop=$("assistantMessages").scrollHeight;}
+}
+$("openAssistant").addEventListener("click",openAssistant);
+$("assistantForm").addEventListener("submit",submitAssistant);
+document.querySelectorAll("[data-assistant-prompt]").forEach(button=>button.addEventListener("click",()=>{$("assistantInput").value=button.dataset.assistantPrompt;$("assistantInput").focus();}));
 document.querySelectorAll("#propTabs .tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 $("propBack").addEventListener("click",()=>switchView("portfolio"));
 
