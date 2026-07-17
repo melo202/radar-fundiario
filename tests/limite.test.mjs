@@ -32,6 +32,6 @@ test("G2: máscara e contorno seguem o modo satélite", () => {
 
 test("G4: limite publicado no PWA e no deploy curado", () => {
   assert.ok(sw.includes('"./limite-goiania.json"'), "limite no OPTIONAL do service worker");
-  assert.match(sw, /const CACHE = "radar-v13"/, "cache bump para invalidar a cópia antiga");
+  assert.match(sw, /const CACHE = "radar-v14"/, "cache atual inclui a camada de oportunidades");
   assert.ok(pages.includes("limite-goiania.json"), "workflow de deploy copia o dataset");
 });
