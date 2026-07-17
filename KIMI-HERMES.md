@@ -16,7 +16,7 @@ Esta fatia entrega a integração do produto com uma interface de runtime substi
 - interface central do assistente no Corretor Inteligente OS;
 - somente leitura nesta primeira etapa.
 
-O ID oficial é `kimi-for-coding`. Ele é estável e o backend da Kimi o atualiza para o modelo vigente; não se deve fixar o nome comercial K3 no código. O HighSpeed usa `kimi-for-coding-highspeed` e continua desativado por padrão.
+O especialista principal usa o ID oficial `k3`, disponível no plano Allegretto. O HighSpeed usa `kimi-for-coding-highspeed` e continua desativado por padrão; em julho de 2026 ele ainda pertence à linha K2.7, por isso não substitui silenciosamente o K3.
 
 ## Limite de segurança
 
@@ -55,7 +55,7 @@ hermes model
 Custom endpoint
 Base URL: https://api.kimi.com/coding/v1
 API key: chave criada no Kimi Code Console
-Model: kimi-for-coding
+Model: k3
 ```
 
 Ativar a API local do Hermes no arquivo de ambiente do perfil:
@@ -87,4 +87,3 @@ Depois do deploy seguro:
 - expor ferramentas de leitura controladas por um serviço intermediário, não por acesso ao PostgreSQL;
 - adicionar o painel de consumo diário/semanal;
 - liberar escrita apenas com confirmação humana explícita e auditoria.
-
