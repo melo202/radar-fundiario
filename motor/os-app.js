@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false}};
+const state={csrf:"",preview:null,todayCounts:{},loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false}};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -19,7 +19,7 @@ async function api(url,options={}){
   if(!r.ok) throw new Error(body.erro||"Não foi possível concluir a ação.");
   return body;
 }
-function el(tag,attrs={},children=[]){const node=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(k==="class")node.className=v;else if(k==="text")node.textContent=v;else if(k.startsWith("data-"))node.setAttribute(k,v);else node[k]=v;}for(const child of [].concat(children)){if(child!=null)node.append(child.nodeType?child:document.createTextNode(String(child)));}return node;}
+function el(tag,attrs={},children=[]){const node=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(k==="class")node.className=v;else if(k==="text")node.textContent=v;else if(k.startsWith("data-")||k.startsWith("aria-"))node.setAttribute(k,v);else node[k]=v;}for(const child of [].concat(children)){if(child!=null)node.append(child.nodeType?child:document.createTextNode(String(child)));}return node;}
 const money=v=>v==null?"Preço a confirmar":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const date=v=>v?new Date(v).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}):"Sem prazo";
 function skeletons(target,n=3){target.replaceChildren(...Array.from({length:n},()=>el("div",{class:"skeleton"})));}
@@ -28,7 +28,7 @@ function errorCard(target,error){target.replaceChildren(el("div",{class:"error-c
 function toast(message){const t=$("toast");t.textContent=message;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,2800);}
 function badge(priority){const labels={baixa:"Baixa",normal:"Normal",alta:"Atenção",critica:"Crítica"};const cls=priority==="critica"?"badge critical":priority==="alta"?"badge high":"badge";return el("span",{class:cls,text:labels[priority]||"Ação"});}
 
-async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;const c=data.counts||{};const cards=[[c.tasks||0,"ações pendentes"],[c.properties||0,"imóveis na carteira"],[c.contacts||0,"relacionamentos"],[c.opportunities||0,"oportunidades abertas"]];$("todayCounts").replaceChildren(...cards.map(([v,l])=>el("div",{class:"count-card"},[el("strong",{text:String(v)}),el("span",{text:l})])));$("todaySummary").textContent=data.actions?.length?`Há ${data.actions.length} item(ns) priorizado(s). O que está funcionando bem não ocupa espaço.`:"Nenhuma pendência crítica agora. Use Capturar para registrar o próximo movimento.";renderActions(data.actions||[]);await loadImprovements();}catch(e){errorCard(target,e);}}
+async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;const c=data.counts||{};state.todayCounts=c;const cards=[[c.tasks||0,"ações pendentes","today"],[c.properties||0,"imóveis na carteira","portfolio"],[c.contacts||0,"clientes e contatos","relationships"],[c.opportunities||0,"negociações abertas","portfolio"]];$("todayCounts").replaceChildren(...cards.map(([v,l,destino])=>{const b=el("button",{class:"count-card",type:"button","aria-label":`${v} ${l}`},[el("strong",{text:String(v)}),el("span",{text:l}),el("i",{text:"Ver →"})]);b.addEventListener("click",()=>switchView(destino));return b;}));$("todaySummary").textContent=data.actions?.length?`Encontrei ${data.actions.length} movimento${data.actions.length===1?"":"s"} que merece${data.actions.length===1?"":"m"} sua atenção.`:"Seu dia está sob controle. Posso analisar a carteira ou registrar um novo movimento.";updateGuide(c);renderActions(data.actions||[]);await loadImprovements();}catch(e){errorCard(target,e);}}
 function renderActions(actions){const target=$("todayActions");if(!actions.length)return empty(target,"Seu dia está limpo","Quando houver prazo, oportunidade ou cadastro incompleto, a próxima ação aparecerá aqui.");target.replaceChildren(...actions.map(a=>{const action=el("button",{class:"card-action",type:"button",text:a.actionLabel||"Abrir"});if(a.source==="task")action.addEventListener("click",()=>completeTask(a.id,action));else if(a.entityType==="inventory_property"&&a.entityId)action.addEventListener("click",()=>openProperty(a.entityId));else action.addEventListener("click",()=>switchView(a.entityType==="inventory_property"?"portfolio":"relationships"));return el("article",{class:"action-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:a.title}),el("p",{text:a.reason})]),badge(a.priority)]),el("div",{class:"meta"},[el("span",{text:date(a.dueAt)}),el("span",{text:a.source==="property_gap"?"Cadastro progressivo":a.source==="opportunity"?"Oportunidade":"Tarefa"})]),action]);}));}
 async function loadImprovements(){const section=$("improvementSection"),target=$("improvementList");try{const data=await api("/painel/api/os/melhorias");const rows=data.proposals||[];section.hidden=!rows.length;if(!rows.length)return;target.replaceChildren(...rows.map(p=>{const approve=el("button",{class:"card-action",type:"button",text:"Aprovar teste"});const reject=el("button",{class:"card-action secondary",type:"button",text:"Agora não"});approve.addEventListener("click",()=>reviewImprovement(p.id,"approved",approve));reject.addEventListener("click",()=>reviewImprovement(p.id,"rejected",reject));return el("article",{class:"improvement-card"},[el("div",{class:"action-top"},[el("div",{},[el("h3",{text:p.title}),el("p",{text:p.reason})]),el("span",{class:p.risk==="alto"?"badge critical":p.risk==="medio"?"badge high":"badge",text:`Risco ${p.risk}`})]),p.expected_benefit?el("p",{class:"benefit",text:`Benefício esperado: ${p.expected_benefit}`}):null,el("div",{class:"improvement-actions"},[approve,reject])]);}));}catch{section.hidden=true;}}
 async function reviewImprovement(id,decision,button){button.disabled=true;try{await api(`/painel/api/os/melhorias/${id}/revisar`,{method:"POST",body:JSON.stringify({decision})});toast(decision==="approved"?"Teste autorizado. Nada foi aplicado em produção.":"Sugestão arquivada.");await loadImprovements();}catch(e){toast(e.message);button.disabled=false;}}
@@ -225,17 +225,17 @@ async function buscarMercadoRef(btn){
   const p=state.property.data.property,ch=p.characteristics||{};
   btn.disabled=true;btn.textContent="Buscando nos portais… (até 2 min)";
   try{
-    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2)}),signal:AbortSignal.timeout(120000)});
+    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2),bedrooms:ch.bedrooms!=null?Number(ch.bedrooms):null}),signal:AbortSignal.timeout(120000)});
     const d=await r.json();if(!r.ok)throw new Error(d.erro||"busca indisponível agora");
     state.property.mercado=d;renderMercado(d);
   }catch(e){btn.disabled=false;btn.textContent="Buscar referência agora";toast(e.message);}
 }
 function renderMercado(d){
   const card=$("mercadoCard");if(!card)return;
-  if(d.status==="amostra_insuficiente"){card.append(el("p",{class:"field-help",text:`Ainda sem amostra suficiente para comparar (${d.sample?.aposDedup??0} oferta(s), mínimo 5). O acervo engorda a cada varredura noturna.`}));return;}
+  if(d.status==="amostra_insuficiente"){card.append(el("div",{class:"market-safety"},[el("strong",{text:"Sem base segura para calcular"}),el("p",{text:`${d.sample?.aposDedup??0} oferta(s) do mesmo bairro passaram pelos filtros; o mínimo é ${d.sample?.minimoParaCalcular??5}. Ofertas de outros bairros não entram no valor.`})]));return;}
   const r=d.result;if(!r)return;
   card.querySelector(".mercado-num")?.remove();
-  card.append(el("div",{class:"mercado-num"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) no cálculo · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:" — referência por OFERTAS públicas; a avaliação completa mora no Radar."})]));
+  card.append(el("div",{class:"mercado-num"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."})]));
 }
 async function saveProperty(form,btn){
   btn.disabled=true;btn.textContent="Salvando…";
@@ -251,11 +251,20 @@ async function completePropTask(id,btn){btn.disabled=true;btn.textContent="Concl
 async function addOpportunity(dados,btn){btn.disabled=true;btn.textContent="Registrando…";try{await api(`/painel/api/os/imoveis/${state.property.id}/oportunidade`,{method:"POST",body:JSON.stringify(dados)});toast("Interessado registrado — a tela Hoje passa a cobrar o retorno.");invalidateLists();state.property.tab="comercial";await loadProperty();}catch(e){toast(e.message);btn.disabled=false;btn.textContent="Registrar interessado";}}
 
 /* Assistente privado: sessão geral criada sob demanda. Modelos e ferramentas nunca aparecem na UX. */
+function storageGet(key){try{return localStorage.getItem(key);}catch{return null;}}
+function storageSet(key,value){try{localStorage.setItem(key,value);}catch{}}
+function updateGuide(counts=state.todayCounts){
+  const card=$("guideCard");if(!card)return;
+  card.hidden=storageGet("ci-guide-hidden")==="1";
+  $("guideCapture")?.classList.toggle("is-done",Number(counts.properties||0)>0);
+  $("guideAssistant")?.classList.toggle("is-done",storageGet("ci-guide-assistant")==="1");
+}
+function showGuide(){storageSet("ci-guide-hidden","0");const card=$("guideCard");if(card){card.hidden=false;card.scrollIntoView({behavior:"smooth",block:"center"});}}
 function appendAssistantMessage(role,text,extra=""){
   const target=$("assistantMessages");target.querySelector(".assistant-empty")?.remove();
   const message=el("div",{class:`assistant-message ${role} ${extra}`.trim(),text});target.append(message);target.scrollTop=target.scrollHeight;return message;
 }
-function openAssistant(){const dialog=$("assistantDialog");dialog.showModal();setTimeout(()=>$("assistantInput").focus(),50);}
+function openAssistant(prompt=""){const dialog=$("assistantDialog");if(prompt)$("assistantInput").value=prompt;if(!dialog.open)dialog.showModal();setTimeout(()=>$("assistantInput").focus(),50);}
 async function ensureAssistantSession(){
   if(state.assistant.sessionId)return state.assistant.sessionId;
   const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify({objectType:"general",title:"Meu dia"})});
@@ -269,12 +278,21 @@ async function submitAssistant(event){
   try{
     const sessionId=await ensureAssistantSession();
     const result=await api(`/painel/api/os/assistente/sessoes/${sessionId}/mensagens`,{method:"POST",body:JSON.stringify({message:text})});
-    waiting.classList.remove("waiting");waiting.textContent=result.reply;
+    waiting.classList.remove("waiting");waiting.textContent=result.reply;storageSet("ci-guide-assistant","1");updateGuide();
   }catch(error){waiting.classList.remove("waiting");waiting.textContent=`Não foi possível responder agora. ${error.message}`;}
   finally{state.assistant.busy=false;$("sendAssistant").disabled=false;input.disabled=false;input.focus();$("assistantMessages").scrollTop=$("assistantMessages").scrollHeight;}
 }
-$("openAssistant").addEventListener("click",openAssistant);
-$("openAssistantNav").addEventListener("click",openAssistant);
+function askFromHome(event){event.preventDefault();const input=$("homeAssistantInput"),prompt=input.value.trim();if(!prompt)return;openAssistant(prompt);input.value="";submitAssistant();}
+function prefillAssistant(prompt){openAssistant(prompt);}
+const hour=new Date().getHours();$("dayGreeting").textContent=`${hour<12?"Bom dia":hour<18?"Boa tarde":"Boa noite"}, Bruno`;
+$("openAssistant").addEventListener("click",()=>openAssistant());
+$("openAssistantNav").addEventListener("click",()=>openAssistant());
+$("homeAssistantForm").addEventListener("submit",askFromHome);
+document.querySelectorAll("[data-home-prompt]").forEach(button=>button.addEventListener("click",()=>prefillAssistant(button.dataset.homePrompt)));
+$("guideCapture").addEventListener("click",openCapture);
+$("guideAssistant").addEventListener("click",()=>openAssistant("Analise minha situação atual e me diga o melhor primeiro passo."));
+$("dismissGuide").addEventListener("click",()=>{storageSet("ci-guide-hidden","1");$("guideCard").hidden=true;});
+$("openGuide").addEventListener("click",showGuide);
 $("assistantForm").addEventListener("submit",submitAssistant);
 document.querySelectorAll("[data-assistant-prompt]").forEach(button=>button.addEventListener("click",()=>{$("assistantInput").value=button.dataset.assistantPrompt;$("assistantInput").focus();}));
 document.querySelectorAll("#propTabs .tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));

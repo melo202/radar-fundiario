@@ -255,7 +255,7 @@ $("formLogin").addEventListener("submit",async ev=>{
   try{
     const r=await fetch("/painel/entrar",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({senha:$("senha").value})});
-    if(r.ok){$("senha").value="";visao();}
+    if(r.ok){$("senha").value="";location.replace("/painel/os");}
     else $("loginErro").textContent=(await r.json().catch(()=>({}))).erro||"Falha no login.";
   }catch{$("loginErro").textContent="Sem conexão com o servidor.";}
   btn.disabled=false;btn.textContent="Entrar";

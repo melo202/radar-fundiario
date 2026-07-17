@@ -4,18 +4,31 @@
    participa de nenhum número daqui; ela só vai REDIGIR sobre este JSON (§17). */
 import { pool } from "./db.js";
 import { resumo, cercaTukey, normalizaBairro, dedupMultiSinal, pesoComparavel, mediaPonderada, confianca } from "./estatistica.js";
-import { localidadeCasa } from "./endereco-anuncio.js";
 
-/* centroides das localidades do CNEFE (cache em memória): a régua de "bairro vizinho"
-   é DISTÂNCIA REAL entre centros de bairro, não palpite de lista */
-let CENTROIDES = null;
-async function centroidesLocalidades() {
-  if (CENTROIDES) return CENTROIDES;
-  const r = await pool.query(
-    `SELECT localidade, avg(ST_Y(geom::geometry)) AS lat, avg(ST_X(geom::geometry)) AS lon
-     FROM enderecos WHERE localidade IS NOT NULL GROUP BY 1`);
-  CENTROIDES = r.rows.map(x => ({ localidade: x.localidade, lat: Number(x.lat), lon: Number(x.lon) }));
-  return CENTROIDES;
+/* Política conservadora: valor profissional nunca mistura automaticamente bairros.
+   O contexto regional pode ajudar o corretor a procurar novas evidências, mas fica
+   explicitamente fora da conta. Faixa de área 75%–133% evita a antiga janela 0,5x–2x. */
+export const COMPARABLE_POLICY = Object.freeze({
+  minimum: 5,
+  ideal: 10,
+  areaRatioMin: 0.75,
+  areaRatioMax: 4 / 3,
+  maxBedroomDelta: 1,
+  nearbyContextRadiusM: 1500,
+  nearbyContextMinLocationConfidence: 0.7,
+});
+
+export function comparableSimilarity(subject, candidate) {
+  if (!(candidate.area > 0)) return { ok: false, reason: "sem_area" };
+  const ratio = candidate.area / Number(subject.areaM2 || 0);
+  if (!(ratio >= COMPARABLE_POLICY.areaRatioMin && ratio <= COMPARABLE_POLICY.areaRatioMax)) {
+    return { ok: false, reason: "area_fora_da_faixa" };
+  }
+  if (subject.bedrooms != null && candidate.bedrooms != null
+      && Math.abs(Number(subject.bedrooms) - Number(candidate.bedrooms)) > COMPARABLE_POLICY.maxBedroomDelta) {
+    return { ok: false, reason: "quartos_incompativeis" };
+  }
+  return { ok: true, reason: null };
 }
 
 /* opts (§14 — revisão do corretor): excluirIds tira comparáveis da amostra por decisão
@@ -50,68 +63,69 @@ export async function avaliar(subject, opts = {}) {
   };
 
   const alvo = normalizaBairro(neighborhood);
-  let foraDoBairro = 0, foraDaFaixaDeArea = 0, semArea = 0, excluidosManual = 0;
-  /* seleção reutilizável: aceitaBairro(r) diz se o candidato entra ("alvo"/"vizinho") */
-  const montaComps = (aceitaBairro) => {
-    foraDoBairro = 0; foraDaFaixaDeArea = 0; semArea = 0; excluidosManual = 0;
-    const lista = [];
-    for (const r of cand.rows) {
-      if (excluir.has(String(r.id))) { excluidosManual++; continue; } /* decisão do corretor (§14) */
-      const origem = aceitaBairro(r);
-      if (!origem) { foraDoBairro++; continue; }
-      const c = r.characteristics || {};
-      const area = c.privateAreaM2 ?? c.totalAreaM2 ?? null;
-      const price = Number(r.pricing?.askingPrice);
-      if (!(area > 0)) { semArea++; continue; } /* pm² exige área */
-      if (area < areaM2 * 0.5 || area > areaM2 * 2) { foraDaFaixaDeArea++; continue; } /* filtro §6 */
-      lista.push({
-        id: r.id, portal: r.portal, url: r.url, collectedAt: r.collected_at,
-        area, price, bedrooms: c.bedrooms ?? null,
-        completeness: Number(r.quality?.completenessScore ?? 0),
-        pm2: price / area,
-        bairro: r.neighborhood, deVizinho: origem === "vizinho",
-        lat: r.lat ?? null, lon: r.lon ?? null,
-        locConfidence: r.location_confidence != null ? Number(r.location_confidence) : null,
-        distanciaM: (temSubjectGeo && r.lat != null) ? distM(r.lat, r.lon) : null,
-      });
-    }
-    return lista;
+  let foraDoBairro = 0, foraDaFaixaDeArea = 0, quartosIncompativeis = 0, semArea = 0, excluidosManual = 0;
+  const monta = r => {
+    const c = r.characteristics || {};
+    const area = c.privateAreaM2 ?? c.totalAreaM2 ?? null;
+    const price = Number(r.pricing?.askingPrice);
+    return {
+      id: r.id, portal: r.portal, url: r.url, collectedAt: r.collected_at,
+      area, price, bedrooms: c.bedrooms ?? null,
+      completeness: Number(r.quality?.completenessScore ?? 0),
+      pm2: area > 0 ? price / area : null,
+      bairro: r.neighborhood,
+      lat: r.lat ?? null, lon: r.lon ?? null,
+      locConfidence: r.location_confidence != null ? Number(r.location_confidence) : null,
+      distanciaM: (temSubjectGeo && r.lat != null && r.lon != null) ? distM(Number(r.lat), Number(r.lon)) : null,
+    };
   };
 
-  let comps = montaComps(r => normalizaBairro(r.neighborhood) === alvo ? "alvo" : null);
-  let { principais, duplicados } = dedupMultiSinal(comps);
-  const totalFound = cand.rows.length;
-  const noBairroSozinho = principais.length;
-
-  /* AMOSTRA AMPLIADA (16/07 — "não consegui fazer laudo"): fora do eixo nobre, o bairro
-     sozinho raramente junta 5 ofertas. Quando há coordenada, ampliamos para bairros
-     VIZINHOS por distância REAL entre centroides do CNEFE (≤2,5 km) — e o resultado
-     DECLARA a ampliação em todo lugar. Método usual de ACM, nunca silencioso. */
-  let bairrosVizinhos = null;
-  if (principais.length < 5 && temSubjectGeo) {
-    const cents = await centroidesLocalidades().catch(() => []);
-    const perto = cents.filter(c => distM(c.lat, c.lon) <= 2500).map(c => c.localidade);
-    if (perto.length) {
-      comps = montaComps(r => {
-        if (normalizaBairro(r.neighborhood) === alvo) return "alvo";
-        return perto.some(L => localidadeCasa(L, r.neighborhood)) ? "vizinho" : null;
-      });
-      ({ principais, duplicados } = dedupMultiSinal(comps));
-      if (principais.length >= 5) {
-        bairrosVizinhos = [...new Set(principais.filter(c => c.deVizinho).map(c => c.bairro))];
+  const comps = [];
+  const contextoRegionalBruto = [];
+  for (const r of cand.rows) {
+    if (excluir.has(String(r.id))) { excluidosManual++; continue; }
+    const comp = monta(r);
+    const mesmoBairro = normalizaBairro(r.neighborhood) === alvo;
+    const similar = comparableSimilarity(subject, comp);
+    if (mesmoBairro) {
+      if (!similar.ok) {
+        if (similar.reason === "sem_area") semArea++;
+        else if (similar.reason === "area_fora_da_faixa") foraDaFaixaDeArea++;
+        else if (similar.reason === "quartos_incompativeis") quartosIncompativeis++;
+        continue;
       }
+      comps.push(comp);
+      continue;
+    }
+    foraDoBairro++;
+    /* Outro bairro nunca entra no valor. Só aparece como contexto se a posição do
+       próprio anúncio for suficientemente confiável e realmente próxima. */
+    if (similar.ok && temSubjectGeo && comp.distanciaM != null
+        && comp.distanciaM <= COMPARABLE_POLICY.nearbyContextRadiusM
+        && comp.locConfidence >= COMPARABLE_POLICY.nearbyContextMinLocationConfidence) {
+      contextoRegionalBruto.push(comp);
     }
   }
 
-  if (principais.length < 5) {
+  let { principais, duplicados } = dedupMultiSinal(comps);
+  const totalFound = cand.rows.length;
+  const noBairroSozinho = principais.length;
+  const contextoRegional = dedupMultiSinal(contextoRegionalBruto).principais
+    .sort((a, b) => a.distanciaM - b.distanciaM).slice(0, 8)
+    .map(c => ({ portal: c.portal, url: c.url, area: c.area, quartos: c.bedrooms,
+      preco: c.price, pm2: Math.round(c.pm2), bairro: c.bairro, distanciaM: c.distanciaM,
+      motivoExclusao: "bairro diferente — contexto regional, fora do cálculo" }));
+
+  if (principais.length < COMPARABLE_POLICY.minimum) {
     /* §12: amostra insuficiente é INFORMADA, nunca maquiada */
     return { status: "amostra_insuficiente",
       sample: { totalFound, noBairro: noBairroSozinho, aposDedup: principais.length,
-        minimoParaCalcular: 5, idealPlano: 10, foraDoBairro, foraDaFaixaDeArea, semArea, excluidosManual,
-        vizinhancaTentada: temSubjectGeo },
-      warnings: [temSubjectGeo
-        ? "Amostra insuficiente mesmo ampliando para bairros vizinhos (raio ~2,5 km) — colete mais anúncios desta região/tipologia."
-        : "Amostra insuficiente para estimativa — colete mais anúncios deste bairro/tipologia."] };
+        minimoParaCalcular: COMPARABLE_POLICY.minimum, idealPlano: COMPARABLE_POLICY.ideal,
+        foraDoBairro, foraDaFaixaDeArea, quartosIncompativeis, semArea, excluidosManual,
+        politicaComparacao: "mesmo bairro; área entre 75% e 133%; diferença máxima de 1 quarto quando informado" },
+      contextoRegional,
+      warnings: ["Amostra insuficiente no mesmo bairro — nenhum valor foi calculado.",
+        ...(contextoRegional.length ? [`${contextoRegional.length} oferta(s) próxima(s) de outros bairros aparecem somente como contexto e estão fora do cálculo.`] : [])] };
   }
 
   /* §9: outliers de pm² pela cerca de Tukey — marcados e explicados */
@@ -142,6 +156,7 @@ export async function avaliar(subject, opts = {}) {
     : null;
 
   const result = {
+    policyVersion: "same-neighborhood-v2",
     estimatedValue: Math.round(pm2Ponderado * areaM2),
     estimatedPricePerM2: Math.round(pm2Ponderado),
     medianPricePerM2: Math.round(rValidos.mediana),
@@ -149,16 +164,17 @@ export async function avaliar(subject, opts = {}) {
     confidence: conf,
     sample: { totalFound, noBairro: noBairroSozinho, duplicadosAgrupados: duplicados.length,
       totalAccepted: validos.length, totalOutliers: outliers.length, foraDoBairro, foraDaFaixaDeArea, semArea,
-      excluidosManual, ofertasColetadasEntre,
-      amostraAmpliada: bairrosVizinhos ? { raioM: 2500, bairrosVizinhos } : null },
-    methods: ["preço/m² por comparável", "dedup multi-sinal entre portais (área+preço/posição)", "cerca de Tukey (outliers marcados)",
+      excluidosManual, quartosIncompativeis, ofertasColetadasEntre,
+      politicaComparacao: "mesmo bairro; área entre 75% e 133%; diferença máxima de 1 quarto quando informado" },
+    methods: ["preço/m² somente com ofertas do mesmo bairro normalizado", "faixa de área estrita (75%–133% do imóvel)",
+      "diferença máxima de 1 quarto quando o dado existe", "dedup multi-sinal entre portais (área+preço/posição)", "cerca de Tukey (outliers marcados)",
       "média ponderada (área×tipologia×qualidade×recência)", "faixa provável = IQR × área"],
     assumptions: ["Comparáveis são preços de OFERTA anunciados publicamente — não são transações fechadas.",
       "Nenhum ajuste automático de negociação/conservação foi aplicado nesta versão.",
-      ...(bairrosVizinhos ? [`Amostra AMPLIADA para bairros vizinhos (raio ~2,5 km entre centros de bairro — IBGE/CNEFE): o bairro do imóvel tinha ${noBairroSozinho} oferta(s) comparável(is). Bairros incluídos: ${bairrosVizinhos.join(", ")}.`] : [])],
+      "Ofertas de bairros diferentes são excluídas do valor, mesmo quando geograficamente próximas."],
     warnings: [
       ...(validos.length < 10 ? ["Amostra abaixo do ideal do plano (10+): use como referência preliminar."] : []),
-      ...(bairrosVizinhos ? [`Amostra ampliada para bairros vizinhos (${bairrosVizinhos.length}) por insuficiência no bairro — os preços podem refletir padrões diferentes do micro-local.`] : [])],
+    ],
   };
 
   /* Cruzamento com a LOCALIZAÇÃO (pedido do usuário 15/07 + §10 do plano): quando o
@@ -226,7 +242,7 @@ export async function avaliar(subject, opts = {}) {
   return { id: valId, status: "calculada", subject, result,
     comparaveis: pesos.map(p => ({ portal: p.c.portal, url: p.c.url, area: p.c.area, quartos: p.c.bedrooms,
       preco: p.c.price, pm2: Math.round(p.c.pm2), peso: Math.round(p.peso * 100) / 100,
-      bairro: p.c.bairro, deVizinho: p.c.deVizinho || false,
+      bairro: p.c.bairro,
       lat: p.c.lat, lon: p.c.lon, distanciaM: p.c.distanciaM, locConfidence: p.c.locConfidence })),
     outliers: outliers.map(o => ({ portal: o.portal, url: o.url, pm2: Math.round(o.pm2), razao: o.razaoOutlier })) };
 }

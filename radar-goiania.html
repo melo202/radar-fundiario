@@ -7318,7 +7318,11 @@ function miniMapaOfertas(comps,subjLL){
 function renderMercado(d,subject){
   const body=document.getElementById("dMercadoBody");
   if(d.status==="amostra_insuficiente"){
-    body.innerHTML=`<p class="dmercado-hint"><b>Ainda sem amostra suficiente</b> para ${esc(subject.propertyType)} em ${esc(subject.neighborhood)}: ${d.sample.aposDedup} oferta(s) comparável(is) encontrada(s) (mínimo 5). A busca ao vivo e a varredura noturna vão engordando o acervo — enquanto isso, veja os anúncios direto nos portais:</p>${linksPortaisHTML(subject)}`;
+    const regionais=(d.contextoRegional||[]).map(c=>`<li>${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> · <i>${esc(c.bairro)}</i>${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""} <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
+    body.innerHTML=`<div class="dmercado-warn"><b>Não há base segura para calcular.</b><br>${d.sample.aposDedup} oferta(s) do mesmo bairro passaram pelos filtros; o mínimo é ${d.sample.minimoParaCalcular||5}. Nenhum valor foi estimado.</div>
+      <p class="dmercado-hint"><b>Regra aplicada:</b> ${esc(d.sample.politicaComparacao||"mesmo bairro e características semelhantes")}.</p>
+      ${regionais?`<details class="foot"><summary>Ofertas próximas de outros bairros — fora do cálculo (${(d.contextoRegional||[]).length})</summary><div class="footbody"><p class="dmercado-hint">Servem apenas para orientar nova pesquisa. Não influenciam preço, faixa ou confiança.</p><ul class="dmercado-list">${regionais}</ul></div></details>`:""}
+      ${linksPortaisHTML(subject)}`;
     return;
   }
   const r=d.result;
@@ -7326,7 +7330,7 @@ function renderMercado(d,subject){
      A chave prende a análise ao imóvel — laudo de OUTRO imóvel nunca herda esta seção. */
   MERCADO_LAST={chave:clean(MERCADO_A&&MERCADO_A.nrinscr)||clean(MERCADO_A&&MERCADO_A.ci)||null,
     d,quando:new Date().toLocaleDateString("pt-BR")};
-  const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""}${c.deVizinho?` · <i>${esc(c.bairro)}</i>`:""})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
+  const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""} · ${esc(c.bairro)})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
   const subjLL=(MERCADO_A&&MERCADO_A.x_coord&&MERCADO_A.y_coord)?toWGS(MERCADO_A.x_coord,MERCADO_A.y_coord):null;
   const mini=miniMapaOfertas(d.comparaveis||[],subjLL);
@@ -7336,6 +7340,7 @@ function renderMercado(d,subject){
       <span>${brlC(r.probableRange.minimum)} a ${brlC(r.probableRange.maximum)} · ${brlC(r.estimatedPricePerM2)}/m² ponderado</span></div>
     ${ehAptoProvavel(MERCADO_A||{})?`<p class="dmercado-hint">Comparado pela área <b>privativa informada de ${subject.areaM2} m²</b> — a total do cadastro (com comum e vaga) fica fora da conta. <button type="button" onclick="mercadoTrocarArea()" style="background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-decoration:underline;font:inherit">alterar área</button></p>`:""}
     <div class="dmercado-conf">Confiança <b>${esc(r.confidence.rotulo)}</b> — ${r.sample.totalAccepted} oferta(s) no cálculo${r.sample.totalOutliers?`, ${r.sample.totalOutliers} fora da curva (Tukey)`:""}${r.sample.duplicadosAgrupados?`, ${r.sample.duplicadosAgrupados} duplicada(s) agrupada(s)`:""}.${av&&av.buscou?` Busca ao vivo: ${av.novos||0} anúncio(s) novo(s) coletado(s) agora.`:av?" (usando a coleta recente deste bairro).":""}</div>
+    <p class="dmercado-hint"><b>Filtro profissional:</b> ${esc(r.sample.politicaComparacao||"somente mesmo bairro e características semelhantes")}.</p>
     ${(r.warnings&&r.warnings.length)?`<div class="dmercado-warn">${r.warnings.map(esc).join("<br>")}</div>`:""}
     ${r.indiceMercado?`<p class="dmercado-hint" style="margin-top:8px"><b>Índice FipeZap</b> (Goiânia, venda, ref. ${fmtMesRef(r.indiceMercado.referencia)}): ${fmtPct(r.indiceMercado.variacaoMensal)} no mês · ${fmtPct(r.indiceMercado.variacao12m)} em 12 meses${r.indiceMercado.precoM2MedioCidade?` · média da cidade ${brlC(r.indiceMercado.precoM2MedioCidade)}/m²`:""} — contexto da cidade, fora do cálculo.</p>`:""}
     ${mini}

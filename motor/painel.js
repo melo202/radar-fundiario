@@ -50,7 +50,8 @@ async function visao() {
             (SELECT count(*)::int FROM pois) AS pois`).then(r => r.rows[0]);
   const avaliacoes = await pool.query(
     `SELECT id, subject->>'neighborhood' AS bairro, subject->>'propertyType' AS tipo,
-            result->>'estimatedValue' AS valor, result->'confidence'->>'rotulo' AS confianca,
+            CASE WHEN status='calculada' THEN result->>'estimatedValue' END AS valor,
+            CASE WHEN status='calculada' THEN result->'confidence'->>'rotulo' END AS confianca,
             status, created_at
      FROM valuations ORDER BY created_at DESC LIMIT 8`).then(r => r.rows);
   const ia = await pool.query(
@@ -87,6 +88,12 @@ export async function painel(req, res) {
   if (!painelAtivo()) return json(res, 404, { erro: "rota desconhecida" }); /* SEG-05 */
 
   if (req.method === "GET" && (req.url === "/painel" || req.url === "/painel/")) {
+    /* Quem já entrou vai direto ao produto. O painel técnico existe em /painel/admin,
+       fora da navegação cotidiana, para o cérebro não parecer a página principal. */
+    if (sessaoDe(req)) {
+      res.writeHead(303, Object.assign({ Location: "/painel/os", "Cache-Control": "no-store" }, SEC));
+      return res.end();
+    }
     res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": CSP, "Cache-Control": "no-store" }, SEC));
     return res.end(HTML);
@@ -116,7 +123,19 @@ export async function painel(req, res) {
 
   /* daqui para baixo, tudo exige sessão válida */
   const sessao = sessaoDe(req);
-  if (!sessao) return json(res, 401, { erro: "entre com a senha" });
+  if (!sessao) {
+    if (req.method === "GET" && req.url === "/painel/os") {
+      res.writeHead(303, Object.assign({ Location: "/painel", "Cache-Control": "no-store" }, SEC));
+      return res.end();
+    }
+    return json(res, 401, { erro: "entre com a senha" });
+  }
+
+  if (req.method === "GET" && req.url === "/painel/admin") {
+    res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": CSP, "Cache-Control": "no-store" }, SEC));
+    return res.end(HTML);
+  }
 
   /* OS-01: aplicação operacional protegida pela mesma sessão do painel durante a fase alpha. */
   if (req.method === "GET" && req.url === "/painel/os") {

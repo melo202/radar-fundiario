@@ -206,3 +206,29 @@ O usuário auditou o painel de olho: "245 mil pra 600 mil… acho que foi o prim
 
 ### 17/07/2026 — Oportunidades F1 (Caixa ponta a ponta) NO AR
 Implementada a F1 inteira do PLANO-OPORTUNIDADES: **tabela própria `oportunidades`** (migração 008 — o índice de ofertas fica protegido por construção, leilão NUNCA contamina a mediana); **runner residencial** (`atualizar-caixa.py` estendido + `runner-caixa/` com Tarefa Agendada) que baixa o CSV já geocodificado e faz POST autenticado ao VPS (o VPS recebe 403 do Radware); endpoint `/motor/ingestao/caixa` (token) faz **diff/eventos** (`imovel-novo`/`preco-baixou`/`saiu-da-lista` — sumiço NUNCA vira "vendido"); `/motor/oportunidades` (público) cruza cada imóvel com o índice de OFERTAS do bairro → **desconto real** (n≥5, área conhecida, senão indisponível) e avisos jurídicos POR MODALIDADE (SFI ≠ judicial). Mapa consome a API (`bootCaixa`, fallback estático) com o desconto no popup; painel ganhou "Oportunidades em movimento". Verificado em produção: 205 imóveis, 142 no mapa, apto Setor Bueno 42,8% abaixo da mediana. 523 testes. **PENDENTE HUMANO**: preencher `%USERPROFILE%\.radar\ingest.env` com o MOTOR_TOKEN e rodar `runner-caixa\instalar-tarefa.ps1` (a Tarefa Agendada diária das 22:40) — o classificador de segurança (com razão) não me deixou manipular o token; é 1 passo manual único.
+
+### 17/07/2026 — UX guiada + política profissional de comparáveis (decisão do usuário)
+
+O usuário rejeitou corretamente a estética de “painel técnico” da página principal e
+uma avaliação que misturou automaticamente ofertas de sete bairros. As duas correções
+viram prioridade acima de novas funcionalidades:
+
+1. **A página principal é uma central de trabalho, não um dashboard.** Deve receber o
+   corretor com uma pergunta simples, ensinar os três primeiros movimentos, sugerir
+   pedidos conforme o contexto e esconder modelos, ferramentas, tokens e estrutura
+   administrativa. No celular, cinco destinos no máximo; no desktop, a mesma navegação
+   vira barra lateral. Estados vazios sempre ensinam a próxima ação.
+2. **Bairro diferente não entra automaticamente no valor.** A antiga ampliação por
+   centroides em raio de 2,5 km fica revogada. Uma oferta de outro bairro pode aparecer
+   apenas como “contexto regional — fora do cálculo”, desde que tenha coordenada própria
+   confiável e esteja realmente próxima. Nunca altera valor, faixa ou confiança.
+3. **Semelhança mínima obrigatória:** mesmo tipo, mesmo bairro normalizado, área entre
+   75% e 133% da área do imóvel e diferença máxima de um quarto quando esse dado existir.
+   Menos de cinco ofertas após os filtros significa “sem base segura para calcular”.
+4. **Separação de responsabilidades:** busca ao vivo encontra anúncios; o motor
+   determinístico seleciona e calcula; Kimi/Hermes explica, critica e sugere investigação,
+   mas não escolhe silenciosamente comparáveis nem produz números da avaliação.
+5. **Próximo gate de confiança:** permitir ao corretor revisar inclusões/exclusões no
+   próprio fluxo, com bairro, distância, área, quartos, fonte e motivo visíveis antes de
+   gerar documento. Expansão territorial, se existir no futuro, será manual, comparativa
+   e apresentada lado a lado — nunca um único número misturado.

@@ -57,8 +57,9 @@ test("OS-01: domínio privado não reutiliza o acervo público de comparáveis",
 });
 
 test("OS-01: shell tem somente a navegação principal combinada", () => {
-  for (const label of ["Hoje", "Carteira", "Relacionamentos", "Capturar"]) assert.ok(html.includes(label));
-  assert.ok(html.includes("Estas são as coisas que merecem sua atenção hoje."));
+  for (const label of ["Início", "Carteira", "Assistente", "Mapa", "Clientes"]) assert.ok(html.includes(label));
+  assert.ok(html.includes("O que vamos resolver hoje?"));
+  assert.ok(html.includes("Três passos para colocar o escritório em movimento"));
   assert.ok(html.includes("Nada será salvo antes da sua confirmação — nem falando, nem digitando."));
   assert.ok(!html.includes("Dashboard"));
 });
@@ -70,4 +71,13 @@ test("OS-01: rotas privadas usam sessão existente e POSTs continuam sob CSRF", 
   assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf('/painel/api/os/captura/confirmar'));
   assert.ok(app.includes('headers["X-CSRF-Token"]=state.csrf'));
   assert.ok(app.includes('if(mutating&&!state.csrf)'), "POST não corre antes do token CSRF chegar");
+});
+
+test("UX-02: login e endereço principal desembocam no produto, não no painel técnico", () => {
+  const legacy = readFileSync(new URL("../motor/painel.html", import.meta.url), "utf-8");
+  assert.ok(panel.includes('Location: "/painel/os"'));
+  assert.ok(panel.includes('Location: "/painel"'));
+  assert.ok(panel.includes('req.url === "/painel/admin"'));
+  assert.ok(legacy.includes('location.replace("/painel/os")'));
+  assert.ok(!html.includes('href="/painel/admin"'));
 });

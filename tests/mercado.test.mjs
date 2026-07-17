@@ -22,7 +22,7 @@ test("mercado: rotulagem honesta obrigatória em todos os caminhos", () => {
   /* sem área edificada não existe comparação honesta por m² */
   assert.ok(html.includes("sem área não existe comparação honesta por m²"));
   /* amostra insuficiente é informada, nunca maquiada */
-  assert.ok(html.includes("Ainda sem amostra suficiente</b>"));
+  assert.ok(html.includes("Não há base segura para calcular"));
 });
 
 test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada NESTE imóvel", () => {
@@ -37,21 +37,20 @@ test("laudo-mercado: ACM entra no Relatório de Referência só quando analisada
   assert.ok(html.includes("Avaliação nº ${esc(m.d.id)}"));
 });
 
-test("amostra ampliada: bairro sem 5 ofertas amplia para VIZINHOS por distância real — e declara", () => {
-  /* report do usuário (16/07): "não consegui fazer laudo" — testes na periferia, onde o
-     bairro sozinho nunca junta 5 ofertas */
+test("amostra profissional: bairro diferente nunca entra automaticamente no valor", () => {
+  /* Report real (17/07): a ampliação por centroides misturou sete bairros e produziu
+     uma referência pouco defensável. Falta de amostra agora interrompe o cálculo. */
   const av = readFileSync(new URL("../motor/avaliacao.js", import.meta.url), "utf-8");
-  assert.ok(av.includes("centroidesLocalidades"), "vizinhança por centroides do CNEFE, não lista chutada");
-  assert.ok(av.includes("distM(c.lat, c.lon) <= 2500"), "raio de 2,5 km entre centros de bairro");
-  assert.ok(av.includes('perto.some(L => localidadeCasa(L, r.neighborhood)) ? "vizinho" : null'));
-  assert.ok(av.includes("Amostra AMPLIADA para bairros vizinhos"), "premissa declarada no resultado");
-  assert.ok(av.includes("os preços podem refletir padrões diferentes do micro-local"), "aviso honesto");
-  assert.ok(av.includes("Amostra insuficiente mesmo ampliando"), "insuficiência pós-ampliação também é declarada");
-  /* card mostra o bairro da oferta vizinha; documento ganha coluna Bairro + nota */
-  assert.ok(html.includes("c.deVizinho?` · <i>${esc(c.bairro)}</i>`"));
+  assert.ok(!av.includes("centroidesLocalidades"), "centroide de bairro não decide mais comparabilidade");
+  assert.ok(av.includes("Outro bairro nunca entra no valor"));
+  assert.ok(av.includes("Amostra insuficiente no mesmo bairro — nenhum valor foi calculado."));
+  assert.ok(av.includes("areaRatioMin: 0.75"));
+  assert.ok(av.includes("areaRatioMax: 4 / 3"));
+  assert.ok(html.includes("Ofertas próximas de outros bairros — fora do cálculo"));
+  assert.ok(html.includes("Nenhum valor foi estimado"));
   const doc = readFileSync(new URL("../motor/documento.js", import.meta.url), "utf-8");
   assert.ok(doc.includes("<th>Bairro</th>"));
-  assert.ok(doc.includes("Amostra ampliada para bairros vizinhos"));
+  assert.ok(doc.includes("Bairros diferentes não entram automaticamente no valor"));
 });
 
 test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e não o acervo estático", () => {
@@ -77,7 +76,7 @@ test("links e mapa na avaliação: comparáveis clicáveis, atalhos de portal e 
   assert.match(html, /function miniMapaOfertas\(comps,subjLL\)/, "recorte do mapa dentro da avaliação");
   assert.ok(html.includes("${mini}"), "mapa plugado no render do card");
   /* amostra insuficiente NÃO deixa o corretor na mão — leva aos portais */
-  assert.ok(html.includes("Ainda sem amostra suficiente"));
+  assert.ok(html.includes("Nenhum valor foi estimado"));
 });
 
 test("avaliação a 1 toque: ação principal do dossiê leva ao card e dispara sozinha", () => {

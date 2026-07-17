@@ -11,30 +11,68 @@
   <header class="topbar">
     <a class="brand" href="/painel/os" aria-label="Corretor Inteligente — início">
       <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_horizontal_flat.svg" alt="Corretor Inteligente">
+      <span>Seu escritório imobiliário</span>
     </a>
-    <button type="button" class="quick-capture" id="openCaptureTop">＋ Capturar</button>
+    <div class="header-actions">
+      <button type="button" class="help-button" id="openGuide" aria-label="Como usar o aplicativo">?</button>
+      <button type="button" class="quick-capture" id="openCaptureTop"><span aria-hidden="true">＋</span> Novo</button>
+    </div>
   </header>
 
   <main class="shell" id="main">
     <section class="view is-active" data-view="today" aria-labelledby="todayTitle">
       <div class="hero">
-        <p class="eyebrow">Seu dia</p>
-        <h1 id="todayTitle">Estas são as coisas que merecem sua atenção hoje.</h1>
+        <p class="eyebrow" id="dayGreeting">Olá, Bruno</p>
+        <h1 id="todayTitle">O que vamos resolver hoje?</h1>
         <p id="todaySummary" class="hero-copy">Organizando suas próximas ações…</p>
       </div>
-      <section class="assistant-entry" aria-labelledby="assistantEntryTitle">
-        <div>
-          <p class="eyebrow">Assistente privado</p>
-          <h2 id="assistantEntryTitle">O que você precisa resolver agora?</h2>
-          <p>Converse naturalmente. O sistema escolhe o contexto e mantém os números sob controle do motor.</p>
+      <section class="command-center" aria-labelledby="assistantEntryTitle">
+        <div class="command-head">
+          <span class="assistant-orb" aria-hidden="true">✦</span>
+          <div>
+            <p class="command-kicker">Assistente particular</p>
+            <h2 id="assistantEntryTitle">Peça como você falaria com sua equipe.</h2>
+          </div>
         </div>
-        <button type="button" class="assistant-open" id="openAssistant">Pedir uma análise</button>
+        <form class="command-form" id="homeAssistantForm">
+          <label class="sr-only" for="homeAssistantInput">O que você precisa resolver?</label>
+          <textarea id="homeAssistantInput" rows="2" maxlength="6000" placeholder="Ex.: qual imóvel da carteira merece atenção agora?"></textarea>
+          <button type="submit" aria-label="Enviar para o assistente">→</button>
+        </form>
+        <div class="smart-suggestions" aria-label="Sugestões de pedidos">
+          <button type="button" data-home-prompt="Organize minhas prioridades de hoje e explique o motivo de cada uma.">Organizar meu dia</button>
+          <button type="button" data-home-prompt="Qual imóvel da carteira merece atenção agora? Use somente os dados disponíveis.">Revisar a carteira</button>
+          <button type="button" data-home-prompt="Quais negociações ou pendências correm risco de esfriar?">Evitar perdas</button>
+        </div>
+        <button type="button" class="open-conversation" id="openAssistant">Abrir conversa completa <span aria-hidden="true">↗</span></button>
       </section>
-      <div class="count-grid" id="todayCounts" aria-label="Resumo operacional"></div>
+
+      <section class="guide-card" id="guideCard" aria-labelledby="guideTitle">
+        <div class="guide-heading">
+          <div>
+            <p class="eyebrow">Comece por aqui</p>
+            <h2 id="guideTitle">Três passos para colocar o escritório em movimento</h2>
+          </div>
+          <button type="button" class="guide-dismiss" id="dismissGuide" aria-label="Ocultar primeiros passos">×</button>
+        </div>
+        <div class="guide-steps">
+          <button type="button" id="guideCapture"><span>1</span><strong>Cadastre um imóvel</strong><small>Digite ou fale; você confirma antes de salvar.</small></button>
+          <button type="button" id="guideAssistant"><span>2</span><strong>Peça uma análise</strong><small>O assistente procura só o contexto necessário.</small></button>
+          <a href="https://corretorinteligente.tech/?origem=app"><span>3</span><strong>Explore o mapa</strong><small>Investigue território, lotes e oportunidades.</small></a>
+        </div>
+        <p class="guide-foot">Você pode reabrir este guia pelo <b>?</b> no alto da tela.</p>
+      </section>
+
+      <section class="overview-section" aria-labelledby="overviewTitle">
+        <div class="section-head">
+          <div><p class="eyebrow">Visão rápida</p><h2 id="overviewTitle">Seu escritório agora</h2></div>
+        </div>
+        <div class="count-grid" id="todayCounts" aria-label="Resumo operacional"></div>
+      </section>
       <div class="section-head">
         <div>
-          <p class="eyebrow">Próximas ações</p>
-          <h2>O que fazer agora</h2>
+          <p class="eyebrow">Recomendado para você</p>
+          <h2>Próximos movimentos</h2>
         </div>
         <button class="text-button" type="button" id="refreshToday">Atualizar</button>
       </div>
@@ -86,19 +124,19 @@
 
   <nav class="bottom-nav" aria-label="Navegação principal">
     <button type="button" class="nav-item is-active" data-target="today" aria-current="page">
-      <span class="nav-icon" aria-hidden="true">⌂</span><span>Hoje</span>
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/></svg><span>Início</span>
     </button>
     <button type="button" class="nav-item" data-target="portfolio">
-      <span class="nav-icon" aria-hidden="true">▱</span><span>Carteira</span>
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V7l8-3 8 3v13M8 9h2m4 0h2M8 13h2m4 0h2M9 20v-3h6v3"/></svg><span>Carteira</span>
     </button>
     <button type="button" class="resolve-button" id="openAssistantNav" aria-haspopup="dialog">
-      <span aria-hidden="true">✦</span><span>Resolver</span>
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Zm6 10 .8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8L18 13Z"/></svg><span>Assistente</span>
     </button>
     <a class="nav-item" href="https://corretorinteligente.tech/?origem=app" data-map-link>
-      <span class="nav-icon" aria-hidden="true">⌖</span><span>Mapa</span>
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15"/></svg><span>Mapa</span>
     </a>
     <button type="button" class="nav-item" data-target="relationships">
-      <span class="nav-icon" aria-hidden="true">◌</span><span>Relações</span>
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-1a3 3 0 1 0 0-6M2.5 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2m1-7a4.5 4.5 0 0 1 6 4.25V20"/></svg><span>Clientes</span>
     </button>
   </nav>
 

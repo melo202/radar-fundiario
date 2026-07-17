@@ -160,7 +160,7 @@ export async function documentoDaAvaliacao(id) {
   <small>Avaliação nº ${esc(v.id)}<br>versão ${v.version || 1}${v.parent_id ? `, encadeada à ${esc(v.parent_id).slice(0, 8)}…` : ""}<br>${dataBR(v.created_at)}${v.created_by ? ` · ${esc(v.created_by)}` : ""}</small>
 </div>
 <div class="miolo">
-${r.estimatedValue ? `
+${v.status === "calculada" && r.estimatedValue ? `
 <div class="hero">
   <div class="hv"><span>Valor de referência</span><b>${brl(r.estimatedValue)}</b></div>
   <div class="hv menor"><span>Faixa provável</span><b>${brl(r.probableRange?.minimum)} – ${brl(r.probableRange?.maximum)}</b></div>
@@ -174,7 +174,7 @@ ${locHTML}
 
 <h2>Ofertas aceitas no cálculo (${aceitos.length})</h2>
 <table><tr><th></th><th>Fonte</th><th>Bairro</th><th>Área</th><th>Quartos</th><th>Preço anunciado</th><th>R$/m²</th><th>Peso</th></tr>${linhas}</table>
-${amostra.amostraAmpliada ? `<p class="mini"><b>Amostra ampliada para bairros vizinhos</b> (raio ~2,5 km — IBGE/CNEFE): o bairro do imóvel tinha ${amostra.noBairro ?? "—"} oferta(s). Incluídos: ${(amostra.amostraAmpliada.bairrosVizinhos || []).map(esc).join(", ")}.</p>` : ""}
+${amostra.politicaComparacao ? `<p class="mini"><b>Política de comparabilidade:</b> ${esc(amostra.politicaComparacao)}. Bairros diferentes não entram automaticamente no valor.</p>` : ""}
 ${periodo ? `<p class="mini">Ofertas coletadas entre ${dataBR(periodo.de)} e ${dataBR(periodo.ate)}.</p>` : ""}
 
 ${svgMapa ? `<h2>Mapa — imóvel e ofertas</h2>${svgMapa}
@@ -190,7 +190,7 @@ ${parecer ? `<h2>Parecer da análise</h2><div class="parecer">${esc(parecer.text
 
 <h2>Metodologia, premissas e limites</h2>
 <ul>${(r.methods || []).map(m => `<li>${esc(m)}</li>`).join("")}${(r.assumptions || []).map(a => `<li>${esc(a)}</li>`).join("")}${(r.warnings || []).map(w => `<li>${esc(w)}</li>`).join("")}</ul>
-` : `<p>Esta avaliação não tem resultado calculado (status: ${esc(v.status)}).</p>`}
+` : `<div class="honesto"><b>Resultado retirado de uso.</b> Esta avaliação foi produzida por uma política anterior que podia misturar bairros. Recalcule o imóvel para aplicar a política profissional vigente. Status: ${esc(v.status)}.</div>`}
 
 <div class="honesto"><b>Leitura obrigatória:</b> os valores partem de preços de OFERTA anunciados publicamente — não são transações fechadas.
 Esta Análise Comparativa de Mercado é uma referência técnica e não substitui laudo de avaliação por profissional habilitado (PTAM — Res. COFECI 1.066/2007).</div>
