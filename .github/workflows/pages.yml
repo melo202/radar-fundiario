@@ -6,7 +6,8 @@ name: Deploy Radar ao GitHub Pages
 
 on:
   push:
-    branches: [master]
+    # A branch do assistente é a linha de produção atual; master permanece protegida.
+    branches: [master, agent/kimi-personal-assistant]
   workflow_dispatch:
 
 permissions:

@@ -81,3 +81,8 @@ test("UX-02: login e endereço principal desembocam no produto, não no painel t
   assert.ok(legacy.includes('location.replace("/painel/os")'));
   assert.ok(!html.includes('href="/painel/admin"'));
 });
+
+test("UX-03: a caixa principal envia ao assistente sem depender de um segundo evento", () => {
+  assert.ok(app.includes("event?.preventDefault();if(state.assistant.busy)return"));
+  assert.ok(app.includes('openAssistant(prompt);input.value="";submitAssistant();'));
+});

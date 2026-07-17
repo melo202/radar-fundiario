@@ -62,6 +62,12 @@ test("navegação: Meu Dia, Resolver, Mapa e Relações formam um shell sem pain
   assert.ok(html.includes('href="https://corretorinteligente.tech/?origem=app"'));
   assert.ok(!html.includes('<span>Painel</span>'));
   assert.ok(radar.includes('id="appBack"'));
+  assert.ok(radar.includes('>Meu escritório</span>'));
+  assert.ok(radar.includes('>Escritório</a>'));
+  assert.ok(radar.includes('function voltarEscritorio(event)'));
+  assert.ok(!radar.includes('id="appBack" href="https://api.corretorinteligente.tech/painel/os" hidden'));
+  const pages = readFileSync(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
+  assert.ok(pages.includes("agent/kimi-personal-assistant"), "a branch de produção também publica o mapa estático");
   assert.ok(index.includes('location.search+location.hash'));
 });
 

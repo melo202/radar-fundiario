@@ -5,6 +5,44 @@
 > advogado/corretor + agente, VPS KVM4, motor territorial/avaliação com 467 testes).
 > Este documento NÃO substitui o plano — ele o critica, adapta e sequencia.
 
+## Estado operacional atual — fonte de verdade (17/07/2026)
+
+Quando este quadro divergir de decisões históricas abaixo, ele prevalece para a alpha
+privada single-user.
+
+| Área | Estado | Limite atual / próximo aceite |
+|---|---|---|
+| Início guiado + Hoje | **Pronto na alpha** | Validar em celular real se o corretor entende a próxima ação em 5 segundos. |
+| Captura por texto e voz | **Pronto na alpha** | Voz ainda exige teste físico em Chrome/Android, inclusive em ambiente de rua. |
+| Carteira + filtros + dossiê | **Pronto na alpha** | Geral, Comercial e Histórico funcionam; Arquivos ainda é estado vazio. |
+| Funil + WhatsApp assistido | **Pronto na alpha** | Mensagem é preparada, mas envio e confirmação continuam humanos. |
+| Referência de mercado | **Pronto com política v2** | Mesmo bairro, área 75%–133%, até 1 quarto de diferença e mínimo de 5 ofertas. |
+| Mapa territorial | **Pronto, ainda separado** | Navegação de volta corrigida; dados locais do Mapa ainda não viram carteira automaticamente. |
+| Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
+| Kimi K3 + Hermes | **Parcial e seguro** | Chat geral funciona com contexto selecionado; ainda não há catálogo completo de ferramentas imobiliárias nem UI de sessões por objeto. |
+| Sessões e memória | **Backend parcial** | Tipos existem no banco, mas a tela abre somente conversa geral e não restaura a lista de conversas após recarregar. |
+| Automelhoria | **Observação controlada** | Mede falhas/contexto e propõe revisão; não testa nem modifica o produto sozinho. |
+| Documentos | **Estrutura inicial** | Ingestão determinística existe no código; upload, OCR, seleção de fontes e dossiê documental ainda não estão na tela. |
+| Consumo de IA | **Registrado, não exposto** | Uso/fallback/cache são gravados; falta o painel pessoal simples. |
+| Matching, visita, relatórios e lançamentos | **Não iniciados no OS** | Entram somente após fechar o núcleo de hábito e dados. |
+| Autenticação | **Adequada à alpha privada** | Senha única e sessão protegida; não é a solução futura para equipe/multitenant. |
+
+### Ordem executiva vigente
+
+1. **P0 — confiança e continuidade:** corrigir bugs do caminho principal, impedir
+   resultados contaminados e manter Mapa ↔ Escritório sem becos sem saída.
+2. **P1 — agente realmente imobiliário:** sessões por imóvel/cliente e ferramentas
+   somente leitura (`meu_dia`, `buscar_imovel`, `abrir_dossie`, `buscar_cliente`,
+   `buscar_comparaveis`, `avaliar_imovel`, `consultar_entorno`).
+3. **P2 — uma única operação:** ação “levar este imóvel ao escritório” no Mapa e
+   pesquisa unificada sem duplicar os bancos público e privado.
+4. **P3 — clientes e matching:** ficha pesquisável, preferências estruturadas e
+   compatibilidade cliente ↔ imóvel com motivos visíveis.
+5. **P4 — documentos e visita:** upload/OCR com fontes, resumo determinístico primeiro,
+   Kimi apenas para leitura conjunta; depois preparação e registro de visita.
+6. **P5 — prova de valor:** relatórios ao proprietário, consumo pessoal de IA e dados
+   de lançamentos com licença, fonte e atualização definidas.
+
 ## 1. Veredito
 
 O plano é **excepcionalmente bom** — e não por acaso: ele é a maturação da visão
@@ -232,3 +270,14 @@ viram prioridade acima de novas funcionalidades:
    próprio fluxo, com bairro, distância, área, quartos, fonte e motivo visíveis antes de
    gerar documento. Expansão territorial, se existir no futuro, será manual, comparativa
    e apresentada lado a lado — nunca um único número misturado.
+
+### 17/07/2026 — Continuidade Mapa ↔ Escritório
+
+1. O Mapa e o OS continuam tecnicamente desacoplados, mas deixam de parecer produtos
+   sem volta: o cabeçalho do Radar oferece **Meu escritório** em todas as entradas.
+2. No celular, a barra inferior do Mapa ganha **Escritório** ao lado de Consulta e Mapa.
+3. Quando a navegação veio do painel, o retorno usa o histórico do navegador e preserva
+   a tela anterior; em entrada direta, o link seguro volta para `/painel/os`.
+4. Regra de UX para as próximas entregas: toda saída do OS para uma superfície irmã
+   precisa ter retorno visível, com o vocabulário do corretor — nunca depender do botão
+   do navegador.
