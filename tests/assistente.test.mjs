@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildInstructions, selectRelevantMemories, serializeContext, SESSION_TYPES } from "../motor/assistente.js";
-import { chooseReadOnlyTools, READ_ONLY_AGENT_TOOLS } from "../motor/agent-tools.js";
+import { chooseReadOnlyTools, READ_ONLY_AGENT_TOOLS, visitPreparationChecklist } from "../motor/agent-tools.js";
 
 const migration = readFileSync(new URL("../motor/migrations/009-agent-runtime.sql", import.meta.url), "utf-8");
 const panel = readFileSync(new URL("../motor/painel.js", import.meta.url), "utf-8");
@@ -48,8 +48,8 @@ test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada cen
   assert.ok(html.includes('id="openAssistant"'));
 });
 
-test("assistente: sete ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
-  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno"]);
+test("assistente: ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
+  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno", "preparar_visita"]);
   assert.deepEqual(chooseReadOnlyTools("Quantos imóveis eu tenho?", { object_type: "general" }), ["consultar_meu_dia"]);
   assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["buscar_imovel"]);
   assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["buscar_cliente"]);
@@ -58,6 +58,16 @@ test("assistente: sete ferramentas de leitura são escolhidas sem entregar o ban
   assert.deepEqual(chooseReadOnlyTools("O que existe no entorno?", { object_type: "property" }), ["consultar_entorno", "abrir_dossie"]);
   assert.deepEqual(chooseReadOnlyTools("Leia esta avaliação", { object_type: "valuation" }), ["abrir_avaliacao"]);
   assert.deepEqual(chooseReadOnlyTools("O que sei sobre este cliente?", { object_type: "contact" }), ["buscar_cliente"]);
+  assert.deepEqual(chooseReadOnlyTools("Prepare esta visita", { object_type: "visit" }), ["preparar_visita"]);
+  assert.deepEqual(chooseReadOnlyTools("Resuma o cliente e o imóvel desta visita", { object_type: "visit" }), ["preparar_visita"]);
+});
+
+test("assistente: preparação da visita explicita o que está pronto e o que falta", () => {
+  const checklist = visitPreparationChecklist({ scheduledAt: "2026-07-18", askingPrice: 850000, valuationId: "v1", preferences: { neighborhoods: ["Bueno"] } });
+  assert.equal(checklist.find(x => x.item === "Data registrada")?.status, "ok");
+  assert.equal(checklist.find(x => x.item.includes("horário"))?.status, "missing");
+  assert.equal(checklist.find(x => x.item.includes("endereço"))?.status, "missing");
+  assert.equal(checklist.find(x => x.item.includes("documentos"))?.status, "missing");
 });
 
 test("assistente: sessão é reutilizada, validada contra a carteira e restaurável", () => {
@@ -72,6 +82,9 @@ test("assistente: sessão é reutilizada, validada contra a carteira e restaurá
   assert.ok(html.includes('id="assistantSessionSelect"'));
   assert.ok(app.includes("Perguntar ao assistente sobre este imóvel"));
   assert.ok(app.includes("Perguntar sobre esta pessoa"));
+  assert.ok(src.includes("o.stage IN ('visita_agendada','visitou')"));
+  assert.ok(src.includes('["property", "contact", "valuation", "visit"].includes(objectType)'), "visita nunca nasce sem oportunidade exata");
+  assert.ok(app.includes("✦ Preparar esta visita"));
 });
 
 test("assistente P1-B: avaliação fica ligada ao imóvel e a busca ao vivo permanece autenticada", () => {

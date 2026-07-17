@@ -117,7 +117,7 @@ function clean(value, max = 6000) { return String(value || "").replace(/\s+/g, "
 
 async function resolveSessionObject(org, objectType, objectId, requestedTitle) {
   if (objectType === "general") return { objectId: null, title: "Conversa geral" };
-  if (!objectId && ["property", "contact", "valuation"].includes(objectType)) return null;
+  if (!objectId && ["property", "contact", "valuation", "visit"].includes(objectType)) return null;
   if (!objectId) return { objectId: null, title: clean(requestedTitle, 120) || ({ visit: "Visita", investment: "Oportunidade de investimento" })[objectType] || "Conversa" };
   if (objectType === "property") {
     const r = await pool.query(
@@ -136,6 +136,17 @@ async function resolveSessionObject(org, objectType, objectId, requestedTitle) {
     const r = await pool.query("SELECT id,subject FROM valuations WHERE id=$1", [objectId]);
     if (!r.rowCount) return null;
     return { objectId, title: `Avaliação · ${r.rows[0].subject?.neighborhood || "imóvel"}` };
+  }
+  if (objectType === "visit") {
+    const r = await pool.query(
+      `SELECT o.id,o.stage,c.name AS contact_name,p.title AS property_title
+       FROM opportunities o JOIN contacts c ON c.id=o.contact_id
+       LEFT JOIN inventory_properties p ON p.id=o.inventory_property_id
+       WHERE o.id=$1 AND o.organization_id=$2 AND o.stage IN ('visita_agendada','visitou')`,
+      [objectId, org.id]);
+    if (!r.rowCount) return null;
+    const visit = r.rows[0];
+    return { objectId, title: `Visita · ${visit.contact_name}${visit.property_title ? ` · ${visit.property_title}` : ""}` };
   }
   return { objectId, title: clean(requestedTitle, 120) || ({ visit: "Visita", investment: "Oportunidade de investimento" })[objectType] };
 }
@@ -158,7 +169,7 @@ export async function createAssistantSession({ objectType = "general", objectId 
   const org = await ensureOrganization();
   await ensureProfile(org.id);
   const target = await resolveSessionObject(org, objectType, objectId, title);
-  if (!target) return { ok: false, erro: objectType === "property" ? "Imóvel não encontrado na sua carteira." : objectType === "contact" ? "Cliente não encontrado nos seus relacionamentos." : "Objeto da conversa não encontrado." };
+  if (!target) return { ok: false, erro: objectType === "property" ? "Imóvel não encontrado na sua carteira." : objectType === "contact" ? "Cliente não encontrado nos seus relacionamentos." : objectType === "visit" ? "Esta visita não está agendada ou já foi encerrada." : "Objeto da conversa não encontrado." };
   const existente = await pool.query(
     `SELECT * FROM agent_sessions
      WHERE organization_id=$1 AND object_type=$2 AND object_id IS NOT DISTINCT FROM $3 AND status='active'

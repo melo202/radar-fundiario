@@ -11,6 +11,7 @@ export const READ_ONLY_AGENT_TOOLS = Object.freeze([
   "buscar_comparaveis",
   "abrir_avaliacao",
   "consultar_entorno",
+  "preparar_visita",
 ]);
 
 const STOP = new Set(["qual", "quais", "como", "para", "sobre", "este", "esta", "meu", "minha", "hoje", "agora", "imovel", "imoveis", "cliente", "clientes", "corretor", "carteira", "preciso", "quero", "pode", "faca", "mostre", "mostrar", "analise", "analisar"]);
@@ -148,10 +149,96 @@ async function consultarEntorno(session) {
       .map(c => ({ label: c.rotulo, count: c.count, nearestMeters: c.nearestDistanceMeters, radiusMeters: c.raioM, signal: c.sinal })) };
 }
 
+export function visitPreparationChecklist({ scheduledAt, address, occupancy, askingPrice, valuationId, preferences, documents = [] } = {}) {
+  const items = [];
+  const add = (status, item, reason) => items.push({ status, item, reason });
+  add(scheduledAt ? "ok" : "missing", scheduledAt ? "Data registrada" : "Confirmar a data", scheduledAt ? "A data consta na oportunidade; confirme o horário e o ponto de encontro com o cliente." : "A visita está sem data confirmada no sistema.");
+  add("missing", "Confirmar horário e ponto de encontro", "A agenda atual registra a data, mas ainda não guarda um horário confiável.");
+  add(address ? "ok" : "missing", address ? "Endereço registrado" : "Confirmar endereço completo e ponto de encontro", address ? "Consta no imóvel." : "O endereço não está completo na carteira.");
+  add(occupancy ? "ok" : "missing", occupancy ? "Ocupação e acesso registrados" : "Confirmar ocupação, chaves e acesso", occupancy ? "Consta no imóvel." : "O modo de acesso ainda não foi informado.");
+  add(askingPrice ? "ok" : "missing", askingPrice ? "Preço pedido registrado" : "Confirmar preço e condições comerciais", askingPrice ? "Consta no imóvel." : "O preço pedido ainda não foi confirmado.");
+  add(valuationId ? "ok" : "missing", valuationId ? "Pesquisa de mercado disponível" : "Pesquisar mercado antes da visita", valuationId ? "Há relatório versionado e rastreável." : "Ainda não existe relatório ligado a este imóvel.");
+  add(preferences && Object.keys(preferences).length ? "ok" : "missing", preferences && Object.keys(preferences).length ? "Preferências do cliente registradas" : "Confirmar objetivo e critérios do cliente", preferences && Object.keys(preferences).length ? "Há critérios declarados no relacionamento." : "Não há preferências estruturadas para orientar a visita.");
+  add(documents.length ? "ok" : "missing", documents.length ? "Documentos disponíveis no dossiê" : "Separar documentos e informações essenciais", documents.length ? `${documents.length} arquivo(s) rastreado(s).` : "Não há documento processado ligado ao imóvel ou à visita.");
+  return items;
+}
+
+async function prepararVisita(session) {
+  if (session.object_type !== "visit" || !session.object_id) return { unavailable: true, missing: "Abra uma visita agendada para preparar este atendimento." };
+  const q = await pool.query(
+    `SELECT o.id,o.stage,o.temperature,o.next_action_at,o.last_interaction_at,
+            c.name AS contact_name,c.type AS contact_type,
+            cp.transaction_type,cp.property_types,cp.neighborhoods,cp.price_min,cp.price_max,
+            cp.bedrooms_min,cp.parking_min,cp.area_min,cp.area_max,cp.required_features,cp.preferred_features,
+            p.id AS property_id,p.title AS property_title,p.property_type,p.neighborhood,p.address,
+            p.characteristics,p.asking_price,p.occupancy,p.commercial_conditions,
+            v.id AS valuation_id,v.status AS valuation_status,v.result AS valuation_result,v.created_at AS valuation_created_at
+     FROM opportunities o
+     JOIN contacts c ON c.id=o.contact_id
+     LEFT JOIN contact_preferences cp ON cp.contact_id=c.id AND cp.organization_id=o.organization_id
+     LEFT JOIN inventory_properties p ON p.id=o.inventory_property_id AND p.organization_id=o.organization_id
+     LEFT JOIN LATERAL (
+       SELECT id,status,result,created_at FROM valuations
+       WHERE id=p.latest_valuation_id OR subject->>'inventoryPropertyId'=p.id::text
+       ORDER BY CASE WHEN id=p.latest_valuation_id THEN 0 ELSE 1 END,created_at DESC LIMIT 1
+     ) v ON true
+     WHERE o.id=$1 AND o.organization_id=$2 AND o.stage IN ('visita_agendada','visitou')`,
+    [session.object_id, session.organization_id]);
+  if (!q.rowCount) return { unavailable: true, missing: "A visita não foi encontrada ou não está mais em um estágio de visita." };
+  const row = q.rows[0];
+  const [tasks, documents, comparables] = await Promise.all([
+    pool.query(
+      `SELECT title,due_at,priority,status FROM tasks
+       WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')
+         AND ((related_entity_type='opportunity' AND related_entity_id=$2)
+           OR (related_entity_type='inventory_property' AND related_entity_id=$3))
+       ORDER BY due_at ASC NULLS LAST LIMIT 20`, [session.organization_id, row.id, row.property_id]),
+    pool.query(
+      `SELECT file_name,mime_type,status,extraction_method,factual_summary,updated_at
+       FROM agent_documents WHERE organization_id=$1
+         AND ((object_type='visit' AND object_id=$2) OR (object_type='property' AND object_id=$3))
+       ORDER BY updated_at DESC LIMIT 20`, [session.organization_id, row.id, row.property_id]),
+    row.valuation_id ? pool.query(
+      `SELECT l.portal,l.url,p.neighborhood,p.characteristics,p.pricing,vc.total_score
+       FROM valuation_comparables vc JOIN properties p ON p.id=vc.property_id JOIN listings l ON l.id=p.listing_id
+       WHERE vc.valuation_id=$1 AND vc.accepted IS TRUE AND vc.is_outlier IS NOT TRUE
+       ORDER BY vc.total_score DESC NULLS LAST LIMIT 8`, [row.valuation_id]) : Promise.resolve({ rows: [] }),
+  ]);
+  const preferences = Object.fromEntries(Object.entries({
+    transactionType: row.transaction_type, propertyTypes: row.property_types, neighborhoods: row.neighborhoods,
+    priceMin: row.price_min, priceMax: row.price_max, bedroomsMin: row.bedrooms_min,
+    parkingMin: row.parking_min, areaMin: row.area_min, areaMax: row.area_max,
+    requiredFeatures: row.required_features, preferredFeatures: row.preferred_features,
+  }).filter(([, value]) => value != null && (!Array.isArray(value) || value.length)));
+  const docs = documents.rows.map(d => ({ fileName: d.file_name, mimeType: d.mime_type, status: d.status,
+    extractionMethod: d.extraction_method, factualSummary: d.factual_summary, updatedAt: d.updated_at }));
+  const vr = row.valuation_result || {};
+  return {
+    visit: { id: row.id, stage: row.stage, scheduledAt: row.next_action_at, temperature: row.temperature, lastInteractionAt: row.last_interaction_at },
+    client: { name: row.contact_name, type: row.contact_type, preferences },
+    property: { id: row.property_id, title: row.property_title, type: row.property_type,
+      neighborhood: row.neighborhood, address: row.address, characteristics: row.characteristics,
+      askingPrice: row.asking_price, occupancy: row.occupancy, commercialConditions: row.commercial_conditions },
+    valuation: row.valuation_id ? { id: row.valuation_id, status: row.valuation_status, createdAt: row.valuation_created_at,
+      estimatedValue: vr.estimatedValue, probableRange: vr.probableRange, confidence: vr.confidence,
+      sample: vr.sample, warnings: vr.warnings, reportUrl: `/motor/avaliacoes/${row.valuation_id}/documento` } : { unavailable: true },
+    acceptedComparables: comparables.rows.map(c => ({ portal: c.portal, url: c.url, neighborhood: c.neighborhood,
+      areaM2: c.characteristics?.privateAreaM2 ?? c.characteristics?.totalAreaM2 ?? null,
+      bedrooms: c.characteristics?.bedrooms ?? null, askingPrice: c.pricing?.askingPrice ?? null, score: c.total_score })),
+    pendingTasks: tasks.rows,
+    documents: docs,
+    checklist: visitPreparationChecklist({ scheduledAt: row.next_action_at, address: row.address, occupancy: row.occupancy,
+      askingPrice: row.asking_price, valuationId: row.valuation_id, preferences, documents: docs.filter(d => ["extracted","indexed","reviewed"].includes(d.status)) }),
+  };
+}
+
 export function chooseReadOnlyTools(prompt, session) {
   const text = norm(prompt);
   const chosen = [];
   const contagem = /\b(quantos|quantas|total)\b/.test(text);
+  /* Uma visita já aponta para oportunidade, pessoa e imóvel exatos. Buscar por palavras
+     novamente desperdiça tokens e pode misturar homônimos ou outros imóveis. */
+  if (session.object_type === "visit") return ["preparar_visita"];
   const contextoImovel = ["property","valuation"].includes(session.object_type);
   if (contextoImovel && /\b(comparavel|comparaveis|oferta|ofertas|amostra|anuncio|anuncios)\b/.test(text)) chosen.push("buscar_comparaveis");
   if (contextoImovel && /\b(avaliacao|valor|preco|mercado|relatorio|pesquisa|evidencia|evidencias)\b/.test(text)) chosen.push("abrir_avaliacao");
@@ -177,9 +264,11 @@ export async function runReadOnlyTools(prompt, session) {
       else if (tool === "buscar_comparaveis") data = await buscarComparaveis(session);
       else if (tool === "abrir_avaliacao") data = await abrirAvaliacao(session);
       else if (tool === "consultar_entorno") data = await consultarEntorno(session);
+      else if (tool === "preparar_visita") data = await prepararVisita(session);
       const source = tool === "buscar_comparaveis" ? "ofertas públicas rastreadas no relatório de mercado"
         : tool === "abrir_avaliacao" ? "motor determinístico e avaliação versionada"
         : tool === "consultar_entorno" ? "OpenStreetMap processado localmente, sem ajuste de preço"
+        : tool === "preparar_visita" ? "oportunidade, carteira, documentos e avaliação versionada"
         : "carteira privada do Corretor Inteligente";
       results.push({ tool, source, data });
     } catch {
