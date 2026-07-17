@@ -27,6 +27,23 @@ IFS= read -r -s KIMI_KEY
 echo
 [[ "$KIMI_KEY" =~ ^[A-Za-z0-9_-]{20,}$ ]] || fail "a chave não parece válida"
 
+KIMI_TEST=$(mktemp)
+KIMI_HTTP=$(curl -sS -o "$KIMI_TEST" -w '%{http_code}' \
+  -H "Authorization: Bearer $KIMI_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'User-Agent: Hermes-Agent/0.18.2' \
+  -d '{"model":"k3","messages":[{"role":"user","content":"Responda somente OK"}],"max_tokens":16}' \
+  https://api.kimi.com/coding/v1/chat/completions || true)
+if [[ "$KIMI_HTTP" != 200 ]]; then
+  echo "A Kimi rejeitou a chave (HTTP $KIMI_HTTP)." >&2
+  sed -E 's/sk-[A-Za-z0-9_-]+/[CHAVE-OCULTA]/g' "$KIMI_TEST" | head -c 800 >&2 || true
+  echo >&2
+  rm -f "$KIMI_TEST"
+  unset KIMI_KEY
+  fail "nada foi ativado; crie uma chave no Kimi Code Console"
+fi
+rm -f "$KIMI_TEST"
+
 HERMES_KEY=$(openssl rand -hex 32)
 install -d -m 700 -o 10000 -g 10000 "$DATA_DIR"
 
