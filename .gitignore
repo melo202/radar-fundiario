@@ -11,3 +11,4 @@ corretorinteligente_brandkit.zip
 
 # runner residencial: segredo nunca vai pro repo (fica em %USERPROFILE%\.radar)
 .radar/
+node_modules/
