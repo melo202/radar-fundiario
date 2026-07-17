@@ -13,7 +13,7 @@ Etapas:
  4. Para casas/terrenos casados, calcula fator laudo-Caixa / valor venal
     (mediana por setor, n>=3) — calibracao real do coeficiente do app.
 """
-import csv, io, json, re, time, statistics, unicodedata
+import csv, io, json, os, re, time, statistics, unicodedata
 import urllib.request, urllib.parse
 from datetime import date
 
@@ -98,11 +98,27 @@ def main():
     for r in rows[head_i + 1:]:
         if len(r) < 12 or norm(r[2]) != "GOIANIA":
             continue
+        # area privativa/total da descricao (r[9]) — alimenta o "desconto vs indice" no VPS
+        desc = r[9]
+        mar = re.search(r"([\d.,]+)\s*(?:m2|m²)?\s*de\s+área\s+privativa", desc, re.I) \
+            or re.search(r"([\d.,]+)\s*(?:m2|m²)?\s*de\s+área\s+(?:total|do\s+terreno|constru[ií]da)", desc, re.I)
+        area = None
+        if mar:
+            try:
+                # na descricao o ponto e DECIMAL ("84.32"); so e milhar quando ha ponto E virgula
+                t = mar.group(1)
+                t = t.replace(".", "").replace(",", ".") if ("." in t and "," in t) else t.replace(",", ".")
+                v = float(t)
+                area = round(v, 2) if 8 <= v <= 100000 else None
+            except ValueError:
+                pass
         imoveis.append({
             "id": r[0].strip(), "b": r[3].strip(), "e": re.sub(r"\s+", " ", r[4]).strip(),
             "p": parse_brl(r[5]), "a": parse_brl(r[6]),
             # desconto vem com PONTO decimal ("48.31"), diferente dos precos ("496.312,00")
             "d": (lambda s: round(float(s), 2) if re.fullmatch(r"[0-9]+(\.[0-9]+)?", s) else None)(r[7].strip()),
+            "fin": r[8].strip().lower().startswith("sim"),
+            "ar": area,
             "t": r[9].split(",")[0].strip(),
             "m": r[10].strip(),
             # só aceita link https da Caixa (evita esquema perigoso vindo de CSV adulterado)
@@ -200,6 +216,26 @@ def main():
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
         f.write(";")
     print("caixa-goiania.js gravado (%d imoveis, %d plotaveis)." % (len(imoveis), ok))
+
+    # RUNNER RESIDENCIAL (projeto Oportunidades, 17/07): o VPS recebe 403 do Radware ao
+    # baixar o CSV da Caixa; esta maquina baixa e ENVIA o JSON ja geocodificado. O VPS faz
+    # o diff/eventos/desconto. Ativa quando RADAR_INGEST_URL e MOTOR_TOKEN estao no ambiente.
+    ingest_url = os.environ.get("RADAR_INGEST_URL")
+    token = os.environ.get("MOTOR_TOKEN")
+    if ingest_url and token:
+        print("5/5 enviando ao VPS…")
+        body = json.dumps(out, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(ingest_url, data=body, method="POST", headers={
+            "Content-Type": "application/json", "Authorization": "Bearer " + token,
+            "User-Agent": UA["User-Agent"]})
+        try:
+            r = urllib.request.urlopen(req, timeout=60)
+            print("   VPS respondeu:", r.status, r.read(400).decode("utf-8", "replace"))
+        except Exception as e:
+            print("   FALHA no envio ao VPS:", e)
+            raise SystemExit(1)
+    else:
+        print("(envio ao VPS desligado — defina RADAR_INGEST_URL e MOTOR_TOKEN para ativar o runner)")
 
 if __name__ == "__main__":
     main()

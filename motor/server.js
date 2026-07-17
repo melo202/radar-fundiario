@@ -161,6 +161,22 @@ http.createServer(async (req, res) => {
       const { indiceBairros } = await import("./indice-bairro.js");
       return json(res, 200, { indice: await indiceBairros() });
     }
+    if (req.method === "POST" && req.url === "/motor/ingestao/caixa") {
+      /* ingestão da lista da Caixa (projeto Oportunidades): o VPS recebe 403 do Radware,
+         então o runner residencial baixa o CSV já geocodificado e faz POST aqui. Token
+         interno — nunca público (escreve no acervo). */
+      if (!autorizado(req)) return json(res, 401, { erro: "token" });
+      const payload = JSON.parse(await readBody(req) || "{}");
+      const { ingerirCaixa } = await import("./oportunidades.js");
+      return json(res, 200, await ingerirCaixa(payload));
+    }
+    if (req.method === "GET" && req.url === "/motor/oportunidades") {
+      /* leitura pública para o mapa: imóveis da Caixa ativos + desconto vs índice do
+         bairro + avisos por modalidade. Determinístico, só banco+cache. */
+      if (estourou(req, 30, "oportunidades")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const { listarOportunidades } = await import("./oportunidades.js");
+      return json(res, 200, await listarOportunidades());
+    }
     if (req.method === "POST" && req.url === "/motor/mercado") {
       /* avaliação AO VIVO: dispara busca nos portais (gasta cota Brave) e avalia.
          cache de 6h por bairro protege a cota global; rate limit por IP protege o pico */

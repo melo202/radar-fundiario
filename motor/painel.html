@@ -128,6 +128,8 @@
       <span id="requalStat" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
       <h2 style="margin-top:18px">Mercado em movimento</h2>
       <div id="mudancas"><div class="skel" style="height:60px"></div></div>
+      <h2 style="margin-top:18px">Oportunidades em movimento <span id="oportResumo" style="font-size:13px;color:var(--muted);font-weight:400"></span></h2>
+      <div id="oportunidades"><div class="skel" style="height:60px"></div></div>
       <h2 style="margin-top:18px">Eventos recentes</h2>
       <div id="eventos"><div class="skel" style="height:90px"></div></div>
     </div>
@@ -231,6 +233,11 @@ function render(d){
   /* só mudanças VERIFICADAS (mesmo anúncio por portal+id, salto ≤50%); imóvel identificado
      na linha para o olho humano conferir — bairro, tipo, área e variação % */
   $("mudancas").innerHTML=((d.mudancas||[]).length?`<table><tr><th>Quando</th><th>Anúncio</th><th>De</th><th>Para</th><th>Variação</th></tr>${d.mudancas.map(m=>{const x=m.detail||{};const sobe=Number(x.para)>Number(x.de);const rot=[x.tipo,x.bairro,x.area?`${Math.round(x.area)} m²`:null].filter(Boolean).join(" · ")||x.portal||"";return `<tr><td>${dt(m.created_at)}</td><td><a href="${esc(x.url||"#")}" target="_blank" rel="noopener">${esc(rot)}</a></td><td>${brl(x.de)}</td><td>${brl(x.para)}</td><td class="${sobe?"falha":"ok"}">${sobe?"subiu":"baixou"} ${x.variacaoPct!=null?x.variacaoPct.toLocaleString("pt-BR")+"%":""}</td></tr>`;}).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Nenhuma mudança de preço verificada ainda — conta quando o MESMO anúncio (portal + id) reaparece com valor novo e as duas coletas passam na peneira.</p>")+(d.suspeitas?`<p style='color:var(--muted);font-size:12px;margin-top:6px'>${d.suspeitas} salto(s) acima de 50% em quarentena (provável troca de unidade no anúncio ou erro de extração) — fora do termômetro.</p>`:"");
+  /* Oportunidades em movimento (Caixa/leilão): eventos do diff diário, fonte oficial */
+  const oa=d.oportAcervo;
+  $("oportResumo").textContent=oa&&oa.ativos?`· ${Number(oa.ativos).toLocaleString("pt-BR")} imóveis da Caixa (${oa.plotaveis} no mapa)${oa.gerado?" · lista de "+dt(oa.gerado):""}`:"";
+  const acaoRot={"imovel-novo":["novo","ok"],"preco-baixou":["baixou","ok"],"preco-subiu":["subiu","falha"],"voltou-a-lista":["voltou","ok"],"saiu-da-lista":["saiu da lista","falha"]};
+  $("oportunidades").innerHTML=(d.oportunidades||[]).length?`<table><tr><th>Quando</th><th>Imóvel</th><th>Modalidade</th><th></th></tr>${d.oportunidades.map(o=>{const x=o.detail||{};const[rot,cls]=acaoRot[o.action]||[o.action,""];const nome=[x.tipo,x.bairro].filter(Boolean).join(" · ")||esc(o.entity_id);const delta=x.de!=null&&x.para!=null?` (${brl(x.de)}→${brl(x.para)})`:"";return `<tr><td>${dt(o.created_at)}</td><td>${/^https:\/\//.test(x.url||"")?`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(nome)}</a>`:esc(nome)}${delta}</td><td>${esc(x.modalidade||"")}</td><td class="${cls}">${esc(rot)}</td></tr>`;}).join("")}</table>`:"<p style='color:var(--muted);font-size:13px'>Sem movimento de oportunidades ainda — o runner residencial envia a lista da Caixa diariamente; entrou/baixou/saiu aparece aqui.</p>";
 }
 
 async function visao(){

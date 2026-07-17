@@ -70,7 +70,17 @@ async function visao() {
   const suspeitas = await pool.query(
     `SELECT count(*)::int AS n FROM audit_log WHERE action='mudanca-preco-suspeita'`)
     .then(r => r.rows[0].n);
-  return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas };
+  /* Oportunidades em movimento (Caixa/leilão): feed de eventos + contadores do acervo */
+  const oportunidades = await pool.query(
+    `SELECT entity_id, action, detail, created_at FROM audit_log
+     WHERE entity='oportunidade' AND action <> 'ingestao-caixa'
+     ORDER BY created_at DESC LIMIT 8`).then(r => r.rows);
+  const oportAcervo = await pool.query(
+    `SELECT count(*) FILTER (WHERE situacao='ativo')::int AS ativos,
+            count(*) FILTER (WHERE situacao='ativo' AND x_utm IS NOT NULL)::int AS plotaveis,
+            max(gerado_em) AS gerado
+     FROM oportunidades WHERE fonte='caixa'`).then(r => r.rows[0]).catch(() => null);
+  return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas, oportunidades, oportAcervo };
 }
 
 export async function painel(req, res) {

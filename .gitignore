@@ -8,3 +8,6 @@ bairros-goiania.recon.json
 .env
 motor/.env
 corretorinteligente_brandkit.zip
+
+# runner residencial: segredo nunca vai pro repo (fica em %USERPROFILE%\.radar)
+.radar/
