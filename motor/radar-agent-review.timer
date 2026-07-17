@@ -1,0 +1,10 @@
+[Unit]
+Description=Revisão diária de eficiência do assistente
+
+[Timer]
+OnCalendar=*-*-* 05:20:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

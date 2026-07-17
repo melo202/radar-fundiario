@@ -1,0 +1,12 @@
+[Unit]
+Description=Corretor Inteligente - revisão econômica do agente
+After=postgresql.service radar-api.service
+
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/agent-review.js
+NoNewPrivileges=true
+PrivateTmp=true

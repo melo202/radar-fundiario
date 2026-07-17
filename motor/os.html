@@ -12,7 +12,7 @@
     <a class="brand" href="/painel/os" aria-label="Corretor Inteligente — início">
       <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_horizontal_flat.svg" alt="Corretor Inteligente">
     </a>
-    <a class="radar-link" href="/" target="_blank" rel="noopener">Abrir Radar</a>
+    <button type="button" class="quick-capture" id="openCaptureTop">＋ Capturar</button>
   </header>
 
   <main class="shell" id="main">
@@ -39,6 +39,16 @@
         <button class="text-button" type="button" id="refreshToday">Atualizar</button>
       </div>
       <div class="stack" id="todayActions" aria-live="polite"></div>
+      <section class="improvement-section" id="improvementSection" hidden aria-labelledby="improvementTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Aprendizado controlado</p>
+            <h2 id="improvementTitle">Melhorias para revisar</h2>
+          </div>
+        </div>
+        <p class="section-copy">O sistema observa consumo e falhas, mas nenhuma mudança é aplicada sem sua aprovação.</p>
+        <div class="stack" id="improvementList"></div>
+      </section>
     </section>
 
     <section class="view" data-view="portfolio" aria-labelledby="portfolioTitle" hidden>
@@ -81,15 +91,15 @@
     <button type="button" class="nav-item" data-target="portfolio">
       <span class="nav-icon" aria-hidden="true">▱</span><span>Carteira</span>
     </button>
-    <button type="button" class="capture-button" id="openCapture" aria-haspopup="dialog">
-      <span aria-hidden="true">＋</span><span>Capturar</span>
+    <button type="button" class="resolve-button" id="openAssistantNav" aria-haspopup="dialog">
+      <span aria-hidden="true">✦</span><span>Resolver</span>
     </button>
+    <a class="nav-item" href="https://corretorinteligente.tech/?origem=app" data-map-link>
+      <span class="nav-icon" aria-hidden="true">⌖</span><span>Mapa</span>
+    </a>
     <button type="button" class="nav-item" data-target="relationships">
       <span class="nav-icon" aria-hidden="true">◌</span><span>Relações</span>
     </button>
-    <a class="nav-item" href="/painel">
-      <span class="nav-icon" aria-hidden="true">⋯</span><span>Painel</span>
-    </a>
   </nav>
 
   <dialog id="captureDialog" class="capture-dialog" aria-labelledby="captureTitle">

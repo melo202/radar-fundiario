@@ -25,10 +25,61 @@ export function selectRelevantMemories(memories, objectType, prompt = "") {
   }).slice(0, 5).map(memory => memory.value);
 }
 
+const scalarContext = value => typeof value === "string" ? JSON.stringify(value)
+  : value == null ? "-" : typeof value === "object" ? JSON.stringify(value) : String(value);
+
+/* Formato compacto voltado ao modelo: objetos em linhas e listas uniformes com o
+   cabeçalho declarado uma vez. O banco e as APIs continuam usando JSON normal. */
+export function compactContext(value, depth = 0) {
+  if (value == null || typeof value !== "object") return scalarContext(value);
+  if (Array.isArray(value)) {
+    if (!value.length) return "[]";
+    const objects = value.every(item => item && typeof item === "object" && !Array.isArray(item));
+    if (objects) {
+      const keys = [...new Set(value.flatMap(item => Object.keys(item).filter(key => item[key] != null)))];
+      const rows = value.map(item => keys.map(key => scalarContext(item[key])).join("|")).join("\n");
+      return `[${value.length}]{${keys.join(",")}}:\n${rows}`;
+    }
+    return `[${value.map(item => compactContext(item, depth + 1)).join("|")}]`;
+  }
+  return Object.entries(value).filter(([, item]) => item != null).map(([key, item]) => {
+    const compacted = compactContext(item, depth + 1);
+    return `${"  ".repeat(depth)}${key}:${compacted}`;
+  }).join("\n");
+}
+
+export const estimateTokens = value => Math.ceil([...String(value || "")].length / 3);
+
+export function effectiveContextBudget(session, prompt = "") {
+  const ceiling = Math.min(CONTEXT_BUDGETS.documents, Math.max(8_000, Number(session?.context_budget) || CONTEXT_BUDGETS.standard));
+  const text = String(prompt).toLowerCase();
+  if (/document|matr[ií]cula|certid[aã]o|contrato|escritura|pdf|arquivo/.test(text)) return Math.min(ceiling, 128_000);
+  if (["valuation", "investment"].includes(session?.object_type)) return Math.min(ceiling, 32_000);
+  if (["property", "contact", "visit"].includes(session?.object_type)) return Math.min(ceiling, 16_000);
+  return Math.min(ceiling, 8_000);
+}
+
 export function serializeContext(context, budgetTokens = CONTEXT_BUDGETS.standard) {
-  const raw = JSON.stringify(context);
+  const raw = compactContext(context);
   const maxChars = Math.min(750_000, Math.max(12_000, Number(budgetTokens || CONTEXT_BUDGETS.standard) * 3));
   return raw.length <= maxChars ? raw : `${raw.slice(0, maxChars)}… [contexto truncado pelo orçamento]`;
+}
+
+export function deterministicContextAnswer(prompt, context) {
+  if (context?.type !== "general" || !context.counts) return null;
+  const text = String(prompt || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!/\b(quantos?|quantas?|total)\b/.test(text)) return null;
+  const requested = [
+    ["imove", "properties", "imóveis na carteira"],
+    ["cliente", "contacts", "relacionamentos"],
+    ["relacion", "contacts", "relacionamentos"],
+    ["oportunidade", "opportunities", "oportunidades abertas"],
+    ["tarefa", "tasks", "ações pendentes"],
+    ["acao", "tasks", "ações pendentes"],
+  ].filter(([needle]) => text.includes(needle));
+  if (!requested.length) return null;
+  const unique = requested.filter((item, index) => requested.findIndex(other => other[1] === item[1]) === index);
+  return unique.map(([, key, label]) => `${Number(context.counts[key] || 0)} ${label}`).join(" · ") + ".";
 }
 
 export function buildInstructions({ memories = [], context = null, contextBudget = CONTEXT_BUDGETS.standard } = {}) {
@@ -129,17 +180,23 @@ export async function sendAssistantMessage(sessionId, message, dependencies = {}
   const profile = await ensureProfile(org.id);
   const memories = selectRelevantMemories(profile.memories, session.object_type, input);
   const context = await selectedContext(session);
-  const instructions = buildInstructions({ memories, context, contextBudget: session.context_budget });
+  const contextBudget = effectiveContextBudget(session, input);
+  const instructions = buildInstructions({ memories, context, contextBudget });
   const historyResult = await pool.query(
     "SELECT role,content FROM agent_messages WHERE session_id=$1 ORDER BY id DESC LIMIT 12", [session.id]);
   const history = historyResult.rows.reverse().map(row => ({ role: row.role, content: row.content }));
+  const deterministicReply = deterministicContextAnswer(input, context);
   const runtime = dependencies.runtime || createAgentRuntime(process.env, dependencies);
   const allowFallback = String(process.env.AGENT_LOCAL_FALLBACK || "true").toLowerCase() !== "false";
   const fallback = allowFallback && runtime.status().runtime !== "local"
     ? (dependencies.fallbackRuntime || new LocalRuntime({ runner: dependencies.localRunner })) : null;
   const started = Date.now();
   try {
-    const out = await runWithFallback(runtime, fallback, { input, instructions, history, conversationId: session.id, highSpeed: session.high_speed });
+    const out = deterministicReply
+      ? { value: deterministicReply, runtime: "local", model: "deterministic-context-v1", usage: { input_tokens: 0, output_tokens: 0 }, requestKind: "deterministic" }
+      : { ...await runWithFallback(runtime, fallback, { input, instructions, history, conversationId: session.id, highSpeed: session.high_speed }), requestKind: "analysis" };
+    const contextTokens = deterministicReply ? 0 : estimateTokens(`${instructions}\n${input}`);
+    const cachedInputTokens = out.usage?.cached_input_tokens || out.usage?.input_tokens_details?.cached_tokens || null;
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -149,16 +206,27 @@ export async function sendAssistantMessage(sessionId, message, dependencies = {}
         `INSERT INTO agent_messages (session_id,role,content,runtime,model,usage)
          VALUES ($1,'assistant',$2,$3,$4,$5)`, [session.id, out.value, out.runtime, out.model, out.usage ? JSON.stringify(out.usage) : null]);
       await client.query(
-        `INSERT INTO agent_usage (organization_id,session_id,runtime,model,fallback_from,input_tokens,output_tokens,duration_ms,high_speed,ok)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [org.id, session.id, out.runtime, out.model, out.fallbackFrom || null, out.usage?.input_tokens || out.usage?.prompt_tokens || null, out.usage?.output_tokens || out.usage?.completion_tokens || null, Date.now() - started, session.high_speed]);
-      await client.query("UPDATE agent_sessions SET runtime=$1,updated_at=now() WHERE id=$2", [out.runtime, session.id]);
+        `INSERT INTO agent_usage
+         (organization_id,session_id,runtime,model,fallback_from,input_tokens,output_tokens,cached_input_tokens,context_tokens,request_kind,duration_ms,high_speed,ok)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true)`,
+        [org.id, session.id, out.runtime, out.model, out.fallbackFrom || null,
+          out.usage?.input_tokens || out.usage?.prompt_tokens || 0,
+          out.usage?.output_tokens || out.usage?.completion_tokens || 0,
+          cachedInputTokens, contextTokens, out.requestKind, Date.now() - started, session.high_speed]);
+      if (out.requestKind !== "deterministic") {
+        await client.query("UPDATE agent_sessions SET runtime=$1,updated_at=now() WHERE id=$2", [out.runtime, session.id]);
+      } else {
+        await client.query("UPDATE agent_sessions SET updated_at=now() WHERE id=$1", [session.id]);
+      }
       await client.query("COMMIT");
     } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
     return { ok: true, reply: out.value, runtime: out.runtime, model: out.model, fallbackFrom: out.fallbackFrom || null, usage: out.usage || null };
   } catch (error) {
     await pool.query(
-      `INSERT INTO agent_usage (organization_id,session_id,runtime,model,duration_ms,high_speed,ok,error)
-       VALUES ($1,$2,$3,$4,$5,$6,false,$7)`, [org.id, session.id, runtime.status().runtime, runtime.status().model || null, Date.now() - started, session.high_speed, String(error.message).slice(0, 500)]).catch(() => {});
+      `INSERT INTO agent_usage (organization_id,session_id,runtime,model,context_tokens,request_kind,duration_ms,high_speed,ok,error)
+       VALUES ($1,$2,$3,$4,$5,'analysis',$6,$7,false,$8)`,
+      [org.id, session.id, runtime.status().runtime, runtime.status().model || null,
+        estimateTokens(`${instructions}\n${input}`), Date.now() - started, session.high_speed, String(error.message).slice(0, 500)]).catch(() => {});
     throw error;
   }
 }

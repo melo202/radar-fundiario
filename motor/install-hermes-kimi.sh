@@ -54,10 +54,11 @@ model:
   provider: custom
   base_url: https://api.kimi.com/coding/v1
   api_key: "$KIMI_KEY"
-  context_length: 1000000
+  # Limite operacional, não convite para preencher contexto. O app usa orçamentos menores.
+  context_length: 262144
 
 agent:
-  max_turns: 12
+  max_turns: 8
 
 tool_loop_guardrails:
   hard_stop_enabled: true
@@ -70,6 +71,14 @@ memory:
   user_profile_enabled: true
   memory_char_limit: 2200
   user_char_limit: 1375
+  nudge_interval: 10
+  flush_min_turns: 6
+
+# Aprendizado de preferências fica ativo. Criação autônoma de skills fica desligada
+# até existir uma revisão humana confiável no próprio aplicativo.
+skills:
+  creation_nudge_interval: 0
+  write_approval: true
 
 session_reset:
   mode: both

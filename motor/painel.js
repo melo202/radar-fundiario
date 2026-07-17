@@ -150,6 +150,10 @@ export async function painel(req, res) {
     const { listarRelacionamentos } = await import("./os-core.js");
     return json(res, 200, await listarRelacionamentos());
   }
+  if (req.method === "GET" && req.url === "/painel/api/os/melhorias") {
+    const { listImprovementProposals } = await import("./agent-review.js");
+    return json(res, 200, await listImprovementProposals());
+  }
   if (req.method === "GET" && /^\/painel\/api\/os\/assistente\/sessoes\/[0-9a-f-]{36}$/.test(req.url)) {
     const { getAssistantHistory } = await import("./assistente.js");
     const r = await getAssistantHistory(req.url.split("/").pop());
@@ -200,6 +204,12 @@ export async function painel(req, res) {
       console.error("assistente indisponível:", String(error.message).slice(0, 300));
       return json(res, 503, { erro: "O assistente está indisponível agora. Seus dados não foram alterados." });
     }
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/melhorias\/[0-9a-f-]{36}\/revisar$/.test(req.url)) {
+    const { reviewImprovementProposal } = await import("./agent-review.js");
+    const { decision } = JSON.parse(await readBody(req) || "{}");
+    const r = await reviewImprovementProposal(req.url.split("/")[5], decision);
+    return json(res, r.ok ? 200 : 400, r);
   }
 
   /* OS-01: captura em duas etapas — interpretar não persiste; confirmar cria o cadastro. */
