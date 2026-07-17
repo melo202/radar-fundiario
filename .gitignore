@@ -7,3 +7,4 @@ bairros-goiania.recon.json
 # segredos nunca entram no git (o .env real vive so no VPS)
 .env
 motor/.env
+corretorinteligente_brandkit.zip
