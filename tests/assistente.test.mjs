@@ -49,7 +49,7 @@ test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada cen
 });
 
 test("assistente: ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
-  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno", "preparar_visita"]);
+  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno", "preparar_visita", "ler_documentos"]);
   assert.deepEqual(chooseReadOnlyTools("Quantos imóveis eu tenho?", { object_type: "general" }), ["consultar_meu_dia"]);
   assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["buscar_imovel"]);
   assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["buscar_cliente"]);
@@ -60,6 +60,8 @@ test("assistente: ferramentas de leitura são escolhidas sem entregar o banco ao
   assert.deepEqual(chooseReadOnlyTools("O que sei sobre este cliente?", { object_type: "contact" }), ["buscar_cliente"]);
   assert.deepEqual(chooseReadOnlyTools("Prepare esta visita", { object_type: "visit" }), ["preparar_visita"]);
   assert.deepEqual(chooseReadOnlyTools("Resuma o cliente e o imóvel desta visita", { object_type: "visit" }), ["preparar_visita"]);
+  assert.deepEqual(chooseReadOnlyTools("Leia a matrícula desta visita", { object_type: "visit" }), ["preparar_visita", "ler_documentos"]);
+  assert.deepEqual(chooseReadOnlyTools("Existe penhora na matrícula?", { object_type: "property" }), ["ler_documentos", "abrir_dossie"]);
 });
 
 test("assistente: preparação da visita explicita o que está pronto e o que falta", () => {

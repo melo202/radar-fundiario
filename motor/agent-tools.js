@@ -2,6 +2,7 @@
    O Hermes nunca recebe conexão, SQL ou credenciais: recebe apenas o resultado compacto
    das ferramentas que este roteador determinístico escolheu para o pedido. */
 import { pool } from "./db.js";
+import { selectRelevantDocumentSegments } from "./document-intake.js";
 
 export const READ_ONLY_AGENT_TOOLS = Object.freeze([
   "consultar_meu_dia",
@@ -12,6 +13,7 @@ export const READ_ONLY_AGENT_TOOLS = Object.freeze([
   "abrir_avaliacao",
   "consultar_entorno",
   "preparar_visita",
+  "ler_documentos",
 ]);
 
 const STOP = new Set(["qual", "quais", "como", "para", "sobre", "este", "esta", "meu", "minha", "hoje", "agora", "imovel", "imoveis", "cliente", "clientes", "corretor", "carteira", "preciso", "quero", "pode", "faca", "mostre", "mostrar", "analise", "analisar"]);
@@ -232,17 +234,53 @@ async function prepararVisita(session) {
   };
 }
 
+async function lerDocumentos(session, prompt) {
+  let propertyId = session.object_type === "property" ? session.object_id : null;
+  const visitId = session.object_type === "visit" ? session.object_id : null;
+  if (visitId) {
+    const q = await pool.query(
+      "SELECT inventory_property_id FROM opportunities WHERE id=$1 AND organization_id=$2", [visitId, session.organization_id]);
+    propertyId = q.rows[0]?.inventory_property_id || null;
+  }
+  if (!propertyId && !visitId) return { unavailable: true, missing: "Abra o imóvel ou a visita a que os documentos pertencem." };
+  const docs = await pool.query(
+    `SELECT id,file_name,mime_type,status,extraction_method,page_count,error,updated_at
+     FROM agent_documents WHERE organization_id=$1
+       AND ((object_type='property' AND object_id=$2) OR (object_type='visit' AND object_id=$3))
+     ORDER BY updated_at DESC LIMIT 30`, [session.organization_id, propertyId, visitId]);
+  if (!docs.rowCount) return { documents: [], missing: "Nenhum documento foi anexado a este imóvel ou visita." };
+  const segments = await pool.query(
+    `SELECT s.document_id,d.file_name,s.page_start,s.page_end,s.section,s.content
+     FROM agent_document_segments s JOIN agent_documents d ON d.id=s.document_id
+     WHERE d.organization_id=$1 AND d.status IN ('extracted','indexed','reviewed')
+       AND ((d.object_type='property' AND d.object_id=$2) OR (d.object_type='visit' AND d.object_id=$3))
+     ORDER BY d.updated_at DESC,s.page_start NULLS LAST,s.id LIMIT 240`,
+    [session.organization_id, propertyId, visitId]);
+  let relevant = selectRelevantDocumentSegments(segments.rows, prompt, 12_000);
+  if (!relevant.length && segments.rowCount) relevant = selectRelevantDocumentSegments(segments.rows, "", 12_000);
+  return {
+    documents: docs.rows.map(d => ({ id: d.id, fileName: d.file_name, mimeType: d.mime_type,
+      status: d.status, extractionMethod: d.extraction_method, pageCount: d.page_count,
+      error: d.status === "error" ? d.error : null, updatedAt: d.updated_at })),
+    selectedSegments: relevant.map(s => ({ documentId: s.document_id, fileName: s.file_name,
+      pageStart: s.page_start, pageEnd: s.page_end, section: s.section, content: s.content, relevance: s.relevance })),
+    selectionPolicy: "recuperação lexical local; máximo de 12 mil caracteres; arquivo completo não enviado ao modelo",
+  };
+}
+
 export function chooseReadOnlyTools(prompt, session) {
   const text = norm(prompt);
   const chosen = [];
   const contagem = /\b(quantos|quantas|total)\b/.test(text);
   /* Uma visita já aponta para oportunidade, pessoa e imóvel exatos. Buscar por palavras
      novamente desperdiça tokens e pode misturar homônimos ou outros imóveis. */
-  if (session.object_type === "visit") return ["preparar_visita"];
+  if (session.object_type === "visit") return /\b(documento|documentos|arquivo|arquivos|matricula|certidao|contrato|escritura|onus|penhora)\b/.test(text)
+    ? ["preparar_visita", "ler_documentos"] : ["preparar_visita"];
   const contextoImovel = ["property","valuation"].includes(session.object_type);
   if (contextoImovel && /\b(comparavel|comparaveis|oferta|ofertas|amostra|anuncio|anuncios)\b/.test(text)) chosen.push("buscar_comparaveis");
   if (contextoImovel && /\b(avaliacao|valor|preco|mercado|relatorio|pesquisa|evidencia|evidencias)\b/.test(text)) chosen.push("abrir_avaliacao");
   if (contextoImovel && /\b(entorno|regiao|localizacao|servico|servicos|transporte|escola|escolas|farmacia|farmacias|supermercado|supermercados)\b/.test(text)) chosen.push("consultar_entorno");
+  if (session.object_type === "property" && /\b(documento|documentos|arquivo|arquivos|matricula|certidao|contrato|escritura|onus|penhora)\b/.test(text)) chosen.push("ler_documentos");
   if (session.object_type === "property" && chosen.length < 2) chosen.push("abrir_dossie");
   else if (session.object_type === "valuation" && !chosen.length) chosen.push("abrir_avaliacao");
   else if (session.object_type === "contact") chosen.push("buscar_cliente");
@@ -265,10 +303,12 @@ export async function runReadOnlyTools(prompt, session) {
       else if (tool === "abrir_avaliacao") data = await abrirAvaliacao(session);
       else if (tool === "consultar_entorno") data = await consultarEntorno(session);
       else if (tool === "preparar_visita") data = await prepararVisita(session);
+      else if (tool === "ler_documentos") data = await lerDocumentos(session, prompt);
       const source = tool === "buscar_comparaveis" ? "ofertas públicas rastreadas no relatório de mercado"
         : tool === "abrir_avaliacao" ? "motor determinístico e avaliação versionada"
         : tool === "consultar_entorno" ? "OpenStreetMap processado localmente, sem ajuste de preço"
         : tool === "preparar_visita" ? "oportunidade, carteira, documentos e avaliação versionada"
+        : tool === "ler_documentos" ? "arquivos privados extraídos e indexados localmente na VPS"
         : "carteira privada do Corretor Inteligente";
       results.push({ tool, source, data });
     } catch {

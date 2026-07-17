@@ -5,6 +5,7 @@ import {
   compactContext, deterministicContextAnswer, effectiveContextBudget, estimateTokens, serializeContext,
 } from "../motor/assistente.js";
 import { documentProcessingPlan, selectRelevantDocumentSegments } from "../motor/document-intake.js";
+import { MAX_DOCUMENT_BYTES, segmentDocumentText, verifyFileSignature } from "../motor/document-service.js";
 import { deriveImprovementProposals } from "../motor/agent-review.js";
 
 const migration = readFileSync(new URL("../motor/migrations/010-agent-efficiency.sql", import.meta.url), "utf-8");
@@ -49,6 +50,33 @@ test("documentos: ingestão é determinística e Kimi entra somente sob demanda"
     { page_start: 4, content: "Averbação de penhora e ônus" },
   ], "Existe penhora?", 1000);
   assert.deepEqual(selected.map(item => item.page_start), [4]);
+});
+
+test("documentos: upload valida assinatura, tamanho e segmenta sem IA", () => {
+  assert.equal(MAX_DOCUMENT_BYTES, 8 * 1024 * 1024);
+  assert.equal(verifyFileSignature("application/pdf", Buffer.from("%PDF-1.7\n")), true);
+  assert.equal(verifyFileSignature("application/pdf", Buffer.from("imagem disfarçada")), false);
+  assert.equal(verifyFileSignature("image/png", Buffer.from([137,80,78,71,13,10,26,10,1])), true);
+  const chunks = segmentDocumentText("A".repeat(3600), { page: 4 });
+  assert.equal(chunks.length, 2);
+  assert.deepEqual([...new Set(chunks.map(x => x.pageStart))], [4]);
+  assert.ok(chunks.every(x => /^[a-f0-9]{64}$/.test(x.hash)));
+});
+
+test("documentos: armazenamento fica privado, autenticado e separado por imóvel", () => {
+  const service = readFileSync(new URL("../motor/document-service.js", import.meta.url), "utf-8");
+  const panel = readFileSync(new URL("../motor/painel.js", import.meta.url), "utf-8");
+  const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  const migration = readFileSync(new URL("../motor/migrations/013-document-storage.sql", import.meta.url), "utf-8");
+  assert.ok(migration.includes("agent_documents_object_sha_uidx"));
+  assert.ok(service.includes("flag: \"wx\"") && service.includes("mode: 0o600"));
+  assert.ok(service.includes("aiDuringIngestion: false"));
+  assert.ok(panel.includes("readBinaryBody(req, MAX_DOCUMENT_BYTES)"));
+  assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf("readBinaryBody(req, MAX_DOCUMENT_BYTES)"));
+  assert.ok(panel.includes('"Cache-Control": "private, no-store"'));
+  assert.ok(app.includes("Adicionar ao dossiê"));
+  assert.ok(app.includes("Analisar documentos com o assistente"));
+  assert.ok(app.includes("O assistente recebe somente trechos relacionados"));
 });
 
 test("automelhoria: só cria propostas com evidência e nunca aplica mudanças", () => {

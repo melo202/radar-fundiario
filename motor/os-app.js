@@ -11,7 +11,8 @@ async function api(url,options={}){
     if(!seed.ok||!seedBody.csrf)throw new Error(seedBody.erro||"Não foi possível iniciar a ação com segurança.");
     state.csrf=seedBody.csrf;
   }
-  const headers={"Content-Type":"application/json",...(options.headers||{})};
+  const rawBody=typeof Blob!=="undefined"&&options.body instanceof Blob;
+  const headers={...(rawBody?{"Content-Type":options.body.type||"application/octet-stream"}:{"Content-Type":"application/json"}),...(options.headers||{})};
   if(mutating) headers["X-CSRF-Token"]=state.csrf;
   const r=await fetch(url,{credentials:"same-origin",...options,headers});
   let body={};try{body=await r.json();}catch{}
@@ -213,11 +214,34 @@ function renderPropTab(){
       el("article",{class:"entity-card"},[el("h3",{text:"Novo interessado"}),form]));
     if(state.property.mercado)renderMercado(state.property.mercado);
   }else if(state.property.tab==="arquivos"){
-    body.replaceChildren(el("div",{class:"empty-card"},[el("h3",{text:"Fotos e documentos chegam na Fase 8"}),el("p",{text:"Arquivos entram com versão, aprovação e compartilhamento controlado — documento sensível não se improvisa. Até lá, mantenha fotos e PDFs no seu aparelho."})]));
+    renderPropertyFiles(d,body);
   }else{
     const evs=(d.events||[]);
     body.replaceChildren(evs.length?el("div",{class:"entity-card"},[el("div",{class:"timeline"},evs.map(e=>el("div",{class:"timeline-item"},[el("time",{text:new Date(e.occurred_at).toLocaleString("pt-BR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}),el("p",{text:e.rotulo})])))]):el("div",{class:"empty-card"},[el("h3",{text:"Sem eventos ainda"}),el("p",{text:"Cada mudança relevante deste imóvel ficará registrada aqui, com data — a linha do tempo é a prova do seu trabalho."})]));
   }
+}
+const documentStatus=d=>d.status==="indexed"?"Pronto para consultar":d.status==="reviewed"?"Revisado":d.status==="extracted"?"Texto extraído":d.status==="extracting"?"Processando":d.status==="error"?"Não foi possível ler":d.extraction_method==="ocr-pending"?"Guardado · leitura da imagem pendente":"Guardado";
+const fileSize=value=>{const n=Number(value||0);return n>=1048576?`${(n/1048576).toLocaleString("pt-BR",{maximumFractionDigits:1})} MB`:n?`${Math.ceil(n/1024)} KB`:"Tamanho não informado";};
+function renderPropertyFiles(d,body){
+  const rows=d.documents||[],input=el("input",{class:"os-input",type:"file",multiple:true,accept:".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp"});
+  const send=el("button",{class:"primary-button",type:"button",text:"Adicionar ao dossiê"});
+  send.addEventListener("click",()=>uploadPropertyDocuments(input,send));
+  const uploader=el("article",{class:"entity-card"},[el("h3",{text:"Adicionar arquivos do imóvel"}),el("p",{text:"PDF, Word, texto ou imagem, até 8 MB por arquivo. PDF e Word são lidos localmente; nenhum arquivo é enviado ao K3 durante o cadastro."}),el("div",{class:"file-picker"},[input,send]),el("p",{class:"field-help",text:"Documentos ficam privados na VPS. O assistente recebe somente trechos relacionados à sua pergunta."})]);
+  const cards=rows.map(d=>el("article",{class:"entity-card document-row"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:d.file_name}),el("p",{text:[fileSize(d.byte_size),d.page_count?`${d.page_count} página(s)`:null].filter(Boolean).join(" · ")})]),el("span",{class:d.status==="error"?"badge critical":"badge",text:documentStatus(d)})]),el("a",{class:"card-action secondary as-link",href:d.download_url,text:"Baixar arquivo"})]));
+  const readable=rows.some(x=>["extracted","indexed","reviewed"].includes(x.status));
+  const analyze=readable?el("button",{class:"card-action",type:"button",text:"✦ Analisar documentos com o assistente"}):null;
+  analyze?.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:d.property.id,title:d.property.title||"Imóvel"},"Analise os documentos deste imóvel. Separe fatos, riscos aparentes e informações que ainda precisam de conferência. Cite o nome do arquivo e a página quando estiver disponível; não dê conclusão jurídica definitiva.",true));
+  body.replaceChildren(...[uploader,analyze,rows.length?el("div",{},[el("p",{class:"eyebrow",text:`No dossiê (${rows.length})`}),el("div",{class:"stack"},cards)]):el("div",{class:"empty-card"},[el("h3",{text:"Nenhum arquivo neste imóvel"}),el("p",{text:"Comece pela matrícula, autorização de venda ou documento que ajude a preparar a negociação."})])].filter(Boolean));
+}
+async function uploadPropertyDocuments(input,button){
+  const files=[...(input.files||[])];if(!files.length)return toast("Escolha pelo menos um arquivo.");
+  if(files.some(file=>file.size>8*1024*1024))return toast("Cada arquivo pode ter no máximo 8 MB.");
+  button.disabled=true;let done=0;
+  try{
+    for(const file of files){button.textContent=`Guardando ${done+1} de ${files.length}…`;await api(`/painel/api/os/imoveis/${state.property.id}/documentos`,{method:"POST",body:file,headers:{"X-File-Name":encodeURIComponent(file.name)}});done++;}
+    input.value="";toast(`${done} arquivo${done===1?"":"s"} adicionado${done===1?"":"s"} ao dossiê.`);await loadProperty();
+  }catch(error){toast(`${done?`${done} concluído(s). `:""}${error.message}`);await loadProperty();}
+  finally{button.disabled=false;button.textContent="Adicionar ao dossiê";}
 }
 function mercadoAcao(p,ch){
   const pronto=p.transaction_type==="venda"&&["apartamento","casa"].includes(p.property_type)&&p.neighborhood&&ch.areaM2>0;

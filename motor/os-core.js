@@ -557,7 +557,7 @@ export async function dossieImovel(id) {
      WHERE p.id=$1 AND p.organization_id=$2`, [id, org.id]);
   if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
   const latestValuation = await avaliacaoRecenteDoImovel(db, p.rows[0]);
-  const [tarefas, oportunidades, eventos] = await Promise.all([
+  const [tarefas, oportunidades, eventos, documentos] = await Promise.all([
     db.query(
       `SELECT id,title,type,due_at,priority,status,completed_at FROM tasks
        WHERE organization_id=$1 AND related_entity_type='inventory_property' AND related_entity_id=$2
@@ -574,12 +574,17 @@ export async function dossieImovel(id) {
        WHERE organization_id=$1 AND ((entity_type='inventory_property' AND entity_id=$2)
          OR payload->>'inventoryPropertyId'=$2::text)
        ORDER BY occurred_at DESC LIMIT 60`, [org.id, id]),
+    db.query(
+      `SELECT id,file_name,mime_type,byte_size,page_count,status,extraction_method,error,created_at,updated_at
+       FROM agent_documents WHERE organization_id=$1 AND object_type='property' AND object_id=$2
+       ORDER BY updated_at DESC LIMIT 50`, [org.id, id]),
   ]);
   return {
     ok: true, property: p.rows[0], tasks: tarefas.rows,
     latestValuation,
     /* D-3: cada interessado já vem com a mensagem PRONTA do estágio — quem envia é o corretor */
     opportunities: oportunidades.rows.map(o => ({ ...o, mensagem: mensagemFunil(o, p.rows[0]) })),
+    documents: documentos.rows.map(d => ({ ...d, download_url: `/painel/api/os/documentos/${d.id}/arquivo` })),
     events: eventos.rows.map(e => ({ ...e, rotulo: rotuloEvento(e) })),
   };
 }

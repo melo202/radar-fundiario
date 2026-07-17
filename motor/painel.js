@@ -1,7 +1,7 @@
 /* Painel do corretor (SEG-01) — handler completo de /painel*, isolado do server.js.
    Regra número um (SEG-05): sem PAINEL_SENHA no .env, TUDO aqui responde o mesmo 404
    das rotas desconhecidas — o painel não existe, nem para sondagem. */
-import { readFileSync } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { pool } from "./db.js";
 import {
   painelAtivo, verificaSenha, criaSessao, cookieSessao, cookieLimpa,
@@ -37,6 +37,18 @@ const json = (res, code, obj, extra = {}) => {
 const readBody = (req) => new Promise((ok, ko) => {
   let b = ""; req.on("data", c => { b += c; if (b.length > 1e5) { ko(new Error("body grande demais")); req.destroy(); } });
   req.on("end", () => ok(b)); req.on("error", ko);
+});
+const readBinaryBody = (req, maxBytes) => new Promise((ok, ko) => {
+  const declared = Number(req.headers["content-length"] || 0);
+  if (declared > maxBytes) { req.resume(); return ko(new Error("O arquivo passa de 8 MB.")); }
+  const chunks = []; let total = 0, tooLarge = false;
+  req.on("data", chunk => {
+    total += chunk.length;
+    if (total > maxBytes) { tooLarge = true; chunks.length = 0; }
+    else if (!tooLarge) chunks.push(chunk);
+  });
+  req.on("end", () => tooLarge ? ko(new Error("O arquivo passa de 8 MB.")) : ok(Buffer.concat(chunks)));
+  req.on("error", ko);
 });
 const ipDe = (req) =>
   req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
@@ -188,6 +200,18 @@ export async function painel(req, res) {
     const r = await dossieImovel(req.url.split("/").pop());
     return json(res, r.ok ? 200 : 404, r);
   }
+  if (req.method === "GET" && /^\/painel\/api\/os\/documentos\/[0-9a-f-]{36}\/arquivo$/.test(req.url)) {
+    const { resolvePrivateDocument } = await import("./document-service.js");
+    const document = await resolvePrivateDocument(req.url.split("/")[5]).catch(() => null);
+    if (!document) return json(res, 404, { erro: "arquivo não encontrado" });
+    res.writeHead(200, Object.assign({
+      "Content-Type": document.mime_type,
+      "Content-Length": String(document.byte_size),
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(document.fileName)}`,
+      "Cache-Control": "private, no-store",
+    }, SEC));
+    return createReadStream(document.path).pipe(res);
+  }
   if (req.method === "GET" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}$/.test(req.url)) {
     /* §14: dossiê de revisão — a avaliação + TODOS os comparáveis com rastreio */
     const id = req.url.split("/").pop();
@@ -211,6 +235,17 @@ export async function painel(req, res) {
   }
   /* POSTs autenticados exigem o token CSRF (SEG-04) */
   if (req.method === "POST" && !csrfOk(req, sessao)) return json(res, 403, { erro: "csrf" });
+
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/documentos$/.test(req.url)) {
+    const { addPropertyDocument, MAX_DOCUMENT_BYTES } = await import("./document-service.js");
+    let fileName = "documento";
+    try { fileName = decodeURIComponent(String(req.headers["x-file-name"] || "documento")); } catch {}
+    const buffer = await readBinaryBody(req, MAX_DOCUMENT_BYTES);
+    const r = await addPropertyDocument(req.url.split("/")[5], {
+      fileName, mimeType: req.headers["content-type"], buffer,
+    });
+    return json(res, r.ok ? 200 : 400, r);
+  }
 
   if (req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes") {
     const { createAssistantSession } = await import("./assistente.js");
