@@ -2,6 +2,10 @@
 # Deploy do motor no VPS: repo -> /opt/radar/api, deps, migrações, restart.
 # Roda NO SERVIDOR: bash /opt/radar/repo/motor/deploy-api.sh
 set -euo pipefail
+# main(){...} força o bash a LER o arquivo inteiro antes de executar: o git reset
+# adiante sobrescreve ESTE script, e sem isso a rodada executa metade da versão velha
+# (aconteceu em 17/07 — o timer da revisita não instalou na 1ª rodada).
+main() {
 cd /opt/radar/repo
 # OS-02 (16/07/2026): a hospedagem acompanha a branch do Corretor Inteligente OS —
 # a ultrapremium fica congelada como base recuperável (só bugfix).
@@ -35,3 +39,5 @@ systemctl enable --now radar-revisita.timer >/dev/null 2>&1
 systemctl restart radar-api
 sleep 1
 curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"
+}
+main "$@"
