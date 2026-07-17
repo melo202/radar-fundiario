@@ -22,6 +22,14 @@
         <h1 id="todayTitle">Estas são as coisas que merecem sua atenção hoje.</h1>
         <p id="todaySummary" class="hero-copy">Organizando suas próximas ações…</p>
       </div>
+      <section class="assistant-entry" aria-labelledby="assistantEntryTitle">
+        <div>
+          <p class="eyebrow">Assistente privado</p>
+          <h2 id="assistantEntryTitle">O que você precisa resolver agora?</h2>
+          <p>Converse naturalmente. O sistema escolhe o contexto e mantém os números sob controle do motor.</p>
+        </div>
+        <button type="button" class="assistant-open" id="openAssistant">Pedir uma análise</button>
+      </section>
       <div class="count-grid" id="todayCounts" aria-label="Resumo operacional"></div>
       <div class="section-head">
         <div>
@@ -110,6 +118,31 @@
         </div>
         <button type="button" class="primary-button" id="confirmCapture">Confirmar e criar imóvel</button>
       </section>
+    </div>
+  </dialog>
+
+  <dialog id="assistantDialog" class="assistant-dialog" aria-labelledby="assistantTitle">
+    <form method="dialog" class="dialog-head">
+      <div>
+        <p class="eyebrow">Assistente privado</p>
+        <h2 id="assistantTitle">O que você precisa resolver agora?</h2>
+      </div>
+      <button type="submit" class="icon-button" aria-label="Fechar">×</button>
+    </form>
+    <div class="assistant-body">
+      <div class="assistant-examples" aria-label="Exemplos de pedidos">
+        <button type="button" data-assistant-prompt="Qual imóvel da carteira merece atenção hoje?">Qual imóvel merece atenção?</button>
+        <button type="button" data-assistant-prompt="Organize minhas prioridades de hoje e explique por quê.">Organizar meu dia</button>
+        <button type="button" data-assistant-prompt="Quais pendências podem travar uma negociação?">Ver pendências críticas</button>
+      </div>
+      <div id="assistantMessages" class="assistant-messages" aria-live="polite">
+        <p class="assistant-empty">A conversa começa quando você enviar o primeiro pedido. Esta versão consulta dados, mas não altera nada.</p>
+      </div>
+      <form id="assistantForm" class="assistant-form">
+        <label for="assistantInput">Seu pedido</label>
+        <textarea id="assistantInput" rows="3" maxlength="6000" placeholder="Ex.: Analise minhas prioridades de hoje e diga onde estou perdendo tempo."></textarea>
+        <button type="submit" class="primary-button" id="sendAssistant">Enviar</button>
+      </form>
     </div>
   </dialog>
 
