@@ -24,11 +24,14 @@ cp radar-pois.service /etc/systemd/system/radar-pois.service
 cp radar-pois.timer /etc/systemd/system/radar-pois.timer
 cp radar-indices.service /etc/systemd/system/radar-indices.service
 cp radar-indices.timer /etc/systemd/system/radar-indices.timer
+cp radar-revisita.service /etc/systemd/system/radar-revisita.service
+cp radar-revisita.timer /etc/systemd/system/radar-revisita.timer
 systemctl daemon-reload
 systemctl enable --now radar-api >/dev/null 2>&1
 systemctl enable --now radar-varredura.timer >/dev/null 2>&1
 systemctl enable --now radar-pois.timer >/dev/null 2>&1
 systemctl enable --now radar-indices.timer >/dev/null 2>&1
+systemctl enable --now radar-revisita.timer >/dev/null 2>&1
 systemctl restart radar-api
 sleep 1
 curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"

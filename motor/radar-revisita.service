@@ -1,0 +1,13 @@
+[Unit]
+Description=Radar Fundiario - revisita dirigida dos anuncios identificados (Mercado em Movimento)
+After=network.target postgresql.service ollama.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/revisita.js
+User=www-data
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=2h

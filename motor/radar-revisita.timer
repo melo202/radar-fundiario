@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - agenda da revisita dirigida (04h45, depois da varredura das 03h30)
+
+[Timer]
+OnCalendar=*-*-* 04:45:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target
