@@ -150,6 +150,11 @@ export async function painel(req, res) {
     const { listarRelacionamentos } = await import("./os-core.js");
     return json(res, 200, await listarRelacionamentos());
   }
+  if (req.method === "GET" && /^\/painel\/api\/os\/assistente\/sessoes\/[0-9a-f-]{36}$/.test(req.url)) {
+    const { getAssistantHistory } = await import("./assistente.js");
+    const r = await getAssistantHistory(req.url.split("/").pop());
+    return json(res, r.ok ? 200 : 404, r);
+  }
   if (req.method === "GET" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}$/.test(req.url)) {
     /* D-1: dossiê do imóvel da carteira — Visão geral · Comercial · Arquivos · Histórico */
     const { dossieImovel } = await import("./os-core.js");
@@ -179,6 +184,23 @@ export async function painel(req, res) {
   }
   /* POSTs autenticados exigem o token CSRF (SEG-04) */
   if (req.method === "POST" && !csrfOk(req, sessao)) return json(res, 403, { erro: "csrf" });
+
+  if (req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes") {
+    const { createAssistantSession } = await import("./assistente.js");
+    const r = await createAssistantSession(JSON.parse(await readBody(req) || "{}"));
+    return json(res, r.ok ? 200 : 400, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/assistente\/sessoes\/[0-9a-f-]{36}\/mensagens$/.test(req.url)) {
+    const { sendAssistantMessage } = await import("./assistente.js");
+    const { message } = JSON.parse(await readBody(req) || "{}");
+    try {
+      const r = await sendAssistantMessage(req.url.split("/")[6], message);
+      return json(res, r.ok ? 200 : 400, r);
+    } catch (error) {
+      console.error("assistente indisponível:", String(error.message).slice(0, 300));
+      return json(res, 503, { erro: "O assistente está indisponível agora. Seus dados não foram alterados." });
+    }
+  }
 
   /* OS-01: captura em duas etapas — interpretar não persiste; confirmar cria o cadastro. */
   if (req.method === "POST" && req.url === "/painel/api/os/captura/interpretar") {
