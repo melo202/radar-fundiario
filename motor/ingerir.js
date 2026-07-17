@@ -46,7 +46,8 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
        FROM listings l JOIN properties p ON p.listing_id = l.id
        WHERE l.external_id=$1 AND (l.portal=$2 OR l.portal LIKE '%.' || $2) AND l.id<>$3
          AND (p.quality->>'comparableGrade')::boolean IS TRUE
-       ORDER BY l.collected_at DESC LIMIT 1`, [idt.externalId, idt.portalRaiz, id]).then(r => r.rows[0] || null) : null;
+       ORDER BY COALESCE(l.last_seen_at, l.collected_at) DESC, l.collected_at DESC LIMIT 1`,
+      [idt.externalId, idt.portalRaiz, id]).then(r => r.rows[0] || null) : null;
     try {
       const ex = await extrairAnuncio({ titulo: a.titulo, descricao: a.descricao, tier });
       const v = ex.value;
@@ -73,7 +74,9 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
       if (anterior && anterior.preco != null && v.askingPrice && q.comparableGrade &&
           Number(anterior.preco) !== Number(v.askingPrice)) {
         const de = Number(anterior.preco), para = Number(v.askingPrice);
-        const variacao = Math.abs(para - de) / Math.max(de, para);
+        /* variação sobre o preço ANTERIOR (revisão 17/07: max() no denominador
+           subestimava toda subida — 400->500 mil é +25%, não 20%) */
+        const variacao = Math.abs(para - de) / de;
         const verificada = variacao <= 0.5;
         if (verificada) stats.mudancasPreco = (stats.mudancasPreco || 0) + 1;
         else stats.mudancasSuspeitas = (stats.mudancasSuspeitas || 0) + 1;

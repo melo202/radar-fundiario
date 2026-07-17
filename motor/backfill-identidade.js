@@ -8,15 +8,18 @@
 import { pool } from "./db.js";
 import { identidadeAnuncio } from "./identidade-anuncio.js";
 
-const r = await pool.query("SELECT id, url FROM listings WHERE external_id IS NULL");
-let preenchidos = 0;
+/* recomputa TODAS as identidades (não só as vazias): quando a regra de extração muda
+   — como na revisão de 17/07, que derrubou o "slug termina em número" — os ids antigos
+   errados são corrigidos (ou anulados) na re-execução, nunca perpetuados */
+const r = await pool.query("SELECT id, url, external_id FROM listings");
+let preenchidos = 0, corrigidos = 0;
 for (const l of r.rows) {
   const idt = identidadeAnuncio(l.url);
-  if (!idt.externalId) continue;
+  if ((idt.externalId ?? null) === (l.external_id ?? null)) continue;
   await pool.query("UPDATE listings SET external_id=$1 WHERE id=$2", [idt.externalId, l.id]);
-  preenchidos++;
+  l.external_id == null ? preenchidos++ : corrigidos++;
 }
-console.log(`external_id preenchido em ${preenchidos}/${r.rows.length} listings sem identidade`);
+console.log(`external_id: ${preenchidos} preenchido(s), ${corrigidos} corrigido(s)/anulado(s), em ${r.rows.length} listings`);
 
 const inv = await pool.query(
   `UPDATE audit_log
@@ -43,12 +46,20 @@ const pares = await pool.query(
           lag(c.collected_at) OVER w AS coleta_ant
    FROM coletas c
    WINDOW w AS (PARTITION BY c.portal_raiz, c.external_id ORDER BY c.collected_at)`);
-let legitimas = 0, suspeitas = 0;
+let legitimas = 0, suspeitas = 0, jaRegistradas = 0;
 for (const c of pares.rows) {
   if (c.preco_ant == null || Number(c.preco_ant) === Number(c.preco)) continue;
   const de = Number(c.preco_ant), para = Number(c.preco);
-  const variacao = Math.abs(para - de) / Math.max(de, para);
+  const variacao = Math.abs(para - de) / de; /* sobre o preço anterior, como no ingerir */
   const verificada = variacao <= 0.5;
+  /* idempotência (revisão 17/07): re-execução do script — ou par que o ingerir novo já
+     registrou ao vivo — NÃO pode duplicar linha no termômetro */
+  const ja = await pool.query(
+    `SELECT 1 FROM audit_log
+     WHERE action IN ('mudanca-preco','mudanca-preco-suspeita') AND entity_id=$1
+       AND (detail->>'de')::numeric=$2 AND (detail->>'para')::numeric=$3 LIMIT 1`,
+    [String(c.listing_id), de, para]);
+  if (ja.rowCount) { jaRegistradas++; continue; }
   verificada ? legitimas++ : suspeitas++;
   await pool.query(
     `INSERT INTO audit_log (entity, entity_id, action, detail, created_at)
@@ -60,5 +71,5 @@ for (const c of pares.rows) {
         listingAnterior: c.listing_ant, origem: "backfill-17/07" }),
       c.collected_at]);
 }
-console.log(`histórico recomputado: ${legitimas} mudança(s) legítima(s), ${suspeitas} suspeita(s)`);
+console.log(`histórico recomputado: ${legitimas} mudança(s) legítima(s), ${suspeitas} suspeita(s), ${jaRegistradas} já registrada(s) (puladas)`);
 await pool.end();

@@ -218,6 +218,8 @@ http.createServer(async (req, res) => {
     }
     json(res, 404, { erro: "rota desconhecida" });
   } catch (e) {
-    json(res, 500, { erro: String(e.message).slice(0, 400) });
+    /* módulos sinalizam erro de USO com e.status (400 etc.) — devolver 500 neles
+       quebrava o contrato da rota pública (revisão 17/07) */
+    json(res, Number.isInteger(e.status) ? e.status : 500, { erro: String(e.message).slice(0, 400) });
   }
 }).listen(PORT, "127.0.0.1", () => console.log(`radar-motor em 127.0.0.1:${PORT}`));

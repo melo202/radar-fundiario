@@ -9,7 +9,8 @@ const src = (p) => readFileSync(new URL(p, import.meta.url), "utf-8");
 
 test("A1: o MESMO anúncio (portal+id) com conteúdo novo detecta o delta e audita", () => {
   const ing = src("../motor/ingerir.js");
-  assert.ok(ing.includes("ORDER BY l.collected_at DESC LIMIT 1"), "resgata a coleta anterior do anúncio");
+  assert.ok(ing.includes("ORDER BY COALESCE(l.last_seen_at, l.collected_at) DESC"),
+    "o 'anterior' é o último ESTADO visto (recoleta idêntica atualiza last_seen_at)");
   /* 17/07: identidade canônica — URL bruta comparava páginas-catálogo e inventava saltos */
   assert.ok(ing.includes("identidadeAnuncio"), "identidade extraída na ingestão");
   assert.ok(ing.includes("l.external_id=$1"), "coleta anterior ancorada no id do portal, não na URL");
@@ -26,9 +27,24 @@ test("A1b: identidade e índice de bairro expostos pelo servidor (mapa instantâ
   const srv = src("../motor/server.js");
   assert.ok(srv.includes("/motor/estimativa"), "estimativa imediata para o mapa");
   assert.ok(srv.includes("/motor/mercado/bairros"), "índice completo por bairro");
+  assert.ok(srv.includes("Number.isInteger(e.status) ? e.status : 500"),
+    "erro de uso responde o status do módulo (400), não 500");
   const html = src("../radar-goiania.html");
   assert.ok(html.includes("estimativaImediata"), "o card de mercado busca o valor sozinho");
   assert.ok(html.includes("não são transações"), "rotulagem honesta na estimativa automática");
+});
+
+test("A1c (revisão adversarial 17/07): guardas do termômetro e da estimativa automática", () => {
+  const ing = src("../motor/ingerir.js");
+  assert.ok(ing.includes("Math.abs(para - de) / de"), "variação sobre o preço ANTERIOR (400->500 mil = +25%)");
+  const bf = src("../motor/backfill-identidade.js");
+  assert.ok(bf.includes("jaRegistradas"), "backfill idempotente: re-execução não duplica o termômetro");
+  const html = src("../radar-goiania.html");
+  assert.ok(html.includes('className="dmercado-estimativa"'),
+    "estimativa NUNCA usa dmercado-num — é o sentinela do irParaAvaliacao");
+  assert.ok(html.includes("MERCADO_EPOCH"), "época invalida fetch atrasado (sem bloco duplicado)");
+  assert.ok(html.includes("tipoParaEstimativa"), "tipo pela detecção real de unidade (unitLabel)");
+  assert.ok(html.includes("rotuloArea"), "a área usada é declarada no card");
 });
 
 test("A2: idade da amostra é dado do resultado, exibida no card e no laudo", () => {

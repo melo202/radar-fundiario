@@ -81,9 +81,14 @@ function razaoMesmoImovel(a, b) {
     Math.abs(a.price - b.price) / Math.max(a.price, b.price) <= 0.015;
   const geoPerto = a.lat != null && b.lat != null && a.lon != null && b.lon != null &&
     distanciaM(a, b) <= 40;
+  /* revisão 17/07: num prédio, TODAS as unidades caem no mesmo ponto CNEFE — posição
+     sozinha fundia o apto do 2º andar (500 mil) com o do 15º (750 mil) e sumia com um
+     preço da mediana. Geo só decide com os preços numa banda de 10% (ou sem preço). */
+  const precoBanda = !(a.price > 0 && b.price > 0) ||
+    Math.abs(a.price - b.price) / Math.max(a.price, b.price) <= 0.10;
   if (precoPerto && geoPerto) return "área, preço e posição convergem";
   if (precoPerto) return "área e preço convergem";
-  if (geoPerto) return "área e posição (CNEFE) convergem";
+  if (geoPerto && precoBanda) return "área e posição (CNEFE) convergem";
   return null;
 }
 export function dedupMultiSinal(comps) {

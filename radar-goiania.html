@@ -7133,34 +7133,48 @@ const MERCADO_HINT='<p class="dmercado-hint">Compara este imóvel com ofertas an
 const privKey=a=>clean(a&&a.nrinscr)||clean(a&&a.ci)||"";
 function privGet(a){try{const v=+(JSON.parse(localStorage.getItem("ci_privativa")||"{}")[privKey(a)]);return v>0?v:null;}catch(e){return null;}}
 function privSet(a,v){try{const m=JSON.parse(localStorage.getItem("ci_privativa")||"{}");const k=privKey(a);if(!k)return;if(+v>0)m[k]=+v;else delete m[k];localStorage.setItem("ci_privativa",JSON.stringify(m));}catch(e){}}
+let MERCADO_EPOCH=0; /* época do card: invalida fetch de estimativa que chegar atrasado */
 function mercadoReset(a){
-  MERCADO_A=a;
+  MERCADO_A=a; MERCADO_EPOCH++;
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
   const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Calcular valor";}
   if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
-  estimativaImediata(a); /* Mercado em Movimento 17/07: o valor do bairro chega SOZINHO */
+  estimativaImediata(a,MERCADO_EPOCH); /* Mercado em Movimento 17/07: o valor chega SOZINHO */
 }
 /* ESTIMATIVA IMEDIATA (projeto Mercado em Movimento, 17/07): assim que o imóvel abre,
    o valor pelo índice do bairro aparece sem clique e sem espera — mediana de R$/m² do
    acervo alimentado pela varredura diária (GET /motor/estimativa: determinístico, zero
    IA, zero busca ao vivo). O "Calcular valor" segue sendo a avaliação completa, com
-   comparáveis nomeados e laudo. Falha aqui é silêncio: a estimativa é bônus. */
-async function estimativaImediata(a){
+   comparáveis nomeados e laudo. Falha aqui é silêncio: a estimativa é bônus.
+   Revisão adversarial 17/07: (a) tipo pela detecção REAL de unidade (unitLabel, a mesma
+   da ficha) — casa residencial usa areaedif, Apto exige privativa declarada, Sala/Loja/
+   Box e usos sem índice ficam FORA (não existe mediana de "casa" para uma loja);
+   (b) época + sentinela contra corrida (reabrir rápido duplicava o bloco, e o prepend
+   podia cair por cima da avaliação completa); (c) a área usada é declarada no card. */
+function tipoParaEstimativa(a){
+  if(!(+a.uso===1||+a.uso===5)||isGarage(a))return null; /* só residencial/misto tem índice */
+  const ul=unitLabel(a);
+  if(ul&&!/^Apto/i.test(ul))return null;                 /* Sala/Loja/Box: sem índice honesto */
+  if(ul)return {tipo:"apartamento",area:privGet(a),rotuloArea:"m² privativos (informados)"};
+  return {tipo:"casa",area:+a.areaedif,rotuloArea:"m² do cadastro"};
+}
+async function estimativaImediata(a,epoca){
   const body=document.getElementById("dMercadoBody"); if(!body||!a)return;
-  const isU=ehAptoProvavel(a);
-  const area=isU?privGet(a):+a.areaedif; /* AREA-APTO: unidade só com a privativa declarada */
+  const t=tipoParaEstimativa(a);
   const bairro=clean(a.nmbairro);
-  if(!(area>0)||!bairro)return; /* sem área e bairro honestos não existe R$/m² automático */
+  if(!t||!(t.area>0)||!bairro)return; /* sem tipo, área e bairro honestos não há R$/m² automático */
   try{
-    const r=await fetch(`${MOTOR_BASE}/motor/estimativa?bairro=${encodeURIComponent(bairro)}&tipo=${isU?"apartamento":"casa"}&areaM2=${area}`,{signal:AbortSignal.timeout(12000)});
+    const r=await fetch(`${MOTOR_BASE}/motor/estimativa?bairro=${encodeURIComponent(bairro)}&tipo=${t.tipo}&areaM2=${t.area}`,{signal:AbortSignal.timeout(12000)});
     const d=await r.json();
-    if(!r.ok||!d.disponivel||MERCADO_A!==a)return; /* imóvel já trocou? descarta em silêncio */
+    if(!r.ok||!d.disponivel)return;
+    if(MERCADO_A!==a||epoca!==MERCADO_EPOCH)return; /* card já é de outro imóvel/rodada */
+    if(body.querySelector(".dmercado-estimativa")||body.querySelector(".dmercado-num"))return; /* já tem estimativa ou avaliação/skeleton */
     const el=document.createElement("div");
-    el.className="dmercado-num";
+    el.className="dmercado-estimativa"; /* NUNCA dmercado-num: é o sentinela do irParaAvaliacao */
     el.style.cssText="margin-bottom:10px";
     el.innerHTML=`<div style="font-size:12px;color:#5b6b6a">Estimativa imediata pelo bairro (automática)</div>
       <div style="font-size:22px;font-weight:700">${brlC(d.valorEstimado)}</div>
-      <div style="font-size:12px;color:#5b6b6a">faixa ${brlC(d.faixa.de)} – ${brlC(d.faixa.ate)} · ${brlC(d.pm2Mediana)}/m² · ${d.amostra.n} oferta(s) no bairro · confiança ${esc(d.confianca.rotulo)}</div>
+      <div style="font-size:12px;color:#5b6b6a">faixa ${brlC(d.faixa.de)} – ${brlC(d.faixa.ate)} · ${brlC(d.pm2Mediana)}/m² · sobre ${Math.round(t.area)} ${t.rotuloArea} · ${d.amostra.n} oferta(s) no bairro · confiança ${esc(d.confianca.rotulo)}</div>
       <div style="font-size:11px;color:#8a9695;margin-top:2px">Mediana do acervo diário de ofertas anunciadas — não são transações; o botão abaixo faz a avaliação completa.</div>`;
     body.prepend(el);
   }catch(e){/* bônus: nunca atrapalha o card */}

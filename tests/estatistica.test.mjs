@@ -66,6 +66,16 @@ test("§5 multi-sinal: posição CNEFE agrupa mesmo com preço diferente entre p
   assert.ok(duplicados[0].razaoDedup.includes("posição (CNEFE)"));
 });
 
+test("§5 multi-sinal (revisão 17/07): mesmo prédio NÃO funde unidades com preços longe", () => {
+  /* todas as unidades de um prédio caem no mesmo ponto CNEFE — o apto do 2º andar
+     (500 mil) e o do 15º (750 mil) são imóveis DIFERENTES e os dois preços contam */
+  const { principais } = dedupMultiSinal([
+    { id: "baixo", portal: "olx", bedrooms: 3, area: 90, price: 500000, completeness: 0.9, lat: -16.7081, lon: -49.2723 },
+    { id: "alto", portal: "zap", bedrooms: 3, area: 90, price: 750000, completeness: 0.8, lat: -16.7081, lon: -49.2723 },
+  ]);
+  assert.equal(principais.length, 2, "posição sozinha não decide com 50% de diferença de preço");
+});
+
 test("§5 multi-sinal: unidades DIFERENTES nunca são agrupadas", () => {
   const { principais } = dedupMultiSinal([
     { id: "a", portal: "olx", bedrooms: 3, area: 90, price: 690000, completeness: 0.9 },

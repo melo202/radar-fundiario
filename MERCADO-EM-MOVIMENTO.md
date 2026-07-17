@@ -59,6 +59,37 @@ espera, zero cota. Amostra com n<3 não vira número (honestidade nos limites). 
 "Calcular valor" continua sendo a avaliação completa com comparáveis nomeados e laudo.
 `GET /motor/mercado/bairros` expõe o índice completo.
 
+## Revisão adversarial (17/07, mesma tarde — 53 agentes, 5 lentes × 2 céticos por achado)
+
+11 achados confirmados por maioria e TODOS corrigidos no mesmo dia:
+
+1. **(alta)** Fallback genérico transformava CEP/telefone no fim do slug em "id" — a
+   mesma família do bug original. Agora a cauda longa só ganha identidade com marcador
+   explícito (`id-`/`cod-`/`ref-`); menos cobertura é o preço certo da precisão.
+2. **(média)** `portalRaiz` colapsava sufixos públicos (`.srv.br`) e plataformas
+   multi-tenant. Agora só os portais CONHECIDOS unificam subdomínios; no resto, o host
+   inteiro é o portal.
+3. **(alta)** Backfill não era idempotente (re-execução duplicava o termômetro) — agora
+   checa se o par já foi registrado.
+4. **(média)** O "anterior" podia ser um estado velho — agora ordena por
+   `COALESCE(last_seen_at, collected_at)` (recoleta idêntica atualiza last_seen_at).
+   Limitação documentada: reversão a um preço já visto com texto idêntico não gera linha.
+5. **(média)** Dedup multi-sinal fundia unidades DIFERENTES do mesmo prédio (posição
+   CNEFE igual) — geo só decide com preços numa banda de 10%.
+6. **(média)** `/motor/estimativa` respondia 500 para erro de uso — o catch global agora
+   respeita `e.status` (400).
+7. **(alta)** A estimativa usava a classe `dmercado-num`, sentinela do atalho
+   `irParaAvaliacao` — o laudo de 1 toque nunca mais dispararia. Classe própria
+   (`dmercado-estimativa`).
+8. **(alta)** Tipo vinha de `ehAptoProvavel` (casa nunca ganhava estimativa; loja ganhava
+   estimativa de "casa"). Agora `tipoParaEstimativa` usa a detecção REAL de unidade
+   (`unitLabel`, a mesma da ficha) e usos sem índice ficam fora.
+9. **(média)** Corrida no card (reabrir rápido duplicava o bloco) — época + sentinela.
+10. **(média)** Variação % usava `max(de, para)` no denominador e subestimava toda
+    subida — agora é sobre o preço anterior (400→500 mil = +25%).
+11. **(baixa)** O card agora declara a ÁREA usada no cálculo ("sobre 84 m² privativos
+    (informados)").
+
 ## O que fica para a sequência (não nesta fatia)
 
 - Extração da PÁGINA do anúncio (hoje o preço vem do snippet da busca — a página traz

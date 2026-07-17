@@ -43,6 +43,19 @@ test("número no MEIO do slug (área, preço parcelado) não vira id", () => {
   assert.equal(j.externalId, null);
 });
 
+test("revisão 17/07: CEP/telefone no FIM do slug de portal desconhecido NÃO vira id", () => {
+  // o pior erro possível: dois anúncios diferentes colidindo na mesma identidade
+  const cep1 = identidadeAnuncio("https://www.imobiliariagyn.com.br/casa-rua-t30-setor-bueno-74223010");
+  const cep2 = identidadeAnuncio("https://www.imobiliariagyn.com.br/sobrado-rua-t30-setor-bueno-74223010");
+  assert.equal(cep1.externalId, null, "CEP não é id");
+  assert.equal(cep2.externalId, null);
+  const tel = identidadeAnuncio("https://www.imobalfa.com.br/casa-jardim-europa-fone-6232241234");
+  assert.equal(tel.externalId, null, "telefone não é id");
+  // com marcador explícito, a cauda longa ainda ganha identidade
+  const ok = identidadeAnuncio("https://www.imobalfa.com.br/imovel/casa-jardim-europa-cod-88771");
+  assert.equal(ok.externalId, "88771");
+});
+
 test("go.olx e www.olx são o MESMO portal; URL canônica descarta rastreio", () => {
   assert.equal(portalRaiz("go.olx.com.br"), "olx.com.br");
   assert.equal(portalRaiz("www.olx.com.br"), "olx.com.br");
@@ -50,6 +63,14 @@ test("go.olx e www.olx são o MESMO portal; URL canônica descarta rastreio", ()
   const i = identidadeAnuncio("https://go.olx.com.br/goiania/imoveis/casa-1367774783?utm_source=x&ref=busca#foto");
   assert.equal(i.urlCanonica, "https://go.olx.com.br/goiania/imoveis/casa-1367774783");
   assert.equal(i.portalRaiz, "olx.com.br");
+});
+
+test("revisão 17/07: portal DESCONHECIDO não colapsa por sufixo — o host é o portal", () => {
+  // sufixos públicos (.srv.br) e plataformas multi-tenant não podem unir sites distintos
+  assert.equal(portalRaiz("imobalfa.srv.br"), "imobalfa.srv.br");
+  assert.equal(portalRaiz("imobbeta.srv.br"), "imobbeta.srv.br");
+  assert.equal(portalRaiz("agenciax.tecimob.com.br"), "agenciax.tecimob.com.br");
+  assert.equal(portalRaiz("www.imobiliariagyn.com.br"), "imobiliariagyn.com.br", "www ainda cai");
 });
 
 test("URL inválida não derruba a ingestão — devolve identidade vazia", () => {

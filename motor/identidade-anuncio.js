@@ -16,19 +16,26 @@ const PADROES_PORTAL = [
   { host: /(^|\.)wimoveis\.com\.br$/, re: /-(\d{7,})\.html(?:[?#]|$)/ },
   { host: /(^|\.)chavesnamao\.com\.br$/, re: /\bid[-/](\d{5,})(?:[/?#]|$)|-(\d{6,})(?:[/?#]|$)/ },
 ];
-/* fallback para os portais de cauda longa: id explícito ("id-123…") ou slug que
-   TERMINA num número longo — nunca um número no meio do texto (área, preço, CEP) */
+/* fallback para os portais de cauda longa: SÓ id com marcador explícito ("id-123…",
+   "cod-123", "ref-123"). Revisão adversarial de 17/07 derrubou o padrão "slug que
+   termina em número": CEP (8 díg.), telefone com DDD (10-11) e data AAAAMMDD no fim
+   do slug virariam "id" e dois anúncios DIFERENTES colidiriam na mesma identidade —
+   a mesma família do bug original. Menos cobertura na cauda longa é o preço certo. */
 const PADROES_GENERICOS = [
-  /\bid[-=/](\d{5,})(?:[/?#]|$)/i,
-  /-(\d{7,})(?:\.html)?(?:[/?#]|$)/,
+  /\b(?:id|cod|codigo|ref)[-=/](\d{5,})(?:[/?#]|$)/i,
 ];
 
-/* domínio registrável: go.olx.com.br e www.olx.com.br são o MESMO portal */
+/* identidade de portal: para os portais CONHECIDOS, o domínio registrável unifica os
+   subdomínios (go.olx = www.olx). Para o resto, o host inteiro (sem www.) É o portal —
+   colapsar sufixos públicos (.srv.br) ou plataformas multi-tenant (uma imobiliária por
+   subdomínio) uniria sites diferentes num só "portal" (revisão adversarial 17/07). */
 const SUFIXOS_COMPOSTOS = /\.(com|net|org|imb|goiania)\.br$/;
 export function portalRaiz(host) {
   const h = String(host || "").toLowerCase().replace(/^www\./, "");
+  const conhecido = PADROES_PORTAL.some(p => p.host.test(h));
+  if (!conhecido) return h;
   const partes = h.split(".");
-  const n = SUFIXOS_COMPOSTOS.test(h) ? 3 : 2; /* olx.com.br = 3 rótulos; loft.com.br idem */
+  const n = SUFIXOS_COMPOSTOS.test(h) ? 3 : 2; /* olx.com.br = 3 rótulos */
   return partes.slice(-Math.min(n, partes.length)).join(".");
 }
 
