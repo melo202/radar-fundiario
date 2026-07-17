@@ -56,16 +56,41 @@ test("amostra profissional: bairro diferente nunca entra automaticamente no valo
 test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e não o acervo estático", () => {
   /* pedido do usuário (15/07): "quando eu clicar em analisar tem que disparar e procurar nos sites" */
   assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/mercado"/);
-  assert.ok(html.includes("AbortSignal.timeout(120000)"), "timeout largo p/ a coleta ao vivo");
-  assert.ok(html.includes("Procurando anúncios semelhantes na OLX, Zap Imóveis, Viva Real"));
+  assert.ok(html.includes("AbortSignal.timeout(180000)"), "timeout largo p/ a pesquisa progressiva");
+  assert.ok(html.includes("Procurando ofertas no bairro em vários portais"));
   const srv = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
   assert.ok(srv.includes('req.url === "/motor/mercado"'));
   assert.ok(srv.includes('estourou(req, 4, "mercado")'), "rate limit protege a cota Brave");
   const ao = readFileSync(new URL("../motor/mercado-aovivo.js", import.meta.url), "utf-8");
-  assert.ok(ao.includes('PORTAIS_AOVIVO = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"]'));
-  assert.ok(ao.includes("CACHE_H = 6"), "cache de 6h por bairro protege a cota global");
-  assert.ok(ao.includes("maxExtrair: restante"), "extração limitada p/ o clique não travar");
-  assert.ok(ao.includes("TETO_EXTRACAO = 5"), "teto otimizado (15/07): o clique não espera mais que o necessário");
+  assert.ok(ao.includes('PORTAIS_PRINCIPAIS = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"]'));
+  assert.ok(ao.includes('PORTAIS_APROFUNDADOS = ["62imoveis.com.br", "imovelweb.com.br", "chavesnamao.com.br", "wimoveis.com.br"]'));
+  assert.ok(ao.includes("CACHE_H = 6"), "cache de 6h por perfil protege a cota global");
+  assert.ok(ao.includes("faixaArea") && ao.includes("quartos"), "cache distingue área e quartos");
+  assert.ok(ao.includes("persist: false"), "prévia determinística decide se a busca precisa aprofundar");
+  assert.ok(ao.includes('previa.status === "amostra_insuficiente"'));
+  assert.ok(ao.includes("TETO_EXTRACAO_TOTAL = 18"), "pesquisa profunda continua com teto explícito");
+  assert.ok(ao.includes("TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao"), "falha de extração também consome o teto de IA");
+  const ing = readFileSync(new URL("../motor/ingerir.js", import.meta.url), "utf-8");
+  assert.ok(ing.includes("stats.tentativasExtracao >= maxExtrair"), "página ruim não cria chamadas ilimitadas");
+  assert.ok(ao.includes('"mercado-aovivo-falhou"'), "falha total não envenena o cache por seis horas");
+  assert.ok(ao.includes('modo: ingestao.aprofundou ? "aprofundada" : "direta"'));
+});
+
+test("amostra pequena: bloqueia o preço, mas salva e entrega relatório auditável", () => {
+  const av = readFileSync(new URL("../motor/avaliacao.js", import.meta.url), "utf-8");
+  const doc = readFileSync(new URL("../motor/documento.js", import.meta.url), "utf-8");
+  const os = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  assert.ok(av.includes("amostra insuficiente impede o NÚMERO, nunca o RELATÓRIO"));
+  assert.ok(av.includes("VALUES ($1,'amostra_insuficiente'"), "investigação insuficiente vira versão persistida");
+  assert.ok(av.includes('finalidade: "evidencia_preliminar_sem_calculo"'));
+  assert.ok(doc.includes("Relatório de pesquisa de mercado"));
+  assert.ok(doc.includes("Este relatório não ficou em branco."));
+  assert.ok(doc.includes("nenhum preço foi estimado ou inventado"));
+  assert.ok(html.includes("Abrir relatório da pesquisa"));
+  assert.ok(html.includes('if(m.d.status==="amostra_insuficiente")'), "laudo do mapa não tenta imprimir valores inexistentes");
+  assert.ok(html.includes("Por isso nenhum valor, faixa ou confiança foi estimado"));
+  assert.ok(os.includes("Pesquisa concluída. Seu relatório está pronto."));
+  assert.ok(os.includes("Abrir relatório da pesquisa"));
 });
 
 test("links e mapa na avaliação: comparáveis clicáveis, atalhos de portal e recorte do mapa", () => {
@@ -84,7 +109,7 @@ test("avaliação a 1 toque: ação principal do dossiê leva ao card e dispara 
   assert.match(html, /onclick="irParaAvaliacao\(\)">Avaliação de mercado<\/button>/);
   assert.match(html, /function irParaAvaliacao\(\)[\s\S]{0,400}setDossierView\('territorio'\)[\s\S]{0,400}analisarMercado\(\)/);
   /* não dispara em cima de análise em andamento nem refaz a já feita */
-  assert.ok(html.includes("!bt.disabled&&!body.querySelector('.dmercado-num')"));
+  assert.ok(html.includes("!bt.disabled&&!body.querySelector('.dmercado-num,.dmercado-pesquisa-pronta')"));
   /* Analisar vizinhança continua existindo, agora em Ferramentas */
   assert.match(html, /onclick="setDossierView\('territorio'\);compare\(\)"[^>]*>Analisar vizinhança<\/button>/);
 });

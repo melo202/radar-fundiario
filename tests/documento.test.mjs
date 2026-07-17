@@ -56,3 +56,13 @@ test("§24: card Mercado e painel de revisão apontam para o documento", () => {
   assert.ok(app.includes("/motor/avaliacoes/${esc(d.id)}/documento"));
   assert.ok(painel.includes("Abrir o documento da avaliação →"));
 });
+
+test("§24: pouca amostra gera relatório de investigação, nunca tela morta", () => {
+  assert.ok(doc.includes('v.status === "amostra_insuficiente"'));
+  assert.ok(doc.includes("Relatório de pesquisa de mercado"));
+  assert.ok(doc.includes("Evidências compatíveis encontradas"));
+  assert.ok(doc.includes("Funil da pesquisa — nada some sem explicação"));
+  assert.ok(doc.includes("Contexto regional — fora do cálculo"));
+  assert.ok(doc.includes("Próxima ação recomendada"));
+  assert.ok(doc.includes("Não calculado"));
+});

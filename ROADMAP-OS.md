@@ -16,7 +16,7 @@ privada single-user.
 | Captura por texto e voz | **Pronto na alpha** | Voz ainda exige teste físico em Chrome/Android, inclusive em ambiente de rua. |
 | Carteira + filtros + dossiê | **Pronto na alpha** | Geral, Comercial e Histórico funcionam; Arquivos ainda é estado vazio. |
 | Funil + WhatsApp assistido | **Pronto na alpha** | Mensagem é preparada, mas envio e confirmação continuam humanos. |
-| Referência de mercado | **Pronto com política v2** | Mesmo bairro, área 75%–133%, até 1 quarto de diferença e mínimo de 5 ofertas. |
+| Referência de mercado | **Política v3 em validação** | Busca progressiva por perfil; relatório sempre existe. Com menos de 5 ofertas compatíveis, não calcula preço, mas entrega fontes, evidências, exclusões e próxima ação. |
 | Mapa territorial | **Pronto, ainda separado** | Navegação de volta corrigida; dados locais do Mapa ainda não viram carteira automaticamente. |
 | Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
 | Kimi K3 + Hermes | **Parcial e seguro** | Chat geral funciona com contexto selecionado; ainda não há catálogo completo de ferramentas imobiliárias nem UI de sessões por objeto. |
@@ -30,7 +30,8 @@ privada single-user.
 ### Ordem executiva vigente
 
 1. **P0 — confiança e continuidade:** corrigir bugs do caminho principal, impedir
-   resultados contaminados e manter Mapa ↔ Escritório sem becos sem saída.
+   resultados contaminados, manter Mapa ↔ Escritório sem becos sem saída e garantir
+   que toda pesquisa de mercado termine em relatório útil, mesmo sem amostra para preço.
 2. **P1 — agente realmente imobiliário:** sessões por imóvel/cliente e ferramentas
    somente leitura (`meu_dia`, `buscar_imovel`, `abrir_dossie`, `buscar_cliente`,
    `buscar_comparaveis`, `avaliar_imovel`, `consultar_entorno`).
@@ -42,6 +43,20 @@ privada single-user.
    Kimi apenas para leitura conjunta; depois preparação e registro de visita.
 6. **P5 — prova de valor:** relatórios ao proprietário, consumo pessoal de IA e dados
    de lançamentos com licença, fonte e atualização definidas.
+
+### Regra P0 — pesquisa nunca termina em beco sem saída
+
+- A busca é progressiva: portais principais primeiro; fontes locais/adicionais somente
+  quando a amostra profissional permanece abaixo do mínimo.
+- O cache considera bairro, tipo, faixa de área e quartos; um imóvel pequeno não herda
+  silenciosamente a busca de outro perfil.
+- Com 5 ou mais comparáveis válidos, sai a referência de preço auditável.
+- Com 0 a 4, sai um **Relatório de pesquisa de mercado** sem preço: fontes consultadas,
+  ofertas compatíveis, motivos de exclusão, contexto regional fora do cálculo e próxima ação.
+- “Venda” na interface deve ser entendida como imóvel anunciado à venda. Transação
+  efetivamente fechada só poderá ser afirmada quando houver fonte transacional licenciada.
+- Kimi/Hermes não decide comparabilidade nem número. IA pode ler/extrair e, sob demanda,
+  redigir sobre fatos já calculados; filtros e decisão de suficiência são determinísticos.
 
 ## 1. Veredito
 

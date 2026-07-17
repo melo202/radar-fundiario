@@ -48,6 +48,7 @@ export async function documentoDaAvaliacao(id) {
     "SELECT id, subject, status, result, version, parent_id, created_by, created_at FROM valuations WHERE id=$1", [id]);
   if (!q.rowCount) return null;
   const v = q.rows[0], r = v.result || {}, s = v.subject || {}, amostra = r.sample || {};
+  const insuficiente = v.status === "amostra_insuficiente";
   const comps = await pool.query(
     `SELECT vc.total_score, vc.accepted, vc.is_outlier, vc.rejection_reasons, vc.manual_change,
             p.characteristics, p.pricing, p.neighborhood, l.portal, l.url,
@@ -63,6 +64,7 @@ export async function documentoDaAvaliacao(id) {
   const parecer = r.parecer && r.parecer.texto ? r.parecer : null;
   const periodo = amostra.ofertasColetadasEntre;
   const loc = r.localizacao;
+  const pesquisa = r.pesquisa || {};
 
   const linhas = aceitos.map((c, i) => {
     const ch = c.characteristics || {}, pr = c.pricing || {};
@@ -86,6 +88,11 @@ export async function documentoDaAvaliacao(id) {
     return `<li><a href="${esc(c.url)}" rel="noopener">${esc(c.portal)}</a> — ${razao}</li>`;
   }).join("");
 
+  const linhasRegionais = (r.contextoRegional || []).map(c => `<tr><td><a href="${esc(c.url)}" rel="noopener">${esc(c.portal)}</a></td>
+    <td>${esc(c.bairro || "—")}</td><td>${c.area ?? "—"} m²</td><td>${c.quartos ?? "—"}</td>
+    <td>${brl(c.preco)}</td><td>${c.pm2 ? brl(c.pm2) : "—"}/m²</td>
+    <td>${c.distanciaM != null ? distTx(c.distanciaM) : "—"}</td></tr>`).join("");
+
   const funil = [
     ["Ofertas do tipo no acervo", amostra.totalFound],
     ["Fora do bairro", amostra.foraDoBairro], ["Sem área informada", amostra.semArea],
@@ -93,7 +100,7 @@ export async function documentoDaAvaliacao(id) {
     ["Duplicadas entre portais (agrupadas)", amostra.duplicadosAgrupados],
     ["Fora da curva (Tukey)", amostra.totalOutliers],
     ["Excluídas pelo corretor", amostra.excluidosManual],
-    ["<b>Aceitas no cálculo</b>", `<b>${amostra.totalAccepted ?? "—"}</b>`],
+    [insuficiente ? "<b>Compatíveis encontradas</b>" : "<b>Aceitas no cálculo</b>", `<b>${amostra.totalAccepted ?? amostra.aposDedup ?? "—"}</b>`],
   ].filter(([, n]) => n !== undefined && n !== 0 && n !== null || String(n).includes("<b>"))
     .map(([rot, n]) => `<tr><td>${rot}</td><td class="td-num">${n}</td></tr>`).join("");
 
@@ -107,7 +114,7 @@ export async function documentoDaAvaliacao(id) {
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
-<title>Análise Comparativa de Mercado · Corretor Inteligente</title>
+<title>${insuficiente ? "Relatório de pesquisa de mercado" : "Análise Comparativa de Mercado"} · Corretor Inteligente</title>
 <style>
   :root{color-scheme:light}
   *{box-sizing:border-box;margin:0}
@@ -153,7 +160,7 @@ export async function documentoDaAvaliacao(id) {
 <div class="capa">
   <div>
     <img src="https://corretorinteligente.tech/marca/corretorinteligente_logo_branca.svg" alt="Corretor Inteligente">
-    <div class="oq">Análise Comparativa de Mercado</div>
+    <div class="oq">${insuficiente ? "Relatório de pesquisa de mercado" : "Análise Comparativa de Mercado"}</div>
     <h1>${esc(s.propertyType || "Imóvel")} · ${esc(s.neighborhood || "Goiânia")}</h1>
     <div class="im">${s.areaM2 ? `${s.areaM2} m² de área` : ""}${s.bedrooms ? ` · ${s.bedrooms} quarto(s)` : ""} · Goiânia, GO</div>
   </div>
@@ -187,6 +194,40 @@ ${linhasFora ? `<h2>Fora do cálculo — com a razão registrada (${fora.length}
 
 ${parecer ? `<h2>Parecer da análise</h2><div class="parecer">${esc(parecer.texto)}</div>
 <p class="mini">Parecer redigido por IA sobre o resultado calculado; os valores do texto são conferidos automaticamente contra o resultado.</p>` : ""}
+
+<h2>Metodologia, premissas e limites</h2>
+<ul>${(r.methods || []).map(m => `<li>${esc(m)}</li>`).join("")}${(r.assumptions || []).map(a => `<li>${esc(a)}</li>`).join("")}${(r.warnings || []).map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+` : insuficiente ? `
+<div class="hero">
+  <div class="hv menor"><span>Situação da pesquisa</span><b>Relatório concluído</b></div>
+  <div class="hv menor"><span>Ofertas compatíveis no bairro</span><b>${amostra.aposDedup ?? amostra.totalAccepted ?? 0} de ${amostra.minimoParaCalcular ?? 5} necessárias</b></div>
+  <div class="hv menor"><span>Valor estimado</span><b>Não calculado</b></div>
+</div>
+<div class="honesto" style="margin-top:18px"><b>Este relatório não ficou em branco.</b> A pesquisa foi concluída e as evidências estão registradas abaixo. Como a quantidade mínima de ofertas comparáveis não foi atingida, nenhum preço foi estimado ou inventado.</div>
+
+<h2>Como a pesquisa foi feita</h2>
+<p>${pesquisa.modo === "aprofundada" ? "A busca começou nos portais principais e foi aprofundada em fontes adicionais porque a primeira amostra era pequena." : pesquisa.modo === "cache-recente" ? "Foi usada a coleta recente deste mesmo perfil de imóvel, ainda dentro do prazo de atualização." : "A busca consultou fontes públicas de anúncios e aplicou os filtros profissionais."}</p>
+${Array.isArray(pesquisa.fontesConsultadas) && pesquisa.fontesConsultadas.length ? `<p class="mini"><b>Fontes consultadas:</b> ${pesquisa.fontesConsultadas.map(esc).join(" · ")}.</p>` : ""}
+${pesquisa.consultas != null ? `<p class="mini">${pesquisa.consultas} consulta(s) ao índice público · ${pesquisa.resultadosDoBuscador ?? 0} resultado(s) localizado(s) · ${pesquisa.anunciosNovos ?? 0} anúncio(s) novo(s) incorporado(s).</p>` : ""}
+
+<h2>Evidências compatíveis encontradas (${aceitos.length})</h2>
+${aceitos.length ? `<table><tr><th></th><th>Fonte</th><th>Bairro</th><th>Área</th><th>Quartos</th><th>Preço anunciado</th><th>R$/m²</th><th></th></tr>${linhas}</table>
+<p class="mini">Estas ofertas passaram pelos filtros individuais, mas não formam uma amostra grande o suficiente para gerar preço, faixa ou confiança.${periodo ? ` Coletadas entre ${dataBR(periodo.de)} e ${dataBR(periodo.ate)}.` : ""}</p>` : `<p>Nenhuma oferta passou por todos os filtros de bairro, tipo, área e quartos. Isso é uma conclusão útil da pesquisa — não autorização para ampliar o bairro automaticamente.</p>`}
+
+<h2>Funil da pesquisa — nada some sem explicação</h2>
+<table>${funil}</table>
+
+${linhasRegionais ? `<h2>Contexto regional — fora do cálculo (${(r.contextoRegional || []).length})</h2>
+<table><tr><th>Fonte</th><th>Bairro</th><th>Área</th><th>Quartos</th><th>Preço anunciado</th><th>R$/m²</th><th>Distância</th></tr>${linhasRegionais}</table>
+<p class="mini">Bairros diferentes servem somente para orientar a próxima pesquisa. Não geraram preço, faixa nem confiança.</p>` : ""}
+
+<h2>Próxima ação recomendada</h2>
+<ul>
+  <li>Confirmar se bairro, tipo, área privativa e quantidade de quartos do imóvel estão corretos.</li>
+  <li>Abrir as fontes acima e verificar se os anúncios continuam ativos.</li>
+  <li>Complementar com evidências autorizadas de imobiliárias locais ou dados de transações, quando disponíveis.</li>
+  <li>Refazer a pesquisa após nova coleta; o sistema manterá esta versão para comparação.</li>
+</ul>
 
 <h2>Metodologia, premissas e limites</h2>
 <ul>${(r.methods || []).map(m => `<li>${esc(m)}</li>`).join("")}${(r.assumptions || []).map(a => `<li>${esc(a)}</li>`).join("")}${(r.warnings || []).map(w => `<li>${esc(w)}</li>`).join("")}</ul>

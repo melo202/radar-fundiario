@@ -117,15 +117,65 @@ export async function avaliar(subject, opts = {}) {
       motivoExclusao: "bairro diferente — contexto regional, fora do cálculo" }));
 
   if (principais.length < COMPARABLE_POLICY.minimum) {
-    /* §12: amostra insuficiente é INFORMADA, nunca maquiada */
-    return { status: "amostra_insuficiente",
-      sample: { totalFound, noBairro: noBairroSozinho, aposDedup: principais.length,
+    /* §12/P0: amostra insuficiente impede o NÚMERO, nunca o RELATÓRIO. A investigação
+       vira uma avaliação versionada com as evidências encontradas, fontes e funil.
+       Assim o corretor sempre recebe trabalho útil sem o motor inventar preço. */
+    const datasPreliminares = principais.map(c => new Date(c.collectedAt).getTime()).filter(t => isFinite(t));
+    const ofertasColetadasEntre = datasPreliminares.length
+      ? { de: new Date(Math.min(...datasPreliminares)).toISOString().slice(0, 10),
+          ate: new Date(Math.max(...datasPreliminares)).toISOString().slice(0, 10) }
+      : null;
+    const sample = { totalFound, noBairro: noBairroSozinho, aposDedup: principais.length,
+        totalAccepted: principais.length, duplicadosAgrupados: duplicados.length,
         minimoParaCalcular: COMPARABLE_POLICY.minimum, idealPlano: COMPARABLE_POLICY.ideal,
         foraDoBairro, foraDaFaixaDeArea, quartosIncompativeis, semArea, excluidosManual,
-        politicaComparacao: "mesmo bairro; área entre 75% e 133%; diferença máxima de 1 quarto quando informado" },
+        ofertasColetadasEntre,
+        politicaComparacao: "mesmo bairro; área entre 75% e 133%; diferença máxima de 1 quarto quando informado" };
+    const assumptions = [
+      "As evidências são preços de OFERTA anunciados publicamente — não são transações fechadas.",
+      "Nenhum valor foi estimado porque a quantidade mínima de comparáveis não foi atingida.",
+      "Ofertas de bairros diferentes são excluídas do valor e aparecem apenas como contexto regional.",
+    ];
+    const warnings = ["Amostra insuficiente no mesmo bairro — nenhum valor foi calculado.",
+      ...(contextoRegional.length ? [`${contextoRegional.length} oferta(s) próxima(s) de outros bairros aparecem somente como contexto e estão fora do cálculo.`] : [])];
+    const result = {
+      policyVersion: "same-neighborhood-v3-report-always",
+      sample, contextoRegional,
+      pesquisa: opts.searchSummary || null,
+      methods: ["pesquisa em índice público de anúncios", "preço/m² somente com ofertas do mesmo bairro normalizado",
+        "faixa de área estrita (75%–133% do imóvel)", "diferença máxima de 1 quarto quando o dado existe",
+        "deduplicação multi-sinal entre portais"],
+      assumptions, warnings,
+    };
+    const retorno = { status: "amostra_insuficiente", subject, result, sample,
       contextoRegional,
-      warnings: ["Amostra insuficiente no mesmo bairro — nenhum valor foi calculado.",
-        ...(contextoRegional.length ? [`${contextoRegional.length} oferta(s) próxima(s) de outros bairros aparecem somente como contexto e estão fora do cálculo.`] : [])] };
+      comparaveis: principais.map(c => ({ portal: c.portal, url: c.url, area: c.area,
+        quartos: c.bedrooms, preco: c.price, pm2: Math.round(c.pm2), bairro: c.bairro,
+        lat: c.lat, lon: c.lon, distanciaM: c.distanciaM, locConfidence: c.locConfidence })),
+      warnings };
+    if (opts.persist === false) return retorno;
+
+    let versao = 1;
+    if (opts.parentId) {
+      const pai = await pool.query("SELECT version FROM valuations WHERE id=$1", [opts.parentId]);
+      versao = (pai.rows[0]?.version || 0) + 1;
+    }
+    if (opts.notaRevisao) {
+      result.assumptions = [...result.assumptions, opts.notaRevisao];
+      retorno.result = result;
+    }
+    const val = await pool.query(
+      `INSERT INTO valuations (subject, status, result, assumptions, parent_id, created_by, version)
+       VALUES ($1,'amostra_insuficiente',$2,$3,$4,$5,$6) RETURNING id, created_at`,
+      [JSON.stringify(subject), JSON.stringify(result), JSON.stringify(result.assumptions),
+        opts.parentId || null, opts.createdBy || null, versao]);
+    const valId = val.rows[0].id;
+    for (const c of principais) await pool.query(
+      `INSERT INTO valuation_comparables (valuation_id, property_id, factors, accepted, is_outlier, warnings)
+       VALUES ($1,$2,$3,true,false,$4)`, [valId, c.id,
+        JSON.stringify({ finalidade: "evidencia_preliminar_sem_calculo" }),
+        JSON.stringify(["Amostra global abaixo do mínimo; esta oferta não gerou estimativa."])]);
+    return { id: valId, ...retorno };
   }
 
   /* §9: outliers de pm² pela cerca de Tukey — marcados e explicados */
@@ -156,7 +206,7 @@ export async function avaliar(subject, opts = {}) {
     : null;
 
   const result = {
-    policyVersion: "same-neighborhood-v2",
+    policyVersion: "same-neighborhood-v3-report-always",
     estimatedValue: Math.round(pm2Ponderado * areaM2),
     estimatedPricePerM2: Math.round(pm2Ponderado),
     medianPricePerM2: Math.round(rValidos.mediana),
@@ -175,6 +225,7 @@ export async function avaliar(subject, opts = {}) {
     warnings: [
       ...(validos.length < 10 ? ["Amostra abaixo do ideal do plano (10+): use como referência preliminar."] : []),
     ],
+    pesquisa: opts.searchSummary || null,
   };
 
   /* Cruzamento com a LOCALIZAÇÃO (pedido do usuário 15/07 + §10 do plano): quando o
@@ -221,6 +272,13 @@ export async function avaliar(subject, opts = {}) {
      Revisão do corretor (§14) encadeia por parent_id e a nota entra nas assumptions —
      o parecer e o laudo passam a DECLARAR que houve revisão humana. */
   if (opts.notaRevisao) result.assumptions = [...result.assumptions, opts.notaRevisao];
+  const retorno = { status: "calculada", subject, result,
+    comparaveis: pesos.map(p => ({ portal: p.c.portal, url: p.c.url, area: p.c.area, quartos: p.c.bedrooms,
+      preco: p.c.price, pm2: Math.round(p.c.pm2), peso: Math.round(p.peso * 100) / 100,
+      bairro: p.c.bairro,
+      lat: p.c.lat, lon: p.c.lon, distanciaM: p.c.distanciaM, locConfidence: p.c.locConfidence })),
+    outliers: outliers.map(o => ({ portal: o.portal, url: o.url, pm2: Math.round(o.pm2), razao: o.razaoOutlier })) };
+  if (opts.persist === false) return retorno;
   let versao = 1;
   if (opts.parentId) {
     const pai = await pool.query("SELECT version FROM valuations WHERE id=$1", [opts.parentId]);
@@ -239,10 +297,5 @@ export async function avaliar(subject, opts = {}) {
     `INSERT INTO valuation_comparables (valuation_id, property_id, accepted, is_outlier, rejection_reasons)
      VALUES ($1,$2,false,true,$3)`, [valId, o.id, JSON.stringify([o.razaoOutlier])]);
 
-  return { id: valId, status: "calculada", subject, result,
-    comparaveis: pesos.map(p => ({ portal: p.c.portal, url: p.c.url, area: p.c.area, quartos: p.c.bedrooms,
-      preco: p.c.price, pm2: Math.round(p.c.pm2), peso: Math.round(p.peso * 100) / 100,
-      bairro: p.c.bairro,
-      lat: p.c.lat, lon: p.c.lon, distanciaM: p.c.distanciaM, locConfidence: p.c.locConfidence })),
-    outliers: outliers.map(o => ({ portal: o.portal, url: o.url, pm2: Math.round(o.pm2), razao: o.razaoOutlier })) };
+  return { id: valId, ...retorno };
 }

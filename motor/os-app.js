@@ -223,19 +223,30 @@ function mercadoAcao(p,ch){
 }
 async function buscarMercadoRef(btn){
   const p=state.property.data.property,ch=p.characteristics||{};
-  btn.disabled=true;btn.textContent="Buscando nos portais… (até 2 min)";
+  btn.disabled=true;btn.textContent="Pesquisando a fundo… isso pode levar até 3 min";
   try{
-    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2),bedrooms:ch.bedrooms!=null?Number(ch.bedrooms):null}),signal:AbortSignal.timeout(120000)});
+    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2),bedrooms:ch.bedrooms!=null?Number(ch.bedrooms):null}),signal:AbortSignal.timeout(180000)});
     const d=await r.json();if(!r.ok)throw new Error(d.erro||"busca indisponível agora");
     state.property.mercado=d;renderMercado(d);
-  }catch(e){btn.disabled=false;btn.textContent="Buscar referência agora";toast(e.message);}
+  }catch(e){toast(e.message);}
+  finally{btn.disabled=false;btn.textContent=state.property.mercado?"Pesquisar novamente":"Buscar referência agora";}
 }
 function renderMercado(d){
   const card=$("mercadoCard");if(!card)return;
-  if(d.status==="amostra_insuficiente"){card.append(el("div",{class:"market-safety"},[el("strong",{text:"Sem base segura para calcular"}),el("p",{text:`${d.sample?.aposDedup??0} oferta(s) do mesmo bairro passaram pelos filtros; o mínimo é ${d.sample?.minimoParaCalcular??5}. Ofertas de outros bairros não entram no valor.`})]));return;}
+  card.querySelectorAll(".market-result").forEach(n=>n.remove());
+  if(d.status==="amostra_insuficiente"){
+    const n=d.sample?.aposDedup??0,min=d.sample?.minimoParaCalcular??5;
+    const fontes=d.aoVivo?.portais||d.result?.pesquisa?.fontesConsultadas?.length||0;
+    const box=el("div",{class:"market-safety market-result"},[
+      el("strong",{text:"Pesquisa concluída. Seu relatório está pronto."}),
+      el("p",{text:`Pesquisamos${fontes?` em ${fontes} fonte(s)`:" a fundo"} e encontramos ${n} oferta(s) compatível(is) no mesmo bairro.`}),
+      el("p",{text:`Para calcular um preço com segurança são necessárias pelo menos ${min}. Por isso nenhum valor foi inventado — mas todas as evidências e exclusões estão no relatório.`}),
+      d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório da pesquisa"}):null,
+    ]);
+    card.append(box);return;
+  }
   const r=d.result;if(!r)return;
-  card.querySelector(".mercado-num")?.remove();
-  card.append(el("div",{class:"mercado-num"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."})]));
+  card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]));
 }
 async function saveProperty(form,btn){
   btn.disabled=true;btn.textContent="Salvando…";

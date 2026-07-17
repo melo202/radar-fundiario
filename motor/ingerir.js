@@ -19,11 +19,13 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
     if (p > 0) await dormir(1200); /* Brave free = 1 req/s */
     achados.push(...await buscarWeb(consulta, { offset: p }));
   }
-  const stats = { consulta, encontrados: achados.length, novos: 0, jaConhecidos: 0, extraidos: 0, falhasExtracao: 0, comparaveis: 0, catalogos: 0 };
+  const stats = { consulta, encontrados: achados.length, novos: 0, jaConhecidos: 0,
+    tentativasExtracao: 0, extraidos: 0, falhasExtracao: 0, comparaveis: 0, catalogos: 0 };
   for (const a of achados) {
     /* modo ao vivo: extrai só até o teto (evita 30 anúncios × 18s no clique); o resto
-       vira listing conhecido e a varredura noturna completa a extração sem pressa */
-    if (stats.extraidos >= maxExtrair) break;
+       fica para a varredura noturna. O teto conta TENTATIVAS, inclusive falhas — uma
+       página ruim nunca pode transformar o limite em chamadas ilimitadas de IA. */
+    if (stats.tentativasExtracao >= maxExtrair) break;
     const hash = sha(a.titulo + "\n" + a.descricao);
     /* identidade canônica (17/07): o id que o portal dá ao anúncio na URL — é ela,
        nunca a URL bruta, que ancora histórico de preço e dedup entre subdomínios */
@@ -37,6 +39,7 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
     const { id, novo } = ins.rows[0];
     if (!novo) { stats.jaConhecidos++; continue; }
     stats.novos++;
+    stats.tentativasExtracao++;
     /* A1 (atualização contínua): o MESMO anúncio (portal + id) reaparecendo com conteúdo
        novo = mudou desde a última varredura. A coleta anterior só conta se foi um
        comparável de verdade (peneira §6) — página-catálogo não tem "preço anterior";
