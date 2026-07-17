@@ -19,6 +19,21 @@ echo
 [[ "$KIMI_KEY" =~ ^[A-Za-z0-9_-]{20,}$ ]] || fail "a chave não parece válida"
 
 CHECK=$(mktemp)
+BASE_HTTP=$(curl -sS -o "$CHECK" -w '%{http_code}' \
+  -H "Authorization: Bearer $KIMI_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'User-Agent: Hermes-Agent/0.18.2' \
+  -d '{"model":"kimi-for-coding","messages":[{"role":"user","content":"Responda somente OK"}],"max_tokens":16}' \
+  https://api.kimi.com/coding/v1/chat/completions || true)
+if [[ "$BASE_HTTP" != 200 ]]; then
+  echo "A Kimi rejeitou a chave inclusive no modelo básico (HTTP $BASE_HTTP):" >&2
+  sed -E 's/sk-[A-Za-z0-9_-]+/[CHAVE-OCULTA]/g' "$CHECK" | head -c 800 >&2 || true
+  echo >&2
+  rm -f "$CHECK"
+  unset KIMI_KEY
+  fail "use uma chave criada no Kimi Code Console da mesma conta da assinatura"
+fi
+
 HTTP=$(curl -sS -o "$CHECK" -w '%{http_code}' \
   -H "Authorization: Bearer $KIMI_KEY" \
   -H 'Content-Type: application/json' \
@@ -26,12 +41,12 @@ HTTP=$(curl -sS -o "$CHECK" -w '%{http_code}' \
   -d '{"model":"k3","messages":[{"role":"user","content":"Responda somente OK"}],"max_tokens":16}' \
   https://api.kimi.com/coding/v1/chat/completions || true)
 if [[ "$HTTP" != 200 ]]; then
-  echo "A Kimi rejeitou a chave (HTTP $HTTP):" >&2
+  echo "A chave é válida, mas a conta não autorizou o Kimi K3 (HTTP $HTTP):" >&2
   sed -E 's/sk-[A-Za-z0-9_-]+/[CHAVE-OCULTA]/g' "$CHECK" | head -c 800 >&2 || true
   echo >&2
   rm -f "$CHECK"
   unset KIMI_KEY
-  fail "o assistente continua no runtime local"
+  fail "confirme o plano Allegretto e a ativação dos benefícios do Kimi Code nessa mesma conta"
 fi
 rm -f "$CHECK"
 
