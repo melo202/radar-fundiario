@@ -48,12 +48,15 @@ test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada cen
   assert.ok(html.includes('id="openAssistant"'));
 });
 
-test("assistente: quatro ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
-  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente"]);
+test("assistente: sete ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
+  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno"]);
   assert.deepEqual(chooseReadOnlyTools("Quantos imóveis eu tenho?", { object_type: "general" }), ["consultar_meu_dia"]);
   assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["buscar_imovel"]);
   assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["buscar_cliente"]);
   assert.deepEqual(chooseReadOnlyTools("Analise as pendências deste imóvel", { object_type: "property" }), ["abrir_dossie"]);
+  assert.deepEqual(chooseReadOnlyTools("Critique os comparáveis e a avaliação", { object_type: "property" }), ["buscar_comparaveis", "abrir_avaliacao"]);
+  assert.deepEqual(chooseReadOnlyTools("O que existe no entorno?", { object_type: "property" }), ["consultar_entorno", "abrir_dossie"]);
+  assert.deepEqual(chooseReadOnlyTools("Leia esta avaliação", { object_type: "valuation" }), ["abrir_avaliacao"]);
   assert.deepEqual(chooseReadOnlyTools("O que sei sobre este cliente?", { object_type: "contact" }), ["buscar_cliente"]);
 });
 
@@ -69,4 +72,21 @@ test("assistente: sessão é reutilizada, validada contra a carteira e restaurá
   assert.ok(html.includes('id="assistantSessionSelect"'));
   assert.ok(app.includes("Perguntar ao assistente sobre este imóvel"));
   assert.ok(app.includes("Perguntar sobre esta pessoa"));
+});
+
+test("assistente P1-B: avaliação fica ligada ao imóvel e a busca ao vivo permanece autenticada", () => {
+  const os = readFileSync(new URL("../motor/os-core.js", import.meta.url), "utf-8");
+  const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  const tools = readFileSync(new URL("../motor/agent-tools.js", import.meta.url), "utf-8");
+  const migration = readFileSync(new URL("../motor/migrations/012-property-evidence.sql", import.meta.url), "utf-8");
+  assert.ok(migration.includes("latest_valuation_id uuid REFERENCES valuations(id)"));
+  assert.ok(os.includes("export async function pesquisarMercadoImovel"));
+  assert.ok(os.includes("latest_valuation_id=$1"));
+  assert.ok(os.includes("subject->>'inventoryPropertyId'=$2"));
+  assert.ok(!os.includes("lower(trim(subject->>'neighborhood'))"), "relatório nunca é aproximado por bairro/área");
+  assert.ok(panel.includes("/mercado$/.test(req.url)"));
+  assert.ok(app.includes("/mercado`,{method:\"POST\",body:\"{}\""));
+  assert.ok(app.includes("Pedir uma análise ao assistente"));
+  for (const name of ["buscarComparaveis", "abrirAvaliacao", "consultarEntorno"]) assert.ok(tools.includes(`function ${name}`));
+  assert.ok(tools.includes("OpenStreetMap processado localmente, sem ajuste de preço"));
 });

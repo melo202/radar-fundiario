@@ -258,6 +258,12 @@ export async function painel(req, res) {
     const r = await atualizarImovel(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
     return json(res, r.ok ? 200 : 400, r);
   }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/mercado$/.test(req.url)) {
+    /* P1-B: busca usa o imóvel autenticado e liga a avaliação versionada à carteira. */
+    const { pesquisarMercadoImovel } = await import("./os-core.js");
+    const r = await pesquisarMercadoImovel(req.url.split("/")[5]);
+    return json(res, r.ok ? 200 : 400, r);
+  }
   if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/oportunidade$/.test(req.url)) {
     const { criarOportunidade } = await import("./os-core.js");
     const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));

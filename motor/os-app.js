@@ -158,7 +158,7 @@ async function saveOpportunity(id,dados,btn){
 const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
 function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
 function openProperty(id){state.property={id,data:null,tab:"geral",mercado:null};switchView("property");loadProperty();}
-async function loadProperty(){const body=$("propBody");skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${state.property.id}`);state.property.data=data;renderPropHead();renderPropTab();}catch(e){errorCard(body,e);}}
+async function loadProperty(){const body=$("propBody");skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${state.property.id}`);state.property.data=data;if(!state.property.mercado&&data.latestValuation)state.property.mercado={...data.latestValuation,sample:data.latestValuation.result?.sample};renderPropHead();renderPropTab();}catch(e){errorCard(body,e);}}
 function renderPropHead(){const p=state.property.data.property;const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar ao assistente sobre este imóvel"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"}));$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}),ask);}
 function setTab(tab){state.property.tab=tab;document.querySelectorAll("#propTabs .tab").forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle("is-active",on);b.setAttribute("aria-selected",String(on));});renderPropTab();}
 function fieldCell(label,value){return el("div",{class:"field-cell"},[el("small",{text:label}),el("strong",{text:String(value)})]);}
@@ -215,8 +215,8 @@ function renderPropTab(){
   }
 }
 function mercadoAcao(p,ch){
-  const pronto=["apartamento","casa"].includes(p.property_type)&&p.neighborhood&&ch.areaM2>0;
-  if(!pronto){const faltas=[];if(!["apartamento","casa"].includes(p.property_type))faltas.push("referência disponível para apartamento e casa");if(!p.neighborhood)faltas.push("confirme o bairro");if(!(ch.areaM2>0))faltas.push("informe a área na Visão geral");return el("p",{class:"field-help",text:`Para buscar: ${faltas.join(" · ")}.`});}
+  const pronto=p.transaction_type==="venda"&&["apartamento","casa"].includes(p.property_type)&&p.neighborhood&&ch.areaM2>0;
+  if(!pronto){const faltas=[];if(p.transaction_type!=="venda")faltas.push("referência atual disponível apenas para venda");if(!["apartamento","casa"].includes(p.property_type))faltas.push("referência disponível para apartamento e casa");if(!p.neighborhood)faltas.push("confirme o bairro");if(!(ch.areaM2>0))faltas.push("informe a área na Visão geral");return el("p",{class:"field-help",text:`Para buscar: ${faltas.join(" · ")}.`});}
   const btn=el("button",{class:"card-action",type:"button",text:"Buscar referência agora"});
   btn.addEventListener("click",()=>buscarMercadoRef(btn));
   return btn;
@@ -225,11 +225,19 @@ async function buscarMercadoRef(btn){
   const p=state.property.data.property,ch=p.characteristics||{};
   btn.disabled=true;btn.textContent="Pesquisando a fundo… isso pode levar até 3 min";
   try{
-    const r=await fetch("/motor/mercado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({propertyType:p.property_type,neighborhood:p.neighborhood,areaM2:Number(ch.areaM2),bedrooms:ch.bedrooms!=null?Number(ch.bedrooms):null}),signal:AbortSignal.timeout(180000)});
-    const d=await r.json();if(!r.ok)throw new Error(d.erro||"busca indisponível agora");
+    const d=await api(`/painel/api/os/imoveis/${p.id}/mercado`,{method:"POST",body:"{}",signal:AbortSignal.timeout(180000)});
     state.property.mercado=d;renderMercado(d);
   }catch(e){toast(e.message);}
   finally{btn.disabled=false;btn.textContent=state.property.mercado?"Pesquisar novamente":"Buscar referência agora";}
+}
+function mercadoAssistantAction(status){
+  const p=state.property.data.property;
+  const btn=el("button",{class:"card-action secondary market-result",type:"button",text:"Pedir uma análise ao assistente"});
+  const pedido=status==="calculada"
+    ? "Analise esta avaliação, critique os comparáveis e destaque riscos e próximos passos."
+    : "Analise esta pesquisa de mercado insuficiente, explique as evidências encontradas e o melhor próximo passo.";
+  btn.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"},pedido,true));
+  return btn;
 }
 function renderMercado(d){
   const card=$("mercadoCard");if(!card)return;
@@ -243,10 +251,10 @@ function renderMercado(d){
       el("p",{text:`Para calcular um preço com segurança são necessárias pelo menos ${min}. Por isso nenhum valor foi inventado — mas todas as evidências e exclusões estão no relatório.`}),
       d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório da pesquisa"}):null,
     ]);
-    card.append(box);return;
+    card.append(box,mercadoAssistantAction(d.status));return;
   }
   const r=d.result;if(!r)return;
-  card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]));
+  card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]),mercadoAssistantAction(d.status));
 }
 async function saveProperty(form,btn){
   btn.disabled=true;btn.textContent="Salvando…";

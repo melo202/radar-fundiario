@@ -391,6 +391,7 @@ export function rotuloEvento(ev) {
     case "property.created": return `Imóvel criado pela captura universal${p.missingCount ? ` — ${p.missingCount} pendência(s) gerada(s)` : ""}`;
     case "property.updated": return `Cadastro atualizado: ${(p.campos || []).join(", ") || "dados do imóvel"}`;
     case "property.price_changed": return `Preço: ${brl(p.de)} → ${brl(p.para)}`;
+    case "property.market_researched": return p.status === "calculada" ? "Referência de mercado atualizada" : "Pesquisa de mercado concluída — amostra insuficiente para calcular valor";
     case "contact.created": return p.type === "proprietario" ? "Proprietário registrado" : "Contato registrado";
     case "opportunity.created": return `Novo interessado${p.contactName ? `: ${p.contactName}` : ""} (${p.temperature || "morno"})`;
     case "opportunity.stage_changed": return `${p.contactName || "Interessado"} avançou: ${ROTULO_ESTAGIO[p.de] || p.de} → ${ROTULO_ESTAGIO[p.para] || p.para}`;
@@ -554,6 +555,7 @@ export async function dossieImovel(id) {
      FROM inventory_properties p LEFT JOIN contacts c ON c.id=p.owner_contact_id
      WHERE p.id=$1 AND p.organization_id=$2`, [id, org.id]);
   if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
+  const latestValuation = await avaliacaoRecenteDoImovel(db, p.rows[0]);
   const [tarefas, oportunidades, eventos] = await Promise.all([
     db.query(
       `SELECT id,title,type,due_at,priority,status,completed_at FROM tasks
@@ -574,10 +576,50 @@ export async function dossieImovel(id) {
   ]);
   return {
     ok: true, property: p.rows[0], tasks: tarefas.rows,
+    latestValuation,
     /* D-3: cada interessado já vem com a mensagem PRONTA do estágio — quem envia é o corretor */
     opportunities: oportunidades.rows.map(o => ({ ...o, mensagem: mensagemFunil(o, p.rows[0]) })),
     events: eventos.rows.map(e => ({ ...e, rotulo: rotuloEvento(e) })),
   };
+}
+
+async function avaliacaoRecenteDoImovel(db, property) {
+  const r = await db.query(
+    `SELECT id,subject,status,result,version,parent_id,created_at
+     FROM valuations
+     WHERE id=$1 OR subject->>'inventoryPropertyId'=$2
+     ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END, created_at DESC LIMIT 1`,
+    [property.latest_valuation_id || null, property.id]);
+  return r.rows[0] || null;
+}
+
+export async function pesquisarMercadoImovel(id) {
+  if (!idValido(id)) return { ok: false, erro: "imóvel inválido" };
+  const db = await banco();
+  const org = await garantirOrganizacao();
+  const q = await db.query(
+    `SELECT p.*,ST_Y(p.geom::geometry) AS lat,ST_X(p.geom::geometry) AS lon
+     FROM inventory_properties p WHERE p.id=$1 AND p.organization_id=$2 AND p.status='ativo'`, [id, org.id]);
+  if (!q.rowCount) return { ok: false, erro: "imóvel não encontrado" };
+  const p = q.rows[0], area = Number(p.characteristics?.areaM2);
+  if (p.transaction_type !== "venda") return { ok: false, erro: "A referência atual está disponível somente para venda." };
+  if (!["apartamento","casa"].includes(p.property_type) || !p.neighborhood || !(area > 0))
+    return { ok: false, erro: "Confirme tipo, bairro e área antes de pesquisar o mercado." };
+  const subject = {
+    inventoryPropertyId: p.id, propertyType: p.property_type, neighborhood: p.neighborhood,
+    areaM2: area, bedrooms: p.characteristics?.bedrooms == null ? null : Number(p.characteristics.bedrooms),
+    lat: p.lat == null ? null : Number(p.lat), lon: p.lon == null ? null : Number(p.lon),
+  };
+  const { avaliarAoVivo } = await import("./mercado-aovivo.js");
+  const resultado = await avaliarAoVivo(subject);
+  if (resultado.id) {
+    await db.query("UPDATE inventory_properties SET latest_valuation_id=$1 WHERE id=$2 AND organization_id=$3", [resultado.id, id, org.id]);
+    await db.query(
+      `INSERT INTO domain_events (organization_id,event_type,entity_type,entity_id,payload,source)
+       VALUES ($1,'property.market_researched','inventory_property',$2,$3,'motor-deterministico')`,
+      [org.id, id, JSON.stringify({ valuationId: resultado.id, status: resultado.status })]);
+  }
+  return { ok: true, ...resultado };
 }
 
 export async function atualizarImovel(id, campos) {

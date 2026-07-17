@@ -19,7 +19,7 @@ privada single-user.
 | Referência de mercado | **Política v3 em validação** | Busca progressiva por perfil; relatório sempre existe. Com menos de 5 ofertas compatíveis, não calcula preço, mas entrega fontes, evidências, exclusões e próxima ação. |
 | Mapa territorial | **Correção pronta para deploy conjunto** | Retorno direto para o Painel, sem depender do histórico; botão textual no computador e no celular. O novo `deploy-all.sh` impede API e Mapa de ficarem em versões diferentes. |
 | Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
-| Kimi K3 + Hermes | **P1 inicial em validação** | Quatro ferramentas de leitura são controladas pela aplicação (`meu_dia`, `buscar_imovel`, `abrir_dossie`, `buscar_cliente`); Hermes nunca recebe banco ou SQL. |
+| Kimi K3 + Hermes | **P1-B em validação** | Sete ferramentas de leitura são controladas pela aplicação; avaliação, comparáveis e entorno reutilizam evidências versionadas. Hermes nunca recebe banco ou SQL. |
 | Sessões e memória | **P1 inicial em validação** | Conversas geral, por imóvel e por cliente são reutilizadas e restauradas; a tela mostra claramente o objeto atual. Avaliação, visita e investimento continuam sem entrada própria. |
 | Automelhoria | **Observação controlada** | Mede falhas/contexto e propõe revisão; não testa nem modifica o produto sozinho. |
 | Documentos | **Estrutura inicial** | Ingestão determinística existe no código; upload, OCR, seleção de fontes e dossiê documental ainda não estão na tela. |
@@ -70,8 +70,9 @@ privada single-user.
   `buscar_cliente`. No máximo duas são executadas por pedido.
 - Contagens simples continuam locais e determinísticas, sem Kimi. Nenhuma ferramenta
   escreve, envia mensagem, altera cadastro ou acessa PostgreSQL a partir do Hermes.
-- Próximo P1-B: `buscar_comparaveis`, leitura de avaliação existente e `consultar_entorno`,
-  sempre reutilizando resultados do motor antes de permitir nova coleta.
+- P1-B: `buscar_comparaveis`, leitura de avaliação existente e `consultar_entorno`
+  reutilizam resultados do motor. A busca ao vivo só ocorre pelo botão autenticado do imóvel,
+  liga o relatório versionado à carteira e nunca pode ser iniciada autonomamente pelo Hermes.
 
 ## 1. Veredito
 
