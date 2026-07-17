@@ -14,6 +14,8 @@ const index = readFileSync(new URL("../index.html", import.meta.url), "utf-8");
 const installer = readFileSync(new URL("../motor/install-hermes-kimi.sh", import.meta.url), "utf-8");
 const efficiency = readFileSync(new URL("../motor/configure-hermes-efficiency.sh", import.meta.url), "utf-8");
 const deploy = readFileSync(new URL("../motor/deploy-api.sh", import.meta.url), "utf-8");
+const deployApp = readFileSync(new URL("../motor/deploy-app.sh", import.meta.url), "utf-8");
+const deployAll = readFileSync(new URL("../motor/deploy-all.sh", import.meta.url), "utf-8");
 
 test("eficiência: listas uniformes não repetem chaves em cada linha", () => {
   const context = { rows: Array.from({ length: 20 }, (_, id) => ({ id, bairro: "Bueno", preco: 800000 + id })) };
@@ -79,6 +81,10 @@ test("Hermes e deploy: limite real, loop curto e revisão econômica diária", (
   assert.ok(installer.includes("creation_nudge_interval: 0"));
   assert.ok(efficiency.includes('docker exec -i "$CONTAINER" python -'));
   assert.ok(deploy.includes("radar-agent-review.timer"));
+  assert.ok(deployApp.includes('RADAR_DEPLOY_BRANCH:-agent/kimi-personal-assistant'));
+  assert.ok(deployApp.includes('cmp -s radar-goiania.html "$WEBROOT/radar-goiania.html"'));
+  assert.ok(deployAll.includes("motor/deploy-api.sh"));
+  assert.ok(deployAll.includes("motor/deploy-app.sh"));
   assert.ok(migration.includes("agent_documents"));
   assert.ok(migration.includes("agent_document_segments"));
 });

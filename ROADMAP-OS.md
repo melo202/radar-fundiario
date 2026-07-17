@@ -17,7 +17,7 @@ privada single-user.
 | Carteira + filtros + dossiê | **Pronto na alpha** | Geral, Comercial e Histórico funcionam; Arquivos ainda é estado vazio. |
 | Funil + WhatsApp assistido | **Pronto na alpha** | Mensagem é preparada, mas envio e confirmação continuam humanos. |
 | Referência de mercado | **Política v3 em validação** | Busca progressiva por perfil; relatório sempre existe. Com menos de 5 ofertas compatíveis, não calcula preço, mas entrega fontes, evidências, exclusões e próxima ação. |
-| Mapa territorial | **Correção explícita em validação** | Retorno direto para o Painel, sem depender do histórico; botão textual no computador e no celular. Dados locais do Mapa ainda não viram carteira automaticamente. |
+| Mapa territorial | **Correção pronta para deploy conjunto** | Retorno direto para o Painel, sem depender do histórico; botão textual no computador e no celular. O novo `deploy-all.sh` impede API e Mapa de ficarem em versões diferentes. |
 | Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
 | Kimi K3 + Hermes | **P1 inicial em validação** | Quatro ferramentas de leitura são controladas pela aplicação (`meu_dia`, `buscar_imovel`, `abrir_dossie`, `buscar_cliente`); Hermes nunca recebe banco ou SQL. |
 | Sessões e memória | **P1 inicial em validação** | Conversas geral, por imóvel e por cliente são reutilizadas e restauradas; a tela mostra claramente o objeto atual. Avaliação, visita e investimento continuam sem entrada própria. |
