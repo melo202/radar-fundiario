@@ -57,11 +57,16 @@ textarea{width:100%;resize:vertical;border:1px solid #ccd8da;border-radius:14px;
 .toast{position:fixed;z-index:50;left:50%;bottom:calc(94px + var(--safe-bottom));transform:translateX(-50%);width:min(420px,calc(100% - 28px));background:var(--navy);color:#fff;padding:12px 15px;border-radius:13px;text-align:center;font-size:13px;box-shadow:var(--shadow)}
 /* Assistente: uma única entrada, conversa legível e nenhuma escolha técnica. */
 .assistant-dialog{width:min(680px,calc(100% - 20px));height:min(760px,calc(100vh - 20px));border:0;border-radius:22px;padding:0;background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
-.assistant-body{height:calc(100% - 82px);padding:15px 18px 20px;display:grid;grid-template-rows:auto 1fr auto;gap:12px}
+.assistant-context{margin:4px 0 0;color:var(--brand-strong);font-size:12px;font-weight:800}
+.assistant-body{height:calc(100% - 96px);padding:15px 18px 20px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}
+.assistant-sessionbar{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--canvas)}
+.assistant-sessionbar label{font-size:12px;font-weight:800;color:var(--muted)}
+.assistant-sessionbar .os-select{padding:9px 11px;font-size:13px;font-weight:750}
 .assistant-examples{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}.assistant-examples button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--canvas);color:var(--brand-strong);padding:8px 11px;font-size:12px;font-weight:750}
 .assistant-messages{min-height:180px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px 1px}.assistant-empty{margin:auto;color:var(--muted);font-size:13px;line-height:1.5;text-align:center;max-width:380px}
 .assistant-message{max-width:88%;padding:11px 13px;border-radius:15px;font-size:14px;line-height:1.5;white-space:pre-wrap}.assistant-message.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:5px}.assistant-message.assistant{align-self:flex-start;background:var(--canvas);border:1px solid var(--line);border-bottom-left-radius:5px}.assistant-message.waiting{color:var(--muted)}
 .assistant-form{display:grid;gap:8px}.assistant-form label{font-size:12px;font-weight:800}.assistant-form textarea{max-height:150px}
+@media(max-width:520px){.assistant-sessionbar{grid-template-columns:1fr}.assistant-sessionbar label{font-size:11px}.assistant-body{padding-inline:13px}}
 /* D-1: dossiê do imóvel */
 .back-button{padding:10px 2px;margin-top:4px}
 .tabs{display:flex;gap:6px;margin:0 0 14px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}

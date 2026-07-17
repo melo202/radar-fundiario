@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,todayCounts:{},loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false}};
+const state={csrf:"",preview:null,todayCounts:{},loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false,sessions:[],loaded:false,scope:{objectType:"general",objectId:null,title:"Conversa geral"}}};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -70,7 +70,7 @@ function renderPortfolio(){
 async function loadPortfolio(){if(state.loaded.portfolio)return;const target=$("portfolioList");skeletons(target);try{const data=await api("/painel/api/os/carteira");state.loaded.portfolio=true;state.portfolioRows=data.properties||[];renderPortfolio();}catch(e){errorCard(target,e);}}
 const stageLabel=s=>({prospect:"Prospecção",visited:"Visitado",captured:"Captado",ready_to_publish:"Pronto para divulgar",qualified:"Qualificado",inactive:"Inativo",sold:"Vendido",rented:"Alugado"})[s]||s;
 
-async function loadRelationships(){if(state.loaded.relationships)return;const target=$("relationshipsList");skeletons(target);try{const data=await api("/painel/api/os/relacionamentos");state.loaded.relationships=true;const rows=data.contacts||[];if(!rows.length)return empty(target,"Nenhum relacionamento registrado","Proprietários e clientes aparecerão aqui quando forem capturados ou vinculados a uma oportunidade.");target.replaceChildren(...rows.map(c=>el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:c.name}),el("p",{text:[typeLabel(c.type),c.phone?`Telefone final ${String(c.phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:`${c.open_opportunities||0} aberta(s)`})]),el("div",{class:"meta"},[el("span",{text:c.last_interaction_at?`Última interação: ${date(c.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:c.source||"cadastro"})])])));}catch(e){errorCard(target,e);}}
+async function loadRelationships(){if(state.loaded.relationships)return;const target=$("relationshipsList");skeletons(target);try{const data=await api("/painel/api/os/relacionamentos");state.loaded.relationships=true;const rows=data.contacts||[];if(!rows.length)return empty(target,"Nenhum relacionamento registrado","Proprietários e clientes aparecerão aqui quando forem capturados ou vinculados a uma oportunidade.");target.replaceChildren(...rows.map(c=>{const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar sobre esta pessoa"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"contact",objectId:c.id,title:c.name}));return el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:c.name}),el("p",{text:[typeLabel(c.type),c.phone?`Telefone final ${String(c.phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:`${c.open_opportunities||0} aberta(s)`})]),el("div",{class:"meta"},[el("span",{text:c.last_interaction_at?`Última interação: ${date(c.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:c.source||"cadastro"})]),ask]);}));}catch(e){errorCard(target,e);}}
 const typeLabel=t=>({proprietario:"Proprietário",comprador:"Comprador",locatario:"Locatário",investidor:"Investidor",parceiro:"Parceiro",incorporador:"Incorporador",fornecedor:"Fornecedor"})[t]||t;
 
 function switchView(name){document.querySelectorAll(".view").forEach(v=>{const active=v.dataset.view===name;v.hidden=!active;v.classList.toggle("is-active",active);});document.querySelectorAll(".nav-item[data-target]").forEach(b=>{const active=b.dataset.target===name;b.classList.toggle("is-active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});if(name==="today")loadToday();if(name==="portfolio")loadPortfolio();if(name==="relationships")loadRelationships();scrollTo({top:0,behavior:"smooth"});}
@@ -159,7 +159,7 @@ const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured",
 function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
 function openProperty(id){state.property={id,data:null,tab:"geral",mercado:null};switchView("property");loadProperty();}
 async function loadProperty(){const body=$("propBody");skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${state.property.id}`);state.property.data=data;renderPropHead();renderPropTab();}catch(e){errorCard(body,e);}}
-function renderPropHead(){const p=state.property.data.property;$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}));}
+function renderPropHead(){const p=state.property.data.property;const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar ao assistente sobre este imóvel"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"}));$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}),ask);}
 function setTab(tab){state.property.tab=tab;document.querySelectorAll("#propTabs .tab").forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle("is-active",on);b.setAttribute("aria-selected",String(on));});renderPropTab();}
 function fieldCell(label,value){return el("div",{class:"field-cell"},[el("small",{text:label}),el("strong",{text:String(value)})]);}
 
@@ -275,40 +275,80 @@ function appendAssistantMessage(role,text,extra=""){
   const target=$("assistantMessages");target.querySelector(".assistant-empty")?.remove();
   const message=el("div",{class:`assistant-message ${role} ${extra}`.trim(),text});target.append(message);target.scrollTop=target.scrollHeight;return message;
 }
-function openAssistant(prompt=""){const dialog=$("assistantDialog");if(prompt)$("assistantInput").value=prompt;if(!dialog.open)dialog.showModal();setTimeout(()=>$("assistantInput").focus(),50);}
+function assistantEmpty(){return el("p",{class:"assistant-empty",text:"A conversa começa quando você enviar o primeiro pedido. Esta versão consulta dados, mas não altera nada."});}
+function openAssistant(prompt="",load=true){const dialog=$("assistantDialog");if(prompt)$("assistantInput").value=prompt;if(!dialog.open)dialog.showModal();if(load&&!state.assistant.loaded)loadAssistantSessions();setTimeout(()=>$("assistantInput").focus(),50);}
+const sessionTypeLabel=type=>({general:"Conversa geral",property:"Imóvel",contact:"Cliente",valuation:"Avaliação",visit:"Visita",investment:"Investimento"})[type]||"Conversa";
+function renderAssistantSessions(){
+  const select=$("assistantSessionSelect"),sessions=state.assistant.sessions||[];
+  const general=sessions.find(s=>s.object_type==="general");
+  const options=[el("option",{value:general?.id||"__general__",text:"Conversa geral"})];
+  for(const s of sessions.filter(x=>x.object_type!=="general"))options.push(el("option",{value:s.id,text:`${sessionTypeLabel(s.object_type)} · ${s.title}`}));
+  select.replaceChildren(...options);select.value=state.assistant.sessionId||(general?.id||"__general__");
+}
+async function loadAssistantHistory(sessionId){
+  if(!sessionId||sessionId==="__general__")return;
+  const data=await api(`/painel/api/os/assistente/sessoes/${sessionId}`);
+  state.assistant.sessionId=data.session.id;
+  state.assistant.scope={objectType:data.session.object_type,objectId:data.session.object_id,title:data.session.title};
+  storageSet("ci-assistant-session",data.session.id);
+  $("assistantContext").textContent=data.session.object_type==="general"?"Conversa geral":sessionTypeLabel(data.session.object_type)+" · "+data.session.title;
+  const target=$("assistantMessages");target.replaceChildren(...((data.messages||[]).length?(data.messages||[]).map(m=>el("div",{class:`assistant-message ${m.role}`,text:m.content})):[assistantEmpty()]));target.scrollTop=target.scrollHeight;
+  renderAssistantSessions();
+}
+async function loadAssistantSessions(preferredId=null){
+  try{
+    const data=await api("/painel/api/os/assistente/sessoes");state.assistant.sessions=data.sessions||[];state.assistant.loaded=true;
+    renderAssistantSessions();
+    const wanted=preferredId||state.assistant.sessionId||storageGet("ci-assistant-session");
+    if(wanted&&state.assistant.sessions.some(s=>s.id===wanted))await loadAssistantHistory(wanted);
+    else {const general=state.assistant.sessions.find(s=>s.object_type==="general");if(general)await loadAssistantHistory(general.id);}
+  }catch{state.assistant.loaded=true;renderAssistantSessions();}
+}
 async function ensureAssistantSession(){
   if(state.assistant.sessionId)return state.assistant.sessionId;
-  const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify({objectType:"general",title:"Meu dia"})});
-  state.assistant.sessionId=result.session.id;return result.session.id;
+  const scope=state.assistant.scope||{objectType:"general",objectId:null,title:"Conversa geral"};
+  const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify(scope)});
+  state.assistant.sessionId=result.session.id;await loadAssistantSessions(result.session.id);return result.session.id;
+}
+async function openAssistantForScope(scope,prompt="",autoSend=false){
+  openAssistant(prompt,false);state.assistant.scope=scope;state.assistant.sessionId=null;
+  $("assistantContext").textContent="Abrindo "+sessionTypeLabel(scope.objectType).toLowerCase()+"…";
+  try{
+    const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify(scope)});
+    await loadAssistantSessions(result.session.id);
+    if(autoSend)await submitAssistant();
+  }catch(error){toast(error.message);}
 }
 async function submitAssistant(event){
   event?.preventDefault();if(state.assistant.busy)return;
   const input=$("assistantInput"),text=input.value.trim();if(!text)return;
-  state.assistant.busy=true;$("sendAssistant").disabled=true;input.disabled=true;appendAssistantMessage("user",text);input.value="";
-  const waiting=appendAssistantMessage("assistant","Analisando apenas o contexto necessário…","waiting");
+  state.assistant.busy=true;$("sendAssistant").disabled=true;input.disabled=true;let waiting=null;
   try{
     const sessionId=await ensureAssistantSession();
+    appendAssistantMessage("user",text);input.value="";
+    waiting=appendAssistantMessage("assistant","Consultando somente os dados necessários…","waiting");
     const result=await api(`/painel/api/os/assistente/sessoes/${sessionId}/mensagens`,{method:"POST",body:JSON.stringify({message:text})});
     waiting.classList.remove("waiting");waiting.textContent=result.reply;storageSet("ci-guide-assistant","1");updateGuide();
-  }catch(error){waiting.classList.remove("waiting");waiting.textContent=`Não foi possível responder agora. ${error.message}`;}
+  }catch(error){if(!waiting)waiting=appendAssistantMessage("assistant","");waiting.classList.remove("waiting");waiting.textContent=`Não foi possível responder agora. ${error.message}`;}
   finally{state.assistant.busy=false;$("sendAssistant").disabled=false;input.disabled=false;input.focus();$("assistantMessages").scrollTop=$("assistantMessages").scrollHeight;}
 }
-function askFromHome(event){event.preventDefault();const input=$("homeAssistantInput"),prompt=input.value.trim();if(!prompt)return;openAssistant(prompt);input.value="";submitAssistant();}
-function prefillAssistant(prompt){openAssistant(prompt);}
+async function askFromHome(event){event.preventDefault();const input=$("homeAssistantInput"),prompt=input.value.trim();if(!prompt)return;input.value="";await openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"},prompt,true);}
+function prefillAssistant(prompt){openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"},prompt);}
 const hour=new Date().getHours();$("dayGreeting").textContent=`${hour<12?"Bom dia":hour<18?"Boa tarde":"Boa noite"}, Bruno`;
 $("openAssistant").addEventListener("click",()=>openAssistant());
 $("openAssistantNav").addEventListener("click",()=>openAssistant());
 $("homeAssistantForm").addEventListener("submit",askFromHome);
 document.querySelectorAll("[data-home-prompt]").forEach(button=>button.addEventListener("click",()=>prefillAssistant(button.dataset.homePrompt)));
 $("guideCapture").addEventListener("click",openCapture);
-$("guideAssistant").addEventListener("click",()=>openAssistant("Analise minha situação atual e me diga o melhor primeiro passo."));
+$("guideAssistant").addEventListener("click",()=>openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"},"Analise minha situação atual e me diga o melhor primeiro passo."));
 $("dismissGuide").addEventListener("click",()=>{storageSet("ci-guide-hidden","1");$("guideCard").hidden=true;});
 $("openGuide").addEventListener("click",showGuide);
 $("assistantForm").addEventListener("submit",submitAssistant);
+$("assistantSessionSelect").addEventListener("change",async event=>{if(state.assistant.busy)return;if(event.target.value==="__general__")await openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"});else await loadAssistantHistory(event.target.value);});
 document.querySelectorAll("[data-assistant-prompt]").forEach(button=>button.addEventListener("click",()=>{$("assistantInput").value=button.dataset.assistantPrompt;$("assistantInput").focus();}));
 document.querySelectorAll("#propTabs .tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 $("propBack").addEventListener("click",()=>switchView("portfolio"));
 
 document.querySelectorAll(".nav-item[data-target]").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.target)));
 $("openCaptureTop").addEventListener("click",openCapture);$("interpretCapture").addEventListener("click",interpretCapture);$("confirmCapture").addEventListener("click",confirmCapture);$("refreshToday").addEventListener("click",()=>loadToday(true));
-loadToday();
+loadToday();loadAssistantSessions();

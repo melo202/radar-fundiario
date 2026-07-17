@@ -174,10 +174,17 @@
       <div>
         <p class="eyebrow">Assistente privado</p>
         <h2 id="assistantTitle">O que você precisa resolver agora?</h2>
+        <p class="assistant-context" id="assistantContext">Conversa geral</p>
       </div>
       <button type="submit" class="icon-button" aria-label="Fechar">×</button>
     </form>
     <div class="assistant-body">
+      <div class="assistant-sessionbar">
+        <label for="assistantSessionSelect">Você está falando sobre</label>
+        <select id="assistantSessionSelect" class="os-select" aria-label="Escolher conversa">
+          <option value="">Conversa geral</option>
+        </select>
+      </div>
       <div class="assistant-examples" aria-label="Exemplos de pedidos">
         <button type="button" data-assistant-prompt="Qual imóvel da carteira merece atenção hoje?">Qual imóvel merece atenção?</button>
         <button type="button" data-assistant-prompt="Organize minhas prioridades de hoje e explique por quê.">Organizar meu dia</button>

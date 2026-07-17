@@ -19,8 +19,8 @@ privada single-user.
 | Referência de mercado | **Política v3 em validação** | Busca progressiva por perfil; relatório sempre existe. Com menos de 5 ofertas compatíveis, não calcula preço, mas entrega fontes, evidências, exclusões e próxima ação. |
 | Mapa territorial | **Pronto, ainda separado** | Navegação de volta corrigida; dados locais do Mapa ainda não viram carteira automaticamente. |
 | Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
-| Kimi K3 + Hermes | **Parcial e seguro** | Chat geral funciona com contexto selecionado; ainda não há catálogo completo de ferramentas imobiliárias nem UI de sessões por objeto. |
-| Sessões e memória | **Backend parcial** | Tipos existem no banco, mas a tela abre somente conversa geral e não restaura a lista de conversas após recarregar. |
+| Kimi K3 + Hermes | **P1 inicial em validação** | Quatro ferramentas de leitura são controladas pela aplicação (`meu_dia`, `buscar_imovel`, `abrir_dossie`, `buscar_cliente`); Hermes nunca recebe banco ou SQL. |
+| Sessões e memória | **P1 inicial em validação** | Conversas geral, por imóvel e por cliente são reutilizadas e restauradas; a tela mostra claramente o objeto atual. Avaliação, visita e investimento continuam sem entrada própria. |
 | Automelhoria | **Observação controlada** | Mede falhas/contexto e propõe revisão; não testa nem modifica o produto sozinho. |
 | Documentos | **Estrutura inicial** | Ingestão determinística existe no código; upload, OCR, seleção de fontes e dossiê documental ainda não estão na tela. |
 | Consumo de IA | **Registrado, não exposto** | Uso/fallback/cache são gravados; falta o painel pessoal simples. |
@@ -57,6 +57,21 @@ privada single-user.
   efetivamente fechada só poderá ser afirmada quando houver fonte transacional licenciada.
 - Kimi/Hermes não decide comparabilidade nem número. IA pode ler/extrair e, sob demanda,
   redigir sobre fatos já calculados; filtros e decisão de suficiência são determinísticos.
+
+### Marco P1-A — assistente com contexto imobiliário controlado
+
+- Uma conversa ativa por objeto evita chats infinitos e duplicados.
+- O histórico recente reaparece após recarregar; runtimes sem estado recebem no máximo
+  as 12 mensagens mais recentes. No Hermes, o estado fica isolado por sessão e sujeito
+  à compressão configurada, enquanto o contexto de dados atual contém só as ferramentas necessárias.
+- O corretor abre o assistente dentro do imóvel ou do cliente com um botão em linguagem
+  comum. Um seletor visível permite voltar à conversa geral sem escolher tecnologia.
+- Primeiras ferramentas: `consultar_meu_dia`, `buscar_imovel`, `abrir_dossie` e
+  `buscar_cliente`. No máximo duas são executadas por pedido.
+- Contagens simples continuam locais e determinísticas, sem Kimi. Nenhuma ferramenta
+  escreve, envia mensagem, altera cadastro ou acessa PostgreSQL a partir do Hermes.
+- Próximo P1-B: `buscar_comparaveis`, leitura de avaliação existente e `consultar_entorno`,
+  sempre reutilizando resultados do motor antes de permitir nova coleta.
 
 ## 1. Veredito
 

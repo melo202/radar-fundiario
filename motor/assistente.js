@@ -115,47 +115,76 @@ async function ensureProfile(organizationId) {
 
 function clean(value, max = 6000) { return String(value || "").replace(/\s+/g, " ").trim().slice(0, max); }
 
+async function resolveSessionObject(org, objectType, objectId, requestedTitle) {
+  if (objectType === "general") return { objectId: null, title: "Conversa geral" };
+  if (!objectId && ["property", "contact", "valuation"].includes(objectType)) return null;
+  if (!objectId) return { objectId: null, title: clean(requestedTitle, 120) || ({ visit: "Visita", investment: "Oportunidade de investimento" })[objectType] || "Conversa" };
+  if (objectType === "property") {
+    const r = await pool.query(
+      "SELECT id,title,neighborhood FROM inventory_properties WHERE id=$1 AND organization_id=$2 AND status='ativo'",
+      [objectId, org.id]);
+    if (!r.rowCount) return null;
+    return { objectId, title: r.rows[0].title || `Imóvel · ${r.rows[0].neighborhood || "carteira"}` };
+  }
+  if (objectType === "contact") {
+    const r = await pool.query(
+      "SELECT id,name,type FROM contacts WHERE id=$1 AND organization_id=$2 AND status='ativo'", [objectId, org.id]);
+    if (!r.rowCount) return null;
+    return { objectId, title: `${r.rows[0].name} · ${r.rows[0].type || "contato"}` };
+  }
+  if (objectType === "valuation") {
+    const r = await pool.query("SELECT id,subject FROM valuations WHERE id=$1", [objectId]);
+    if (!r.rowCount) return null;
+    return { objectId, title: `Avaliação · ${r.rows[0].subject?.neighborhood || "imóvel"}` };
+  }
+  return { objectId, title: clean(requestedTitle, 120) || ({ visit: "Visita", investment: "Oportunidade de investimento" })[objectType] };
+}
+
+export async function listAssistantSessions() {
+  const org = await ensureOrganization();
+  const result = await pool.query(
+    `SELECT s.id,s.object_type,s.object_id,s.title,s.summary,s.status,s.created_at,s.updated_at,
+            (SELECT count(*)::int FROM agent_messages m WHERE m.session_id=s.id) AS message_count,
+            (SELECT left(m.content,160) FROM agent_messages m WHERE m.session_id=s.id ORDER BY m.id DESC LIMIT 1) AS last_message
+     FROM agent_sessions s
+     WHERE s.organization_id=$1 AND s.status='active'
+     ORDER BY s.updated_at DESC LIMIT 30`, [org.id]);
+  return { ok: true, sessions: result.rows };
+}
+
 export async function createAssistantSession({ objectType = "general", objectId = null, title = null, contextBudget = CONTEXT_BUDGETS.standard, highSpeed = false } = {}) {
   if (!SESSION_TYPES.includes(objectType)) return { ok: false, erro: "Tipo de conversa desconhecido." };
   if (objectId && !UUID.test(objectId)) return { ok: false, erro: "Objeto da conversa inválido." };
   const org = await ensureOrganization();
   await ensureProfile(org.id);
+  const target = await resolveSessionObject(org, objectType, objectId, title);
+  if (!target) return { ok: false, erro: objectType === "property" ? "Imóvel não encontrado na sua carteira." : objectType === "contact" ? "Cliente não encontrado nos seus relacionamentos." : "Objeto da conversa não encontrado." };
+  const existente = await pool.query(
+    `SELECT * FROM agent_sessions
+     WHERE organization_id=$1 AND object_type=$2 AND object_id IS NOT DISTINCT FROM $3 AND status='active'
+     ORDER BY updated_at DESC LIMIT 1`, [org.id, objectType, target.objectId]);
+  if (existente.rowCount) return { ok: true, session: existente.rows[0], reused: true };
   const runtime = String(process.env.AGENT_RUNTIME || "local").toLowerCase();
   const budget = Math.min(CONTEXT_BUDGETS.documents, Math.max(8_000, Number(contextBudget) || CONTEXT_BUDGETS.standard));
-  const label = clean(title, 120) || ({ general: "Conversa geral", property: "Imóvel", contact: "Cliente", valuation: "Avaliação", visit: "Visita", investment: "Oportunidade de investimento" })[objectType];
   const result = await pool.query(
     `INSERT INTO agent_sessions (organization_id,object_type,object_id,title,runtime,context_budget,high_speed)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [org.id, objectType, objectId, label, ["hermes","direct-kimi","local"].includes(runtime) ? runtime : "local", budget, !!highSpeed]);
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [org.id, objectType, target.objectId, target.title, ["hermes","direct-kimi","local"].includes(runtime) ? runtime : "local", budget, !!highSpeed]);
   return { ok: true, session: result.rows[0] };
 }
 
 async function selectedContext(session) {
   if (session.object_type === "general") {
-    const { visaoHoje } = await import("./os-core.js");
-    const today = await visaoHoje();
-    return { type: "general", counts: today.counts, actions: (today.actions || []).slice(0, 8).map(a => ({ title: a.title, reason: a.reason, dueAt: a.dueAt, priority: a.priority })) };
+    return { type: "general" };
   }
   if (session.object_type === "property" && session.object_id) {
-    const { dossieImovel } = await import("./os-core.js");
-    const dossier = await dossieImovel(session.object_id);
-    if (!dossier.ok) return { type: "property", unavailable: true };
-    const p = dossier.property;
-    return { type: "property", property: {
-      id: p.id, title: p.title, stage: p.capture_stage, type: p.property_type,
-      neighborhood: p.neighborhood, askingPrice: p.asking_price,
-      characteristics: p.characteristics, conditions: p.commercial_conditions,
-    }, pendingTasks: (dossier.tasks || []).filter(t => !["concluida","cancelada"].includes(t.status)).map(t => ({ title: t.title, dueAt: t.due_at, priority: t.priority })),
-      opportunities: (dossier.opportunities || []).map(o => ({ stage: o.stage, temperature: o.temperature, nextActionAt: o.next_action_at })) };
+    return { type: "property", objectId: session.object_id };
   }
   if (session.object_type === "valuation" && session.object_id) {
     const result = await pool.query("SELECT id,subject,status,result,created_at FROM valuations WHERE id=$1", [session.object_id]);
     return result.rowCount ? { type: "valuation", valuation: result.rows[0] } : { type: "valuation", unavailable: true };
   }
   if (session.object_type === "contact" && session.object_id) {
-    const result = await pool.query(
-      `SELECT id,type,name,status,source,notes,metadata,created_at FROM contacts
-       WHERE id=$1 AND organization_id=$2`, [session.object_id, session.organization_id]);
-    return result.rowCount ? { type: "contact", contact: result.rows[0] } : { type: "contact", unavailable: true };
+    return { type: "contact", objectId: session.object_id };
   }
   return { type: session.object_type, objectId: session.object_id, data: "Ainda não há entidade estruturada para este tipo de conversa." };
 }
@@ -180,6 +209,13 @@ export async function sendAssistantMessage(sessionId, message, dependencies = {}
   const profile = await ensureProfile(org.id);
   const memories = selectRelevantMemories(profile.memories, session.object_type, input);
   const context = await selectedContext(session);
+  const { runReadOnlyTools } = await import("./agent-tools.js");
+  const toolResults = await runReadOnlyTools(input, session);
+  if (toolResults.length) {
+    context.toolResults = toolResults;
+    const hoje = toolResults.find(item => item.tool === "consultar_meu_dia");
+    if (hoje?.data?.counts) { context.counts = hoje.data.counts; context.actions = hoje.data.actions; }
+  }
   const contextBudget = effectiveContextBudget(session, input);
   const instructions = buildInstructions({ memories, context, contextBudget });
   const historyResult = await pool.query(
@@ -194,7 +230,7 @@ export async function sendAssistantMessage(sessionId, message, dependencies = {}
   try {
     const out = deterministicReply
       ? { value: deterministicReply, runtime: "local", model: "deterministic-context-v1", usage: { input_tokens: 0, output_tokens: 0 }, requestKind: "deterministic" }
-      : { ...await runWithFallback(runtime, fallback, { input, instructions, history, conversationId: session.id, highSpeed: session.high_speed }), requestKind: "analysis" };
+      : { ...await runWithFallback(runtime, fallback, { input, instructions, history, conversationId: session.id, highSpeed: session.high_speed }), requestKind: toolResults.length ? "tool-assisted" : "analysis" };
     const contextTokens = deterministicReply ? 0 : estimateTokens(`${instructions}\n${input}`);
     const cachedInputTokens = out.usage?.cached_input_tokens || out.usage?.input_tokens_details?.cached_tokens || null;
     const client = await pool.connect();
@@ -224,9 +260,10 @@ export async function sendAssistantMessage(sessionId, message, dependencies = {}
   } catch (error) {
     await pool.query(
       `INSERT INTO agent_usage (organization_id,session_id,runtime,model,context_tokens,request_kind,duration_ms,high_speed,ok,error)
-       VALUES ($1,$2,$3,$4,$5,'analysis',$6,$7,false,$8)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,$9)`,
       [org.id, session.id, runtime.status().runtime, runtime.status().model || null,
-        estimateTokens(`${instructions}\n${input}`), Date.now() - started, session.high_speed, String(error.message).slice(0, 500)]).catch(() => {});
+        estimateTokens(`${instructions}\n${input}`), toolResults.length ? "tool-assisted" : "analysis",
+        Date.now() - started, session.high_speed, String(error.message).slice(0, 500)]).catch(() => {});
     throw error;
   }
 }

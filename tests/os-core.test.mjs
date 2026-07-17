@@ -84,5 +84,5 @@ test("UX-02: login e endereço principal desembocam no produto, não no painel t
 
 test("UX-03: a caixa principal envia ao assistente sem depender de um segundo evento", () => {
   assert.ok(app.includes("event?.preventDefault();if(state.assistant.busy)return"));
-  assert.ok(app.includes('openAssistant(prompt);input.value="";submitAssistant();'));
+  assert.ok(app.includes('await openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"},prompt,true)'));
 });

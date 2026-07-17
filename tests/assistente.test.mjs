@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildInstructions, selectRelevantMemories, serializeContext, SESSION_TYPES } from "../motor/assistente.js";
+import { chooseReadOnlyTools, READ_ONLY_AGENT_TOOLS } from "../motor/agent-tools.js";
 
 const migration = readFileSync(new URL("../motor/migrations/009-agent-runtime.sql", import.meta.url), "utf-8");
 const panel = readFileSync(new URL("../motor/painel.js", import.meta.url), "utf-8");
@@ -42,7 +43,30 @@ test("assistente: orçamento limita contexto extremo", () => {
 
 test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada central", () => {
   assert.ok(panel.includes('/painel/api/os/assistente/sessoes'));
-  assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf('/painel/api/os/assistente/sessoes'));
+  assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf('req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes"'));
   assert.ok(html.includes("O que você precisa resolver agora?"));
   assert.ok(html.includes('id="openAssistant"'));
+});
+
+test("assistente: quatro ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
+  assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente"]);
+  assert.deepEqual(chooseReadOnlyTools("Quantos imóveis eu tenho?", { object_type: "general" }), ["consultar_meu_dia"]);
+  assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["buscar_imovel"]);
+  assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["buscar_cliente"]);
+  assert.deepEqual(chooseReadOnlyTools("Analise as pendências deste imóvel", { object_type: "property" }), ["abrir_dossie"]);
+  assert.deepEqual(chooseReadOnlyTools("O que sei sobre este cliente?", { object_type: "contact" }), ["buscar_cliente"]);
+});
+
+test("assistente: sessão é reutilizada, validada contra a carteira e restaurável", () => {
+  const src = readFileSync(new URL("../motor/assistente.js", import.meta.url), "utf-8");
+  const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  assert.ok(src.includes("export async function listAssistantSessions"));
+  assert.ok(src.includes("object_id IS NOT DISTINCT FROM $3"), "um objeto não cria chats infinitos");
+  assert.ok(src.includes("inventory_properties WHERE id=$1 AND organization_id=$2"));
+  assert.ok(src.includes("contacts WHERE id=$1 AND organization_id=$2"));
+  assert.ok(app.includes('storageGet("ci-assistant-session")'));
+  assert.ok(app.includes("loadAssistantHistory"));
+  assert.ok(html.includes('id="assistantSessionSelect"'));
+  assert.ok(app.includes("Perguntar ao assistente sobre este imóvel"));
+  assert.ok(app.includes("Perguntar sobre esta pessoa"));
 });

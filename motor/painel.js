@@ -173,6 +173,10 @@ export async function painel(req, res) {
     const { listImprovementProposals } = await import("./agent-review.js");
     return json(res, 200, await listImprovementProposals());
   }
+  if (req.method === "GET" && req.url === "/painel/api/os/assistente/sessoes") {
+    const { listAssistantSessions } = await import("./assistente.js");
+    return json(res, 200, await listAssistantSessions());
+  }
   if (req.method === "GET" && /^\/painel\/api\/os\/assistente\/sessoes\/[0-9a-f-]{36}$/.test(req.url)) {
     const { getAssistantHistory } = await import("./assistente.js");
     const r = await getAssistantHistory(req.url.split("/").pop());
