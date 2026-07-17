@@ -20,7 +20,7 @@ test("runtime: Kimi usa o alias oficial e HighSpeed somente quando pedido", asyn
   const runtime = new DirectKimiRuntime({ apiKey: "segredo", allowDirect: true, fetchImpl: async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); return response({ model: JSON.parse(options.body).model, choices: [{ message: { content: "ok" } }] }); } });
   await runtime.run({ input: "a", instructions: "b", highSpeed: false });
   await runtime.run({ input: "a", instructions: "b", highSpeed: true });
-  assert.equal(calls[0].body.model, "kimi-for-coding");
+  assert.equal(calls[0].body.model, "k3");
   assert.equal(calls[1].body.model, "kimi-for-coding-highspeed");
   assert.equal(calls[0].url, "https://api.kimi.com/coding/v1/chat/completions");
 });
