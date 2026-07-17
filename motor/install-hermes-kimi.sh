@@ -152,7 +152,12 @@ source "$MOTOR_ENV"
 set +a
 (cd /opt/radar/api && node migrate.js)
 systemctl restart radar-api
-if ! curl -fsS http://127.0.0.1:8140/motor/health >/dev/null; then
+motor_ready=false
+for _ in $(seq 1 20); do
+  if curl -fsS http://127.0.0.1:8140/motor/health >/dev/null 2>&1; then motor_ready=true; break; fi
+  sleep 1
+done
+if [[ "$motor_ready" != true ]]; then
   cp -a "$BACKUP" "$MOTOR_ENV"
   systemctl restart radar-api
   fail "o motor não iniciou com Hermes; configuração anterior restaurada"
