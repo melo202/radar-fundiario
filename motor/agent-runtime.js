@@ -85,7 +85,7 @@ export class DirectKimiRuntime {
   constructor({ baseUrl, apiKey, model, highSpeedModel, fetchImpl = fetch, timeoutMs, allowDirect = false } = {}) {
     this.baseUrl = String(baseUrl || "https://api.kimi.com/coding/v1").replace(/\/$/, "");
     this.apiKey = apiKey || "";
-    this.model = model || "kimi-for-coding";
+    this.model = model || "k3";
     this.highSpeedModel = highSpeedModel || "kimi-for-coding-highspeed";
     this.fetchImpl = fetchImpl;
     this.timeoutMs = Number(timeoutMs || DEFAULT_TIMEOUT_MS);
