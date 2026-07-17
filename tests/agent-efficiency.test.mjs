@@ -59,12 +59,14 @@ test("automelhoria: só cria propostas com evidência e nunca aplica mudanças",
 
 test("navegação: Meu Dia, Resolver, Mapa e Relações formam um shell sem painel técnico", () => {
   assert.ok(html.includes('id="openAssistantNav"'));
-  assert.ok(html.includes('href="https://corretorinteligente.tech/?origem=app"'));
+  assert.ok(html.includes('href="https://corretorinteligente.tech/?origem=painel"'));
   assert.ok(!html.includes('<span>Painel</span>'));
   assert.ok(radar.includes('id="appBack"'));
-  assert.ok(radar.includes('>Meu escritório</span>'));
-  assert.ok(radar.includes('>Escritório</a>'));
+  assert.ok(radar.includes('>Voltar ao painel</span>'));
+  assert.ok(radar.includes('>Painel</a>'));
   assert.ok(radar.includes('function voltarEscritorio(event)'));
+  assert.ok(radar.includes('window.location.assign("https://api.corretorinteligente.tech/painel/os")'));
+  assert.ok(!radar.includes("history.back()"), "retorno não pode depender do histórico e seus redirects");
   assert.ok(!radar.includes('id="appBack" href="https://api.corretorinteligente.tech/painel/os" hidden'));
   const pages = readFileSync(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
   assert.ok(pages.includes("agent/kimi-personal-assistant"), "a branch de produção também publica o mapa estático");

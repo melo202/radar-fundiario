@@ -145,6 +145,7 @@
     box-shadow:0 5px 16px rgba(20,26,31,.12);white-space:nowrap}
   .app-back:hover{background:var(--brand-strong);border-color:var(--brand-strong)}
   .app-back svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .app-back-short{display:none}
   .app-back[hidden]{display:none}
   .panel{background:var(--paper-2);border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow-y:auto}
   .brand{padding:22px 22px 16px;border-bottom:2px solid var(--ink)}
@@ -1457,8 +1458,9 @@
     .atlas-brandmark{width:36px;height:36px;flex-basis:36px;border-radius:11px}
     .atlas-brandplace,.atlas-source,.atlas-search-trigger kbd{display:none}
     .atlas-meta{display:flex}
-    .app-back{width:44px;min-width:44px;height:44px;padding:0;border-radius:13px}
-    .app-back span{display:none}
+    .app-back{width:auto;min-width:74px;height:44px;padding:0 10px;border-radius:13px}
+    .app-back-wide{display:none}
+    .app-back-short{display:inline}
     .atlas-brandname{font-size:15px}
     .atlas-search-trigger{min-height:44px;padding:0 12px;border-radius:13px;cursor:pointer}
     .atlas-search-copy{font-size:13px}
@@ -1532,8 +1534,8 @@
     </button>
     <div class="atlas-meta">
       <span class="atlas-source" id="atlasSource" role="status">Cadastro público · fontes rastreáveis</span>
-      <a class="app-back" id="appBack" href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao meu escritório">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/></svg><span>Meu escritório</span>
+      <a class="app-back" id="appBack" href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao painel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7M8 12h11"/></svg><span class="app-back-wide">Voltar ao painel</span><span class="app-back-short">Painel</span>
       </a>
     </div>
   </header>
@@ -1964,7 +1966,7 @@
   <nav class="viewbar" id="viewbar">
     <button id="vbBusca" class="on" onclick="setView('busca')">Consulta</button>
     <button id="vbMapa" onclick="setView('mapa')">Mapa</button>
-    <a href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao meu escritório">Escritório</a>
+    <a href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao painel">Painel</a>
   </nav>
 </div>
 
@@ -2077,9 +2079,9 @@ proj4.defs("EPSG:31982","+proj=utm +zone=22 +south +ellps=GRS80 +towgs84=0,0,0,0
 const toWGS = (x,y)=>{const [lon,lat]=proj4("EPSG:31982","EPSG:4326",[x,y]);return [lat,lon];};
 const SVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/3/query";
 function voltarEscritorio(event){
-  /* strict-origin-when-cross-origin preserva somente a origem ao sair do painel. */
-  const veioDoEscritorio=document.referrer.startsWith("https://api.corretorinteligente.tech/");
-  if(veioDoEscritorio&&history.length>1){event.preventDefault();history.back();}
+  /* Retorno determinístico: não depende do histórico, que pode conter redirects do mapa. */
+  event?.preventDefault();
+  window.location.assign("https://api.corretorinteligente.tech/painel/os");
 }
 const LOTSVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/0/query";
 const BAISVC="https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/2/query";
