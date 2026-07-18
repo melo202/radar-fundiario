@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  normalizeFindings, normalizeInvestigationPlan, orchestrationInstructions,
+  chunkEvidence, normalizeFindings, normalizeInvestigationPlan, orchestrationInstructions,
 } from "../motor/intelligence-orchestrator.js";
 
 const migration = readFileSync(new URL("../motor/migrations/014-intelligence-orchestrator.sql", import.meta.url), "utf-8");
 const orchestrator = readFileSync(new URL("../motor/intelligence-orchestrator.js", import.meta.url), "utf-8");
 const panel = readFileSync(new URL("../motor/painel.js", import.meta.url), "utf-8");
 const deploy = readFileSync(new URL("../motor/deploy-api.sh", import.meta.url), "utf-8");
+const batchingMigration = readFileSync(new URL("../motor/migrations/015-intelligence-batching.sql", import.meta.url), "utf-8");
 
 test("orquestrador: K3 planeja consultas dentro do orçamento e remove duplicidade", () => {
   const plan = normalizeInvestigationPlan(`\`\`\`json
@@ -32,6 +33,16 @@ test("orquestrador: achado sem evidência conhecida é descartado", () => {
   assert.equal(findings.length, 1);
   assert.deepEqual(findings[0].evidenceIds, [10, 11]);
   assert.equal(findings[0].confidence, 0.86);
+});
+
+test("orquestrador: divide evidências em lotes pequenos e retomáveis", () => {
+  const batches = chunkEvidence(Array.from({ length: 97 }, (_, id) => ({ id: id + 1 })), 20);
+  assert.equal(batches.length, 5);
+  assert.deepEqual(batches.map(batch => batch.length), [20, 20, 20, 20, 17]);
+  assert.match(orchestrationInstructions("synthesis"), /sem criar fatos novos/);
+  assert.ok(orchestrator.includes("progress.batchResults[index]"));
+  assert.ok(orchestrator.includes("INTELLIGENCE_TIMEOUT_MS"));
+  assert.ok(batchingMigration.includes("max_attempts SET DEFAULT 3"));
 });
 
 test("orquestrador: conteúdo da internet é dado não confiável e nunca vira escrita canônica", () => {

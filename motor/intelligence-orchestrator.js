@@ -11,6 +11,7 @@ const JOB_KINDS = new Set(["market_scan", "source_discovery", "opportunity_inves
 const FINDING_KINDS = new Set(["possible_duplicate", "price_change", "urgent_sale_signal", "market_anomaly", "data_conflict", "source_gap", "other"]);
 const DEFAULT_QUERY_BUDGET = 4;
 const DEFAULT_RESULT_BUDGET = 40;
+const DEFAULT_BATCH_SIZE = 20;
 const clean = (value, max = 1000) => String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 const sha = value => createHash("sha256").update(String(value || "")).digest("hex");
 const estimateTokens = value => Math.ceil([...String(value || "")].length / 3);
@@ -45,7 +46,7 @@ export function normalizeInvestigationPlan(value, { queryBudget = DEFAULT_QUERY_
   };
 }
 
-export function normalizeFindings(value, allowedEvidenceIds = []) {
+export function normalizeFindings(value, allowedEvidenceIds = [], { limit = 20 } = {}) {
   const parsed = jsonObject(value);
   const allowed = new Set(allowedEvidenceIds.map(Number).filter(Number.isSafeInteger));
   const findings = [];
@@ -65,9 +66,16 @@ export function normalizeFindings(value, allowedEvidenceIds = []) {
       candidateData: item?.candidateData && typeof item.candidateData === "object" && !Array.isArray(item.candidateData)
         ? item.candidateData : {},
     });
-    if (findings.length >= 20) break;
+    if (findings.length >= Math.max(1, Math.min(20, Number(limit) || 20))) break;
   }
   return findings;
+}
+
+export function chunkEvidence(evidence, size = DEFAULT_BATCH_SIZE) {
+  const safeSize = Math.max(1, Math.min(40, Number(size) || DEFAULT_BATCH_SIZE));
+  const batches = [];
+  for (let index = 0; index < evidence.length; index += safeSize) batches.push(evidence.slice(index, index + safeSize));
+  return batches;
 }
 
 export function orchestrationInstructions(stage) {
@@ -79,10 +87,16 @@ Responda SOMENTE com JSON válido, sem markdown.`;
   if (stage === "plan") return `${common}
 Crie um plano curto de pesquisa pública. Use no máximo o orçamento de consultas informado.
 Formato: {"objective":"...","queries":[{"query":"...","reason":"..."}],"crossChecks":["..."],"stopConditions":["..."]}.`;
+  if (stage === "synthesis") return `${common}
+ consolide candidatos já fundamentados: una duplicidades e conflitos sem criar fatos novos.
+ Preserve apenas os IDs de evidência recebidos e produza no máximo 20 achados finais.
+ Se dois candidatos não forem claramente o mesmo caso, mantenha-os separados.
+ Formato: {"findings":[{"kind":"possible_duplicate|price_change|urgent_sale_signal|market_anomaly|data_conflict|source_gap|other","title":"...","summary":"...","confidence":0.0,"evidenceIds":[1],"candidateData":{}}]}.`;
   return `${common}
 Cruze as evidências por endereço, edifício, metragem, quartos, vagas, fotos descritas, identificadores, preço e datas.
 Cada conclusão deve referenciar exclusivamente IDs de evidência fornecidos. Se não houver prova, não crie o achado.
 Tudo é hipótese para revisão humana, nunca fato promovido automaticamente.
+Produza no máximo 8 achados neste lote.
 Formato: {"findings":[{"kind":"possible_duplicate|price_change|urgent_sale_signal|market_anomaly|data_conflict|source_gap|other","title":"...","summary":"...","confidence":0.0,"evidenceIds":[1],"candidateData":{}}]}.`;
 }
 
@@ -232,7 +246,10 @@ async function snapshotForPlanner(job) {
 }
 
 async function callK3({ organizationId, jobId, stage, input, runtime }) {
-  const selected = runtime || createAgentRuntime(process.env);
+  const selected = runtime || createAgentRuntime({
+    ...process.env,
+    AGENT_TIMEOUT_MS: process.env.INTELLIGENCE_TIMEOUT_MS || "300000",
+  });
   const status = selected.status();
   if (!new Set(["hermes", "direct-kimi"]).has(status.runtime))
     throw new Error("O orquestrador exige Kimi K3 via Hermes ou DirectKimi; runtime local recusado.");
@@ -274,25 +291,92 @@ async function saveFindings(job, findings) {
   return inserted;
 }
 
+function progressFrom(job) {
+  const value = job.result_summary;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { batchResults: {} };
+  const batchResults = value.batchResults && typeof value.batchResults === "object" && !Array.isArray(value.batchResults)
+    ? value.batchResults : {};
+  return { ...value, batchResults };
+}
+
+async function saveProgress(jobId, progress) {
+  await pool.query("UPDATE intelligence_jobs SET result_summary=$1,updated_at=now() WHERE id=$2", [JSON.stringify(progress), jobId]);
+}
+
+function bestCandidates(findings, limit = 20) {
+  return [...findings].sort((a, b) => b.confidence - a.confidence).slice(0, limit);
+}
+
 async function runJob(job, dependencies = {}) {
   const queryBudget = Math.max(0, Math.min(8, Number(job.scope?.queryBudget ?? process.env.INTELLIGENCE_QUERY_BUDGET ?? DEFAULT_QUERY_BUDGET)));
-  const snapshot = await snapshotForPlanner(job);
-  const planText = await callK3({ organizationId: job.organization_id, jobId: job.id, stage: "plan",
-    input: JSON.stringify({ ...snapshot, queryBudget }), runtime: dependencies.runtime });
-  const plan = normalizeInvestigationPlan(planText, { queryBudget });
-  await pool.query("UPDATE intelligence_jobs SET plan=$1,updated_at=now() WHERE id=$2", [JSON.stringify(plan), job.id]);
+  let plan;
+  if (job.plan) plan = normalizeInvestigationPlan(job.plan, { queryBudget });
+  else {
+    const snapshot = await snapshotForPlanner(job);
+    const planText = await callK3({ organizationId: job.organization_id, jobId: `${job.id}-plan`, stage: "plan",
+      input: JSON.stringify({ ...snapshot, queryBudget }), runtime: dependencies.runtime });
+    plan = normalizeInvestigationPlan(planText, { queryBudget });
+    await pool.query("UPDATE intelligence_jobs SET plan=$1,updated_at=now() WHERE id=$2", [JSON.stringify(plan), job.id]);
+  }
 
-  await collectAcervoEvidence(job);
-  const webEvidence = await collectSearchEvidence(job, plan);
-  const evidence = await evidenceForAnalysis(job.id);
-  let findings = [];
-  if (evidence.length) {
-    const analysisText = await callK3({ organizationId: job.organization_id, jobId: job.id, stage: "analysis",
-      input: JSON.stringify({ objective: job.objective, plan, evidence }), runtime: dependencies.runtime });
-    findings = normalizeFindings(analysisText, evidence.map(item => item.id));
+  let evidence = await evidenceForAnalysis(job.id);
+  const hasCollectedSearch = evidence.some(item => item.source_kind === "search") || plan.queries.length === 0;
+  if (!evidence.length || !hasCollectedSearch) {
+    await collectAcervoEvidence(job);
+    await collectSearchEvidence(job, plan);
+    evidence = await evidenceForAnalysis(job.id);
+  }
+
+  const webEvidence = evidence.filter(item => item.source_kind === "search").length;
+  const batchSize = Math.max(5, Math.min(30, Number(process.env.INTELLIGENCE_BATCH_SIZE || DEFAULT_BATCH_SIZE)));
+  const batches = chunkEvidence(evidence, batchSize);
+  const progress = progressFrom(job);
+  progress.stage = "analysis";
+  progress.evidence = evidence.length;
+  progress.webEvidence = webEvidence;
+  progress.batchesTotal = batches.length;
+
+  for (let index = 0; index < batches.length; index++) {
+    if (Array.isArray(progress.batchResults[index])) continue;
+    const batch = batches[index];
+    const analysisText = await callK3({
+      organizationId: job.organization_id,
+      jobId: `${job.id}-batch-${index + 1}`,
+      stage: "analysis",
+      input: JSON.stringify({ objective: job.objective, plan, batch: index + 1, batches: batches.length, evidence: batch }),
+      runtime: dependencies.runtime,
+    });
+    progress.batchResults[index] = normalizeFindings(analysisText, batch.map(item => item.id), { limit: 8 });
+    progress.batchesCompleted = Object.values(progress.batchResults).filter(Array.isArray).length;
+    await saveProgress(job.id, progress);
+    console.log(JSON.stringify({ jobId: job.id, stage: "analysis", batch: index + 1,
+      batches: batches.length, findings: progress.batchResults[index].length }));
+  }
+
+  const candidates = Object.values(progress.batchResults).filter(Array.isArray).flat();
+  let findings = bestCandidates(candidates);
+  let synthesis = candidates.length ? "batch-fallback" : "not-needed";
+  if (candidates.length && batches.length > 1) {
+    try {
+      const synthesisText = await callK3({
+        organizationId: job.organization_id,
+        jobId: `${job.id}-synthesis`,
+        stage: "synthesis",
+        input: JSON.stringify({ objective: job.objective, candidates }),
+        runtime: dependencies.runtime,
+      });
+      const consolidated = normalizeFindings(synthesisText, evidence.map(item => item.id));
+      if (consolidated.length) {
+        findings = consolidated;
+        synthesis = "completed";
+      } else synthesis = "empty-batch-fallback";
+    } catch (error) {
+      synthesis = `failed-batch-fallback: ${clean(error.message, 180)}`;
+    }
   }
   const inserted = await saveFindings(job, findings);
-  const summary = { queries: plan.queries.length, evidence: evidence.length, webEvidence, findings: inserted };
+  const summary = { queries: plan.queries.length, evidence: evidence.length, webEvidence,
+    batches: batches.length, candidates: candidates.length, findings: inserted, synthesis };
   await pool.query(
     `UPDATE intelligence_jobs SET status='completed',result_summary=$1,completed_at=now(),
             locked_at=NULL,updated_at=now() WHERE id=$2`, [JSON.stringify(summary), job.id]);
@@ -340,6 +424,10 @@ export async function listIntelligenceOverview() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   seedDailyIntelligenceJob().then(() => processIntelligenceQueue({ maxJobs: 1 }))
-    .then(result => { console.log(JSON.stringify(result)); return pool.end(); })
+    .then(result => {
+      console.log(JSON.stringify(result));
+      if (result.results.some(item => !item.ok)) process.exitCode = 1;
+      return pool.end();
+    })
     .catch(async error => { console.error(error); process.exitCode = 1; await pool.end().catch(() => {}); });
 }
