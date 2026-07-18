@@ -71,10 +71,10 @@ O segredo `API_SERVER_KEY` e `HERMES_API_KEY` deve ser o mesmo valor, guardado s
 
 ## Deploy controlado
 
-O script continua usando `agent/corretor-inteligente-os` por padrão. Para testar esta branch sem mover a produção de forma implícita:
+O deploy da API e o deploy do app usam `agent/kimi-personal-assistant` por padrão, evitando que cada superfície publique uma branch diferente:
 
 ```text
-RADAR_DEPLOY_BRANCH=agent/kimi-personal-assistant bash /opt/radar/repo/motor/deploy-api.sh
+bash /opt/radar/repo/motor/deploy-all.sh
 ```
 
 O deploy aplica automaticamente `009-agent-runtime.sql`. Só alterar `AGENT_RUNTIME` para `hermes` depois que o gateway isolado responder em loopback.
@@ -87,3 +87,18 @@ Depois do deploy seguro:
 - expor ferramentas de leitura controladas por um serviço intermediário, não por acesso ao PostgreSQL;
 - adicionar o painel de consumo diário/semanal;
 - liberar escrita apenas com confirmação humana explícita e auditoria.
+
+## Orquestrador de inteligência assíncrono
+
+A partir da migração `014-intelligence-orchestrator.sql`, o Hermes/K3 também opera fora
+do caminho síncrono do chat. O timer `radar-intelligence.timer` cria uma investigação
+diária depois das varreduras, e o K3:
+
+1. planeja consultas dentro de um orçamento explícito;
+2. recebe ofertas recentes, mudanças de preço e resultados públicos como dados não confiáveis;
+3. cruza entidades e produz hipóteses ligadas a IDs de evidência;
+4. grava somente `intelligence_findings` com status `candidate`.
+
+O orquestrador não contém `INSERT` ou `UPDATE` em `properties`, `valuations` ou na
+carteira privada. Promoção de um achado para a base confiável exige uma etapa posterior
+de validação e revisão humana.

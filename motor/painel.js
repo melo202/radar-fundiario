@@ -185,6 +185,10 @@ export async function painel(req, res) {
     const { listImprovementProposals } = await import("./agent-review.js");
     return json(res, 200, await listImprovementProposals());
   }
+  if (req.method === "GET" && req.url === "/painel/api/os/inteligencia") {
+    const { listIntelligenceOverview } = await import("./intelligence-orchestrator.js");
+    return json(res, 200, await listIntelligenceOverview());
+  }
   if (req.method === "GET" && req.url === "/painel/api/os/assistente/sessoes") {
     const { listAssistantSessions } = await import("./assistente.js");
     return json(res, 200, await listAssistantSessions());
@@ -245,6 +249,13 @@ export async function painel(req, res) {
       fileName, mimeType: req.headers["content-type"], buffer,
     });
     return json(res, r.ok ? 200 : 400, r);
+  }
+
+  if (req.method === "POST" && req.url === "/painel/api/os/inteligencia/investigar") {
+    const { createIntelligenceJob } = await import("./intelligence-orchestrator.js");
+    const { objective, scope, priority } = JSON.parse(await readBody(req) || "{}");
+    const r = await createIntelligenceJob({ kind: "custom_research", objective, scope, priority });
+    return json(res, r.ok ? 202 : 400, r);
   }
 
   if (req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes") {

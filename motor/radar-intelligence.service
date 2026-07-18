@@ -1,0 +1,13 @@
+[Unit]
+Description=Corretor Inteligente - orquestração Kimi K3 de pesquisas e oportunidades
+After=network-online.target postgresql.service docker.service radar-api.service
+
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/intelligence-orchestrator.js
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=3h

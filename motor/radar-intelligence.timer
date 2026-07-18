@@ -1,0 +1,10 @@
+[Unit]
+Description=Corretor Inteligente - investigação inteligente diária pós-varredura
+
+[Timer]
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target
