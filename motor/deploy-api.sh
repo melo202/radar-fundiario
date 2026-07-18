@@ -10,7 +10,9 @@ cd /opt/radar/repo
 # A API e o app estático precisam acompanhar a mesma branch. A branch Kimi contém o
 # Corretor Inteligente OS e o orquestrador; a base anterior continua recuperável no git.
 DEPLOY_BRANCH="${RADAR_DEPLOY_BRANCH:-agent/kimi-personal-assistant}"
-git fetch -q origin "$DEPLOY_BRANCH"
+# Atualiza explicitamente a referência remota. Em clones com refspec restrito, o fetch
+# simples atualiza apenas FETCH_HEAD e deixa origin/<branch> congelada (bug de 18/07).
+git fetch -q origin "$DEPLOY_BRANCH:refs/remotes/origin/$DEPLOY_BRANCH"
 git checkout -q "$DEPLOY_BRANCH" 2>/dev/null || git checkout -qb "$DEPLOY_BRANCH" "origin/$DEPLOY_BRANCH"
 git reset -q --hard "origin/$DEPLOY_BRANCH"
 mkdir -p /opt/radar/api

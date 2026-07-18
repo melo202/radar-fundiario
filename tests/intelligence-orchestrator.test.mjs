@@ -51,4 +51,5 @@ test("orquestrador: fila tem execução própria, API protegida e timer de produ
   assert.ok(deploy.includes("radar-intelligence.service"));
   assert.ok(deploy.includes("radar-intelligence.timer"));
   assert.ok(deploy.includes("intelligence-orchestrator.js"));
+  assert.ok(deploy.includes('$DEPLOY_BRANCH:refs/remotes/origin/$DEPLOY_BRANCH'), "a API nunca usa referência remota obsoleta");
 });
