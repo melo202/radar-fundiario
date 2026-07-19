@@ -377,7 +377,56 @@ export async function visaoHoje() {
     }
   }
 
-  return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20) };
+  /* Métrica-norte do hábito (auditoria 19/07): 1 evento por dia de uso real, idempotente
+     pela chave org+dia. É espelho do próprio trabalho no banco do corretor — não é
+     telemetria externa; a sequência aparece no painel admin, nunca na tela diária. */
+  await db.query(
+    `INSERT INTO domain_events (organization_id,event_type,entity_type,payload,source,idempotency_key)
+     VALUES ($1,'dia_ativo','organization','{}'::jsonb,'corretor-os','dia_ativo:'||to_char(now() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD'))
+     ON CONFLICT (organization_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`, [org.id]);
+
+  /* Novidade exógena diária: falha aqui NUNCA derruba o Hoje */
+  let novidade = null;
+  try { novidade = await novidadeDoMercado(db, org); } catch { novidade = null; }
+
+  return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20), novidade };
+}
+
+/* Seleção pura das novidades da Caixa: prioriza bairros da carteira, cai para a cidade
+   quando a carteira ainda não tem bairro; só entra quem tem desconto HONESTO calculado
+   contra a mediana de ofertas do bairro (n>=5, regra do motor de oportunidades). */
+export function selecionarNovidades(imoveis, bairrosCarteira, normaliza) {
+  const alvo = new Set((bairrosCarteira || []).map(b => normaliza(b)).filter(Boolean));
+  const candidatos = (imoveis || [])
+    .filter(i => i.descontoBairro && Number(i.descontoBairro.pctAbaixoDaMediana) > 0)
+    .sort((a, b) => b.descontoBairro.pctAbaixoDaMediana - a.descontoBairro.pctAbaixoDaMediana);
+  const daCarteira = candidatos.filter(i => alvo.has(normaliza(i.b)));
+  const escolhidos = (daCarteira.length ? daCarteira : candidatos).slice(0, 3);
+  if (!escolhidos.length) return null;
+  return {
+    escopo: daCarteira.length ? "carteira" : "cidade",
+    itens: escolhidos.map(i => ({
+      id: i.id, bairro: i.b, tipo: i.t, preco: i.p, url: i.u,
+      pctAbaixoDaMediana: i.descontoBairro.pctAbaixoDaMediana, nOfertas: i.descontoBairro.nOfertas,
+    })),
+  };
+}
+
+/* Guarda de frescor (auditoria 19/07): lista com mais de 3 dias não se chama novidade —
+   o card some sozinho até o runner residencial voltar a alimentar a ingestão. */
+export async function novidadeDoMercado(db, org) {
+  const { listarOportunidades } = await import("./oportunidades.js");
+  const { normalizaBairro } = await import("./estatistica.js");
+  const lista = await listarOportunidades();
+  if (!lista.gerado) return null;
+  const idadeDias = Math.floor((Date.now() - Date.parse(lista.gerado)) / 86400000);
+  if (idadeDias > 3) return null;
+  const bairros = await db.query(
+    `SELECT DISTINCT neighborhood FROM inventory_properties
+     WHERE organization_id=$1 AND status='ativo' AND neighborhood IS NOT NULL`, [org.id]);
+  const selecao = selecionarNovidades(lista.imoveis, bairros.rows.map(r => r.neighborhood), normalizaBairro);
+  if (!selecao) return null;
+  return { ...selecao, geradoEm: lista.gerado, fonte: lista.fonte };
 }
 
 export async function listarCarteira() {

@@ -94,7 +94,12 @@ async function visao() {
             count(*) FILTER (WHERE situacao='ativo' AND x_utm IS NOT NULL)::int AS plotaveis,
             max(gerado_em) AS gerado
      FROM oportunidades WHERE fonte='caixa'`).then(r => r.rows[0]).catch(() => null);
-  return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas, oportunidades, oportAcervo };
+  /* Métrica-norte do hábito (auditoria 19/07): dias com uso real do OS, no fuso do corretor */
+  const habito = await pool.query(
+    `SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') AS dia
+     FROM domain_events WHERE event_type='dia_ativo' ORDER BY dia DESC LIMIT 30`)
+    .then(r => r.rows.map(x => x.dia)).catch(() => []);
+  return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas, oportunidades, oportAcervo, habito };
 }
 
 export async function painel(req, res) {
