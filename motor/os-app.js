@@ -29,7 +29,14 @@ function errorCard(target,error){target.replaceChildren(el("div",{class:"error-c
 function toast(message){const t=$("toast");t.textContent=message;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,2800);}
 function badge(priority){const labels={baixa:"Baixa",normal:"Normal",alta:"Atenção",critica:"Crítica"};const cls=priority==="critica"?"badge critical":priority==="alta"?"badge high":"badge";return el("span",{class:cls,text:labels[priority]||"Ação"});}
 
-async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;state.todayLoadedAt=Date.now();const c=data.counts||{};state.todayCounts=c;renderCountsLine(c);$("todaySummary").textContent=data.actions?.length?`Encontrei ${data.actions.length} movimento${data.actions.length===1?"":"s"} que merece${data.actions.length===1?"":"m"} sua atenção.`:"Seu dia está sob controle. Posso analisar a carteira ou registrar um novo movimento.";updateGuide(c);renderActions(data.actions||[]);renderNovidade(data.novidade);}catch(e){errorCard(target,e);}}
+async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;state.todayLoadedAt=Date.now();const c=data.counts||{};state.todayCounts=c;renderCountsLine(c);$("todaySummary").textContent=data.actions?.length?`Encontrei ${data.actions.length} movimento${data.actions.length===1?"":"s"} que merece${data.actions.length===1?"":"m"} sua atenção.`:"Seu dia está sob controle. Posso analisar a carteira ou registrar um novo movimento.";updateGuide(c);renderActions(data.actions||[]);renderNovidade(data.novidade);renderPlantao(data.plantao);}catch(e){errorCard(target,e);}}
+/* Plantão do radar: uma linha factual — "trabalhou por mim enquanto eu não olhava" */
+function renderPlantao(p){const alvo=$("todayPlantao");if(!alvo)return;if(!p){alvo.hidden=true;return;}
+  const partes=[];
+  if(p.bairros)partes.push(`${p.bairros} bairro${p.bairros===1?"":"s"} varrido${p.bairros===1?"":"s"}`);
+  if(p.novos)partes.push(`${p.novos} anúncio${p.novos===1?"":"s"} novo${p.novos===1?"":"s"} no acervo`);
+  if(p.precosMudaram)partes.push(p.precosMudaram===1?"1 preço mudou":`${p.precosMudaram} preços mudaram`);
+  alvo.textContent=`Radar nas últimas 24h: ${partes.join(" · ")}.`;alvo.hidden=false;}
 /* Novidade do mercado: recompensa exógena diária — mudanças de preço VERIFICADAS pelo
    radar nos bairros da carteira. Sem mudança recente, o card simplesmente não existe
    (aparição rara e com motivo — Mestre dos Magos, não mural). */

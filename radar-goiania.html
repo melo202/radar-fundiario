@@ -1390,6 +1390,16 @@
   .dossier-view[hidden]{display:none!important}
   .dossier-view{animation:atlas-view-in var(--motion-fast) var(--ease-out)}
   @keyframes atlas-view-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
+  /* Pulso do mercado (19/07): pinos que respiram onde o radar VERIFICOU mudança de preço
+     nos últimos 7 dias — o mapa mostra o mercado vivo, sem inventar nada */
+  .pulso-preco{position:relative;width:18px;height:18px}
+  .pulso-preco::before{content:"";position:absolute;inset:0;border-radius:50%;animation:pulso-onda 2s ease-out infinite}
+  .pulso-preco::after{content:"";position:absolute;inset:5px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .pulso-preco.queda::before{background:rgba(16,150,72,.45)}
+  .pulso-preco.queda::after{background:#109648}
+  .pulso-preco.alta::before{background:rgba(191,109,25,.4)}
+  .pulso-preco.alta::after{background:#bf6d19}
+  @keyframes pulso-onda{0%{transform:scale(.5);opacity:.9}75%{transform:scale(2.1);opacity:0}100%{transform:scale(2.1);opacity:0}}
   .idcheck-warning-mark{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:var(--brass);color:#fff;font-weight:800}
   .dvalor{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-soft);padding:18px 20px}
   .dvalor-v{color:var(--brand-strong);font-size:24px;letter-spacing:-.02em}
@@ -10212,6 +10222,28 @@ if(!window.L||!window.proj4){
     initCaixa();
   };
   if(document.readyState!=="loading")bootCaixa();else document.addEventListener("DOMContentLoaded",bootCaixa);
+  /* Pulso do mercado (19/07): mudanças de preço VERIFICADAS (mesmo anúncio, portal+id,
+     duas coletas) dos últimos 7 dias pulsam no mapa. Falha da API = mapa segue sem pulso. */
+  const bootPulso=async()=>{
+    try{
+      const r=await fetch(MOTOR_BASE+"/motor/mercado/mudancas",{signal:AbortSignal.timeout(8000)});
+      if(!r.ok)return;
+      const d=await r.json();
+      const fmt=v=>Number(v).toLocaleString("pt-BR");
+      (d.mudancas||[]).filter(m=>m.lat!=null&&m.lon!=null).forEach(m=>{
+        const queda=Number(m.para)<Number(m.de);
+        const pct=m.variacaoPct!=null?` ${Math.abs(Number(m.variacaoPct)).toLocaleString("pt-BR")}%`:"";
+        const icon=L.divIcon({className:"",html:`<div class="pulso-preco ${queda?"queda":"alta"}"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+        L.marker([m.lat,m.lon],{icon,zIndexOffset:640}).addTo(map).bindPopup(
+          `<b>${queda?"Preço baixou":"Preço subiu"}${pct}</b><br>`+
+          `${m.tipo||"imóvel"}${m.bairro?` · ${m.bairro}`:""}<br>`+
+          `R$ ${fmt(m.de)} → R$ ${fmt(m.para)}<br>`+
+          (m.url?`<a href="${m.url}" target="_blank" rel="noopener">ver anúncio ↗</a><br>`:"")+
+          `<small>verificado pelo radar: mesmo anúncio, duas coletas · ${new Date(m.quando).toLocaleDateString("pt-BR")}</small>`);
+      });
+    }catch(e){/* pulso é bônus — nunca atrapalha o mapa */}
+  };
+  if(document.readyState!=="loading")bootPulso();else document.addEventListener("DOMContentLoaded",bootPulso);
   /* deep-link ?insc= (BUSCA-09): so depende de map (initMap, sincrona) — NAO espera loadBairros
      (insc nao usa COMBO/setor). Erro (inscricao nao encontrada) reusa o toast/estado vazio de finish(). */
   const inscParam=new URLSearchParams(location.search).get("insc");

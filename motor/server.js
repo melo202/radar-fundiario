@@ -177,6 +177,25 @@ http.createServer(async (req, res) => {
       const { listarOportunidades } = await import("./oportunidades.js");
       return json(res, 200, await listarOportunidades());
     }
+    if (req.method === "GET" && req.url === "/motor/mercado/mudancas") {
+      /* pulso do mapa (19/07): mudanças de preço VERIFICADAS dos últimos 7 dias, com a
+         coordenada do anúncio quando existir. Só o termômetro honesto (portal+id, duas
+         coletas); invalidadas do backfill nunca voltam. Determinístico, só banco. */
+      if (estourou(req, 30, "mudancas")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const r = await pool.query(
+        `SELECT a.detail, a.created_at,
+                ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon
+         FROM audit_log a
+         LEFT JOIN listings l ON l.id = (a.detail->>'listingAnterior')::uuid
+         LEFT JOIN properties p ON p.listing_id = l.id
+         WHERE a.action='mudanca-preco' AND (a.detail->>'verificada')::boolean IS TRUE
+           AND a.detail->>'invalidada' IS NULL AND a.created_at > now()-interval '7 days'
+         ORDER BY a.created_at DESC LIMIT 50`);
+      return json(res, 200, { janelaDias: 7,
+        fonte: "Mudanças verificadas pelo radar — mesmo anúncio (portal+id), duas coletas comparáveis",
+        mudancas: r.rows.map(x => ({ ...x.detail,
+          quando: x.created_at, lat: x.lat != null ? Number(x.lat) : null, lon: x.lon != null ? Number(x.lon) : null })) });
+    }
     if (req.method === "POST" && req.url === "/motor/mercado") {
       /* avaliação AO VIVO: dispara busca nos portais (gasta cota Brave) e avalia.
          cache de 6h por bairro protege a cota global; rate limit por IP protege o pico */

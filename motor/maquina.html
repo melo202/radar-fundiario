@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Sala de Máquinas · Corretor Inteligente</title>
+<style>
+  :root{--bg:#0c151e;--panel:#131f2b;--panel2:#0f1a24;--line:#1f3140;--ink:#d9e6ea;--muted:#7d94a0;
+    --verde:#23c69f;--verde-soft:rgba(35,198,159,.12);--warm:#d78a42;--vermelho:#e0604f;
+    --mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace}
+  *{box-sizing:border-box;margin:0}
+  body{background:radial-gradient(circle at 85% -20%,rgba(35,198,159,.07),transparent 30rem),var(--bg);
+    color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;min-height:100vh;padding:22px 18px 40px}
+  a{color:var(--verde);text-decoration:none}
+  .topo{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1180px;margin:0 auto 20px}
+  .topo h1{font-size:19px;display:flex;align-items:center;gap:11px;letter-spacing:.02em}
+  .coracao{width:12px;height:12px;border-radius:50%;background:#5a707c;flex:0 0 12px}
+  .coracao.vivo{background:var(--verde);animation:bater 1.6s ease-in-out infinite;box-shadow:0 0 0 0 rgba(35,198,159,.5)}
+  .coracao.morno{background:var(--warm)}
+  @keyframes bater{0%,100%{box-shadow:0 0 0 0 rgba(35,198,159,.45)}50%{box-shadow:0 0 0 9px rgba(35,198,159,0)}}
+  .topo small{color:var(--muted);font-size:12px}
+  .topo nav{display:flex;gap:14px;font-size:13px}
+  .grade{display:grid;gap:14px;max-width:1180px;margin:0 auto;grid-template-columns:1fr}
+  @media(min-width:980px){.grade{grid-template-columns:1.6fr 1fr}.col-feed{grid-row:1/span 3}}
+  .painel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .painel h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:13px}
+  /* AGORA */
+  .agora-linha{font-size:15px;line-height:1.5}
+  .agora-linha b{color:var(--verde)}
+  .barra{height:8px;border-radius:99px;background:var(--panel2);margin:12px 0 6px;overflow:hidden}
+  .barra i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#128d74,var(--verde));transition:width .8s ease;position:relative}
+  .barra i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:varrer 1.8s linear infinite}
+  @keyframes varrer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+  .agora-sub{font-size:12px;color:var(--muted)}
+  .relogios{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
+  .relogio{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .relogio b{color:var(--ink);font-size:15px}
+  /* CONTADORES */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .tile{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:13px 14px}
+  .tile strong{display:block;font-family:var(--mono);font-size:26px;color:var(--ink);transition:color .3s}
+  .tile strong.subiu{color:var(--verde)}
+  .tile span{font-size:11.5px;color:var(--muted);line-height:1.3;display:block;margin-top:4px}
+  .cotinha{height:4px;border-radius:99px;background:var(--line);margin-top:8px}
+  .cotinha i{display:block;height:100%;border-radius:99px;background:var(--warm)}
+  /* SPARKLINE */
+  svg.spark{width:100%;height:64px;display:block}
+  .spark polyline{fill:none;stroke:var(--verde);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .spark .area{fill:var(--verde-soft);stroke:none}
+  .spark-rotulo{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+  /* TURNO */
+  .turno p{font-size:13px;line-height:1.6;color:var(--ink)}
+  .turno p b{font-family:var(--mono);color:var(--verde)}
+  .turno .quando{color:var(--muted);font-family:var(--mono);font-size:11.5px;margin-right:8px}
+  /* FEED */
+  .feed{display:grid;gap:0;max-height:72vh;overflow-y:auto;scrollbar-width:thin}
+  .evento{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);animation:chegar .5s ease}
+  @keyframes chegar{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .evento.fresco{background:var(--verde-soft);border-radius:8px}
+  .evento time{font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:2px;white-space:nowrap}
+  .evento p{font-size:12.5px;line-height:1.45;color:var(--ink)}
+  .evento p small{color:var(--muted)}
+  .rodape{max-width:1180px;margin:18px auto 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .erro{background:rgba(224,96,79,.12);border:1px solid rgba(224,96,79,.4);border-radius:12px;padding:12px 14px;font-size:13px;display:none;max-width:1180px;margin:0 auto 14px}
+</style>
+</head>
+<body>
+  <header class="topo">
+    <h1><span class="coracao" id="coracao"></span> Sala de Máquinas <small id="statusResumo">conectando…</small></h1>
+    <nav><a href="/painel/os">Meu dia</a><a href="/painel/admin">Painel técnico</a></nav>
+  </header>
+  <div class="erro" id="erro">Sem contato com o motor agora — tentando de novo sozinho.</div>
+  <main class="grade">
+    <section class="painel">
+      <h2>Agora</h2>
+      <div id="agora"><p class="agora-linha">Carregando…</p></div>
+      <div class="relogios" id="relogios"></div>
+    </section>
+    <aside class="painel col-feed">
+      <h2>Acontecendo · registro vivo</h2>
+      <div class="feed" id="feed"></div>
+    </aside>
+    <section class="painel">
+      <h2>O império em números</h2>
+      <div class="tiles" id="tiles"></div>
+    </section>
+    <section class="painel">
+      <h2>Anúncios novos por dia · 14 dias</h2>
+      <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+      <div class="spark-rotulo" id="sparkRotulo"></div>
+      <div class="turno" id="turno" style="margin-top:16px"></div>
+    </section>
+  </main>
+  <p class="rodape">Atualiza sozinho a cada 20 s. Tudo aqui é registro do trabalho determinístico (audit_log, ai_logs, acervo)
+    — nenhum número é inventado. A varredura ronda os 684 bairros do cadastro; a revisita confere preços; o índice engorda a base.</p>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+let DADOS=null,ANTERIOR={},PRIMEIRA=true;
+const fmt=n=>Number(n||0).toLocaleString("pt-BR");
+const rel=t=>{const s=Math.max(0,(Date.now()-new Date(t).getTime())/1000);
+  if(s<60)return"agora";if(s<3600)return`há ${Math.floor(s/60)} min`;
+  if(s<86400)return`há ${Math.floor(s/3600)} h`;return`há ${Math.floor(s/86400)} d`;};
+
+/* próxima ocorrência de um horário fixo (varredura 03:33 · revisita 04:47), fuso local */
+function proxima(h,m){const d=new Date();d.setHours(h,m,0,0);if(d<=new Date())d.setDate(d.getDate()+1);return d;}
+function contagem(alvo){const s=Math.max(0,(alvo-new Date())/1000);
+  return`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor(s/60)%60).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`;}
+
+function rotuloEvento(e){
+  const d=e.detail||{};
+  if(e.entity==="varredura"&&e.action==="executada")return`Varredura concluída: <b>${fmt(d.bairros)}</b> bairros, <b>${fmt(d.novos)}</b> anúncios novos, ${fmt(d.comparaveis)} comparáveis <small>(${d.tipo||""} · ${d.portalAlvo||"geral"})</small>`;
+  if(e.entity==="revisita"&&e.action==="executada")return`Revisita noturna: ${fmt(d.alvos??d.total??"")} anúncios conferidos`;
+  if(e.action==="mudanca-preco")return`<b>Preço ${Number(d.para)<Number(d.de)?"baixou":"subiu"}</b> ${d.variacaoPct!=null?Math.abs(d.variacaoPct).toLocaleString("pt-BR")+"%":""}: ${d.tipo||"imóvel"} ${d.bairro?`· ${d.bairro}`:""} <small>(verificado)</small>`;
+  if(e.action==="mudanca-preco-suspeita")return`Salto de preço em quarentena <small>(fora do termômetro)</small>`;
+  if(e.entity==="valuation"||e.entity==="avaliacao")return`Avaliação ${e.action}`;
+  if(e.entity==="oportunidade")return`Oportunidade: ${e.action}`;
+  if(e.entity==="schema")return`Migração aplicada: ${e.entity_id}`;
+  return`${e.entity}: ${e.action}`;
+}
+
+function render(){
+  const d=DADOS;if(!d)return;
+  /* coração: verde pulsando se algo aconteceu há <10 min */
+  const ultimo=d.feed?.[0]?.created_at;
+  const idadeMin=ultimo?(Date.now()-new Date(ultimo).getTime())/60000:Infinity;
+  const rodando=d.agora?.varredura?.rodando;
+  $("coracao").className="coracao "+(rodando||idadeMin<10?"vivo":idadeMin<120?"morno":"");
+  $("statusResumo").textContent=rodando?"varredura em curso":idadeMin<10?"trabalhando":idadeMin<120?"atividade recente":"em repouso · próximo turno programado";
+  document.title=(rodando||idadeMin<3?"● ":"")+"Sala de Máquinas · Corretor Inteligente";
+
+  /* AGORA */
+  const v=d.agora?.varredura;
+  let html="";
+  if(v?.rodando){
+    const pct=v.total?Math.round(100*v.feitos/v.total):0;
+    html+=`<p class="agora-linha"><b>Varredura em curso</b> — ${v.tipo||""} · fonte ${v.portalAlvo||"geral"}<br>
+      bairro atual: <b>${v.bairroAtual||"…"}</b></p>
+      <div class="barra"><i style="width:${pct}%"></i></div>
+      <p class="agora-sub">${v.feitos}/${v.total} bairros · ${fmt(v.novos)} anúncios novos até agora · começou ${rel(v.inicio)}</p>`;
+  } else {
+    html+=`<p class="agora-linha">Máquina em ronda programada — a última varredura ${v?.fim?`terminou ${rel(v.fim)} (${fmt(v.novos)} novos)`:"aguarda o turno"}.</p>`;
+  }
+  const jobsAtivos=(d.agora?.jobs||[]).filter(j=>["pending","running"].includes(j.status)).reduce((s,j)=>s+j.n,0);
+  if(jobsAtivos)html+=`<p class="agora-sub" style="margin-top:8px">✦ ${jobsAtivos} investigação(ões) na fila do radar</p>`;
+  $("agora").innerHTML=html;
+  $("relogios").innerHTML=`<span class="relogio">próxima varredura <b id="cdVarredura"></b></span>
+    <span class="relogio">próxima revisita <b id="cdRevisita"></b></span>`;
+
+  /* TILES: número que cresceu desde o último poll acende em verde com o delta */
+  const c=d.contadores||{};
+  let tilesHtml=[["listings",c.listings,"anúncios no acervo"],
+    ["comparaveis",c.comparaveis,"passaram na peneira profissional"],
+    ["bairros",c.bairrosComBase,"bairros com base de preço (n≥3)"]].map(([k,val,rot])=>{
+    const antes=ANTERIOR[k];
+    const subiu=!PRIMEIRA&&antes!=null&&val>antes;
+    ANTERIOR[k]=val;
+    return`<div class="tile"><strong class="${subiu?"subiu":""}">${fmt(val)}</strong><span>${rot}${subiu?` · +${fmt(val-antes)} agora`:""}</span></div>`;
+  }).join("");
+  const pctCota=Math.min(100,Math.round(100*(d.cotaBrave?.usadas||0)/(d.cotaBrave?.limite||2000)));
+  tilesHtml+=`<div class="tile"><strong>${fmt(d.cotaBrave?.usadas)}</strong><span>buscas da varredura no mês · cota ${fmt(d.cotaBrave?.limite)}</span><div class="cotinha"><i style="width:${pctCota}%"></i></div></div>`;
+  $("tiles").innerHTML=tilesHtml;
+
+  /* SPARKLINE */
+  const serie=d.porDia||[];
+  if(serie.length>1){
+    const max=Math.max(...serie.map(x=>x.n),1),W=300,H=60;
+    const pts=serie.map((x,i)=>`${(i/(serie.length-1))*W},${H-(x.n/max)*(H-8)+4}`);
+    $("spark").innerHTML=`<polygon class="area" points="0,${H+4} ${pts.join(" ")} ${W},${H+4}"/><polyline points="${pts.join(" ")}"/>`;
+    $("sparkRotulo").innerHTML=`<span>${serie[0].dia}</span><span>pico ${fmt(max)}/dia</span><span>${serie[serie.length-1].dia}</span>`;
+  }
+
+  /* TURNO 24h */
+  $("turno").innerHTML=(d.noite||[]).length
+    ?`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2>`+(d.noite||[]).map(t=>{const x=t.detail||{};
+        return`<p><span class="quando">${new Date(t.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>${t.entity==="varredura"?`varredura: <b>${fmt(x.bairros)}</b> bairros · <b>${fmt(x.novos)}</b> novos · ${fmt(x.comparaveis)} comparáveis`:`revisita: anúncios conferidos`}</p>`;}).join("")
+    :`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2><p style="color:var(--muted);font-size:12.5px">Nenhum turno nas últimas 24 h — o próximo está no relógio acima.</p>`;
+
+  /* FEED (audit + IA mesclados) */
+  const eventos=[...(d.feed||[]).map(e=>({t:e.created_at,html:rotuloEvento(e)})),
+    ...(d.ia||[]).map(l=>({t:l.created_at,html:`IA ${l.ok?"extraiu/analisou":"falhou em"} <b>${l.task||""}</b> em ${(l.duration_ms/1000).toFixed(1)} s <small>(${l.model||""})</small>`}))]
+    .sort((a,b)=>new Date(b.t)-new Date(a.t)).slice(0,34);
+  $("feed").innerHTML=eventos.map(e=>{const fresco=(Date.now()-new Date(e.t).getTime())<120000;
+    return`<div class="evento${fresco?" fresco":""}"><time data-t="${e.t}">${rel(e.t)}</time><p>${e.html}</p></div>`;}).join("");
+  PRIMEIRA=false;
+}
+
+async function poll(){
+  try{
+    const r=await fetch("/painel/api/os/maquina",{credentials:"same-origin"});
+    if(r.status===401){location.href="/painel";return;}
+    if(!r.ok)throw 0;
+    DADOS=await r.json();$("erro").style.display="none";render();
+  }catch{$("erro").style.display="block";}
+}
+/* relógio de 1 s: tempos relativos e contagens regressivas vivem sem esperar o poll */
+setInterval(()=>{
+  document.querySelectorAll(".evento time[data-t]").forEach(t=>t.textContent=rel(t.dataset.t));
+  const cv=$("cdVarredura"),cr=$("cdRevisita");
+  if(cv)cv.textContent=contagem(proxima(3,33));
+  if(cr)cr.textContent=contagem(proxima(4,47));
+},1000);
+poll();setInterval(poll,20000);
+</script>
+</body>
+</html>

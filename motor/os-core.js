@@ -389,7 +389,25 @@ export async function visaoHoje() {
   let novidade = null;
   try { novidade = await novidadeDoMercado(db, org); } catch { novidade = null; }
 
-  return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20), novidade };
+  /* Plantão do radar (19/07): o trabalho noturno vira UMA linha no rodapé do Hoje —
+     a sensação de "trabalhou por mim enquanto eu não olhava", sem virar mural */
+  let plantao = null;
+  try {
+    const p = await db.query(
+      `SELECT
+        COALESCE((SELECT SUM((detail->>'bairros')::int) FROM audit_log
+          WHERE entity='varredura' AND action='executada' AND created_at>now()-interval '24 hours'),0)::int AS bairros,
+        COALESCE((SELECT SUM((detail->>'novos')::int) FROM audit_log
+          WHERE entity='varredura' AND action='executada' AND created_at>now()-interval '24 hours'),0)::int AS novos,
+        (SELECT count(*)::int FROM audit_log
+          WHERE action='mudanca-preco' AND (detail->>'verificada')::boolean IS TRUE
+            AND detail->>'invalidada' IS NULL AND created_at>now()-interval '24 hours') AS precos`);
+    const x = p.rows[0];
+    if (x.bairros > 0 || x.novos > 0 || x.precos > 0)
+      plantao = { bairros: x.bairros, novos: x.novos, precosMudaram: x.precos };
+  } catch { plantao = null; }
+
+  return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20), novidade, plantao };
 }
 
 /* Seleção pura das novidades: mudanças de preço VERIFICADAS pelo radar (mesmo anúncio,

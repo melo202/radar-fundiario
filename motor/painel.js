@@ -16,12 +16,16 @@ const HTML = HTML_BASE.replace("<main>", `<main>
       <h2>Corretor Inteligente OS — alpha</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Abra a nova experiência orientada ao seu dia: Hoje, Carteira, Relacionamentos e Captura universal.</p>
       <a href="/painel/os" style="display:inline-block;text-decoration:none;font-weight:700;background:linear-gradient(135deg,#088780,#19A99A);color:#fff;border-radius:9px;padding:10px 16px">Abrir meu dia</a>
+      <a href="/painel/admin/maquina" style="display:inline-block;text-decoration:none;font-weight:700;background:#14212e;color:#8fe6d3;border:1px solid #24564d;border-radius:9px;padding:10px 16px;margin-left:8px">◉ Sala de Máquinas</a>
     </div>`);
 /* OS-01: shell operacional isolado; o painel técnico legado continua intacto. */
 const OS_HTML = readFileSync(new URL("./os.html", import.meta.url), "utf-8");
 const OS_CSS = readFileSync(new URL("./os.css", import.meta.url), "utf-8");
 const OS_JS = readFileSync(new URL("./os-app.js", import.meta.url), "utf-8");
 const OS_MANIFEST = readFileSync(new URL("./os.webmanifest", import.meta.url), "utf-8");
+/* Sala de Máquinas (19/07): painel VIVO do fundador — exibe o trabalho determinístico
+   que já acontece (varredura, revisita, índice, IA); nada aqui gera trabalho novo. */
+const MAQUINA_HTML = readFileSync(new URL("./maquina.html", import.meta.url), "utf-8");
 /* SEG-03 no que o Node serve; o nginx cobre o restante do site */
 const SEC = {
   "X-Frame-Options": "DENY",
@@ -102,6 +106,49 @@ async function visao() {
   return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas, oportunidades, oportAcervo, habito };
 }
 
+/* Sala de Máquinas: leitura PURA do que já foi registrado — audit_log, ai_logs, acervo,
+   índice e o status ao vivo que a própria varredura escreve. Nada aqui dispara trabalho. */
+async function salaDeMaquinas() {
+  const { readFileSync: lerArquivo } = await import("node:fs");
+  let varredura = null;
+  try { varredura = JSON.parse(lerArquivo(new URL("./varredura-status.json", import.meta.url), "utf-8")); } catch {}
+  const contadores = await pool.query(
+    `SELECT (SELECT count(*)::int FROM listings) AS listings,
+            (SELECT count(*)::int FROM properties WHERE (quality->>'comparableGrade')::boolean) AS comparaveis`)
+    .then(r => r.rows[0]);
+  const { indiceBairros } = await import("./indice-bairro.js");
+  const indice = await indiceBairros().catch(() => []);
+  const porDia = await pool.query(
+    `SELECT to_char(date_trunc('day', collected_at AT TIME ZONE 'America/Sao_Paulo'),'DD/MM') AS dia, count(*)::int AS n
+     FROM listings WHERE collected_at > now()-interval '14 days'
+     GROUP BY date_trunc('day', collected_at AT TIME ZONE 'America/Sao_Paulo')
+     ORDER BY date_trunc('day', collected_at AT TIME ZONE 'America/Sao_Paulo')`)
+    .then(r => r.rows).catch(() => []);
+  const jobs = await pool.query(
+    `SELECT status, count(*)::int AS n FROM intelligence_jobs
+     WHERE created_at > now()-interval '7 days' GROUP BY 1`).then(r => r.rows).catch(() => []);
+  const feed = await pool.query(
+    `SELECT entity, entity_id, action, detail, created_at FROM audit_log
+     ORDER BY created_at DESC LIMIT 30`).then(r => r.rows);
+  const ia = await pool.query(
+    `SELECT task, model, ok, duration_ms, created_at FROM ai_logs
+     ORDER BY created_at DESC LIMIT 10`).then(r => r.rows).catch(() => []);
+  const noite = await pool.query(
+    `SELECT entity, detail, created_at FROM audit_log
+     WHERE action='executada' AND entity IN ('varredura','revisita')
+       AND created_at > now()-interval '24 hours' ORDER BY created_at DESC LIMIT 6`).then(r => r.rows);
+  const cota = await pool.query(
+    `SELECT COALESCE(SUM((detail->>'bairros')::int),0)::int AS usadas FROM audit_log
+     WHERE entity='varredura' AND action='executada'
+       AND created_at >= date_trunc('month', now())`).then(r => r.rows[0]).catch(() => ({ usadas: 0 }));
+  return {
+    agora: { varredura, jobs },
+    contadores: { ...contadores, bairrosComBase: indice.filter(i => i.n >= 3).length },
+    cotaBrave: { usadas: cota.usadas, limite: 2000 },
+    porDia, feed, ia, noite, serverTime: new Date().toISOString(),
+  };
+}
+
 export async function painel(req, res) {
   if (!painelAtivo()) return json(res, 404, { erro: "rota desconhecida" }); /* SEG-05 */
 
@@ -163,6 +210,13 @@ export async function painel(req, res) {
     return res.end(HTML);
   }
 
+  if (req.method === "GET" && req.url === "/painel/admin/maquina") {
+    /* Sala de Máquinas: página viva do fundador, atrás da mesma sessão do painel */
+    res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": CSP, "Cache-Control": "no-store" }, SEC));
+    return res.end(MAQUINA_HTML);
+  }
+
   /* OS-01: aplicação operacional protegida pela mesma sessão do painel durante a fase alpha. */
   if (req.method === "GET" && req.url === "/painel/os") {
     res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8",
@@ -182,6 +236,9 @@ export async function painel(req, res) {
 
   if (req.method === "GET" && req.url === "/painel/api/visao") {
     return json(res, 200, Object.assign(await visao(), { csrf: csrfDe(sessao) }));
+  }
+  if (req.method === "GET" && req.url === "/painel/api/os/maquina") {
+    return json(res, 200, await salaDeMaquinas());
   }
   if (req.method === "GET" && req.url === "/painel/api/os/hoje") {
     const { visaoHoje } = await import("./os-core.js");

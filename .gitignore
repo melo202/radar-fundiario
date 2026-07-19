@@ -12,3 +12,6 @@ corretorinteligente_brandkit.zip
 # runner residencial: segredo nunca vai pro repo (fica em %USERPROFILE%\.radar)
 .radar/
 node_modules/
+
+# status ao vivo da varredura (runtime, nunca versionado)
+motor/varredura-status.json

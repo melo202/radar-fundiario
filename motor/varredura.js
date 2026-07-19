@@ -10,9 +10,19 @@
    buscas/noite ≈ 1.200/mês, sobrando ~800 da cota para as pesquisas ao vivo do dossiê.
    A base de preço (indice-bairro) engorda sozinha a cada noite e a revisita mantém os
    preços vivos — cobertura completa do ciclo em ~35 noites, depois recomeça. */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { pool } from "./db.js";
 import { ingerir } from "./ingerir.js";
+
+/* Status ao vivo (Sala de Máquinas, 19/07): a varredura escreve o próprio progresso num
+   JSON ao lado do código — o painel admin lê e mostra a máquina trabalhando em tempo
+   real. Arquivo, não banco: sobrevive a processo separado (systemd oneshot) sem
+   transação, e falha de escrita nunca derruba a varredura. */
+const STATUS_URL = new URL("./varredura-status.json", import.meta.url);
+const escreveStatus = (s) => { try { writeFileSync(STATUS_URL, JSON.stringify(s)); } catch {} };
+export function leStatus() {
+  try { return JSON.parse(readFileSync(STATUS_URL, "utf-8")); } catch { return null; }
+}
 
 /* Maiores bairros do cadastro (ROADMAP §0) + eixos de mercado consolidados. */
 export const BAIRROS_PADRAO = [
@@ -66,7 +76,12 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
   }
   const portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
   const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
+  const inicio = new Date().toISOString();
+  let feitos = 0;
   for (const bairro of bairros) {
+    escreveStatus({ rodando: true, tipo, portalAlvo: portal || "geral", inicio,
+      total: bairros.length, feitos, bairroAtual: bairro,
+      novos: resumo.novos, comparaveis: resumo.comparaveis });
     const consulta = `"R$" ${tipo} ${bairro} goiania venda m2${portal ? ` site:${portal}` : ""}`;
     try {
       const s = await ingerir({ consulta, paginas, tier });
@@ -77,8 +92,12 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
       resumo.falhas++;
       resumo.porBairro.push({ bairro, erro: String(e.message).slice(0, 120) });
     }
+    feitos++;
     await dormir(2000); /* folga entre bairros (Brave 1 req/s + gentileza geral) */
   }
+  escreveStatus({ rodando: false, tipo, portalAlvo: portal || "geral", inicio,
+    fim: new Date().toISOString(), total: bairros.length, feitos,
+    novos: resumo.novos, comparaveis: resumo.comparaveis, falhas: resumo.falhas });
   await pool.query(
     "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('varredura', $1, 'executada', $2)",
     [tipo, JSON.stringify(resumo)]).catch(() => {});
