@@ -372,6 +372,35 @@ function mercadoAssistantAction(status){
   btn.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"},pedido,true));
   return btn;
 }
+/* Gate de confiança dos comparáveis (decisão de 17/07, aceite P0): antes de usar o número,
+   o corretor VÊ o que entrou e o que ficou de fora — bairro, área, quartos, preço, fonte,
+   distância e motivo. Sem número secreto: o funil de exclusões é sempre visível. */
+function compLinha(c,contexto=false){
+  const dist=c.distanciaM!=null?(c.distanciaM<1000?`${c.distanciaM} m`:`${(c.distanciaM/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})} km`):null;
+  const partes=[c.bairro,c.area?`${c.area} m²`:null,c.quartos!=null?`${c.quartos} quarto${c.quartos===1?"":"s"}`:null,
+    c.preco?money(c.preco):null,c.pm2?`R$ ${Number(c.pm2).toLocaleString("pt-BR")}/m²`:null,dist,c.portal||null,
+    contexto?(c.motivoExclusao||"fora do cálculo"):null].filter(Boolean).join(" · ");
+  return el("div",{class:"comp-row"},[el("span",{text:partes}),c.url?el("a",{href:c.url,target:"_blank",rel:"noopener",text:"abrir ↗"}):null]);
+}
+function painelComparaveis(d){
+  const s=d.result?.sample||d.sample||{};
+  const inclusos=d.comparaveis||[],outliers=d.outliers||[],contexto=d.result?.contextoRegional||d.contextoRegional||[];
+  const funil=[[s.totalFound,"encontrada(s)"],[s.foraDoBairro,"de outro bairro — fora do cálculo"],
+    [s.foraDaFaixaDeArea,"com área fora de 75%–133%"],[s.quartosIncompativeis,"com mais de 1 quarto de diferença"],
+    [s.semArea,"sem área no anúncio"],[s.duplicadosAgrupados,"duplicada(s) entre portais"],
+    [s.totalOutliers,"fora da cerca estatística"],[s.excluidosManual,"excluída(s) por você em revisão"]]
+    .filter(([n])=>Number(n)>0);
+  if(!inclusos.length&&!outliers.length&&!contexto.length&&!funil.length)return null;
+  const rotulo=d.status==="calculada"?`Como esse número foi formado (${inclusos.length} oferta(s) no cálculo)`:"O que a pesquisa encontrou e por que não há número";
+  const det=el("details",{class:"signal-sources market-result comp-panel"},[el("summary",{text:rotulo})]);
+  if(funil.length)det.append(el("div",{class:"meta"},funil.map(([n,l])=>el("span",{text:`${n} ${l}`}))));
+  if(inclusos.length)det.append(el("p",{class:"eyebrow",text:"No cálculo"}),el("div",{class:"comp-list"},inclusos.map(c=>compLinha(c))));
+  if(outliers.length)det.append(el("p",{class:"eyebrow",text:"Fora da cerca estatística"}),el("div",{class:"comp-list"},outliers.map(o=>compLinha({...o,motivoExclusao:o.razao||"outlier"},true))));
+  if(contexto.length)det.append(el("p",{class:"eyebrow",text:"Contexto regional — nunca entra no valor"}),el("div",{class:"comp-list"},contexto.map(c=>compLinha(c,true))));
+  if(!inclusos.length&&d.status!=="calculada"&&(d.result?.sample||d.sample))det.append(el("p",{class:"field-help",text:"A lista completa das ofertas aparece ao pesquisar novamente; este resumo vem da pesquisa registrada."}));
+  det.append(el("p",{class:"field-help",text:"Revise as ofertas antes de usar o número em conversa ou documento — o relatório completo lista as mesmas evidências."}));
+  return det;
+}
 function renderMercado(d){
   const card=$("mercadoCard");if(!card)return;
   card.querySelectorAll(".market-result").forEach(n=>n.remove());
@@ -384,10 +413,13 @@ function renderMercado(d){
       el("p",{text:`Para calcular um preço com segurança são necessárias pelo menos ${min}. Por isso nenhum valor foi inventado — mas todas as evidências e exclusões estão no relatório.`}),
       d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório da pesquisa"}):null,
     ]);
+    const painelIns=painelComparaveis(d);if(painelIns)card.append(painelIns);
     card.append(box,mercadoAssistantAction(d.status));return;
   }
   const r=d.result;if(!r)return;
-  card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]),mercadoAssistantAction(d.status));
+  card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]));
+  const painel=painelComparaveis(d);if(painel)card.append(painel);
+  card.append(mercadoAssistantAction(d.status));
 }
 async function saveProperty(form,btn){
   btn.disabled=true;btn.textContent="Salvando…";

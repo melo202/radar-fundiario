@@ -31,6 +31,19 @@ test("início guiado: entrada direta, sugestões, primeiros passos e ajuda recup
   assert.ok(app.includes("ci-guide-hidden"));
 });
 
+test("gate de confiança (P0 17/07): corretor vê inclusões e exclusões antes de usar o número", () => {
+  const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  assert.ok(app.includes("painelComparaveis"), "painel de transparência existe no dossiê");
+  assert.ok(app.includes("Como esse número foi formado"), "número nunca é caixa-preta");
+  assert.ok(app.includes("O que a pesquisa encontrou e por que não há número"), "sem número também tem transparência");
+  assert.ok(app.includes("Contexto regional — nunca entra no valor"), "outro bairro jamais vira valor");
+  assert.ok(app.includes("Fora da cerca estatística"), "outliers aparecem com razão");
+  assert.ok(app.includes("excluída(s) por você em revisão"), "exclusão manual do corretor fica visível");
+  /* atributos exigidos pela decisão: bairro, área, quartos, preço, fonte, distância, motivo */
+  for (const attr of ["c.bairro", "c.area", "c.quartos", "c.preco", "c.portal", "c.distanciaM", "motivoExclusao"])
+    assert.ok(app.includes(attr), `atributo ausente na linha do comparável: ${attr}`);
+});
+
 test("avaliações antigas com bairros ampliados são retiradas de uso sem apagar a trilha", () => {
   const migration = readFileSync(new URL("../motor/migrations/011-comparable-policy.sql", import.meta.url), "utf-8");
   assert.ok(migration.includes("status = 'revisao_necessaria'"));
