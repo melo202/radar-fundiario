@@ -1,9 +1,16 @@
-/* Varredura automática (fonte A em regime): percorre os principais bairros de Goiânia
-   com a consulta enviesada para preço que mediu 44% de comparáveis. Orçamento de cota:
-   1 busca/bairro/noite (20/noite ≈ 600/mês, dentro das 2.000 da Brave free; 1 req/s
-   respeitado pelo ingerir). A tipologia alterna por dia (par=apartamento, ímpar=casa)
-   para cobrir o mercado vertical e o horizontal ao longo da semana. Reingestão de
-   resultado já visto não gasta IA (dedup por hash pula a extração). */
+/* Varredura automática (fonte A em regime): percorre os bairros de Goiânia com a
+   consulta enviesada para preço que mediu 44% de comparáveis. Orçamento de cota:
+   1 busca/bairro/noite (Brave free ≈ 2.000/mês; 1 req/s respeitado pelo ingerir).
+   A tipologia alterna por dia (par=apartamento, ímpar=casa). Reingestão de resultado
+   já visto não gasta IA (dedup por hash pula a extração).
+
+   CIDADE INTEIRA (19/07/2026, pedido do usuário "rodar todas as regiões"): além dos
+   20 fixos, uma JANELA DE ROTAÇÃO determinística percorre os 715 bairros do cadastro
+   (motor/bairros-goiania-lista.json) — LOTE_ROTACAO/noite (default 20). Total ≈ 40
+   buscas/noite ≈ 1.200/mês, sobrando ~800 da cota para as pesquisas ao vivo do dossiê.
+   A base de preço (indice-bairro) engorda sozinha a cada noite e a revisita mantém os
+   preços vivos — cobertura completa do ciclo em ~35 noites, depois recomeça. */
+import { readFileSync } from "node:fs";
 import { pool } from "./db.js";
 import { ingerir } from "./ingerir.js";
 
@@ -15,18 +22,48 @@ export const BAIRROS_PADRAO = [
   "serrinha", "cidade jardim", "goiania 2", "jardim atlantico", "setor leste universitario",
 ];
 
+const normalizaConsulta = (s) => String(s).toLowerCase()
+  .normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .replace(/\s+/g, " ").trim();
+
+export function listaCidade() {
+  try {
+    const lista = JSON.parse(readFileSync(new URL("./bairros-goiania-lista.json", import.meta.url), "utf-8"));
+    /* Set: nomes que colidem após normalizar (acento/caixa) viram UMA consulta só —
+       duplicata na rotação seria busca desperdiçada da cota */
+    return [...new Set(lista.map(normalizaConsulta).filter(Boolean))];
+  } catch { return []; }
+}
+
+/* Janela de rotação PURA e determinística por data: sem estado em banco, sem arquivo de
+   ponteiro — a mesma noite produz sempre a mesma janela (idempotente a re-execuções). */
+export function janelaRotacao(lista, diaIndex, lote, fixos = BAIRROS_PADRAO) {
+  const fixosSet = new Set(fixos.map(normalizaConsulta));
+  const resto = lista.filter(b => !fixosSet.has(b));
+  if (!resto.length || lote <= 0) return [];
+  const inicio = (diaIndex * lote) % resto.length;
+  const janela = [];
+  for (let i = 0; i < Math.min(lote, resto.length); i++) janela.push(resto[(inicio + i) % resto.length]);
+  return janela;
+}
+
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
 /* Multi-portal (pedido do usuário 15/07: "puxar em vários sites"): a cada noite a
    varredura mira UM portal com site: (roda a lista ao longo da semana) e uma noite é
-   genérica — mesma cota de 20 buscas/noite, diversidade de fonte no mês. O dedup
-   multi-sinal (§5) é quem garante que o mesmo imóvel em portais diferentes conte 1x. */
+   genérica — diversidade de fonte no mês. O dedup multi-sinal (§5) é quem garante que
+   o mesmo imóvel em portais diferentes conte 1x. */
 export const PORTAIS_ALVO = ["", "zapimoveis.com.br", "vivareal.com.br", "olx.com.br",
   "imovelweb.com.br", "chavesnamao.com.br", "dfimoveis.com.br"];
 
-export async function varrer({ bairros = BAIRROS_PADRAO, paginas = 1, tier = "fast" } = {}) {
+export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo = null } = {}) {
   const dia = new Date().getDate();
-  const tipo = (dia % 2 === 0) ? "apartamento" : "casa";
+  tipo = tipo || ((dia % 2 === 0) ? "apartamento" : "casa");
+  if (!bairros) {
+    const lote = Number(process.env.VARREDURA_LOTE_ROTACAO ?? 20);
+    const diaIndex = Math.floor(Date.now() / 86400000);
+    bairros = [...BAIRROS_PADRAO, ...janelaRotacao(listaCidade(), diaIndex, lote)];
+  }
   const portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
   const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
   for (const bairro of bairros) {
