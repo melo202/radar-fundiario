@@ -435,3 +435,25 @@ bairros da carteira antes da cidade. Copy do card declara a proveniência e suge
 ("argumento de precificação com seus proprietários"). A revisita dirigida (04h45, até 30
 anúncios/noite) passa a ser quem alimenta a recompensa diária do Hoje — o loop de hábito
 fica inteiro sem a Caixa.
+
+### 19/07/2026 — Base de preço da cidade inteira + Páginas Vivas (commits 352e715 + 23b0026)
+
+**Cidade inteira:** a varredura noturna deixou de rodar só 20 bairros fixos — uma janela
+de rotação determinística percorre os **684 bairros únicos do cadastro** (20 fixos + 20
+rodando/noite ≈ 1.200 buscas/mês na cota Brave de 2.000; ciclo completo ~35 noites; a
+suíte prova que a união das janelas cobre 100%). Backfill imediato disparado nos 120
+bairros com atividade sem índice (60 apto + 60 casa). Baseline antes: 29 combinações
+bairro+tipo estimáveis. A base engorda toda noite e a revisita mantém os preços vivos.
+
+**Páginas Vivas (pedido do usuário: "sensação de que tá trabalhando sozinha"):**
+1. **Sala de Máquinas** (`/painel/admin/maquina`, sessão): coração pulsando, progresso
+   ao vivo da varredura (bairro atual + barra, via varredura-status.json que a própria
+   varredura escreve), contagem regressiva para os turnos, tiles com delta verde quando
+   o acervo cresce na tela, sparkline 14 dias, cota do mês, feed audit_log+ai_logs com
+   "há X min" atualizando a cada segundo. Poll 20s, zero asset externo, leitura pura.
+2. **Plantão no Hoje**: 1 linha com ponto pulsante — "Radar nas últimas 24h: N bairros ·
+   M anúncios novos · K preços mudaram"; some quando não há nada.
+3. **Pulso no Mapa**: `/motor/mercado/mudancas` (público) + pinos respirando onde houve
+   mudança VERIFICADA nos últimos 7 dias (verde=queda, âmbar=alta), popup com proveniência.
+Tudo exibição do trabalho determinístico já registrado — freeze e regra de peças móveis
+intactos. Suíte **601/601**. Verificado em produção (401 sem sessão; endpoint público ok).
