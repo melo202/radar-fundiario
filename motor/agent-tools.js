@@ -51,8 +51,10 @@ async function buscarImovel(session, prompt) {
       conditions: p.commercial_conditions },
     pendingTasks: (d.tasks || []).filter(t => !["concluida","cancelada"].includes(t.status)).map(t => ({ title: t.title, dueAt: t.due_at, priority: t.priority })),
     opportunities: (d.opportunities || []).map(o => ({ stage: o.stage, temperature: o.temperature, nextActionAt: o.next_action_at })),
-    intelligenceSignals: (d.intelligence?.findings || []).map(f => ({ kind: f.kind, title: f.title, summary: f.summary,
-      confidence: f.confidence, relation: f.relation, status: f.status,
+    intelligenceSignals: (d.intelligence?.findings || [])
+      .filter(f => f.status !== "rejected" && !["false_positive","expired","wrong_scope"].includes(f.feedback?.decision))
+      .map(f => ({ kind: f.kind, title: f.title, summary: f.summary,
+      confidence: f.confidence, relation: f.relation, status: f.status, humanDecision: f.feedback?.decision || null,
       evidence: (f.evidence || []).map(e => ({ title: e.title, domain: e.domain, url: e.url })) })) };
   }
   const r = await pool.query(

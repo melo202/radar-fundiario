@@ -22,7 +22,7 @@ cp limite-goiania.json /opt/radar/api/ # fundo Cidade Viva do login do painel
 cd /opt/radar/api
 [ -f .env ] || { echo "FALTA /opt/radar/api/.env (DATABASE_URL, AI_*)"; exit 1; }
 npm install --omit=dev --no-audit --no-fund --loglevel=error
-node --check server.js && node --check ai-provider.js && node --check agent-runtime.js && node --check assistente.js && node --check agent-review.js && node --check intelligence-orchestrator.js && node --check document-intake.js && node --check document-service.js && node --check extract.js
+node --check server.js && node --check ai-provider.js && node --check agent-runtime.js && node --check assistente.js && node --check agent-review.js && node --check intelligence-orchestrator.js && node --check intelligence-feedback.js && node --check document-intake.js && node --check document-service.js && node --check extract.js
 set -a; source .env; set +a
 node migrate.js
 cp radar-api.service /etc/systemd/system/radar-api.service

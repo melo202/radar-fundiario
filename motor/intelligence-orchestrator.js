@@ -408,7 +408,10 @@ export async function listPropertyIntelligence({ organizationId, propertyId }, d
   const [findings, jobs] = await Promise.all([
     db.query(
       `SELECT f.id,f.kind,f.title,f.summary,f.confidence,l.status,f.created_at,l.relation,l.relevance,
-              COALESCE(src.evidence,'[]'::jsonb) AS evidence
+              COALESCE(src.evidence,'[]'::jsonb) AS evidence,
+              CASE WHEN fb.id IS NULL THEN NULL ELSE jsonb_build_object(
+                'id',fb.id,'decision',fb.decision,'reason',fb.reason,'correction',fb.correction,
+                'note',fb.note,'createdAt',fb.created_at,'legacy',fb.reason='legacy_review') END AS feedback
        FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
        LEFT JOIN LATERAL (
          SELECT jsonb_agg(jsonb_build_object('id',x.id,'url',x.source_url,'domain',x.source_domain,
@@ -416,8 +419,16 @@ export async function listPropertyIntelligence({ organizationId, propertyId }, d
          FROM (SELECT e.id,e.source_url,e.source_domain,e.title,e.collected_at
                FROM intelligence_evidence e WHERE e.id=ANY(f.evidence_ids) ORDER BY e.id LIMIT 8) x
        ) src ON true
-       WHERE l.inventory_property_id=$1 AND f.organization_id=$2 AND l.status<>'rejected'
-       ORDER BY l.relevance DESC,f.confidence DESC,f.created_at DESC LIMIT 12`, [propertyId, organizationId]),
+       LEFT JOIN LATERAL (
+         SELECT x.id,x.decision,x.reason,x.correction,x.note,x.created_at
+         FROM intelligence_feedback x
+         WHERE x.organization_id=f.organization_id AND x.finding_id=f.id
+           AND x.inventory_property_id=l.inventory_property_id AND x.status='active'
+         ORDER BY x.created_at DESC LIMIT 1
+       ) fb ON true
+       WHERE l.inventory_property_id=$1 AND f.organization_id=$2
+       ORDER BY CASE WHEN l.status='rejected' THEN 1 ELSE 0 END,
+                l.relevance DESC,f.confidence DESC,f.created_at DESC LIMIT 30`, [propertyId, organizationId]),
     db.query(
       `SELECT id,status,attempts,result_summary,error,created_at,started_at,completed_at
        FROM intelligence_jobs WHERE organization_id=$1 AND scope->>'inventoryPropertyId'=$2::text
@@ -452,19 +463,9 @@ export async function requestPropertyInvestigation(propertyId) {
   });
 }
 
-export async function reviewPropertyFinding({ organizationId, propertyId, findingId, decision }) {
-  if (!['reviewed','rejected'].includes(decision)) return { ok: false, erro: "Decisão inválida." };
-  const orgId = organizationId || (await defaultOrganization()).id;
-  const result = await pool.query(
-    `UPDATE intelligence_finding_links l SET status=$1,reviewed_at=now()
-     FROM intelligence_findings f
-     WHERE l.finding_id=$2 AND f.id=l.finding_id AND f.organization_id=$3 AND l.inventory_property_id=$4
-     RETURNING l.finding_id AS id,l.status`, [decision, findingId, orgId, propertyId]);
-  if (!result.rowCount) return { ok: false, erro: "Sinal não encontrado neste imóvel." };
-  await pool.query(
-    "INSERT INTO audit_log (entity,entity_id,action,detail,actor) VALUES ('intelligence-finding',$1,'human-review',$2,'corretor-painel')",
-    [findingId, JSON.stringify({ propertyId, decision })]).catch(() => {});
-  return { ok: true, finding: result.rows[0] };
+export async function reviewPropertyFinding(input) {
+  const { recordIntelligenceFeedback } = await import("./intelligence-feedback.js");
+  return recordIntelligenceFeedback(input);
 }
 
 function progressFrom(job) {

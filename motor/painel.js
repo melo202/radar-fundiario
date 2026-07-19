@@ -264,9 +264,15 @@ export async function painel(req, res) {
   }
   if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/inteligencia\/[0-9a-f-]{36}\/revisar$/.test(req.url)) {
     const { reviewPropertyFinding } = await import("./intelligence-orchestrator.js");
-    const { decision } = JSON.parse(await readBody(req) || "{}");
+    const { decision, reason, correction, note } = JSON.parse(await readBody(req) || "{}");
     const parts = req.url.split("/");
-    const r = await reviewPropertyFinding({ propertyId: parts[5], findingId: parts[7], decision });
+    const r = await reviewPropertyFinding({ propertyId: parts[5], findingId: parts[7], decision, reason, correction, note });
+    return json(res, r.ok ? 200 : 400, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/inteligencia\/[0-9a-f-]{36}\/desfazer$/.test(req.url)) {
+    const { undoIntelligenceFeedback } = await import("./intelligence-feedback.js");
+    const parts = req.url.split("/");
+    const r = await undoIntelligenceFeedback({ propertyId: parts[5], findingId: parts[7] });
     return json(res, r.ok ? 200 : 400, r);
   }
 

@@ -169,6 +169,51 @@
     </div>
   </dialog>
 
+  <dialog id="signalFeedbackDialog" class="feedback-dialog" aria-labelledby="signalFeedbackTitle">
+    <form method="dialog" class="dialog-head">
+      <div>
+        <p class="eyebrow">Ensinar o radar</p>
+        <h2 id="signalFeedbackTitle">O que está incorreto neste sinal?</h2>
+      </div>
+      <button type="submit" class="icon-button" aria-label="Fechar">×</button>
+    </form>
+    <form id="signalFeedbackForm" class="dialog-body">
+      <label for="signalFeedbackReason">Motivo</label>
+      <select id="signalFeedbackReason" class="os-select" required>
+        <option value="">Escolha o motivo</option>
+        <option value="different_property">É outro imóvel</option>
+        <option value="different_unit">É outra unidade</option>
+        <option value="catalog_or_multi_listing">É catálogo ou mistura vários anúncios</option>
+        <option value="wrong_geography">Cidade ou região errada</option>
+        <option value="wrong_transaction">Venda/aluguel incorreto</option>
+        <option value="stale_source">Fonte desatualizada</option>
+        <option value="unproven_price">Preço não está comprovado</option>
+        <option value="change_not_found">A mudança indicada não aconteceu</option>
+        <option value="duplicate_signal">Este sinal está duplicado</option>
+        <option value="insufficient_evidence">As evidências não são suficientes</option>
+        <option value="no_commercial_relevance">Não tem relevância comercial</option>
+        <option value="expired_signal">O sinal perdeu a validade</option>
+        <option value="other">Outro motivo</option>
+      </select>
+      <label for="signalFeedbackRelation">Relação correta <small>(opcional)</small></label>
+      <select id="signalFeedbackRelation" class="os-select">
+        <option value="">Não informar</option>
+        <option value="direct">É sobre este imóvel</option>
+        <option value="comparable">É apenas um comparável</option>
+        <option value="neighborhood">É apenas contexto do bairro</option>
+        <option value="unrelated">Não está relacionado</option>
+      </select>
+      <label for="signalFeedbackNote">Observação <small>(opcional)</small></label>
+      <textarea id="signalFeedbackNote" rows="3" maxlength="500" placeholder="Explique somente se ajudar a evitar o mesmo erro."></textarea>
+      <p class="field-help">Sua correção fica no histórico e não altera automaticamente os fatos do imóvel.</p>
+      <div id="signalFeedbackStatus" class="status" role="status" aria-live="polite"></div>
+      <div class="feedback-dialog-actions">
+        <button type="button" class="card-action secondary" id="cancelSignalFeedback">Cancelar</button>
+        <button type="submit" class="primary-button" id="saveSignalFeedback">Registrar correção</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="assistantDialog" class="assistant-dialog" aria-labelledby="assistantTitle">
     <form method="dialog" class="dialog-head">
       <div>

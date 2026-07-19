@@ -7,6 +7,14 @@
 - **Documento relacionado:** `ULTRAROADMAP-INTELIGENCIA-IMOBILIARIA.md`
 - **Objetivo deste documento:** transformar o Marco F — sistema autoaperfeiçoável controlado — em uma sequência concreta de implementação, validação, rollout e operação.
 
+### Estado de execução
+
+| Entrega | Estado em 19/07/2026 |
+|---|---|
+| E0 — qualificação e baseline | Código publicado; comprovação da migration `017` e baseline pós-filtro ainda pendentes no servidor |
+| E1 — feedback semanticamente útil | Implementação concluída na branch; migration `018`, API, histórico, motivos e desfazer aguardam deploy |
+| E2 em diante | Não iniciada |
+
 ---
 
 ## 1. Decisão executiva
@@ -1401,7 +1409,7 @@ O Marco F será considerado alcançado quando:
 
 ## 20. Próxima ação de implementação
 
-Após comprovar o deploy da migration `017`, a execução começa pela **Entrega 1 — feedback semanticamente útil**.
+A **Entrega 1 — feedback semanticamente útil** foi implementada sem ativar adaptação automática. A próxima ação operacional é implantar as migrations `017` e `018`, comprovar o baseline pós-filtro e começar a formar os primeiros rótulos estruturados. Em seguida, a execução avança para a **Entrega 2 — atribuição de ação e resultado**.
 
 Essa ordem é obrigatória porque o sistema não pode aprender antes de saber a diferença entre:
 

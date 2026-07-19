@@ -36,8 +36,11 @@ test("radar do imóvel: experiência permite investigar, abrir fontes e revisar 
   assert.ok(app.includes("Em um comparável deste imóvel"));
   assert.ok(app.includes("No mesmo bairro"));
   assert.ok(app.includes("Ver fontes"));
-  assert.ok(app.includes("Marcar como conferido"));
-  assert.ok(app.includes("Descartar sinal"));
+  assert.ok(app.includes("Confirmar sinal"));
+  assert.ok(app.includes("Está incorreto"));
+  assert.ok(app.includes("Ainda inconclusivo"));
+  assert.ok(app.includes("Acompanhar"));
+  assert.ok(app.includes("Desfazer decisão"));
   assert.ok(panel.includes("inteligencia/investigar"));
   assert.ok(panel.includes("reviewPropertyFinding"));
   assert.ok(tools.includes("intelligenceSignals"), "o assistente recebe os sinais vinculados ao imóvel");

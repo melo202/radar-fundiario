@@ -169,53 +169,80 @@ function propertyViewActive(){const view=document.querySelector('.view[data-view
 function schedulePropertyIntelligencePoll(data){stopPropertyIntelligencePoll();const active=(data?.intelligence?.jobs||[]).some(j=>["pending","running"].includes(j.status));if(!active||!propertyViewActive())return;const propertyId=state.property.id;state.property.pollTimer=setTimeout(()=>{if(state.property.id===propertyId&&propertyViewActive())loadProperty({silent:true});},20000);}
 function openProperty(id){stopPropertyIntelligencePoll();state.property={id,data:null,tab:"geral",mercado:null,pollTimer:null};switchView("property");loadProperty();}
 async function loadProperty({silent=false}={}){const body=$("propBody"),propertyId=state.property.id;if(!silent)skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${propertyId}`);if(state.property.id!==propertyId)return;state.property.data=data;if(!state.property.mercado&&data.latestValuation)state.property.mercado={...data.latestValuation,sample:data.latestValuation.result?.sample};renderPropHead();renderPropTab();schedulePropertyIntelligencePoll(data);}catch(e){if(!silent)errorCard(body,e);else if(state.property.id===propertyId&&propertyViewActive())state.property.pollTimer=setTimeout(()=>loadProperty({silent:true}),40000);}}
-function renderPropHead(){const p=state.property.data.property,signals=state.property.data.intelligence?.findings?.length||0;const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar ao assistente sobre este imóvel"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"}));$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}),signals?el("span",{class:"badge high",text:`✦ ${signals} sinal(is) para revisar`}):null,ask);}
+function renderPropHead(){const p=state.property.data.property,signals=(state.property.data.intelligence?.findings||[]).filter(f=>f.status==="candidate"&&!intelligenceFeedbackArchived(f.feedback?.decision)).length;const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar ao assistente sobre este imóvel"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"}));$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}),signals?el("span",{class:"badge high",text:`✦ ${signals} sinal(is) para revisar`}):null,ask);}
 function setTab(tab){state.property.tab=tab;document.querySelectorAll("#propTabs .tab").forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle("is-active",on);b.setAttribute("aria-selected",String(on));});renderPropTab();}
 function fieldCell(label,value){return el("div",{class:"field-cell"},[el("small",{text:label}),el("strong",{text:String(value)})]);}
 
 const intelligenceKindLabel=k=>({possible_duplicate:"Possível duplicidade",price_change:"Mudança de preço",urgent_sale_signal:"Possível urgência",market_anomaly:"Anomalia de mercado",data_conflict:"Conflito de dados",source_gap:"Cobertura insuficiente",other:"Sinal exploratório"})[k]||"Sinal";
 const intelligenceRelationLabel=r=>r==="direct"?"Sobre este imóvel":r==="comparable"?"Em um comparável deste imóvel":"No mesmo bairro";
+const intelligenceCorrectedRelationLabel=r=>({direct:"sobre este imóvel",comparable:"apenas um comparável",neighborhood:"apenas contexto do bairro",unrelated:"não relacionado"})[r]||r;
 const intelligenceConfidence=v=>Number(v)>=.85?"Confiança alta":Number(v)>=.7?"Confiança média":"Exploratório";
+const intelligenceFeedbackLabel=d=>({confirmed:"✓ Confirmado por você",false_positive:"Marcado como incorreto",inconclusive:"Ainda inconclusivo",watching:"Em acompanhamento",expired:"Sinal expirado",wrong_scope:"Ligação com o imóvel está incorreta"})[d]||"Decisão registrada";
+const intelligenceFeedbackReasonLabel=r=>({confirmed_by_source:"confirmado nas fontes",different_property:"é outro imóvel",different_unit:"é outra unidade",catalog_or_multi_listing:"catálogo ou vários anúncios",wrong_geography:"localização errada",wrong_transaction:"venda/aluguel incorreto",stale_source:"fonte desatualizada",unproven_price:"preço não comprovado",change_not_found:"mudança não encontrada",duplicate_signal:"sinal duplicado",insufficient_evidence:"evidência insuficiente",no_commercial_relevance:"sem relevância comercial",expired_signal:"perdeu a validade",legacy_review:"decisão da versão anterior",other:"outro motivo"})[r]||null;
+const intelligenceFeedbackArchived=d=>["false_positive","expired","wrong_scope"].includes(d);
+function signalCard(f,d,{archived=false}={}){
+  const sources=(f.evidence||[]).map(e=>el("a",{href:e.url,target:"_blank",rel:"noopener",text:e.title||e.domain||"Abrir fonte"}));
+  const actions=el("div",{class:"signal-actions"});
+  const ask=el("button",{class:"card-action secondary",type:"button",text:"Analisar com o assistente"});
+  ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:d.property.id,title:d.property.title||"Imóvel"},`Analise este sinal do radar no contexto do imóvel: ${f.title}. Explique o que está comprovado, o que ainda é hipótese e qual deve ser minha próxima verificação.`,true));
+  if(!archived)actions.append(ask);
+  if(f.feedback){
+    const undo=el("button",{class:"text-button",type:"button",text:"Desfazer decisão"});
+    undo.addEventListener("click",()=>undoPropertySignal(f.id,undo));
+    actions.append(undo);
+  }else if(!archived){
+    const confirm=el("button",{class:"card-action secondary",type:"button",text:"Confirmar sinal"});
+    const incorrect=el("button",{class:"text-button",type:"button",text:"Está incorreto"});
+    const inconclusive=el("button",{class:"text-button",type:"button",text:"Ainda inconclusivo"});
+    const watching=el("button",{class:"text-button",type:"button",text:"Acompanhar"});
+    confirm.addEventListener("click",()=>reviewPropertySignal(f.id,"confirmed",confirm,{reason:"confirmed_by_source"}));
+    incorrect.addEventListener("click",()=>openSignalFeedback(f.id));
+    inconclusive.addEventListener("click",()=>reviewPropertySignal(f.id,"inconclusive",inconclusive));
+    watching.addEventListener("click",()=>reviewPropertySignal(f.id,"watching",watching));
+    actions.append(confirm,incorrect,inconclusive,watching);
+  }
+  return el("article",{class:"entity-card signal-card"+(archived?" is-archived":"")},[
+    el("div",{class:"entity-top"},[el("div",{},[el("p",{class:"eyebrow",text:intelligenceRelationLabel(f.relation)}),el("h3",{text:f.title})]),el("span",{class:Number(f.confidence)>=.85?"badge high":"badge",text:intelligenceConfidence(f.confidence)})]),
+    el("div",{class:"meta"},[el("span",{text:intelligenceKindLabel(f.kind)}),f.feedback?.legacy?el("span",{text:"Decisão anterior migrada"}):null]),el("p",{text:f.summary}),
+    f.feedback?el("div",{class:"signal-feedback",text:[intelligenceFeedbackLabel(f.feedback.decision),intelligenceFeedbackReasonLabel(f.feedback.reason),f.feedback.correction?.relation?`relação corrigida: ${intelligenceCorrectedRelationLabel(f.feedback.correction.relation)}`:null].filter(Boolean).join(" · ")}):null,
+    sources.length?el("details",{class:"signal-sources"},[el("summary",{text:`Ver fontes (${sources.length})`}),el("div",{class:"source-links"},sources)]):null,actions,
+  ]);
+}
 function intelligencePanel(d){
-  const intel=d.intelligence||{findings:[],jobs:[]},findings=intel.findings||[],jobs=intel.jobs||[],active=jobs.find(j=>["pending","running"].includes(j.status)),latest=jobs[0],coverage=latest?.result_summary||{};
+  const intel=d.intelligence||{findings:[],jobs:[]},allFindings=intel.findings||[],findings=allFindings.filter(f=>f.status!=="rejected"&&!intelligenceFeedbackArchived(f.feedback?.decision)),archived=allFindings.filter(f=>f.status==="rejected"||intelligenceFeedbackArchived(f.feedback?.decision)),jobs=intel.jobs||[],active=jobs.find(j=>["pending","running"].includes(j.status)),latest=jobs[0],coverage=latest?.result_summary||{};
   const progress=active?.status==="running"&&coverage.batchesTotal?`Analisando lote ${coverage.batchesCompleted||0} de ${coverage.batchesTotal}. Esta tela atualiza sozinha.`:active?"Na fila. Esta tela atualiza sozinha quando a investigação começar.":latest?.status==="failed"?"A última investigação não concluiu. Você pode tentar novamente.":null;
   const request=el("button",{class:"card-action",type:"button",text:active?"Investigação em andamento":"Investigar este imóvel agora",disabled:!!active});
   request.addEventListener("click",()=>requestPropertyIntelligence(request));
   const intro=el("article",{class:"entity-card intelligence-card"},[
-    el("div",{class:"entity-top"},[el("div",{},[el("p",{class:"eyebrow",text:"Radar do imóvel"}),el("h3",{text:findings.length?`${findings.length} sinal(is) para sua decisão`:"Nenhum sinal ligado ainda"})]),el("span",{class:"badge",text:active?active.status==="running"?"Analisando":"Na fila":"Kimi K3"})]),
-    el("p",{text:findings.length?"Hipóteses rastreáveis encontradas na internet e no acervo. Confira as fontes antes de usar em negociação.":"Peça uma investigação focada neste imóvel. O radar buscará anúncios correspondentes, reprecificação, conflitos e comparáveis."}),
+    el("div",{class:"entity-top"},[el("div",{},[el("p",{class:"eyebrow",text:"Radar do imóvel"}),el("h3",{text:findings.length?`${findings.length} sinal(is) para sua decisão`:archived.length?"Nenhum sinal ativo":"Nenhum sinal ligado ainda"})]),el("span",{class:"badge",text:active?active.status==="running"?"Analisando":"Na fila":"Kimi K3"})]),
+    el("p",{text:findings.length?"Hipóteses rastreáveis encontradas na internet e no acervo. Confira as fontes antes de usar em negociação.":archived.length?"Os sinais anteriores já foram revisados. Você pode consultar ou desfazer as decisões no histórico abaixo.":"Peça uma investigação focada neste imóvel. O radar buscará anúncios correspondentes, reprecificação, conflitos e comparáveis."}),
     progress?el("p",{class:"status",text:progress}):null,coverage.collectedEvidence!=null?el("div",{class:"meta coverage-meta"},[el("span",{text:`${coverage.evidence||0} evidência(s) útil(eis)`}),el("span",{text:`${coverage.rejectedEvidence||0} descartada(s)`}),coverage.sources!=null?el("span",{text:`${coverage.sources} fonte(s)`}):null]):null,request,
   ]);
-  const cards=findings.map(f=>{
-    const sources=(f.evidence||[]).map(e=>el("a",{href:e.url,target:"_blank",rel:"noopener",text:e.title||e.domain||"Abrir fonte"}));
-    const actions=el("div",{class:"signal-actions"});
-    const ask=el("button",{class:"card-action secondary",type:"button",text:"Analisar com o assistente"});
-    ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:d.property.id,title:d.property.title||"Imóvel"},`Analise este sinal do radar no contexto do imóvel: ${f.title}. Explique o que está comprovado, o que ainda é hipótese e qual deve ser minha próxima verificação.`,true));
-    actions.append(ask);
-    if(f.status==="candidate"){
-      const reviewed=el("button",{class:"card-action secondary",type:"button",text:"Marcar como conferido"});
-      const reject=el("button",{class:"text-button",type:"button",text:"Descartar sinal"});
-      reviewed.addEventListener("click",()=>reviewPropertySignal(f.id,"reviewed",reviewed));
-      reject.addEventListener("click",()=>reviewPropertySignal(f.id,"rejected",reject));
-      actions.append(reviewed,reject);
-    }
-    return el("article",{class:"entity-card signal-card"},[
-      el("div",{class:"entity-top"},[el("div",{},[el("p",{class:"eyebrow",text:intelligenceRelationLabel(f.relation)}),el("h3",{text:f.title})]),el("span",{class:Number(f.confidence)>=.85?"badge high":"badge",text:intelligenceConfidence(f.confidence)})]),
-      el("div",{class:"meta"},[el("span",{text:intelligenceKindLabel(f.kind)}),f.status==="reviewed"?el("span",{text:"✓ Conferido por você"}):null]),el("p",{text:f.summary}),
-      sources.length?el("details",{class:"signal-sources"},[el("summary",{text:`Ver fontes (${sources.length})`}),el("div",{class:"source-links"},sources)]):null,actions,
-    ]);
-  });
-  return el("section",{class:"intelligence-stack"},[intro,...cards]);
+  const cards=findings.map(f=>signalCard(f,d));
+  const history=archived.length?el("details",{class:"signal-history"},[el("summary",{text:`Decisões anteriores (${archived.length})`}),el("div",{class:"stack"},archived.map(f=>signalCard(f,d,{archived:true}))) ]):null;
+  return el("section",{class:"intelligence-stack"},[intro,...cards,history]);
 }
 async function requestPropertyIntelligence(btn){
   btn.disabled=true;btn.textContent="Colocando na fila…";
   try{const r=await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/investigar`,{method:"POST",body:"{}"});state.property.data.intelligence.jobs.unshift(r.job);toast("Investigação solicitada. O radar começa em até 10 minutos.");renderPropHead();renderPropTab();schedulePropertyIntelligencePoll(state.property.data);}
   catch(e){toast(e.message);btn.disabled=false;btn.textContent="Investigar este imóvel agora";}
 }
-async function reviewPropertySignal(findingId,decision,btn){
+function openSignalFeedback(findingId){const dialog=$("signalFeedbackDialog");dialog.dataset.findingId=findingId;$("signalFeedbackReason").value="";$("signalFeedbackRelation").value="";$("signalFeedbackNote").value="";$("signalFeedbackStatus").textContent="";$("saveSignalFeedback").disabled=false;dialog.showModal();setTimeout(()=>$("signalFeedbackReason").focus(),50);}
+async function reviewPropertySignal(findingId,decision,btn,extra={}){
   btn.disabled=true;
-  try{await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/${findingId}/revisar`,{method:"POST",body:JSON.stringify({decision})});const rows=state.property.data.intelligence.findings;if(decision==="rejected")state.property.data.intelligence.findings=rows.filter(f=>f.id!==findingId);else{const f=rows.find(f=>f.id===findingId);if(f)f.status="reviewed";}invalidateLists();renderPropHead();renderPropTab();toast(decision==="rejected"?"Sinal descartado.":"Sinal marcado como conferido.");}
+  try{await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/${findingId}/revisar`,{method:"POST",body:JSON.stringify({decision,...extra})});if($("signalFeedbackDialog").open)$("signalFeedbackDialog").close();invalidateLists();await loadProperty({silent:true});toast(decision==="confirmed"?"Sinal confirmado — esta decisão vai calibrar o radar.":decision==="watching"?"Sinal colocado em acompanhamento.":decision==="inconclusive"?"Sinal mantido como inconclusivo.":"Correção registrada no histórico.");}
+  catch(e){toast(e.message);btn.disabled=false;$("signalFeedbackStatus").textContent=e.message;}
+}
+async function undoPropertySignal(findingId,btn){
+  btn.disabled=true;
+  try{await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/${findingId}/desfazer`,{method:"POST"});invalidateLists();await loadProperty({silent:true});toast("Decisão desfeita. O sinal voltou para revisão.");}
   catch(e){toast(e.message);btn.disabled=false;}
+}
+async function submitSignalFeedback(event){
+  event.preventDefault();const dialog=$("signalFeedbackDialog"),findingId=dialog.dataset.findingId,reason=$("signalFeedbackReason").value,relation=$("signalFeedbackRelation").value,note=$("signalFeedbackNote").value.trim(),button=$("saveSignalFeedback");
+  if(!reason){$("signalFeedbackStatus").textContent="Escolha o motivo da correção.";return;}
+  const decision=reason==="expired_signal"?"expired":["different_property","different_unit"].includes(reason)?"wrong_scope":"false_positive";
+  await reviewPropertySignal(findingId,decision,button,{reason,correction:relation?{relation}:{},note});
 }
 
 function renderPropTab(){
@@ -431,6 +458,8 @@ $("guideAssistant").addEventListener("click",()=>openAssistantForScope({objectTy
 $("dismissGuide").addEventListener("click",()=>{storageSet("ci-guide-hidden","1");$("guideCard").hidden=true;});
 $("openGuide").addEventListener("click",showGuide);
 $("assistantForm").addEventListener("submit",submitAssistant);
+$("signalFeedbackForm").addEventListener("submit",submitSignalFeedback);
+$("cancelSignalFeedback").addEventListener("click",()=>$("signalFeedbackDialog").close());
 $("assistantSessionSelect").addEventListener("change",async event=>{if(state.assistant.busy)return;if(event.target.value==="__general__")await openAssistantForScope({objectType:"general",objectId:null,title:"Conversa geral"});else await loadAssistantHistory(event.target.value);});
 document.querySelectorAll("[data-assistant-prompt]").forEach(button=>button.addEventListener("click",()=>{$("assistantInput").value=button.dataset.assistantPrompt;$("assistantInput").focus();}));
 document.querySelectorAll("#propTabs .tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
