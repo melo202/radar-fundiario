@@ -374,3 +374,16 @@ ROADMAP-AUTOEVOLUCAO. **O aprendizado para aqui até o G1.**
 **HUMANO (inalterado e agora caminho crítico):** G0-dogfood + G1 (ROTEIRO-G1.md);
 MOTOR_TOKEN + instalar-tarefa.ps1 do runner Caixa; testar voz e o teste dos 5 segundos
 no celular real — agora com o ícone "Seu dia" instalável.
+
+### 19/07/2026 — Hábito mínimo NO AR (commit 3f54027)
+
+Fecha a seção C da auditoria (o usuário adiou a instalação do runner — o card nasce com
+guarda de frescor e se ativa/desativa sozinho): **métrica-norte `dia_ativo`** (evento
+idempotente por dia no fuso de Goiânia; sequência no painel admin — nunca gamificação na
+tela diária); **card "Novidade do mercado"** no Hoje (até 3 imóveis da Caixa nos bairros
+da carteira, fallback cidade, só desconto honesto vs mediana de ofertas n≥5, aviso
+"oferta anunciada, não venda fechada"; lista >3 dias = card some — hoje a lista de 17/07
+ainda vale); **"Aberto há N dias"** nos cards sem prazo real. Verificado em produção:
+novidade retorna 3 aptos no SETOR BUENO a 62,1% / 45,7% / 34,8% abaixo da mediana (18
+ofertas); API 401 sem sessão. Suíte **589/589**. Sem o runner, o card morre em ~2 dias —
+instalar o MOTOR_TOKEN o ressuscita sem deploy.
