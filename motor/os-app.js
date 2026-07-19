@@ -49,7 +49,7 @@ function renderNovidade(n){const target=$("todayNews");if(!target)return;if(!n||
   ]));}
 /* Contadores em UMA linha tocável — resumo, não dashboard (decisão de 17/07). Revisão de
    melhorias da automelhoria mora no painel admin, fora da tela diária. */
-function renderCountsLine(c){const target=$("todayCounts");if(!target)return;const partes=[[c.properties||0,n=>`${n} imóve${n===1?"l":"is"}`,"portfolio",null],[c.opportunities||0,n=>`${n} interessado${n===1?"":"s"}`,"portfolio","interessados"],[c.tasks||0,n=>`${n} pendência${n===1?"":"s"}`,"portfolio","pendencias"]];if(c.intelligence_signals>0)partes.push([c.intelligence_signals,n=>`✦ ${n} sinal(is) do radar`,"portfolio","radar"]);const nodes=[];partes.forEach(([v,rotulo,destino,filter],i)=>{if(i)nodes.push(document.createTextNode(" · "));const b=el("button",{class:"counts-link",type:"button",text:rotulo(v)});b.addEventListener("click",()=>{if(filter)state.portfolioFilter=filter;switchView(destino);});nodes.push(b);});target.replaceChildren(...nodes);}
+function renderCountsLine(c){const target=$("todayCounts");if(!target)return;const partes=[[c.properties||0,n=>`${n} imóve${n===1?"l":"is"}`,"portfolio",null],[c.opportunities||0,n=>`${n} interessado${n===1?"":"s"}`,"portfolio","interessados"],[c.tasks||0,n=>`${n} pendência${n===1?"":"s"}`,"portfolio","pendencias"]];if(c.intelligence_signals>0)partes.push([c.intelligence_signals,n=>`✦ ${n} sinal(is) do radar`,"portfolio","radar"]);const nodes=[];partes.forEach(([v,rotulo,destino,filter],i)=>{if(i)nodes.push(document.createTextNode(" · "));const b=el("button",{class:"counts-link",type:"button",text:rotulo(v)});b.addEventListener("click",()=>{if(filter)state.portfolioFilter=filter;if(destino==="portfolio"&&state.loaded.portfolio)renderPortfolio();switchView(destino);});nodes.push(b);});target.replaceChildren(...nodes);}
 /* Manchete, não mural: a ação nº 1 em destaque, 2 seguintes visíveis, o resto sob demanda. */
 function renderActions(actions){const target=$("todayActions");if(!actions.length)return empty(target,"Comece pelo primeiro imóvel","Toque em ＋ Novo e descreva por texto ou voz — você confirma antes de salvar. A partir daí, o Hoje organiza seu dia sozinho.");const VISIVEIS=3;const cards=actions.map((a,i)=>actionCard(a,i===0));target.replaceChildren(...cards.slice(0,VISIVEIS));const resto=cards.slice(VISIVEIS);if(resto.length){const ver=el("button",{class:"card-action secondary",type:"button",text:`Ver todas (${actions.length})`});ver.addEventListener("click",()=>{ver.remove();target.append(...resto);});target.append(ver);}}
 function actionCard(a,destaque){const action=el("button",{class:"card-action",type:"button",text:a.actionLabel||"Abrir"});if(a.source==="task")action.addEventListener("click",()=>completeTask(a.id,action));else if(a.entityType==="inventory_property"&&a.entityId)action.addEventListener("click",()=>openProperty(a.entityId));else if(a.entityType==="opportunity"&&a.stage==="visita_agendada"&&a.entityId)action.addEventListener("click",()=>openAssistantForScope({objectType:"visit",objectId:a.entityId,title:a.title},"Prepare esta visita. Monte um resumo objetivo do cliente e do imóvel, uma lista do que preciso confirmar, os argumentos sustentados pelos dados e cinco perguntas para fazer durante a visita.",true));else if(a.entityType==="opportunity"&&a.propertyId)action.addEventListener("click",()=>openProperty(a.propertyId,{tab:"comercial",oppId:a.entityId}));else action.addEventListener("click",()=>switchView(a.entityType==="inventory_property"?"portfolio":"relationships"));/* Gap e sinal não têm prazo — a data de criação vira idade honesta ("aberto há N dias") */
@@ -393,13 +393,16 @@ function painelComparaveis(d){
     [s.totalOutliers,"fora da cerca estatística"],[s.excluidosManual,"excluída(s) por você em revisão"]]
     .filter(([n])=>Number(n)>0);
   if(!inclusos.length&&!outliers.length&&!contexto.length&&!funil.length)return null;
-  const rotulo=d.status==="calculada"?`Como esse número foi formado (${inclusos.length} oferta(s) no cálculo)`:"O que a pesquisa encontrou e por que não há número";
+  /* avaliação RESTAURADA não persiste a lista de ofertas — o rótulo usa o total do
+     sample e a nota explica que a lista completa vem ao pesquisar de novo */
+  const noCalculo=inclusos.length||Number(s.totalAccepted)||0;
+  const rotulo=d.status==="calculada"?`Como esse número foi formado (${noCalculo} oferta(s) no cálculo)`:"O que a pesquisa encontrou e por que não há número";
   const det=el("details",{class:"signal-sources market-result comp-panel"},[el("summary",{text:rotulo})]);
   if(funil.length)det.append(el("div",{class:"meta"},funil.map(([n,l])=>el("span",{text:`${n} ${l}`}))));
   if(inclusos.length)det.append(el("p",{class:"eyebrow",text:"No cálculo"}),el("div",{class:"comp-list"},inclusos.map(c=>compLinha(c))));
   if(outliers.length)det.append(el("p",{class:"eyebrow",text:"Fora da cerca estatística"}),el("div",{class:"comp-list"},outliers.map(o=>compLinha({...o,motivoExclusao:o.razao||"outlier"},true))));
   if(contexto.length)det.append(el("p",{class:"eyebrow",text:"Contexto regional — nunca entra no valor"}),el("div",{class:"comp-list"},contexto.map(c=>compLinha(c,true))));
-  if(!inclusos.length&&d.status!=="calculada"&&(d.result?.sample||d.sample))det.append(el("p",{class:"field-help",text:"A lista completa das ofertas aparece ao pesquisar novamente; este resumo vem da pesquisa registrada."}));
+  if(!inclusos.length&&(d.result?.sample||d.sample))det.append(el("p",{class:"field-help",text:"A lista completa das ofertas aparece ao pesquisar novamente; este resumo vem da pesquisa registrada."}));
   det.append(el("p",{class:"field-help",text:"Revise as ofertas antes de usar o número em conversa ou documento — o relatório completo lista as mesmas evidências."}));
   return det;
 }
@@ -441,9 +444,11 @@ function storageGet(key){try{return localStorage.getItem(key);}catch{return null
 function storageSet(key,value){try{localStorage.setItem(key,value);}catch{}}
 function updateGuide(counts=state.todayCounts){
   const card=$("guideCard");if(!card)return;
-  /* guia é de primeiro uso: some sozinho quando os passos foram cumpridos, não só no × */
+  /* guia é de primeiro uso: some sozinho quando os passos foram cumpridos, não só no ×.
+     Exceção: "0" = o corretor reabriu pelo "?" — pedido explícito vence o auto-esconder. */
+  const flag=storageGet("ci-guide-hidden");
   const concluiu=Number(counts.properties||0)>0&&storageGet("ci-guide-assistant")==="1";
-  card.hidden=storageGet("ci-guide-hidden")==="1"||concluiu;
+  card.hidden=flag==="1"||(flag!=="0"&&concluiu);
   $("guideCapture")?.classList.toggle("is-done",Number(counts.properties||0)>0);
   $("guideAssistant")?.classList.toggle("is-done",storageGet("ci-guide-assistant")==="1");
 }
@@ -491,13 +496,22 @@ async function ensureAssistantSession(){
   state.assistant.sessionId=result.session.id;await loadAssistantSessions(result.session.id);return result.session.id;
 }
 async function openAssistantForScope(scope,prompt="",autoSend=false){
+  /* erro ao abrir o escopo (ex.: visita cujo estágio mudou) reverte para o estado
+     anterior — o diálogo nunca fica preso em "Abrindo…" */
+  const anterior={scope:state.assistant.scope,sessionId:state.assistant.sessionId};
   openAssistant(prompt,false);state.assistant.scope=scope;state.assistant.sessionId=null;
   $("assistantContext").textContent="Abrindo "+sessionTypeLabel(scope.objectType).toLowerCase()+"…";
   try{
     const result=await api("/painel/api/os/assistente/sessoes",{method:"POST",body:JSON.stringify(scope)});
     await loadAssistantSessions(result.session.id);
     if(autoSend)await submitAssistant();
-  }catch(error){toast(error.message);}
+  }catch(error){
+    state.assistant.scope=anterior.scope||{objectType:"general",objectId:null,title:"Conversa geral"};
+    state.assistant.sessionId=anterior.sessionId;
+    renderAssistantSessions();
+    $("assistantContext").textContent=state.assistant.scope.objectType==="general"?"Conversa geral":sessionTypeLabel(state.assistant.scope.objectType)+" · "+state.assistant.scope.title;
+    toast(error.message);
+  }
 }
 async function submitAssistant(event){
   event?.preventDefault();if(state.assistant.busy)return;

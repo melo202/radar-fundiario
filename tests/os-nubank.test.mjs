@@ -49,8 +49,16 @@ test("cobrança do Hoje abre direto o interessado: payload traz o imóvel e o fr
   assert.ok(core.includes("o.inventory_property_id,c.name AS contact_name"));
   assert.ok(core.includes("propertyId: o.inventory_property_id || null"));
   assert.ok(app.includes('a.propertyId)action.addEventListener("click",()=>openProperty(a.propertyId,{tab:"comercial",oppId:a.entityId}))'));
-  assert.ok(app.includes("data-opp-id"));
-  assert.ok(app.includes("focusOpp"));
+  /* pino no CONSUMIDOR do deep-link (pente-fino 19/07): setter sozinho não basta */
+  assert.ok(app.includes('querySelector(`[data-opp-id="${state.property.focusOpp}"]`)'), "o card alvo é localizado");
+  assert.ok(app.includes('opp-msg")?.setAttribute("open"'), "a mensagem pronta abre sozinha");
+  assert.ok(app.includes("scrollIntoView"), "a tela rola até o interessado cobrado");
+});
+
+test("counts-line: renderizada no load, tocável, e re-renderiza a Carteira já carregada", () => {
+  assert.ok(app.includes("renderCountsLine(c)"), "contadores renderizam a cada load do Hoje");
+  assert.ok(app.includes('class:"counts-link"'), "cada contador é um botão tocável");
+  assert.ok(app.includes("state.loaded.portfolio)renderPortfolio()"), "filtro aplica mesmo com a Carteira já carregada");
 });
 
 test("o Hoje nunca termina em silêncio: 5ª fonte server-side sugere reaquecer imóvel parado", () => {

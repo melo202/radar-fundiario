@@ -97,7 +97,7 @@ async function visao() {
   /* Métrica-norte do hábito (auditoria 19/07): dias com uso real do OS, no fuso do corretor */
   const habito = await pool.query(
     `SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') AS dia
-     FROM domain_events WHERE event_type='dia_ativo' ORDER BY dia DESC LIMIT 30`)
+     FROM domain_events WHERE event_type='dia_ativo' ORDER BY dia DESC LIMIT 60`)
     .then(r => r.rows.map(x => x.dia)).catch(() => []);
   return { acervo, avaliacoes, ia, eventos, mudancas, suspeitas, oportunidades, oportAcervo, habito };
 }

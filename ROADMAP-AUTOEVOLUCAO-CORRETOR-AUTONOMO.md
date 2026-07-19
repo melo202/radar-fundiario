@@ -25,11 +25,11 @@
 
 ### Estado de execução
 
-| Entrega | Estado em 19/07/2026 |
+| Entrega | Estado em 19/07/2026 (manhã — o cabeçalho ✅ acima, da tarde, prevalece) |
 |---|---|
-| E0 — qualificação e baseline | Código publicado; comprovação da migration `017` e baseline pós-filtro ainda pendentes no servidor |
-| E1 — feedback semanticamente útil | Implementação concluída na branch; migration `018`, API, histórico, motivos e desfazer aguardam deploy |
-| E2 em diante | Não iniciada |
+| E0 — qualificação e baseline | ~~pendente no servidor~~ **Provado em produção 19/07 à tarde** (migration 017 aplicada; baseline no cabeçalho) |
+| E1 — feedback semanticamente útil | ~~aguarda deploy~~ **Provado em produção 19/07 à tarde** (migration 018 aplicada; 0 registros — começa com o uso real) |
+| E2 em diante | Não iniciada — ⛔ congelada até G1+G2 |
 
 ---
 

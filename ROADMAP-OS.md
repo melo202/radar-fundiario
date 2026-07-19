@@ -7,8 +7,10 @@
 
 ## Estado operacional atual — fonte de verdade (17/07/2026)
 
-Quando este quadro divergir de decisões históricas abaixo, ele prevalece para a alpha
-privada single-user.
+Quando este quadro divergir de decisões ANTERIORES a 17/07, ele prevalece para a alpha
+privada single-user. **Entradas do diário POSTERIORES a 17/07 prevalecem sobre este
+quadro** — em especial as de 19/07: auditoria + freeze da inteligência, correção Nubank,
+persona "Mestre dos Magos" e descontinuação Caixa/leilão.
 
 | Área | Estado | Limite atual / próximo aceite |
 |---|---|---|
@@ -17,11 +19,11 @@ privada single-user.
 | Carteira + filtros + dossiê | **Pronto na alpha** | Geral, Comercial e Histórico funcionam; Arquivos ainda é estado vazio. |
 | Funil + WhatsApp assistido | **Pronto na alpha** | Mensagem é preparada, mas envio e confirmação continuam humanos. |
 | Referência de mercado | **Política v3 em validação** | Busca progressiva por perfil; relatório sempre existe. Com menos de 5 ofertas compatíveis, não calcula preço, mas entrega fontes, evidências, exclusões e próxima ação. |
-| Mapa territorial | **Correção pronta para deploy conjunto** | Retorno direto para o Painel, sem depender do histórico; botão textual no computador e no celular. O novo `deploy-all.sh` impede API e Mapa de ficarem em versões diferentes. |
+| Mapa territorial | **No ar** (deploy conjunto verificado em 19/07) | Retorno direto para o Painel ativo; botão textual no computador e no celular. O `deploy-all.sh` impede API e Mapa de ficarem em versões diferentes. |
 | Clientes | **Parcial** | Lista existe; faltam busca, ficha própria, criação/edição direta e matching. |
-| Kimi K3 + Hermes | **P1-B em validação** | Sete ferramentas de leitura são controladas pela aplicação; avaliação, comparáveis e entorno reutilizam evidências versionadas. Hermes nunca recebe banco ou SQL. |
+| Kimi K3 + Hermes | **P1-B em validação · ⛔ expansão congelada até G1 (19/07)** | Sete ferramentas de leitura são controladas pela aplicação; avaliação, comparáveis e entorno reutilizam evidências versionadas. Hermes nunca recebe banco ou SQL. |
 | Sessões e memória | **P1 inicial em validação** | Conversas geral, por imóvel e por cliente são reutilizadas e restauradas; a tela mostra claramente o objeto atual. Avaliação, visita e investimento continuam sem entrada própria. |
-| Automelhoria | **Observação controlada** | Mede falhas/contexto e propõe revisão; não testa nem modifica o produto sozinho. |
+| Automelhoria | **Observação controlada · ⛔ E2+ congeladas até G1 (19/07)** | Mede falhas/contexto e propõe revisão; não testa nem modifica o produto sozinho. Revisão de propostas mora no painel admin. |
 | Documentos | **Estrutura inicial** | Ingestão determinística existe no código; upload, OCR, seleção de fontes e dossiê documental ainda não estão na tela. |
 | Consumo de IA | **Registrado, não exposto** | Uso/fallback/cache são gravados; falta o painel pessoal simples. |
 | Matching, visita, relatórios e lançamentos | **Não iniciados no OS** | Entram somente após fechar o núcleo de hábito e dados. |
@@ -372,8 +374,9 @@ preservadas em pending, fora do K3. Snapshot congelado no cabeçalho do
 ROADMAP-AUTOEVOLUCAO. **O aprendizado para aqui até o G1.**
 
 **HUMANO (inalterado e agora caminho crítico):** G0-dogfood + G1 (ROTEIRO-G1.md);
-MOTOR_TOKEN + instalar-tarefa.ps1 do runner Caixa; testar voz e o teste dos 5 segundos
-no celular real — agora com o ícone "Seu dia" instalável.
+~~MOTOR_TOKEN + instalar-tarefa.ps1 do runner Caixa~~ *(SUPERADO à tarde: Caixa/leilão
+descontinuado — ver entrada abaixo)*; testar voz e o teste dos 5 segundos no celular
+real — agora com o ícone "Seu dia" instalável.
 
 ### 19/07/2026 — Hábito mínimo NO AR (commit 3f54027)
 
@@ -385,8 +388,9 @@ da carteira, fallback cidade, só desconto honesto vs mediana de ofertas n≥5, 
 "oferta anunciada, não venda fechada"; lista >3 dias = card some — hoje a lista de 17/07
 ainda vale); **"Aberto há N dias"** nos cards sem prazo real. Verificado em produção:
 novidade retorna 3 aptos no SETOR BUENO a 62,1% / 45,7% / 34,8% abaixo da mediana (18
-ofertas); API 401 sem sessão. Suíte **589/589**. Sem o runner, o card morre em ~2 dias —
-instalar o MOTOR_TOKEN o ressuscita sem deploy.
+ofertas); API 401 sem sessão. Suíte **589/589**. ~~Sem o runner, o card morre em ~2 dias —
+instalar o MOTOR_TOKEN o ressuscita sem deploy.~~ *(SUPERADO à tarde: o card foi
+re-apontado para mudanças de preço verificadas — o runner não o afeta mais.)*
 
 ### 19/07/2026 — Gate de confiança dos comparáveis NO AR + kit do G1 (commit 2f98b11)
 

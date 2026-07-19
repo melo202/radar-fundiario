@@ -7,6 +7,8 @@ main() {
   bash /opt/radar/repo/motor/deploy-api.sh
   bash /opt/radar/repo/motor/deploy-app.sh
   curl -fsS http://127.0.0.1:8140/motor/health >/dev/null
+  # rota pública do painel: prova que o handler /painel* subiu inteiro (sem exigir sessão)
+  curl -fsS http://127.0.0.1:8140/painel/os.webmanifest >/dev/null
   echo "deploy completo ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"
 }
 

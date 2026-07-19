@@ -48,6 +48,7 @@ test("novidade: só mudança VERIFICADA e recente; falha nunca derruba o Hoje; z
   assert.ok(core.includes("interval '7 days'"), "janela de 7 dias É a guarda de frescor");
   assert.ok(core.includes("catch { novidade = null; }"), "falha na novidade nunca derruba o Hoje");
   assert.ok(html.includes('id="todayNews"'));
+  assert.ok(app.includes("renderNovidade(data.novidade)"), "o card é renderizado no load do Hoje");
   assert.ok(app.includes("Novidade do mercado"));
   assert.ok(app.includes("Mudança verificada"), "proveniência declarada no card");
   for (const arquivo of [app, html])

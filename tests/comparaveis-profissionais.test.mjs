@@ -42,6 +42,12 @@ test("gate de confiança (P0 17/07): corretor vê inclusões e exclusões antes 
   /* atributos exigidos pela decisão: bairro, área, quartos, preço, fonte, distância, motivo */
   for (const attr of ["c.bairro", "c.area", "c.quartos", "c.preco", "c.portal", "c.distanciaM", "motivoExclusao"])
     assert.ok(app.includes(attr), `atributo ausente na linha do comparável: ${attr}`);
+  /* pino nos DOIS call sites (pente-fino 19/07): a função existir não basta — precisa
+     estar anexada tanto no caminho sem número quanto no calculada */
+  assert.ok(app.includes("painelIns=painelComparaveis(d)"), "painel anexado no caminho amostra_insuficiente");
+  assert.ok(app.includes("const painel=painelComparaveis(d)"), "painel anexado no caminho calculada");
+  /* avaliação restaurada não persiste a lista — o rótulo usa o total do sample */
+  assert.ok(app.includes("s.totalAccepted"), "rótulo honesto quando a lista não veio na restauração");
 });
 
 test("avaliações antigas com bairros ampliados são retiradas de uso sem apagar a trilha", () => {

@@ -1,5 +1,11 @@
 # Auditoria do plano e do front — 19/07/2026
 
+> **⚠ Atualização de 19/07 à tarde:** Caixa/leilão foi DESCONTINUADO por decisão do
+> usuário depois desta auditoria. Ficam suplantados: a exceção do runner-caixa no item 3
+> da seção A e o card de oportunidades da Caixa no item 11 da seção C — o card "Novidade
+> do mercado" foi re-apontado para mudanças de preço verificadas pelo radar (ver
+> ROADMAP-OS.md, entrada "Caixa/leilão DESCONTINUADO"). O restante permanece válido.
+
 > Pedido do usuário: *"faz uma auditoria no plano, e veja se você trocaria algo. Tô achando o
 > front um pouco complexo demais, não está estilo Nubank intuitivo. E tem que ser uma
 > ferramenta que o corretor vai usar todo dia."*
