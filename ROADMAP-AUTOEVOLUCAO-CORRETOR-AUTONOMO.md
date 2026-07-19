@@ -5,6 +5,16 @@
 > em produção o que já foi codado (migration 017 + baseline conciliado logs×SQL); E1 limita-se
 > a deploy de backend/migration 018 e medição — **sem expor ao corretor a UI de feedback
 > estruturado** antes do G1 validar que corretor de rua topa dar esse feedback.
+>
+> **✅ BASELINE-2026-07 CONGELADO (19/07, 14:34 UTC-3)** — E0 e E1 PROVADOS em produção.
+> Migrations 017/018 aplicadas; investigação dirigida real no Apartamento · Setor Bueno
+> (job df3d1560, 8m39s): **100 evidências coletadas → 31 qualificadas (todas usáveis) ·
+> 69 rejeitadas**; conciliação resumo-do-job × SQL EXATA (31/31 e 69/69). Motivos de
+> rejeição: catalog_page 69 · transaction_mismatch 3. Registro de fontes nasceu operante:
+> 18 domínios, 1 degradado (chavesnamao: 39/46 rejeitadas). As 205 evidências antigas
+> permanecem `pending` preservadas — nunca voltam ao K3 (regra da migration 017).
+> intelligence_feedback: 0 registros (esperado; começa com o uso real). Gate CR-09 satisfeito.
+> **Aqui o aprendizado PARA até o G1** — os primeiros rótulos virão do uso do fundador (G0-dogfood).
 
 - **Projeto:** Corretor Inteligente / Radar Fundiário
 - **Data da auditoria:** 19/07/2026

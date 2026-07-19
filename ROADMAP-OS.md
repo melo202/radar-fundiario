@@ -347,3 +347,30 @@ no Hoje — nota hábito 3,5/10). A queixa do usuário já era a decisão regist
 6. **Humano:** G0-dogfood (Bruno usa 5 dias reais) antes/junto do G1; G1 esta semana com o
    ROTEIRO-G1.md. Resumo matinal por e-mail adiado para pós-G1 (exige serviço de e-mail e
    sessão longa — decisão do usuário).
+
+### 19/07/2026 — Correção Nubank NO AR + baseline E0/E1 provado (commit 5c3f8c9)
+
+**Front (seções B e C da auditoria), verificado em produção:** home ação-primeiro ("Sua
+próxima ação" em manchete com motivo + 2 ações + "Ver todas (N)"; contadores em linha
+tocável; assistente desce; guia só no primeiro uso e auto-esconde por conclusão);
+"Melhorias para revisar" saiu do Hoje → painel admin; dossiê com dados antes do radar;
+sinal com 3 ações ("É isso mesmo" / "Não é isso" com 5 motivos em linguagem de corretor /
+"Depois") + "Próximo passo" determinístico por tipo; badge "Kimi K3" e "Analisando lote"
+eliminados; seletor de sessões virou chip de contexto; cobrança de interessado do Hoje
+abre direto o card no dossiê (payload ganhou inventory_property_id, fallback preservado);
+5ª fonte server-side "Reaqueça o imóvel parado" (o Hoje nunca emudece); revalidação ao
+voltar o foco; **PWA próprio do escritório** (os.webmanifest público em
+api.corretorinteligente.tech/painel/os.webmanifest — verificado 200 sem sessão; /painel/os
+segue 303 e API 401 sem sessão). Suíte **583/583** (10 testes novos em os-nubank.test.mjs
+travam as regras). Deploy conjunto ok (API+Mapa no mesmo commit).
+
+**Baseline E0/E1 (gate CR-09) PROVADO:** investigação dirigida real no Apartamento ·
+Setor Bueno (job df3d1560, 8m39s) → 100 evidências, **31 qualificadas · 69 rejeitadas
+(catalog_page 69, transaction_mismatch 3)**, conciliação resumo×SQL exata; registro de
+fontes operante (18 domínios, chavesnamao degradada 39/46); 205 evidências antigas
+preservadas em pending, fora do K3. Snapshot congelado no cabeçalho do
+ROADMAP-AUTOEVOLUCAO. **O aprendizado para aqui até o G1.**
+
+**HUMANO (inalterado e agora caminho crítico):** G0-dogfood + G1 (ROTEIRO-G1.md);
+MOTOR_TOKEN + instalar-tarefa.ps1 do runner Caixa; testar voz e o teste dos 5 segundos
+no celular real — agora com o ícone "Seu dia" instalável.
