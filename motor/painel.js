@@ -257,6 +257,18 @@ export async function painel(req, res) {
     const r = await createIntelligenceJob({ kind: "custom_research", objective, scope, priority });
     return json(res, r.ok ? 202 : 400, r);
   }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/inteligencia\/investigar$/.test(req.url)) {
+    const { requestPropertyInvestigation } = await import("./intelligence-orchestrator.js");
+    const r = await requestPropertyInvestigation(req.url.split("/")[5]);
+    return json(res, r.ok ? 202 : 400, r);
+  }
+  if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/inteligencia\/[0-9a-f-]{36}\/revisar$/.test(req.url)) {
+    const { reviewPropertyFinding } = await import("./intelligence-orchestrator.js");
+    const { decision } = JSON.parse(await readBody(req) || "{}");
+    const parts = req.url.split("/");
+    const r = await reviewPropertyFinding({ propertyId: parts[5], findingId: parts[7], decision });
+    return json(res, r.ok ? 200 : 400, r);
+  }
 
   if (req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes") {
     const { createAssistantSession } = await import("./assistente.js");

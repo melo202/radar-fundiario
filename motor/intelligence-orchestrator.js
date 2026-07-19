@@ -277,18 +277,117 @@ async function callK3({ organizationId, jobId, stage, input, runtime }) {
 
 async function saveFindings(job, findings) {
   let inserted = 0;
+  const ids = [];
   for (const finding of findings) {
     const fingerprint = sha(`${finding.kind}|${finding.title.toLocaleLowerCase("pt-BR")}|${[...finding.evidenceIds].sort((a,b) => a-b).join(",")}|${JSON.stringify(finding.candidateData)}`);
     const result = await pool.query(
       `INSERT INTO intelligence_findings
        (job_id,organization_id,kind,title,summary,candidate_data,confidence,evidence_ids,fingerprint)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       ON CONFLICT (organization_id,fingerprint) DO NOTHING RETURNING id`,
+       ON CONFLICT (organization_id,fingerprint) DO UPDATE
+         SET summary=EXCLUDED.summary,confidence=GREATEST(intelligence_findings.confidence,EXCLUDED.confidence)
+       RETURNING id,(xmax=0) AS inserted`,
       [job.id, job.organization_id, finding.kind, finding.title, finding.summary,
         JSON.stringify(finding.candidateData), finding.confidence, finding.evidenceIds, fingerprint]);
-    inserted += result.rowCount;
+    if (result.rows[0]) {
+      ids.push(result.rows[0].id);
+      inserted += result.rows[0].inserted ? 1 : 0;
+    }
   }
-  return inserted;
+  return { inserted, ids };
+}
+
+async function linkJobFindings(job, findingIds) {
+  if (!findingIds.length) return;
+  if (job.scope?.inventoryPropertyId) await pool.query(
+    `INSERT INTO intelligence_finding_links (finding_id,inventory_property_id,relation,relevance)
+     SELECT f.id,p.id,'direct',1 FROM intelligence_findings f
+     JOIN inventory_properties p ON p.organization_id=f.organization_id AND p.id::text=$2
+     WHERE f.id=ANY($1::uuid[])
+     ON CONFLICT (finding_id,inventory_property_id) DO UPDATE SET relation='direct',relevance=1`,
+    [findingIds, String(job.scope.inventoryPropertyId)]);
+  await pool.query(
+    `INSERT INTO intelligence_finding_links (finding_id,inventory_property_id,relation,relevance)
+     SELECT DISTINCT f.id,p.id,'comparable',0.750
+     FROM intelligence_findings f
+     JOIN intelligence_evidence e ON e.id=ANY(f.evidence_ids)
+     JOIN valuation_comparables vc ON vc.property_id::text=e.metadata->>'propertyId'
+     JOIN valuations v ON v.id=vc.valuation_id
+     JOIN inventory_properties p ON p.id::text=v.subject->>'inventoryPropertyId' AND p.organization_id=f.organization_id
+     WHERE f.id=ANY($1::uuid[])
+     ON CONFLICT (finding_id,inventory_property_id) DO UPDATE
+       SET relation=CASE WHEN intelligence_finding_links.relevance<EXCLUDED.relevance THEN EXCLUDED.relation ELSE intelligence_finding_links.relation END,
+           relevance=GREATEST(intelligence_finding_links.relevance,EXCLUDED.relevance)`, [findingIds]);
+  await pool.query(
+    `INSERT INTO intelligence_finding_links (finding_id,inventory_property_id,relation,relevance)
+     SELECT DISTINCT f.id,p.id,'neighborhood',0.550
+     FROM intelligence_findings f JOIN intelligence_evidence e ON e.id=ANY(f.evidence_ids)
+     JOIN inventory_properties p ON p.organization_id=f.organization_id AND p.neighborhood IS NOT NULL
+       AND lower(trim(e.metadata->>'neighborhood'))=lower(trim(p.neighborhood))
+     WHERE f.id=ANY($1::uuid[]) AND f.kind NOT IN ('source_gap','other')
+     ON CONFLICT (finding_id,inventory_property_id) DO NOTHING`, [findingIds]);
+}
+
+export async function listPropertyIntelligence({ organizationId, propertyId }, db = pool) {
+  const [findings, jobs] = await Promise.all([
+    db.query(
+      `SELECT f.id,f.kind,f.title,f.summary,f.confidence,l.status,f.created_at,l.relation,l.relevance,
+              COALESCE(src.evidence,'[]'::jsonb) AS evidence
+       FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
+       LEFT JOIN LATERAL (
+         SELECT jsonb_agg(jsonb_build_object('id',x.id,'url',x.source_url,'domain',x.source_domain,
+                              'title',x.title,'collectedAt',x.collected_at) ORDER BY x.id) AS evidence
+         FROM (SELECT e.id,e.source_url,e.source_domain,e.title,e.collected_at
+               FROM intelligence_evidence e WHERE e.id=ANY(f.evidence_ids) ORDER BY e.id LIMIT 8) x
+       ) src ON true
+       WHERE l.inventory_property_id=$1 AND f.organization_id=$2 AND l.status<>'rejected'
+       ORDER BY l.relevance DESC,f.confidence DESC,f.created_at DESC LIMIT 12`, [propertyId, organizationId]),
+    db.query(
+      `SELECT id,status,attempts,result_summary,error,created_at,started_at,completed_at
+       FROM intelligence_jobs WHERE organization_id=$1 AND scope->>'inventoryPropertyId'=$2::text
+       ORDER BY created_at DESC LIMIT 5`, [organizationId, propertyId]),
+  ]);
+  return { findings: findings.rows, jobs: jobs.rows };
+}
+
+export async function requestPropertyInvestigation(propertyId) {
+  const org = await defaultOrganization();
+  const result = await pool.query(
+    `SELECT id,title,property_type,neighborhood,address,asking_price,characteristics
+     FROM inventory_properties WHERE id=$1 AND organization_id=$2 AND status='ativo'`, [propertyId, org.id]);
+  if (!result.rowCount) return { ok: false, erro: "Imóvel não encontrado na carteira ativa." };
+  const p = result.rows[0];
+  const active = await pool.query(
+    `SELECT id,kind,objective,status,priority,created_at FROM intelligence_jobs
+     WHERE organization_id=$1 AND scope->>'inventoryPropertyId'=$2::text AND status IN ('pending','running')
+     ORDER BY created_at DESC LIMIT 1`, [org.id, p.id]);
+  if (active.rowCount) return { ok: true, job: active.rows[0], reused: true };
+  return createIntelligenceJob({
+    organizationId: org.id,
+    kind: "opportunity_investigation",
+    objective: `Investigar sinais públicos relevantes para ${p.title || p.property_type || "o imóvel"} em ${p.neighborhood || "Goiânia"}: possíveis anúncios correspondentes, alterações de preço, duplicidades, conflitos, ofertas comparáveis e sinais de oportunidade. Distinguir rigorosamente o que é sobre o imóvel, sobre um comparável ou apenas sobre o bairro.`,
+    scope: { inventoryPropertyId: p.id, city: "Goiânia", state: "GO", neighborhood: p.neighborhood,
+      address: p.address, propertyType: p.property_type, askingPrice: p.asking_price,
+      areaM2: p.characteristics?.areaM2 ?? null, bedrooms: p.characteristics?.bedrooms ?? null,
+      horizonDays: 30, queryBudget: Number(process.env.INTELLIGENCE_QUERY_BUDGET || DEFAULT_QUERY_BUDGET) },
+    priority: 80,
+    idempotencyKey: `property-investigation:${p.id}:${Date.now()}`,
+  });
+}
+
+export async function reviewPropertyFinding({ organizationId, propertyId, findingId, decision }) {
+  if (!['reviewed','rejected'].includes(decision)) return { ok: false, erro: "Decisão inválida." };
+  const orgId = organizationId || (await defaultOrganization()).id;
+  const result = await pool.query(
+    `UPDATE intelligence_finding_links l SET status=$1,reviewed_at=now()
+     FROM intelligence_findings f
+     WHERE l.finding_id=$2 AND f.id=l.finding_id AND f.organization_id=$3 AND l.inventory_property_id=$4
+     RETURNING l.finding_id AS id,l.status`, [decision, findingId, orgId, propertyId]);
+  if (!result.rowCount) return { ok: false, erro: "Sinal não encontrado neste imóvel." };
+  await pool.query(
+    "INSERT INTO audit_log (entity,entity_id,action,detail,actor) VALUES ('intelligence-finding',$1,'human-review',$2,'corretor-painel')",
+    [findingId, JSON.stringify({ propertyId, decision })]).catch(() => {});
+  return { ok: true, finding: result.rows[0] };
 }
 
 function progressFrom(job) {
@@ -374,9 +473,10 @@ async function runJob(job, dependencies = {}) {
       synthesis = `failed-batch-fallback: ${clean(error.message, 180)}`;
     }
   }
-  const inserted = await saveFindings(job, findings);
+  const saved = await saveFindings(job, findings);
+  await linkJobFindings(job, saved.ids);
   const summary = { queries: plan.queries.length, evidence: evidence.length, webEvidence,
-    batches: batches.length, candidates: candidates.length, findings: inserted, synthesis };
+    batches: batches.length, candidates: candidates.length, findings: saved.inserted, synthesis };
   await pool.query(
     `UPDATE intelligence_jobs SET status='completed',result_summary=$1,completed_at=now(),
             locked_at=NULL,updated_at=now() WHERE id=$2`, [JSON.stringify(summary), job.id]);

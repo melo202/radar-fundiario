@@ -50,7 +50,10 @@ async function buscarImovel(session, prompt) {
       neighborhood: p.neighborhood, askingPrice: p.asking_price, characteristics: p.characteristics,
       conditions: p.commercial_conditions },
     pendingTasks: (d.tasks || []).filter(t => !["concluida","cancelada"].includes(t.status)).map(t => ({ title: t.title, dueAt: t.due_at, priority: t.priority })),
-    opportunities: (d.opportunities || []).map(o => ({ stage: o.stage, temperature: o.temperature, nextActionAt: o.next_action_at })) };
+    opportunities: (d.opportunities || []).map(o => ({ stage: o.stage, temperature: o.temperature, nextActionAt: o.next_action_at })),
+    intelligenceSignals: (d.intelligence?.findings || []).map(f => ({ kind: f.kind, title: f.title, summary: f.summary,
+      confidence: f.confidence, relation: f.relation, status: f.status,
+      evidence: (f.evidence || []).map(e => ({ title: e.title, domain: e.domain, url: e.url })) })) };
   }
   const r = await pool.query(
     `SELECT id,title,capture_stage,property_type,neighborhood,asking_price,characteristics,updated_at

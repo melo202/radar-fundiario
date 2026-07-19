@@ -256,7 +256,7 @@ function acaoDeTarefa(t) {
 export async function visaoHoje() {
   const db = await banco();
   const org = await garantirOrganizacao();
-  const [tarefas, incompletos, oportunidades, contagens] = await Promise.all([
+  const [tarefas, incompletos, oportunidades, sinais, contagens] = await Promise.all([
     db.query(
       `SELECT id,related_entity_type,related_entity_id,title,due_at,priority,status
        FROM tasks WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')
@@ -275,11 +275,23 @@ export async function visaoHoje() {
          AND (o.next_action_at <= now() OR o.last_interaction_at IS NULL OR o.last_interaction_at < now()-interval '3 days')
        ORDER BY o.next_action_at ASC NULLS FIRST LIMIT 12`, [org.id]),
     db.query(
+      `SELECT * FROM (
+         SELECT DISTINCT ON (p.id) f.id AS finding_id,p.id AS property_id,p.title AS property_title,
+                f.title,left(f.summary,280) AS summary,f.confidence,f.created_at,l.relation,l.relevance
+         FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
+         JOIN inventory_properties p ON p.id=l.inventory_property_id
+         WHERE p.organization_id=$1 AND p.status='ativo' AND l.status='candidate' AND f.confidence>=0.750
+         ORDER BY p.id,l.relevance DESC,f.confidence DESC,f.created_at DESC
+       ) ranked ORDER BY relevance DESC,confidence DESC,created_at DESC LIMIT 8`, [org.id]),
+    db.query(
       `SELECT
         (SELECT count(*)::int FROM inventory_properties WHERE organization_id=$1 AND status='ativo') AS properties,
         (SELECT count(*)::int FROM contacts WHERE organization_id=$1 AND status='ativo') AS contacts,
         (SELECT count(*)::int FROM opportunities WHERE organization_id=$1 AND stage NOT IN ('fechado','perdido')) AS opportunities,
-        (SELECT count(*)::int FROM tasks WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')) AS tasks`, [org.id]),
+        (SELECT count(*)::int FROM tasks WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')) AS tasks,
+        (SELECT count(*)::int FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
+         JOIN inventory_properties p ON p.id=l.inventory_property_id
+         WHERE p.organization_id=$1 AND p.status='ativo' AND l.status='candidate') AS intelligence_signals`, [org.id]),
   ]);
 
   const acoes = tarefas.rows.map(acaoDeTarefa);
@@ -316,6 +328,21 @@ export async function visaoHoje() {
       dueAt: o.next_action_at || o.last_interaction_at,
     });
   }
+  for (const s of sinais.rows) {
+    const contexto = s.relation === "direct" ? "sobre este imóvel" : s.relation === "comparable" ? "em um comparável usado" : "no mesmo bairro";
+    acoes.push({
+      id: `intelligence:${s.finding_id}`,
+      source: "intelligence",
+      entityType: "inventory_property",
+      entityId: s.property_id,
+      title: s.title,
+      reason: `Radar encontrou ${contexto}: ${s.summary}`,
+      actionLabel: "Revisar no imóvel",
+      priority: Number(s.confidence) >= 0.9 && s.relation !== "neighborhood" ? "alta" : "normal",
+      status: "pendente",
+      dueAt: s.created_at,
+    });
+  }
 
   return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20) };
 }
@@ -327,7 +354,11 @@ export async function listarCarteira() {
     `SELECT p.id,p.title,p.capture_stage,p.status,p.transaction_type,p.property_type,p.neighborhood,
             p.asking_price,p.characteristics,p.created_at,p.updated_at,c.name AS owner_name,
             (SELECT count(*)::int FROM opportunities o WHERE o.inventory_property_id=p.id AND o.stage NOT IN ('fechado','perdido')) AS open_opportunities,
-            (SELECT count(*)::int FROM tasks t WHERE t.related_entity_type='inventory_property' AND t.related_entity_id=p.id AND t.status IN ('pendente','em_andamento','adiada')) AS pending_tasks
+            (SELECT count(*)::int FROM tasks t WHERE t.related_entity_type='inventory_property' AND t.related_entity_id=p.id AND t.status IN ('pendente','em_andamento','adiada')) AS pending_tasks,
+            (SELECT count(*)::int FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
+             WHERE l.inventory_property_id=p.id AND l.status='candidate') AS intelligence_signals,
+            (SELECT max(f.confidence) FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
+             WHERE l.inventory_property_id=p.id AND l.status='candidate') AS intelligence_confidence
      FROM inventory_properties p LEFT JOIN contacts c ON c.id=p.owner_contact_id
      WHERE p.organization_id=$1 ORDER BY p.updated_at DESC LIMIT 100`, [org.id]);
   return { organization: org, properties: r.rows };
@@ -557,7 +588,9 @@ export async function dossieImovel(id) {
      WHERE p.id=$1 AND p.organization_id=$2`, [id, org.id]);
   if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
   const latestValuation = await avaliacaoRecenteDoImovel(db, p.rows[0]);
-  const [tarefas, oportunidades, eventos, documentos] = await Promise.all([
+  const intelligencePromise = import("./intelligence-orchestrator.js")
+    .then(({ listPropertyIntelligence }) => listPropertyIntelligence({ organizationId: org.id, propertyId: id }, db));
+  const [tarefas, oportunidades, eventos, documentos, intelligence] = await Promise.all([
     db.query(
       `SELECT id,title,type,due_at,priority,status,completed_at FROM tasks
        WHERE organization_id=$1 AND related_entity_type='inventory_property' AND related_entity_id=$2
@@ -578,6 +611,7 @@ export async function dossieImovel(id) {
       `SELECT id,file_name,mime_type,byte_size,page_count,status,extraction_method,error,created_at,updated_at
        FROM agent_documents WHERE organization_id=$1 AND object_type='property' AND object_id=$2
        ORDER BY updated_at DESC LIMIT 50`, [org.id, id]),
+    intelligencePromise,
   ]);
   return {
     ok: true, property: p.rows[0], tasks: tarefas.rows,
@@ -586,6 +620,7 @@ export async function dossieImovel(id) {
     opportunities: oportunidades.rows.map(o => ({ ...o, mensagem: mensagemFunil(o, p.rows[0]) })),
     documents: documentos.rows.map(d => ({ ...d, download_url: `/painel/api/os/documentos/${d.id}/arquivo` })),
     events: eventos.rows.map(e => ({ ...e, rotulo: rotuloEvento(e) })),
+    intelligence,
   };
 }
 

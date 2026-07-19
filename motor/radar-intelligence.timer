@@ -2,9 +2,10 @@
 Description=Corretor Inteligente - investigação inteligente diária pós-varredura
 
 [Timer]
-OnCalendar=*-*-* 05:30:00
-Persistent=true
-RandomizedDelaySec=10m
+OnBootSec=2m
+OnUnitInactiveSec=10m
+RandomizedDelaySec=1m
+AccuracySec=30s
 
 [Install]
 WantedBy=timers.target
