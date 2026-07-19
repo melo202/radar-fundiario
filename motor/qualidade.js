@@ -35,6 +35,15 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
   if (semDadosDeUnidade) { sinais++; razoes.push("sem preço nem área individuais"); }
   const isCatalogPage = sinais >= 2;
 
+  /* -- venda vs aluguel (auditoria 19/07): ALUGUEL nunca vira comparável de venda.
+     O caso real que motivou: casa "para-alugar ... R$950" extraída como venda de
+     R$950.000 — teria sujado a mediana do bairro. O sinal decisivo é a URL do
+     próprio portal; o título decide quando não menciona venda. Descrição sozinha
+     não decide (anúncio de venda pode citar "aceita também alugar"). -- */
+  const isRental = /alug|loca[cç][aã]o|temporada/i.test(path || "")
+    || (/\b(para alugar|aluguel|loca[cç][aã]o|temporada)\b/i.test(titulo) && !/vend/i.test(titulo));
+  if (isRental) razoes.push("anúncio de ALUGUEL — fora dos comparáveis de venda");
+
   /* -- completude (fração dos campos-chave preenchidos) -- */
   const preenchidos = CAMPOS_CHAVE.filter(c => e[c] != null).length;
   const completenessScore = Math.round((preenchidos / CAMPOS_CHAVE.length) * 100) / 100;
@@ -48,7 +57,7 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
   const temPreco = e.askingPrice != null && e.askingPrice >= 20000 && e.askingPrice <= 100000000;
   const temTamanho = (area != null && area >= 10 && area <= 100000) || e.bedrooms != null;
   const temLocal = !!e.neighborhood;
-  const comparableGrade = !isCatalogPage && temPreco && temTamanho && temLocal;
+  const comparableGrade = !isCatalogPage && !isRental && temPreco && temTamanho && temLocal;
   if (!comparableGrade) {
     if (isCatalogPage) razoes.push("classificado como página-catálogo");
     if (!temPreco) razoes.push("sem preço confiável");
@@ -56,5 +65,5 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
     if (!temLocal) razoes.push("sem bairro");
   }
 
-  return { completenessScore, isCatalogPage, comparableGrade, razoes };
+  return { completenessScore, isCatalogPage, isRental, comparableGrade, razoes };
 }

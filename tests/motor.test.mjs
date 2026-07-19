@@ -54,6 +54,39 @@ test("anúncio sem preço nunca vira comparável, mas não é apagado", () => {
   assert.ok(q.razoes.some(r => r.includes("sem preço confiável")));
 });
 
+/* Auditoria de 19/07 (caso REAL do backfill): casa "para-alugar ... R$950" extraída
+   como venda de R$950.000 passou na peneira e ia sujar a mediana do bairro. */
+test("aluguel NUNCA vira comparável de venda — a URL do portal decide", () => {
+  const q = avaliarQualidade({
+    url: "https://www.chavesnamao.com.br/imovel/casa-para-alugar-2-quartos-go-goiania-setor-leste-vila-nova-80m2-RS950/id-14348010/",
+    titulo: "Casa com 2 quartos na Rua 214, Setor Leste Vila Nova, Goiânia - GO",
+    descricao: "Casa para alugar com 2 quartos, 80m²",
+    extracao: { propertyType: "casa", neighborhood: "Setor Leste Vila Nova", totalAreaM2: 80, bedrooms: 2, askingPrice: 950000 },
+  });
+  assert.equal(q.isRental, true);
+  assert.equal(q.comparableGrade, false);
+  assert.ok(q.razoes.some(r => r.includes("ALUGUEL")));
+});
+
+test("título de aluguel sem menção a venda também é pego; venda com 'aceita alugar' passa", () => {
+  const aluguel = avaliarQualidade({
+    url: "https://www.exemplo.com.br/imovel/id-5544332211",
+    titulo: "Apartamento para alugar no Setor Bueno",
+    descricao: "2 quartos, R$ 1.500",
+    extracao: { propertyType: "apartamento", neighborhood: "Setor Bueno", bedrooms: 2, askingPrice: 150000 },
+  });
+  assert.equal(aluguel.isRental, true);
+  assert.equal(aluguel.comparableGrade, false);
+  const venda = avaliarQualidade({
+    url: "https://www.exemplo.com.br/imovel/apartamento-a-venda-id-6677889900",
+    titulo: "Apartamento à venda no Setor Bueno — aceita também alugar",
+    descricao: "3 quartos, 89m², R$ 690.000",
+    extracao: { propertyType: "apartamento", neighborhood: "Setor Bueno", privateAreaM2: 89, bedrooms: 3, askingPrice: 690000 },
+  });
+  assert.equal(venda.isRental, false);
+  assert.equal(venda.comparableGrade, true);
+});
+
 test("preço e área implausíveis geram razões explícitas", () => {
   const q = avaliarQualidade({
     url: "https://www.exemplo.com.br/imovel/id-1234567890",
