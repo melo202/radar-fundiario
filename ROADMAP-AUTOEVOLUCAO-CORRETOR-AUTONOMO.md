@@ -1,5 +1,11 @@
 # Roadmap auditado — Autoevolução do Corretor Inteligente Autônomo
 
+> **⛔ CONGELADO em 19/07/2026 — Entregas E2 a E10 não avançam até os gates G1 e G2 do
+> ROADMAP-OS.md passarem** (auditoria em AUDITORIA-PLANO-2026-07-19.md). E0 limita-se a provar
+> em produção o que já foi codado (migration 017 + baseline conciliado logs×SQL); E1 limita-se
+> a deploy de backend/migration 018 e medição — **sem expor ao corretor a UI de feedback
+> estruturado** antes do G1 validar que corretor de rua topa dar esse feedback.
+
 - **Projeto:** Corretor Inteligente / Radar Fundiário
 - **Data da auditoria:** 19/07/2026
 - **Branch auditada:** `agent/kimi-personal-assistant`

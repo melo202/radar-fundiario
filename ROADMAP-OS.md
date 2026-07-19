@@ -312,3 +312,38 @@ viram prioridade acima de novas funcionalidades:
 4. Regra de UX para as próximas entregas: toda saída do OS para uma superfície irmã
    precisa ter retorno visível, com o vocabulário do corretor — nunca depender do botão
    do navegador.
+
+### 19/07/2026 — Auditoria do plano + freeze da inteligência (a pedido do usuário)
+
+O usuário pediu auditoria do plano com duas queixas: front complexo demais ("não está
+estilo Nubank") e a exigência de ser ferramenta de uso DIÁRIO. Auditoria multi-agente
+(4 lentes + 2 céticos por recomendação; 11 confirmadas, 3 refutadas) em
+**AUDITORIA-PLANO-2026-07-19.md**. Diagnóstico central: a branch kimi inverteu a hierarquia
+da home (assistente virou porta de entrada; "o que eu faço agora" caiu para o 4º bloco) e o
+loop de hábito está aberto nas duas pontas (zero gatilho de retorno; zero recompensa exógena
+no Hoje — nota hábito 3,5/10). A queixa do usuário já era a decisão registrada em 17/07
+("central de trabalho, não dashboard") — a execução seguinte foi na direção contrária.
+
+**Decisões em vigor a partir desta entrada:**
+1. **O gate do GATE G1 estende-se explicitamente a qualquer construção grande, incluindo
+   infra de inteligência.** ULTRAROADMAP Ondas 3–14 e AUTOEVOLUÇÃO E2–E10 congeladas
+   (cabeçalhos ⛔ nos dois arquivos). Onda 0 = só higiene do deployado; E0/E1 = provar em
+   produção o que já subiu (migrations 017/018), sem expor UI de feedback complexa.
+2. **Correção "Nubank" do front é a prioridade executiva** (já era, por 17/07): home
+   ação-primeiro ("Sua próxima ação" no topo, com motivo), contadores viram linha tocável,
+   guia só no primeiro uso, "Melhorias para revisar" sai do Hoje (→ painel admin), dossiê
+   com dados antes do radar, sinal com 3 ações e "Próximo passo" determinístico, feedback
+   com 5 motivos em linguagem de corretor (mapeados aos 13 códigos que ficam no banco),
+   badge "Kimi K3" e "lote 2 de 5" eliminados, seletor de sessões vira chip de contexto.
+3. **Hábito mínimo determinístico:** PWA próprio do escritório (o instalável hoje abre o
+   Mapa!), estado vazio ativo ("Reaqueça o imóvel parado há N dias", server-side), card
+   diário de oportunidades da Caixa nos bairros da carteira (com guarda de frescor),
+   revalidação do Hoje ao voltar o foco, e evento dia_ativo como métrica-norte.
+4. **Regra de peças móveis:** serviço/timer novo exige aposentar um existente ou evidência
+   de uso. Exceção: ativar o runner-caixa (termina peça entregue). Se G1 não validar sinais,
+   desligar radar-intelligence.timer + esconder o botão "Investigar" no MESMO commit.
+5. **Refutados pelos céticos (ficam como estão):** separação Mapa×OS (objetos distintos),
+   branch de deploy atual (sem drift), e não criar "fase F-UX" formal — executar, não planejar.
+6. **Humano:** G0-dogfood (Bruno usa 5 dias reais) antes/junto do G1; G1 esta semana com o
+   ROTEIRO-G1.md. Resumo matinal por e-mail adiado para pós-G1 (exige serviço de e-mail e
+   sessão longa — decisão do usuário).

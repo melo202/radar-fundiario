@@ -1,5 +1,12 @@
 # Ultraroadmap — Sistema Operacional de Inteligência Imobiliária
 
+> **⛔ CONGELADO em 19/07/2026 — Ondas 3 a 14 não avançam até os gates G1 e G2 do
+> ROADMAP-OS.md passarem** (auditoria em AUDITORIA-PLANO-2026-07-19.md). Da Onda 0 executa-se
+> apenas higiene do que já está em produção (correção de bugs do pipeline deployado, sem
+> capacidade nova). Ondas 1–2 só saem do freezer se o G1 mostrar que corretores valorizam os
+> sinais do radar. Motivo: a suposição mais arriscada do projeto é adoção diária, não
+> tecnologia — e segue sem teste com corretor real.
+
 **Projeto:** Corretor Inteligente / Radar Fundiário  
 **Versão do plano:** 1.0  
 **Data-base:** 19/07/2026  
