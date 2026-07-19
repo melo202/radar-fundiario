@@ -457,3 +457,21 @@ bairro+tipo estimáveis. A base engorda toda noite e a revisita mantém os preç
    mudança VERIFICADA nos últimos 7 dias (verde=queda, âmbar=alta), popup com proveniência.
 Tudo exibição do trabalho determinístico já registrado — freeze e regra de peças móveis
 intactos. Suíte **601/601**. Verificado em produção (401 sem sessão; endpoint público ok).
+
+### 19/07/2026 — Auditoria de fidelidade da extração: 3 contaminações achadas e barradas
+
+Pergunta do usuário ("a extração tá correta?") respondida com auditoria determinística:
+231 extrações do modelo novo conferidas campo a campo contra o texto bruto — bairro 100%,
+preço 96%, área 98%; falhas concentradas em páginas-catálogo (que a peneira já barra).
+Nos 29 que PASSARAM na peneira (os que alimentam o índice), **3 contaminações reais**:
+1. **Aluguel como venda** — casa "para-alugar … R$950" virou "venda R$950.000" (o modelo
+   inventou a escala) e ia sujar a mediana do bairro. Guarda `isRental` pela URL/título.
+2. **Outra cidade** — a busca do bairro Campinas (Goiânia) trouxe Campinas-SP com grau
+   de comparável. Guarda `foraDeGoiania`: sem menção a Goiânia = reprovado.
+3. **Área absurda com tipologia** — 8 m² passava porque tinha quartos, mas o índice
+   divide preço/área. Área implausível agora REPROVA, não só registra razão.
+No caminho, a cadeia de IA foi consertada de verdade: qwen3-32b aposentado pela Groq
+(404) → qwen3.6-27b falhou o modo JSON (raciocínio) → **llama-3.1-8b-instant a ~2 s por
+extração**, testado COM `response_format json_object` (lição no .env.example).
+Requalificação retroativa do acervo: 1.964 imóveis → 331 comparáveis limpos (0 aluguéis);
+vigia no VPS requalifica de novo sozinho quando o backfill terminar. Suíte **605/605**.
