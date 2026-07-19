@@ -1,0 +1,15 @@
+{
+  "id": "/painel/os",
+  "name": "Corretor Inteligente — Seu dia",
+  "short_name": "Seu dia",
+  "description": "Seu escritório imobiliário: Hoje, Carteira, Relacionamentos e Captura.",
+  "start_url": "/painel/os",
+  "scope": "/painel/",
+  "display": "standalone",
+  "background_color": "#f3f5f3",
+  "theme_color": "#17665f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

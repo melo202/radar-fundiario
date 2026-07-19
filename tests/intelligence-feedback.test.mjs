@@ -102,10 +102,17 @@ test("feedback: schema, API e dossiê preservam histórico e desfazer", () => {
   assert.ok(panel.includes("/desfazer"));
   assert.ok(panel.includes("{ decision, reason, correction, note }"));
   assert.ok(!panel.includes("{ ...feedback, propertyId"), "organização e IDs nunca vêm do corpo do feedback");
-  for (const text of ["Confirmar sinal", "Está incorreto", "Ainda inconclusivo", "Acompanhar", "Desfazer decisão", "Decisões anteriores"])
+  for (const text of ["É isso mesmo", "Não é isso", 'text:"Depois"', "Desfazer decisão", "Decisões anteriores"])
     assert.ok(app.includes(text), `ação ausente: ${text}`);
   assert.ok(html.includes('id="signalFeedbackDialog"'));
   assert.ok(html.includes("não altera automaticamente os fatos do imóvel"));
+  /* Correção Nubank 19/07: 5 motivos em linguagem de corretor no front; a taxonomia
+     completa de 13+ códigos permanece no banco e no normalizador */
+  const motivosNoFront = [...html.matchAll(/<option value="([a-z_]+)">/g)].map(m => m[1])
+    .filter(v => !["direct", "comparable", "neighborhood", "unrelated"].includes(v));
+  assert.deepEqual(motivosNoFront, ["different_property", "insufficient_evidence", "stale_source", "no_commercial_relevance", "other"],
+    "o corretor escolhe entre 5 motivos; cada um é um código que o backend já conhece");
+  assert.ok(migration.includes("'catalog_or_multi_listing'"), "a taxonomia completa continua no schema");
   assert.ok(agentTools.includes('["false_positive","expired","wrong_scope"].includes(f.feedback?.decision)'),
     "o assistente não reutiliza hipótese que o corretor já invalidou");
   assert.ok(deploy.includes("node --check intelligence-feedback.js"));

@@ -268,7 +268,7 @@ export async function visaoHoje() {
          AND (owner_contact_id IS NULL OR asking_price IS NULL OR neighborhood IS NULL)
        ORDER BY created_at ASC LIMIT 12`, [org.id]),
     db.query(
-      `SELECT o.id,o.stage,o.last_interaction_at,o.next_action_at,c.name AS contact_name,p.title AS property_title
+      `SELECT o.id,o.stage,o.last_interaction_at,o.next_action_at,o.inventory_property_id,c.name AS contact_name,p.title AS property_title
        FROM opportunities o JOIN contacts c ON c.id=o.contact_id
        LEFT JOIN inventory_properties p ON p.id=o.inventory_property_id
        WHERE o.organization_id=$1 AND o.stage NOT IN ('fechado','perdido')
@@ -319,6 +319,9 @@ export async function visaoHoje() {
       source: "opportunity",
       entityType: "opportunity",
       entityId: o.id,
+      /* propertyId permite ao Hoje abrir direto o card do interessado no dossiê;
+         oportunidade sem imóvel (LEFT JOIN) mantém o caminho antigo */
+      propertyId: o.inventory_property_id || null,
       title: `Retornar para ${o.contact_name}`,
       reason: o.property_title ? `Oportunidade ligada a ${o.property_title} está sem próxima interação confirmada.` : "Oportunidade sem próxima interação confirmada.",
       actionLabel: o.stage === "visita_agendada" ? "Preparar visita" : "Preparar retorno",
@@ -342,6 +345,36 @@ export async function visaoHoje() {
       status: "pendente",
       dueAt: s.created_at,
     });
+  }
+
+  /* 5ª fonte — o Hoje nunca termina em silêncio: sem nenhuma ação, o servidor sugere
+     reaquecer o imóvel parado (mesma definição pública do filtro da Carteira: sem
+     interessado aberto, sem desfecho e sem movimento há mais de 14 dias). */
+  if (!acoes.length) {
+    const parados = await db.query(
+      `SELECT p.id,p.title,COALESCE(p.updated_at,p.created_at) AS moveu_em
+       FROM inventory_properties p
+       WHERE p.organization_id=$1 AND p.status='ativo'
+         AND p.capture_stage NOT IN ('sold','rented')
+         AND COALESCE(p.updated_at,p.created_at) < now()-interval '14 days'
+         AND NOT EXISTS (SELECT 1 FROM opportunities o
+                         WHERE o.inventory_property_id=p.id AND o.stage NOT IN ('fechado','perdido'))
+       ORDER BY COALESCE(p.updated_at,p.created_at) ASC LIMIT 3`, [org.id]);
+    for (const p of parados.rows) {
+      const dias = Math.max(1, Math.floor((Date.now() - new Date(p.moveu_em).getTime()) / 86400000));
+      acoes.push({
+        id: `stale:${p.id}`,
+        source: "stale_property",
+        entityType: "inventory_property",
+        entityId: p.id,
+        title: `Reaqueça ${p.title || "um imóvel parado"}`,
+        reason: `Sem interessado aberto e sem movimento há ${dias} dias. Uma mensagem ao proprietário ou nova divulgação muda isso.`,
+        actionLabel: "Abrir imóvel",
+        priority: "normal",
+        status: "pendente",
+        dueAt: null,
+      });
+    }
   }
 
   return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20) };

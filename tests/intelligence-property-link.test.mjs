@@ -30,17 +30,20 @@ test("radar do imóvel: dossiê, carteira e Hoje recebem sinais sem promovê-los
 
 test("radar do imóvel: experiência permite investigar, abrir fontes e revisar hipótese", () => {
   assert.ok(app.includes("Radar do imóvel"));
-  assert.ok(app.includes('"sinais do radar","portfolio","radar"'), "Início leva direto ao filtro de imóveis com sinais");
+  assert.ok(app.includes('"portfolio","radar"'), "Início leva direto ao filtro de imóveis com sinais");
+  assert.ok(app.includes("sinal(is) do radar"));
   assert.ok(app.includes("Investigar este imóvel agora"));
   assert.ok(app.includes("Sobre este imóvel"));
   assert.ok(app.includes("Em um comparável deste imóvel"));
   assert.ok(app.includes("No mesmo bairro"));
   assert.ok(app.includes("Ver fontes"));
-  assert.ok(app.includes("Confirmar sinal"));
-  assert.ok(app.includes("Está incorreto"));
-  assert.ok(app.includes("Ainda inconclusivo"));
-  assert.ok(app.includes("Acompanhar"));
+  /* Correção Nubank 19/07: 3 ações em linguagem de corretor; sem decisão = acompanhando */
+  assert.ok(app.includes("É isso mesmo"));
+  assert.ok(app.includes("Não é isso"));
+  assert.ok(app.includes('text:"Depois"'));
+  assert.ok(app.includes("Próximo passo:"), "cada sinal diz o que FAZER, sem delegar a um chat");
   assert.ok(app.includes("Desfazer decisão"));
+  assert.ok(!app.includes("Analisar com o assistente"), "a ação do sinal é do corretor, não de outro chat");
   assert.ok(panel.includes("inteligencia/investigar"));
   assert.ok(panel.includes("reviewPropertyFinding"));
   assert.ok(tools.includes("intelligenceSignals"), "o assistente recebe os sinais vinculados ao imóvel");

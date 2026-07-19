@@ -130,6 +130,8 @@
       <div id="mudancas"><div class="skel" style="height:60px"></div></div>
       <h2 style="margin-top:18px">Oportunidades em movimento <span id="oportResumo" style="font-size:13px;color:var(--muted);font-weight:400"></span></h2>
       <div id="oportunidades"><div class="skel" style="height:60px"></div></div>
+      <h2 style="margin-top:18px">Melhorias propostas <span style="font-size:13px;color:var(--muted);font-weight:400">automelhoria — nada é aplicado sem sua aprovação</span></h2>
+      <div id="melhorias"><div class="skel" style="height:40px"></div></div>
       <h2 style="margin-top:18px">Eventos recentes</h2>
       <div id="eventos"><div class="skel" style="height:90px"></div></div>
     </div>
@@ -246,7 +248,37 @@ async function visao(){
     if(r.status===401){mostraLogin();return;}
     if(!r.ok)throw 0;
     render(await r.json());
+    carregaMelhorias();
   }catch{mostraLogin("Não consegui falar com o motor — tente de novo.");}
+}
+
+/* Revisão da automelhoria mora AQUI (estrutura administrativa), não na tela diária do OS */
+async function carregaMelhorias(){
+  const alvo=$("melhorias");if(!alvo)return;
+  try{
+    const r=await fetch("/painel/api/os/melhorias");if(!r.ok)throw 0;
+    const rows=(await r.json()).proposals||[];
+    if(!rows.length){alvo.innerHTML="<p style='color:var(--muted);font-size:13px'>Nenhuma proposta aguardando revisão.</p>";return;}
+    alvo.innerHTML="";
+    for(const p of rows){
+      const div=document.createElement("div");
+      div.style.cssText="border:1px solid var(--linha);border-radius:10px;padding:12px 14px;margin-bottom:8px";
+      const risco=p.risk==="alto"?"#a8372a":p.risk==="medio"?"#a96a0a":"var(--muted)";
+      div.innerHTML=`<b>${esc(p.title)}</b> <span style="font-size:12px;color:${risco}">risco ${esc(p.risk||"baixo")}</span><br><span style="font-size:13px;color:var(--muted)">${esc(p.reason||"")}</span>${p.expected_benefit?`<br><span style="font-size:13px;color:#087f76">Benefício esperado: ${esc(p.expected_benefit)}</span>`:""}<br>`;
+      const ok=document.createElement("button");ok.type="button";ok.textContent="Aprovar teste";ok.style.marginTop="8px";
+      const nao=document.createElement("button");nao.type="button";nao.textContent="Agora não";nao.style.cssText="margin:8px 0 0 8px";
+      ok.onclick=()=>revisaMelhoria(p.id,"approved",div);nao.onclick=()=>revisaMelhoria(p.id,"rejected",div);
+      div.append(ok,nao);alvo.append(div);
+    }
+  }catch{alvo.innerHTML="<p style='color:var(--muted);font-size:13px'>Não foi possível carregar as propostas.</p>";}
+}
+async function revisaMelhoria(id,decision,div){
+  try{
+    const r=await fetch(`/painel/api/os/melhorias/${id}/revisar`,{method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRF-Token":CSRF},body:JSON.stringify({decision})});
+    if(!r.ok)throw 0;
+    div.remove();
+  }catch{alert("Não foi possível registrar a decisão agora.");}
 }
 
 $("formLogin").addEventListener("submit",async ev=>{

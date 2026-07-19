@@ -45,7 +45,8 @@ test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada cen
   assert.ok(panel.includes('/painel/api/os/assistente/sessoes'));
   assert.ok(panel.indexOf('!csrfOk(req, sessao)') < panel.indexOf('req.method === "POST" && req.url === "/painel/api/os/assistente/sessoes"'));
   assert.ok(html.includes("O que você precisa resolver agora?"));
-  assert.ok(html.includes('id="openAssistant"'));
+  assert.ok(html.includes('id="openAssistantNav"'), "a entrada canônica é o botão central do nav");
+  assert.ok(!html.includes("Abrir conversa completa"), "sem entradas duplicadas na home (correção Nubank 19/07)");
 });
 
 test("assistente: ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
@@ -79,9 +80,13 @@ test("assistente: sessão é reutilizada, validada contra a carteira e restaurá
   assert.ok(src.includes("object_id IS NOT DISTINCT FROM $3"), "um objeto não cria chats infinitos");
   assert.ok(src.includes("inventory_properties WHERE id=$1 AND organization_id=$2"));
   assert.ok(src.includes("contacts WHERE id=$1 AND organization_id=$2"));
-  assert.ok(app.includes('storageGet("ci-assistant-session")'));
   assert.ok(app.includes("loadAssistantHistory"));
-  assert.ok(html.includes('id="assistantSessionSelect"'));
+  /* Correção Nubank 19/07: o conceito de sessão não aparece — chip de contexto + volta à
+     conversa geral; o nav abre sempre em geral, objeto entra em foco pelos botões contextuais */
+  assert.ok(html.includes('id="assistantScopeChip"'));
+  assert.ok(html.includes('id="assistantGeneralBtn"'));
+  assert.ok(!html.includes("assistantSessionSelect"), "seletor de sessões não existe mais");
+  assert.ok(app.includes("Falando sobre:"));
   assert.ok(app.includes("Perguntar ao assistente sobre este imóvel"));
   assert.ok(app.includes("Perguntar sobre esta pessoa"));
   assert.ok(src.includes("o.stage IN ('visita_agendada','visitou')"));

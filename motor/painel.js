@@ -21,6 +21,7 @@ const HTML = HTML_BASE.replace("<main>", `<main>
 const OS_HTML = readFileSync(new URL("./os.html", import.meta.url), "utf-8");
 const OS_CSS = readFileSync(new URL("./os.css", import.meta.url), "utf-8");
 const OS_JS = readFileSync(new URL("./os-app.js", import.meta.url), "utf-8");
+const OS_MANIFEST = readFileSync(new URL("./os.webmanifest", import.meta.url), "utf-8");
 /* SEG-03 no que o Node serve; o nginx cobre o restante do site */
 const SEC = {
   "X-Frame-Options": "DENY",
@@ -119,6 +120,14 @@ export async function painel(req, res) {
         "Cache-Control": "public, max-age=86400" }, SEC));
       return res.end(gj);
     } catch { return json(res, 404, { erro: "limite indisponível" }); }
+  }
+  if (req.method === "GET" && req.url === "/painel/os.webmanifest") {
+    /* Manifest do PWA "Seu dia" — público de propósito: o fetch do <link rel="manifest">
+       não envia cookies, então atrás do gate de sessão o prompt de instalação nunca
+       apareceria. Contém só metadados de instalação; nenhum dado do corretor. */
+    res.writeHead(200, Object.assign({ "Content-Type": "application/manifest+json; charset=utf-8",
+      "Cache-Control": "public, max-age=86400" }, SEC));
+    return res.end(OS_MANIFEST);
   }
 
   if (req.method === "POST" && req.url === "/painel/entrar") {

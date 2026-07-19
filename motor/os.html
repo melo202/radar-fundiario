@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#17665f">
   <title>Corretor Inteligente · Seu dia</title>
   <link rel="stylesheet" href="/painel/os.css">
+  <link rel="manifest" href="/painel/os.webmanifest">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
   <header class="topbar">
@@ -26,6 +29,18 @@
         <h1 id="todayTitle">O que vamos resolver hoje?</h1>
         <p id="todaySummary" class="hero-copy">Organizando suas próximas ações…</p>
       </div>
+
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Para hoje</p>
+          <h2>Sua próxima ação</h2>
+        </div>
+        <button class="text-button" type="button" id="refreshToday">Atualizar</button>
+      </div>
+      <div class="stack" id="todayActions" aria-live="polite"></div>
+
+      <p class="counts-line" id="todayCounts" aria-label="Resumo do escritório"></p>
+
       <section class="command-center" aria-labelledby="assistantEntryTitle">
         <div class="command-head">
           <span class="assistant-orb" aria-hidden="true">✦</span>
@@ -44,13 +59,12 @@
           <button type="button" data-home-prompt="Qual imóvel da carteira merece atenção agora? Use somente os dados disponíveis.">Revisar a carteira</button>
           <button type="button" data-home-prompt="Quais negociações ou pendências correm risco de esfriar?">Evitar perdas</button>
         </div>
-        <button type="button" class="open-conversation" id="openAssistant">Abrir conversa completa <span aria-hidden="true">↗</span></button>
       </section>
 
-      <section class="guide-card" id="guideCard" aria-labelledby="guideTitle">
+      <section class="guide-card" id="guideCard" hidden aria-labelledby="guideTitle">
         <div class="guide-heading">
           <div>
-            <p class="eyebrow">Comece por aqui</p>
+            <p class="eyebrow">Primeiros passos</p>
             <h2 id="guideTitle">Três passos para colocar o escritório em movimento</h2>
           </div>
           <button type="button" class="guide-dismiss" id="dismissGuide" aria-label="Ocultar primeiros passos">×</button>
@@ -61,31 +75,6 @@
           <a href="https://corretorinteligente.tech/?origem=painel"><span>3</span><strong>Explore o mapa</strong><small>Investigue território, lotes e oportunidades.</small></a>
         </div>
         <p class="guide-foot">Você pode reabrir este guia pelo <b>?</b> no alto da tela.</p>
-      </section>
-
-      <section class="overview-section" aria-labelledby="overviewTitle">
-        <div class="section-head">
-          <div><p class="eyebrow">Visão rápida</p><h2 id="overviewTitle">Seu escritório agora</h2></div>
-        </div>
-        <div class="count-grid" id="todayCounts" aria-label="Resumo operacional"></div>
-      </section>
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Recomendado para você</p>
-          <h2>Próximos movimentos</h2>
-        </div>
-        <button class="text-button" type="button" id="refreshToday">Atualizar</button>
-      </div>
-      <div class="stack" id="todayActions" aria-live="polite"></div>
-      <section class="improvement-section" id="improvementSection" hidden aria-labelledby="improvementTitle">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Aprendizado controlado</p>
-            <h2 id="improvementTitle">Melhorias para revisar</h2>
-          </div>
-        </div>
-        <p class="section-copy">O sistema observa consumo e falhas, mas nenhuma mudança é aplicada sem sua aprovação.</p>
-        <div class="stack" id="improvementList"></div>
       </section>
     </section>
 
@@ -179,20 +168,14 @@
     </form>
     <form id="signalFeedbackForm" class="dialog-body">
       <label for="signalFeedbackReason">Motivo</label>
+      <!-- 5 motivos em linguagem de corretor; a taxonomia completa continua no banco,
+           cada opção envia um código que o backend já conhece -->
       <select id="signalFeedbackReason" class="os-select" required>
         <option value="">Escolha o motivo</option>
-        <option value="different_property">É outro imóvel</option>
-        <option value="different_unit">É outra unidade</option>
-        <option value="catalog_or_multi_listing">É catálogo ou mistura vários anúncios</option>
-        <option value="wrong_geography">Cidade ou região errada</option>
-        <option value="wrong_transaction">Venda/aluguel incorreto</option>
-        <option value="stale_source">Fonte desatualizada</option>
-        <option value="unproven_price">Preço não está comprovado</option>
-        <option value="change_not_found">A mudança indicada não aconteceu</option>
-        <option value="duplicate_signal">Este sinal está duplicado</option>
-        <option value="insufficient_evidence">As evidências não são suficientes</option>
-        <option value="no_commercial_relevance">Não tem relevância comercial</option>
-        <option value="expired_signal">O sinal perdeu a validade</option>
+        <option value="different_property">É outro imóvel ou outra unidade</option>
+        <option value="insufficient_evidence">A informação está errada ou não comprovada</option>
+        <option value="stale_source">O anúncio é velho ou está desatualizado</option>
+        <option value="no_commercial_relevance">Não me interessa para negociação</option>
         <option value="other">Outro motivo</option>
       </select>
       <label for="signalFeedbackRelation">Relação correta <small>(opcional)</small></label>
@@ -225,10 +208,8 @@
     </form>
     <div class="assistant-body">
       <div class="assistant-sessionbar">
-        <label for="assistantSessionSelect">Você está falando sobre</label>
-        <select id="assistantSessionSelect" class="os-select" aria-label="Escolher conversa">
-          <option value="">Conversa geral</option>
-        </select>
+        <span class="assistant-chip" id="assistantScopeChip">Conversa geral</span>
+        <button type="button" class="text-button" id="assistantGeneralBtn" hidden>Voltar à conversa geral</button>
       </div>
       <div class="assistant-examples" aria-label="Exemplos de pedidos">
         <button type="button" data-assistant-prompt="Qual imóvel da carteira merece atenção hoje?">Qual imóvel merece atenção?</button>
