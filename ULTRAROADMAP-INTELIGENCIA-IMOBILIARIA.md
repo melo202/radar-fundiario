@@ -1365,6 +1365,8 @@ Os horizontes assumem trabalho contínuo e decisões rápidas de produto. Capaci
 **Horizonte sugerido:** contínuo, início em 2 ciclos  
 **Objetivo:** fazer o sistema melhorar com uso real.
 
+> Plano de execução auditado: `ROADMAP-AUTOEVOLUCAO-CORRETOR-AUTONOMO.md`.
+
 ### Entregas
 
 - motivos estruturados de revisão;
