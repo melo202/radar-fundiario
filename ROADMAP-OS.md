@@ -401,3 +401,19 @@ Zero mudança no motor — o retorno da avaliação já carregava tudo; era só 
 planilha-registro.csv (1 linha por corretor). Suíte **590/590**; deploy conjunto ok.
 **Com isto, TODO o trabalho de agente do plano pós-auditoria está entregue** — o que
 resta no caminho crítico é humano: G0-dogfood e G1.
+
+### 19/07/2026 — Princípio de design da inteligência: "Mestre dos Magos" (decisão do usuário)
+
+O freeze congela a FÁBRICA (infra nova), não o mago: assistente, radar, sinais e novidades
+seguem vivos em produção. A persona oficial da inteligência no app passa a ser o **Mestre
+dos Magos** (Caverna do Dragão), e toda entrega futura de IA se mede por ela:
+1. **Aparece do nada, na hora certa** — aparições raras, com gatilho determinístico e
+   motivo declarado (sinal ≥0,75 no Hoje; Caixa fresca no bairro da carteira; imóvel parado).
+2. **Fala pouco e aponta o caminho** — uma frase, um "próximo passo"; nunca um painel.
+3. **Nunca luta por você** — somente-leitura; conselho é dele, a espada é do corretor.
+4. **Some quando não é preciso** — abaixo dos dados, atrás de "Ver detalhes", morre com
+   dado velho, sem crachá de modelo.
+5. **Quando erra, aprende** — "Não é isso" calibra; histórico com desfazer.
+Pós-G1 (se os corretores validarem os sinais), as Ondas 1–2 e o motor de eventos ganham
+esta persona: mais aparições espontâneas de QUALIDADE (preço baixou em comparável do seu
+captado, anúncio sumiu do portal, evento no bairro do cliente quente) — nunca mais volume.
