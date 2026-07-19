@@ -1,5 +1,5 @@
 "use strict";
-const state={csrf:"",preview:null,todayCounts:{},loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false,sessions:[],loaded:false,scope:{objectType:"general",objectId:null,title:"Conversa geral"}}};
+const state={csrf:"",preview:null,todayCounts:{},loaded:{today:false,portfolio:false,relationships:false},property:{id:null,data:null,tab:"geral",mercado:null,pollTimer:null},portfolioRows:[],portfolioFilter:"todos",assistant:{sessionId:null,busy:false,sessions:[],loaded:false,scope:{objectType:"general",objectId:null,title:"Conversa geral"}}};
 const $=id=>document.getElementById(id);
 
 async function api(url,options={}){
@@ -75,7 +75,7 @@ const stageLabel=s=>({prospect:"Prospecção",visited:"Visitado",captured:"Capta
 async function loadRelationships(){if(state.loaded.relationships)return;const target=$("relationshipsList");skeletons(target);try{const data=await api("/painel/api/os/relacionamentos");state.loaded.relationships=true;const rows=data.contacts||[];if(!rows.length)return empty(target,"Nenhum relacionamento registrado","Proprietários e clientes aparecerão aqui quando forem capturados ou vinculados a uma oportunidade.");target.replaceChildren(...rows.map(c=>{const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar sobre esta pessoa"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"contact",objectId:c.id,title:c.name}));return el("article",{class:"entity-card"},[el("div",{class:"entity-top"},[el("div",{},[el("h3",{text:c.name}),el("p",{text:[typeLabel(c.type),c.phone?`Telefone final ${String(c.phone).slice(-4)}`:null].filter(Boolean).join(" · ")})]),el("span",{class:"badge",text:`${c.open_opportunities||0} aberta(s)`})]),el("div",{class:"meta"},[el("span",{text:c.last_interaction_at?`Última interação: ${date(c.last_interaction_at)}`:"Sem interação registrada"}),el("span",{text:c.source||"cadastro"})]),ask]);}));}catch(e){errorCard(target,e);}}
 const typeLabel=t=>({proprietario:"Proprietário",comprador:"Comprador",locatario:"Locatário",investidor:"Investidor",parceiro:"Parceiro",incorporador:"Incorporador",fornecedor:"Fornecedor"})[t]||t;
 
-function switchView(name){document.querySelectorAll(".view").forEach(v=>{const active=v.dataset.view===name;v.hidden=!active;v.classList.toggle("is-active",active);});document.querySelectorAll(".nav-item[data-target]").forEach(b=>{const active=b.dataset.target===name;b.classList.toggle("is-active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});if(name==="today")loadToday();if(name==="portfolio")loadPortfolio();if(name==="relationships")loadRelationships();scrollTo({top:0,behavior:"smooth"});}
+function switchView(name){if(name!=="property")stopPropertyIntelligencePoll();document.querySelectorAll(".view").forEach(v=>{const active=v.dataset.view===name;v.hidden=!active;v.classList.toggle("is-active",active);});document.querySelectorAll(".nav-item[data-target]").forEach(b=>{const active=b.dataset.target===name;b.classList.toggle("is-active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});if(name==="today")loadToday();if(name==="portfolio")loadPortfolio();if(name==="relationships")loadRelationships();scrollTo({top:0,behavior:"smooth"});}
 
 /* ---------------- D-4: captura por VOZ (Web Speech API, custo zero) ----------------
    A voz só PREENCHE o texto — interpretar e confirmar continuam manuais: nada é salvo
@@ -164,8 +164,11 @@ async function saveOpportunity(id,dados,btn){
 }
 const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
 function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
-function openProperty(id){state.property={id,data:null,tab:"geral",mercado:null};switchView("property");loadProperty();}
-async function loadProperty(){const body=$("propBody");skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${state.property.id}`);state.property.data=data;if(!state.property.mercado&&data.latestValuation)state.property.mercado={...data.latestValuation,sample:data.latestValuation.result?.sample};renderPropHead();renderPropTab();}catch(e){errorCard(body,e);}}
+function stopPropertyIntelligencePoll(){if(state.property.pollTimer){clearTimeout(state.property.pollTimer);state.property.pollTimer=null;}}
+function propertyViewActive(){const view=document.querySelector('.view[data-view="property"]');return !!view&&!view.hidden;}
+function schedulePropertyIntelligencePoll(data){stopPropertyIntelligencePoll();const active=(data?.intelligence?.jobs||[]).some(j=>["pending","running"].includes(j.status));if(!active||!propertyViewActive())return;const propertyId=state.property.id;state.property.pollTimer=setTimeout(()=>{if(state.property.id===propertyId&&propertyViewActive())loadProperty({silent:true});},20000);}
+function openProperty(id){stopPropertyIntelligencePoll();state.property={id,data:null,tab:"geral",mercado:null,pollTimer:null};switchView("property");loadProperty();}
+async function loadProperty({silent=false}={}){const body=$("propBody"),propertyId=state.property.id;if(!silent)skeletons(body,3);try{const data=await api(`/painel/api/os/imoveis/${propertyId}`);if(state.property.id!==propertyId)return;state.property.data=data;if(!state.property.mercado&&data.latestValuation)state.property.mercado={...data.latestValuation,sample:data.latestValuation.result?.sample};renderPropHead();renderPropTab();schedulePropertyIntelligencePoll(data);}catch(e){if(!silent)errorCard(body,e);else if(state.property.id===propertyId&&propertyViewActive())state.property.pollTimer=setTimeout(()=>loadProperty({silent:true}),40000);}}
 function renderPropHead(){const p=state.property.data.property,signals=state.property.data.intelligence?.findings?.length||0;const ask=el("button",{class:"card-action secondary",type:"button",text:"Perguntar ao assistente sobre este imóvel"});ask.addEventListener("click",()=>openAssistantForScope({objectType:"property",objectId:p.id,title:p.title||"Imóvel"}));$("propHead").replaceChildren(el("p",{class:"eyebrow",text:`${stageLabel(p.capture_stage)} · ${typeLabelProperty(p.property_type)}`}),el("h1",{id:"propTitle",text:p.title||"Imóvel"}),el("p",{class:"hero-copy",text:[p.neighborhood||"Bairro a confirmar",money(p.asking_price),p.owner_name?`Proprietário: ${p.owner_name}`:"Proprietário a vincular"].join(" · ")}),signals?el("span",{class:"badge high",text:`✦ ${signals} sinal(is) para revisar`}):null,ask);}
 function setTab(tab){state.property.tab=tab;document.querySelectorAll("#propTabs .tab").forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle("is-active",on);b.setAttribute("aria-selected",String(on));});renderPropTab();}
 function fieldCell(label,value){return el("div",{class:"field-cell"},[el("small",{text:label}),el("strong",{text:String(value)})]);}
@@ -174,12 +177,14 @@ const intelligenceKindLabel=k=>({possible_duplicate:"Possível duplicidade",pric
 const intelligenceRelationLabel=r=>r==="direct"?"Sobre este imóvel":r==="comparable"?"Em um comparável deste imóvel":"No mesmo bairro";
 const intelligenceConfidence=v=>Number(v)>=.85?"Confiança alta":Number(v)>=.7?"Confiança média":"Exploratório";
 function intelligencePanel(d){
-  const intel=d.intelligence||{findings:[],jobs:[]},findings=intel.findings||[],active=(intel.jobs||[]).find(j=>["pending","running"].includes(j.status));
+  const intel=d.intelligence||{findings:[],jobs:[]},findings=intel.findings||[],jobs=intel.jobs||[],active=jobs.find(j=>["pending","running"].includes(j.status)),latest=jobs[0],coverage=latest?.result_summary||{};
+  const progress=active?.status==="running"&&coverage.batchesTotal?`Analisando lote ${coverage.batchesCompleted||0} de ${coverage.batchesTotal}. Esta tela atualiza sozinha.`:active?"Na fila. Esta tela atualiza sozinha quando a investigação começar.":latest?.status==="failed"?"A última investigação não concluiu. Você pode tentar novamente.":null;
   const request=el("button",{class:"card-action",type:"button",text:active?"Investigação em andamento":"Investigar este imóvel agora",disabled:!!active});
   request.addEventListener("click",()=>requestPropertyIntelligence(request));
   const intro=el("article",{class:"entity-card intelligence-card"},[
     el("div",{class:"entity-top"},[el("div",{},[el("p",{class:"eyebrow",text:"Radar do imóvel"}),el("h3",{text:findings.length?`${findings.length} sinal(is) para sua decisão`:"Nenhum sinal ligado ainda"})]),el("span",{class:"badge",text:active?active.status==="running"?"Analisando":"Na fila":"Kimi K3"})]),
-    el("p",{text:findings.length?"Hipóteses rastreáveis encontradas na internet e no acervo. Confira as fontes antes de usar em negociação.":"Peça uma investigação focada neste imóvel. O radar buscará anúncios correspondentes, reprecificação, conflitos e comparáveis."}),request,
+    el("p",{text:findings.length?"Hipóteses rastreáveis encontradas na internet e no acervo. Confira as fontes antes de usar em negociação.":"Peça uma investigação focada neste imóvel. O radar buscará anúncios correspondentes, reprecificação, conflitos e comparáveis."}),
+    progress?el("p",{class:"status",text:progress}):null,coverage.collectedEvidence!=null?el("div",{class:"meta coverage-meta"},[el("span",{text:`${coverage.evidence||0} evidência(s) útil(eis)`}),el("span",{text:`${coverage.rejectedEvidence||0} descartada(s)`}),coverage.sources!=null?el("span",{text:`${coverage.sources} fonte(s)`}):null]):null,request,
   ]);
   const cards=findings.map(f=>{
     const sources=(f.evidence||[]).map(e=>el("a",{href:e.url,target:"_blank",rel:"noopener",text:e.title||e.domain||"Abrir fonte"}));
@@ -204,7 +209,7 @@ function intelligencePanel(d){
 }
 async function requestPropertyIntelligence(btn){
   btn.disabled=true;btn.textContent="Colocando na fila…";
-  try{const r=await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/investigar`,{method:"POST",body:"{}"});state.property.data.intelligence.jobs.unshift(r.job);toast("Investigação solicitada. O radar começa em até 10 minutos.");renderPropHead();renderPropTab();}
+  try{const r=await api(`/painel/api/os/imoveis/${state.property.id}/inteligencia/investigar`,{method:"POST",body:"{}"});state.property.data.intelligence.jobs.unshift(r.job);toast("Investigação solicitada. O radar começa em até 10 minutos.");renderPropHead();renderPropTab();schedulePropertyIntelligencePoll(state.property.data);}
   catch(e){toast(e.message);btn.disabled=false;btn.textContent="Investigar este imóvel agora";}
 }
 async function reviewPropertySignal(findingId,decision,btn){

@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { pool } from "./db.js";
 import { buscarWeb } from "./busca-web.js";
 import { createAgentRuntime } from "./agent-runtime.js";
+import { canonicalizeEvidenceUrl, qualifyEvidence } from "./evidence-qualification.js";
 
 const JOB_KINDS = new Set(["market_scan", "source_discovery", "opportunity_investigation", "custom_research"]);
 const FINDING_KINDS = new Set(["possible_duplicate", "price_change", "urgent_sale_signal", "market_anomaly", "data_conflict", "source_gap", "other"]);
@@ -128,7 +129,8 @@ export async function seedDailyIntelligenceJob(now = new Date()) {
   return createIntelligenceJob({
     kind: "market_scan",
     objective: "Cruzar ofertas públicas recentes de Goiânia, mudanças de preço e fontes adicionais para descobrir oportunidades, duplicidades, conflitos e lacunas que mereçam investigação.",
-    scope: { city: "Goiânia", state: "GO", horizonDays: 14, queryBudget: Number(process.env.INTELLIGENCE_QUERY_BUDGET || DEFAULT_QUERY_BUDGET) },
+    scope: { city: "Goiânia", state: "GO", transactionType: "venda", horizonDays: 14,
+      queryBudget: Number(process.env.INTELLIGENCE_QUERY_BUDGET || DEFAULT_QUERY_BUDGET) },
     priority: 60,
     idempotencyKey: `market-scan:${day}`,
   });
@@ -160,22 +162,28 @@ function sourceDomain(url) {
   catch { return "fonte-desconhecida"; }
 }
 
-async function saveEvidence(jobId, item) {
-  const url = clean(item.url, 2000);
-  if (!/^https?:\/\//i.test(url)) return null;
+async function saveEvidence(job, item) {
+  const qualification = qualifyEvidence(item, job.scope);
+  const url = qualification.canonicalUrl || canonicalizeEvidenceUrl(item.url);
+  if (!url) return null;
   const title = clean(item.title, 500);
   const excerpt = clean(item.excerpt, 2500);
   const hash = /^[a-f0-9]{64}$/.test(item.contentHash || "") ? item.contentHash : sha(`${title}\n${excerpt}`);
   const result = await pool.query(
     `INSERT INTO intelligence_evidence
-       (job_id,source_url,source_domain,source_kind,title,excerpt,content_hash,metadata,collected_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9,now()))
+       (job_id,source_url,source_domain,source_kind,title,excerpt,content_hash,metadata,collected_at,
+        qualification_status,qualification,usable_for_analysis)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9,now()),$10,$11,$12)
      ON CONFLICT (job_id,source_url,content_hash) DO UPDATE
        SET metadata=intelligence_evidence.metadata || EXCLUDED.metadata,
-           collected_at=GREATEST(intelligence_evidence.collected_at,EXCLUDED.collected_at)
-     RETURNING id,source_url,source_domain,source_kind,title,excerpt,metadata,collected_at`,
-    [jobId, url, sourceDomain(url), item.sourceKind, title || null, excerpt || null, hash,
-      JSON.stringify(item.metadata || {}), item.collectedAt || null]);
+           collected_at=GREATEST(intelligence_evidence.collected_at,EXCLUDED.collected_at),
+           qualification_status=EXCLUDED.qualification_status,qualification=EXCLUDED.qualification,
+           usable_for_analysis=EXCLUDED.usable_for_analysis
+     RETURNING id,source_url,source_domain,source_kind,title,excerpt,metadata,collected_at,
+               qualification_status,qualification,usable_for_analysis`,
+    [job.id, url, sourceDomain(url), item.sourceKind, title || null, excerpt || null, hash,
+      JSON.stringify(item.metadata || {}), item.collectedAt || null, qualification.status,
+      JSON.stringify(qualification), qualification.usableForAnalysis]);
   return result.rows[0];
 }
 
@@ -188,7 +196,7 @@ async function collectAcervoEvidence(job) {
      FROM listings l LEFT JOIN properties p ON p.listing_id=l.id
      WHERE COALESCE(l.last_seen_at,l.collected_at)>=now()-($1::int*interval '1 day')
      ORDER BY COALESCE(l.last_seen_at,l.collected_at) DESC LIMIT 60`, [horizon]);
-  for (const row of rows.rows) await saveEvidence(job.id, {
+  for (const row of rows.rows) await saveEvidence(job, {
     url: row.url, title: row.raw_title, excerpt: row.raw_description, contentHash: row.content_hash,
     sourceKind: "acervo", collectedAt: row.observed_at,
     metadata: { listingId: row.listing_id, propertyId: row.property_id, portal: row.portal,
@@ -203,7 +211,7 @@ async function collectAcervoEvidence(job) {
      ORDER BY created_at DESC LIMIT 20`, [horizon]);
   for (const row of changes.rows) {
     if (!row.detail?.url) continue;
-    await saveEvidence(job.id, {
+    await saveEvidence(job, {
       url: row.detail.url, title: `Mudança de preço · ${row.detail.bairro || row.detail.portal || "imóvel"}`,
       excerpt: `Preço anterior: ${row.detail.de ?? "não informado"}; preço atual: ${row.detail.para ?? "não informado"}; variação: ${row.detail.variacaoPct ?? "não informada"}%.`,
       sourceKind: "price_change", collectedAt: row.created_at, metadata: row.detail,
@@ -218,7 +226,7 @@ async function collectSearchEvidence(job, plan) {
     if (collected >= maxResults) break;
     const rows = await buscarWeb(query.query, { count: Math.min(10, maxResults - collected) });
     for (const row of rows) {
-      await saveEvidence(job.id, { url: row.url, title: row.titulo, excerpt: row.descricao,
+      await saveEvidence(job, { url: row.url, title: row.titulo, excerpt: row.descricao,
         sourceKind: "search", metadata: { query: query.query, reason: query.reason, portal: row.portal } });
       collected++;
       if (collected >= maxResults) break;
@@ -230,9 +238,77 @@ async function collectSearchEvidence(job, plan) {
 
 async function evidenceForAnalysis(jobId) {
   const result = await pool.query(
-    `SELECT id,source_url,source_domain,source_kind,title,excerpt,metadata,collected_at
-     FROM intelligence_evidence WHERE job_id=$1 ORDER BY id LIMIT 120`, [jobId]);
+    `SELECT id,source_url,source_domain,source_kind,title,excerpt,metadata,collected_at,qualification
+     FROM intelligence_evidence WHERE job_id=$1 AND usable_for_analysis IS TRUE ORDER BY id LIMIT 120`, [jobId]);
   return result.rows;
+}
+
+async function requalifyPendingEvidence(job) {
+  const pending = await pool.query(
+    `SELECT id,source_url AS url,source_kind,title,excerpt,metadata
+     FROM intelligence_evidence
+     WHERE job_id=$1 AND qualification_status='pending'
+     ORDER BY id`, [job.id]);
+  for (const item of pending.rows) {
+    const qualification = qualifyEvidence(item, job.scope);
+    await pool.query(
+      `UPDATE intelligence_evidence
+       SET qualification_status=$1,qualification=$2,usable_for_analysis=$3
+       WHERE id=$4 AND qualification_status='pending'`,
+      [qualification.status, JSON.stringify(qualification), qualification.usableForAnalysis, item.id]);
+  }
+  return pending.rowCount;
+}
+
+async function evidenceQualificationStats(jobId) {
+  const result = await pool.query(
+    `SELECT count(*)::int AS collected,
+            count(*) FILTER (WHERE usable_for_analysis IS TRUE)::int AS qualified,
+            count(*) FILTER (WHERE qualification_status='rejected')::int AS rejected,
+            count(*) FILTER (WHERE qualification_status='pending')::int AS pending,
+            count(*) FILTER (WHERE source_kind='search')::int AS search_collected,
+            count(DISTINCT source_domain)::int AS sources
+     FROM intelligence_evidence WHERE job_id=$1`, [jobId]);
+  return result.rows[0];
+}
+
+async function refreshSourceRegistry(organizationId, jobId) {
+  await pool.query(
+    `WITH affected AS (
+       SELECT DISTINCT source_domain FROM intelligence_evidence WHERE job_id=$2
+     ), base AS (
+       SELECT e.* FROM intelligence_evidence e JOIN intelligence_jobs j ON j.id=e.job_id
+       JOIN affected a ON a.source_domain=e.source_domain
+       WHERE j.organization_id=$1 AND e.qualification_status<>'pending'
+     ), stats AS (
+       SELECT source_domain,count(*)::int AS total,
+              count(*) FILTER (WHERE usable_for_analysis IS TRUE)::int AS qualified,
+              count(*) FILTER (WHERE qualification_status='rejected')::int AS rejected,
+              max(collected_at) AS last_seen,
+              max(collected_at) FILTER (WHERE usable_for_analysis IS TRUE) AS last_qualified
+       FROM base GROUP BY source_domain
+     ), reason_counts AS (
+       SELECT b.source_domain,r.reason,count(*)::int AS amount FROM base b
+       CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(b.qualification->'reasons','[]'::jsonb)) AS r(reason)
+       GROUP BY b.source_domain,r.reason
+     ), reasons AS (
+       SELECT source_domain,jsonb_object_agg(reason,amount) AS value FROM reason_counts GROUP BY source_domain
+     )
+     INSERT INTO intelligence_source_registry
+       (organization_id,source_domain,status,total_observations,qualified_observations,rejected_observations,
+        rejection_reasons,last_seen_at,last_qualified_at)
+     SELECT $1,s.source_domain,
+            CASE WHEN s.total>=10 AND s.qualified*4<s.total THEN 'degraded' ELSE 'active' END,
+            s.total,s.qualified,s.rejected,COALESCE(r.value,'{}'::jsonb),s.last_seen,s.last_qualified
+     FROM stats s LEFT JOIN reasons r USING (source_domain)
+     ON CONFLICT (organization_id,source_domain) DO UPDATE SET
+       status=CASE WHEN intelligence_source_registry.status='blocked' THEN 'blocked' ELSE EXCLUDED.status END,
+       total_observations=EXCLUDED.total_observations,
+       qualified_observations=EXCLUDED.qualified_observations,
+       rejected_observations=EXCLUDED.rejected_observations,
+       rejection_reasons=EXCLUDED.rejection_reasons,
+       last_seen_at=EXCLUDED.last_seen_at,last_qualified_at=EXCLUDED.last_qualified_at,updated_at=now()`,
+    [organizationId, jobId]);
 }
 
 async function snapshotForPlanner(job) {
@@ -353,7 +429,7 @@ export async function listPropertyIntelligence({ organizationId, propertyId }, d
 export async function requestPropertyInvestigation(propertyId) {
   const org = await defaultOrganization();
   const result = await pool.query(
-    `SELECT id,title,property_type,neighborhood,address,asking_price,characteristics
+    `SELECT id,title,transaction_type,property_type,neighborhood,address,asking_price,characteristics
      FROM inventory_properties WHERE id=$1 AND organization_id=$2 AND status='ativo'`, [propertyId, org.id]);
   if (!result.rowCount) return { ok: false, erro: "Imóvel não encontrado na carteira ativa." };
   const p = result.rows[0];
@@ -366,7 +442,8 @@ export async function requestPropertyInvestigation(propertyId) {
     organizationId: org.id,
     kind: "opportunity_investigation",
     objective: `Investigar sinais públicos relevantes para ${p.title || p.property_type || "o imóvel"} em ${p.neighborhood || "Goiânia"}: possíveis anúncios correspondentes, alterações de preço, duplicidades, conflitos, ofertas comparáveis e sinais de oportunidade. Distinguir rigorosamente o que é sobre o imóvel, sobre um comparável ou apenas sobre o bairro.`,
-    scope: { inventoryPropertyId: p.id, city: "Goiânia", state: "GO", neighborhood: p.neighborhood,
+    scope: { inventoryPropertyId: p.id, city: "Goiânia", state: "GO", transactionType: p.transaction_type,
+      neighborhood: p.neighborhood,
       address: p.address, propertyType: p.property_type, askingPrice: p.asking_price,
       areaM2: p.characteristics?.areaM2 ?? null, bedrooms: p.characteristics?.bedrooms ?? null,
       horizonDays: 30, queryBudget: Number(process.env.INTELLIGENCE_QUERY_BUDGET || DEFAULT_QUERY_BUDGET) },
@@ -418,13 +495,17 @@ async function runJob(job, dependencies = {}) {
     await pool.query("UPDATE intelligence_jobs SET plan=$1,updated_at=now() WHERE id=$2", [JSON.stringify(plan), job.id]);
   }
 
+  await requalifyPendingEvidence(job);
   let evidence = await evidenceForAnalysis(job.id);
-  const hasCollectedSearch = evidence.some(item => item.source_kind === "search") || plan.queries.length === 0;
-  if (!evidence.length || !hasCollectedSearch) {
+  let qualificationStats = await evidenceQualificationStats(job.id);
+  const hasCollectedSearch = Number(qualificationStats.search_collected) > 0 || plan.queries.length === 0;
+  if (!qualificationStats.collected || !hasCollectedSearch) {
     await collectAcervoEvidence(job);
     await collectSearchEvidence(job, plan);
     evidence = await evidenceForAnalysis(job.id);
+    qualificationStats = await evidenceQualificationStats(job.id);
   }
+  await refreshSourceRegistry(job.organization_id, job.id);
 
   const webEvidence = evidence.filter(item => item.source_kind === "search").length;
   const batchSize = Math.max(5, Math.min(30, Number(process.env.INTELLIGENCE_BATCH_SIZE || DEFAULT_BATCH_SIZE)));
@@ -432,6 +513,9 @@ async function runJob(job, dependencies = {}) {
   const progress = progressFrom(job);
   progress.stage = "analysis";
   progress.evidence = evidence.length;
+  progress.collectedEvidence = qualificationStats.collected;
+  progress.rejectedEvidence = qualificationStats.rejected;
+  progress.sources = qualificationStats.sources;
   progress.webEvidence = webEvidence;
   progress.batchesTotal = batches.length;
 
@@ -476,7 +560,9 @@ async function runJob(job, dependencies = {}) {
   const saved = await saveFindings(job, findings);
   await linkJobFindings(job, saved.ids);
   const summary = { queries: plan.queries.length, evidence: evidence.length, webEvidence,
-    batches: batches.length, candidates: candidates.length, findings: saved.inserted, synthesis };
+    collectedEvidence: qualificationStats.collected, rejectedEvidence: qualificationStats.rejected,
+    sources: qualificationStats.sources, batches: batches.length, candidates: candidates.length,
+    findings: saved.inserted, synthesis };
   await pool.query(
     `UPDATE intelligence_jobs SET status='completed',result_summary=$1,completed_at=now(),
             locked_at=NULL,updated_at=now() WHERE id=$2`, [JSON.stringify(summary), job.id]);
@@ -508,7 +594,7 @@ export async function processIntelligenceQueue({ maxJobs = 1, runtime } = {}) {
 
 export async function listIntelligenceOverview() {
   const org = await defaultOrganization();
-  const [jobs, findings] = await Promise.all([
+  const [jobs, findings, sources] = await Promise.all([
     pool.query(
       `SELECT id,kind,objective,status,priority,attempts,plan,result_summary,error,created_at,started_at,completed_at
        FROM intelligence_jobs WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 20`, [org.id]),
@@ -518,8 +604,14 @@ export async function listIntelligenceOverview() {
                         ORDER BY e.id) AS evidence
        FROM intelligence_findings f JOIN intelligence_evidence e ON e.id=ANY(f.evidence_ids)
        WHERE f.organization_id=$1 GROUP BY f.id ORDER BY f.created_at DESC LIMIT 30`, [org.id]),
+    pool.query(
+      `SELECT source_domain,status,total_observations,qualified_observations,rejected_observations,
+              rejection_reasons,last_seen_at,last_qualified_at
+       FROM intelligence_source_registry WHERE organization_id=$1
+       ORDER BY CASE status WHEN 'blocked' THEN 0 WHEN 'degraded' THEN 1 ELSE 2 END,
+                rejected_observations DESC,source_domain LIMIT 100`, [org.id]),
   ]);
-  return { ok: true, jobs: jobs.rows, findings: findings.rows };
+  return { ok: true, jobs: jobs.rows, findings: findings.rows, sources: sources.rows };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
