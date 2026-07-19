@@ -30,20 +30,22 @@ function toast(message){const t=$("toast");t.textContent=message;t.hidden=false;
 function badge(priority){const labels={baixa:"Baixa",normal:"Normal",alta:"Atenção",critica:"Crítica"};const cls=priority==="critica"?"badge critical":priority==="alta"?"badge high":"badge";return el("span",{class:cls,text:labels[priority]||"Ação"});}
 
 async function loadToday(force=false){if(state.loaded.today&&!force)return;const target=$("todayActions");skeletons(target);try{const data=await api("/painel/api/os/hoje");state.csrf=data.csrf||state.csrf;state.loaded.today=true;state.todayLoadedAt=Date.now();const c=data.counts||{};state.todayCounts=c;renderCountsLine(c);$("todaySummary").textContent=data.actions?.length?`Encontrei ${data.actions.length} movimento${data.actions.length===1?"":"s"} que merece${data.actions.length===1?"":"m"} sua atenção.`:"Seu dia está sob controle. Posso analisar a carteira ou registrar um novo movimento.";updateGuide(c);renderActions(data.actions||[]);renderNovidade(data.novidade);}catch(e){errorCard(target,e);}}
-/* Novidade do mercado: recompensa exógena diária — Caixa nos bairros da carteira, como
-   AÇÃO com proveniência e aviso honesto. Sem dado fresco, o card simplesmente não existe. */
+/* Novidade do mercado: recompensa exógena diária — mudanças de preço VERIFICADAS pelo
+   radar nos bairros da carteira. Sem mudança recente, o card simplesmente não existe
+   (aparição rara e com motivo — Mestre dos Magos, não mural). */
 function renderNovidade(n){const target=$("todayNews");if(!target)return;if(!n||!n.itens?.length)return target.replaceChildren();
-  const cab=n.escopo==="carteira"?"Imóveis da Caixa nos bairros da sua carteira":"Imóveis da Caixa em Goiânia";
-  const dataRotulo=new Date(`${n.geradoEm}T12:00:00`).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
-  const itens=n.itens.map(i=>el("div",{class:"news-item"},[
-    el("p",{text:`${i.tipo||"Imóvel"} no ${i.bairro} — ${money(i.preco)} · ${String(i.pctAbaixoDaMediana).replace(".",",")}% abaixo da mediana de ${i.nOfertas} ofertas do bairro`}),
-    i.url?el("a",{class:"text-button as-link",href:i.url,target:"_blank",rel:"noopener",text:"Ver anúncio da Caixa ↗"}):null,
-  ]));
+  const cab=n.escopo==="carteira"?"Preços mudaram nos bairros da sua carteira":"Preços mudaram em Goiânia";
+  const tipoRotulo=t=>({apartamento:"Apartamento",casa:"Casa",terreno:"Terreno",galpao:"Galpão",sala_comercial:"Sala comercial",loja:"Loja"})[t]||"Imóvel";
+  const itens=n.itens.map(i=>{const queda=Number(i.para)<Number(i.de);
+    const pct=i.variacaoPct!=null?` ${String(Math.abs(Number(i.variacaoPct))).replace(".",",")}%`:"";
+    return el("div",{class:"news-item"},[
+      el("p",{text:`${tipoRotulo(i.tipo)} no ${i.bairro}${i.area?` · ${i.area} m²`:""} — ${queda?"baixou":"subiu"}${pct}: de ${money(i.de)} para ${money(i.para)}`}),
+      i.url?el("a",{class:"text-button as-link",href:i.url,target:"_blank",rel:"noopener",text:`Ver anúncio${i.portal?` (${i.portal})`:""} ↗`}):null,
+    ]);});
   target.replaceChildren(el("article",{class:"action-card news-card"},[
-    el("p",{class:"eyebrow",text:`Novidade do mercado · lista da Caixa de ${dataRotulo}`}),
+    el("p",{class:"eyebrow",text:`Novidade do mercado · últimos ${n.janelaDias||7} dias`}),
     el("h3",{text:cab}),...itens,
-    el("a",{class:"card-action secondary as-link",href:"https://corretorinteligente.tech/?origem=painel",text:"Ver no Mapa ↗"}),
-    el("p",{class:"news-foot",text:"Oferta anunciada, não venda fechada — leia o edital e a matrícula antes de agir."}),
+    el("p",{class:"news-foot",text:"Mudança verificada: o MESMO anúncio (portal + id) reencontrado com preço novo em duas coletas. Use como argumento de precificação com seus proprietários."}),
   ]));}
 /* Contadores em UMA linha tocável — resumo, não dashboard (decisão de 17/07). Revisão de
    melhorias da automelhoria mora no painel admin, fora da tela diária. */

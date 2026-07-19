@@ -392,41 +392,51 @@ export async function visaoHoje() {
   return { organization: org, counts: contagens.rows[0], actions: ordenarAcoes(acoes).slice(0, 20), novidade };
 }
 
-/* Seleção pura das novidades da Caixa: prioriza bairros da carteira, cai para a cidade
-   quando a carteira ainda não tem bairro; só entra quem tem desconto HONESTO calculado
-   contra a mediana de ofertas do bairro (n>=5, regra do motor de oportunidades). */
-export function selecionarNovidades(imoveis, bairrosCarteira, normaliza) {
+/* Seleção pura das novidades: mudanças de preço VERIFICADAS pelo radar (mesmo anúncio,
+   portal+id, duas coletas comparáveis). Prioriza bairros da carteira e QUEDAS antes de
+   altas; dentro do grupo, a maior variação primeiro. A linha Caixa/leilão foi
+   descontinuada por decisão do usuário em 19/07 — nada de leilão aparece aqui. */
+export function selecionarNovidades(mudancas, bairrosCarteira, normaliza) {
   const alvo = new Set((bairrosCarteira || []).map(b => normaliza(b)).filter(Boolean));
-  const candidatos = (imoveis || [])
-    .filter(i => i.descontoBairro && Number(i.descontoBairro.pctAbaixoDaMediana) > 0)
-    .sort((a, b) => b.descontoBairro.pctAbaixoDaMediana - a.descontoBairro.pctAbaixoDaMediana);
-  const daCarteira = candidatos.filter(i => alvo.has(normaliza(i.b)));
-  const escolhidos = (daCarteira.length ? daCarteira : candidatos).slice(0, 3);
-  if (!escolhidos.length) return null;
+  const validas = (mudancas || []).filter(m => Number(m.de) > 0 && Number(m.para) > 0 && Number(m.de) !== Number(m.para));
+  const ordena = arr => [...arr].sort((a, b) => {
+    const quedaA = Number(a.para) < Number(a.de), quedaB = Number(b.para) < Number(b.de);
+    if (quedaA !== quedaB) return quedaA ? -1 : 1;
+    return Math.abs(Number(b.variacaoPct || 0)) - Math.abs(Number(a.variacaoPct || 0));
+  });
+  const daCarteira = validas.filter(m => alvo.has(normaliza(m.bairro)));
+  const escolhidas = ordena(daCarteira.length ? daCarteira : validas).slice(0, 3);
+  if (!escolhidas.length) return null;
   return {
     escopo: daCarteira.length ? "carteira" : "cidade",
-    itens: escolhidos.map(i => ({
-      id: i.id, bairro: i.b, tipo: i.t, preco: i.p, url: i.u,
-      pctAbaixoDaMediana: i.descontoBairro.pctAbaixoDaMediana, nOfertas: i.descontoBairro.nOfertas,
+    itens: escolhidas.map(m => ({
+      bairro: m.bairro, tipo: m.tipo, area: m.area != null ? Number(m.area) : null,
+      de: Number(m.de), para: Number(m.para),
+      variacaoPct: m.variacaoPct != null ? Number(m.variacaoPct) : null,
+      url: m.url, portal: m.portal, quando: m.quando,
     })),
   };
 }
 
-/* Guarda de frescor (auditoria 19/07): lista com mais de 3 dias não se chama novidade —
-   o card some sozinho até o runner residencial voltar a alimentar a ingestão. */
+/* A janela de 7 dias É a guarda de frescor: sem mudança recente, o card simplesmente
+   não existe (aparição rara e com motivo — princípio Mestre dos Magos). */
 export async function novidadeDoMercado(db, org) {
-  const { listarOportunidades } = await import("./oportunidades.js");
   const { normalizaBairro } = await import("./estatistica.js");
-  const lista = await listarOportunidades();
-  if (!lista.gerado) return null;
-  const idadeDias = Math.floor((Date.now() - Date.parse(lista.gerado)) / 86400000);
-  if (idadeDias > 3) return null;
+  const r = await db.query(
+    `SELECT detail, created_at FROM audit_log
+     WHERE action='mudanca-preco' AND (detail->>'verificada')::boolean IS TRUE
+       AND detail->>'invalidada' IS NULL
+       AND created_at > now() - interval '7 days'
+     ORDER BY created_at DESC LIMIT 40`);
+  if (!r.rowCount) return null;
   const bairros = await db.query(
     `SELECT DISTINCT neighborhood FROM inventory_properties
      WHERE organization_id=$1 AND status='ativo' AND neighborhood IS NOT NULL`, [org.id]);
-  const selecao = selecionarNovidades(lista.imoveis, bairros.rows.map(r => r.neighborhood), normalizaBairro);
+  const mudancas = r.rows.map(x => ({ ...x.detail, quando: x.created_at }));
+  const selecao = selecionarNovidades(mudancas, bairros.rows.map(b => b.neighborhood), normalizaBairro);
   if (!selecao) return null;
-  return { ...selecao, geradoEm: lista.gerado, fonte: lista.fonte };
+  return { ...selecao, janelaDias: 7,
+    fonte: "Mudanças de preço verificadas pelo radar (mesmo anúncio, portal+id, duas coletas comparáveis)" };
 }
 
 export async function listarCarteira() {

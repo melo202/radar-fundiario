@@ -1,5 +1,13 @@
 # Plano: Oportunidades (Leilões + Caixa + Bancos) — 17/07/2026
 
+> **⛔ DESCONTINUADO em 19/07/2026 por decisão do usuário** ("esquecendo de caixa
+> econômica e leilão"). F2–F4 canceladas; o runner residencial NÃO será instalado
+> (MOTOR_TOKEN sai da lista de pendências humanas); o card do Hoje foi re-apontado
+> para mudanças de preço verificadas pelo radar (nada de leilão). A F1 entregue
+> permanece no ar como está — a camada do Mapa mostra a última lista (17/07) com a
+> data rotulada e a tabela `oportunidades` fica preservada; remoção total da camada
+> só sob pedido. Retomada exige decisão explícita do usuário.
+
 Pedido do usuário: alimentar continuamente a base com imóveis de leilão e da Caixa,
 cruzar com o índice de mercado e mostrar no mapa de forma automática. Este plano
 sintetiza a pesquisa de **10 agentes em paralelo** (17/07/2026) + testes técnicos

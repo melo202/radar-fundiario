@@ -417,3 +417,17 @@ dos Magos** (Caverna do Dragão), e toda entrega futura de IA se mede por ela:
 Pós-G1 (se os corretores validarem os sinais), as Ondas 1–2 e o motor de eventos ganham
 esta persona: mais aparições espontâneas de QUALIDADE (preço baixou em comparável do seu
 captado, anúncio sumiu do portal, evento no bairro do cliente quente) — nunca mais volume.
+
+### 19/07/2026 — Caixa/leilão DESCONTINUADO; novidade vira mudança de preço verificada
+
+Decisão do usuário: "esquecendo de caixa econômica e leilão". Registrado no cabeçalho ⛔
+do PLANO-OPORTUNIDADES.md (F2–F4 canceladas; runner/MOTOR_TOKEN sai das pendências
+humanas; F1 permanece no ar com a última lista rotulada pela data; remoção da camada do
+Mapa só sob pedido). O card "Novidade do mercado" do Hoje foi **re-apontado no mesmo dia**
+para a fonte exógena que o projeto já coleta toda noite sem nada de leilão: **mudanças de
+preço VERIFICADAS** do termômetro (mesmo anúncio, portal+id, duas coletas; invalidadas do
+backfill nunca voltam), janela de 7 dias como guarda de frescor, quedas antes de altas,
+bairros da carteira antes da cidade. Copy do card declara a proveniência e sugere o uso
+("argumento de precificação com seus proprietários"). A revisita dirigida (04h45, até 30
+anúncios/noite) passa a ser quem alimenta a recompensa diária do Hoje — o loop de hábito
+fica inteiro sem a Caixa.
