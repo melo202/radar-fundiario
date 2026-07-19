@@ -387,3 +387,17 @@ ainda vale); **"Aberto há N dias"** nos cards sem prazo real. Verificado em pro
 novidade retorna 3 aptos no SETOR BUENO a 62,1% / 45,7% / 34,8% abaixo da mediana (18
 ofertas); API 401 sem sessão. Suíte **589/589**. Sem o runner, o card morre em ~2 dias —
 instalar o MOTOR_TOKEN o ressuscita sem deploy.
+
+### 19/07/2026 — Gate de confiança dos comparáveis NO AR + kit do G1 (commit 2f98b11)
+
+Fecha o último aceite de P0 que era trabalho de código (decisão de 17/07): o card
+"Referência de mercado" do dossiê ganhou o painel **"Como esse número foi formado"** —
+funil de exclusões sempre visível (outro bairro, área fora de 75–133%, quartos, sem área,
+duplicadas, cerca estatística, exclusão manual), cada oferta do cálculo com bairro, área,
+quartos, preço, R$/m², distância e fonte com link; outliers com razão; contexto regional
+rotulado "nunca entra no valor". Sem número (amostra insuficiente) também há transparência.
+Zero mudança no motor — o retorno da avaliação já carregava tudo; era só mostrar.
+**G1-KIT/** criado: folha-de-campo.md (imprimível, com checklist e critérios do gate) e
+planilha-registro.csv (1 linha por corretor). Suíte **590/590**; deploy conjunto ok.
+**Com isto, TODO o trabalho de agente do plano pós-auditoria está entregue** — o que
+resta no caminho crítico é humano: G0-dogfood e G1.
