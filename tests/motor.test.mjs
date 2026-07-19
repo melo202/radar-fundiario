@@ -33,7 +33,7 @@ test("URL de catálogo com ordenação também é pega", () => {
 test("anúncio individual completo passa como comparável", () => {
   const q = avaliarQualidade({
     url: "https://www.exemplo.com.br/imovel/apartamento-setor-bueno-3-quartos-id-2345678901",
-    titulo: "Apartamento 89m² no Setor Bueno",
+    titulo: "Apartamento 89m² no Setor Bueno, Goiânia - GO",
     descricao: "3 quartos sendo 1 suíte, 2 vagas, R$ 690.000",
     extracao: { propertyType: "apartamento", neighborhood: "Setor Bueno", privateAreaM2: 89,
       bedrooms: 3, suites: 1, parkingSpaces: 2, askingPrice: 690000 },
@@ -79,12 +79,38 @@ test("título de aluguel sem menção a venda também é pego; venda com 'aceita
   assert.equal(aluguel.comparableGrade, false);
   const venda = avaliarQualidade({
     url: "https://www.exemplo.com.br/imovel/apartamento-a-venda-id-6677889900",
-    titulo: "Apartamento à venda no Setor Bueno — aceita também alugar",
+    titulo: "Apartamento à venda no Setor Bueno, Goiânia — aceita também alugar",
     descricao: "3 quartos, 89m², R$ 690.000",
     extracao: { propertyType: "apartamento", neighborhood: "Setor Bueno", privateAreaM2: 89, bedrooms: 3, askingPrice: 690000 },
   });
   assert.equal(venda.isRental, false);
   assert.equal(venda.comparableGrade, true);
+});
+
+/* Auditoria de 19/07 (casos REAIS): a busca do bairro "Campinas" (Goiânia) trouxe
+   Campinas-SP com grau de comparável; e área de 8 m² passou porque havia quartos —
+   mas o índice divide preço/área, então área absurda envenena o R$/m². */
+test("outra cidade nunca vira comparável de Goiânia", () => {
+  const q = avaliarQualidade({
+    url: "https://www.chavesnamao.com.br/imovel/apartamento-a-venda-sp-campinas-cambui-id-16309886/",
+    titulo: "Apartamento com 2 quartos na Avenida José de Souza Campos, Cambuí, Campinas - SP",
+    descricao: "2 quartos, 70m², R$ 850.000",
+    extracao: { propertyType: "apartamento", neighborhood: "Cambuí", totalAreaM2: 70, bedrooms: 2, askingPrice: 850000 },
+  });
+  assert.equal(q.foraDeGoiania, true);
+  assert.equal(q.comparableGrade, false);
+  assert.ok(q.razoes.some(r => r.includes("Goiânia")));
+});
+
+test("área implausível REPROVA o comparável mesmo com tipologia presente", () => {
+  const q = avaliarQualidade({
+    url: "https://www.exemplo.com.br/imovel/apartamento-goiania-id-7788990011",
+    titulo: "Apartamento com 2 quartos em Goiânia - GO",
+    descricao: "2 quartos, R$ 300.000",
+    extracao: { propertyType: "apartamento", neighborhood: "Centro", totalAreaM2: 8, bedrooms: 2, askingPrice: 300000 },
+  });
+  assert.equal(q.comparableGrade, false);
+  assert.ok(q.razoes.some(r => r.includes("área implausível")));
 });
 
 test("preço e área implausíveis geram razões explícitas", () => {

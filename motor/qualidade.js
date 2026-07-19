@@ -44,20 +44,31 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
     || (/\b(para alugar|aluguel|loca[cç][aã]o|temporada)\b/i.test(titulo) && !/vend/i.test(titulo));
   if (isRental) razoes.push("anúncio de ALUGUEL — fora dos comparáveis de venda");
 
+  /* -- cidade (auditoria 19/07): o acervo é de GOIÂNIA. A busca do bairro "Campinas"
+     trouxe Campinas-SP com grau de comparável. Anúncio que não menciona Goiânia em
+     lugar NENHUM (título+descrição+URL) não sustenta comparável daqui — conservador
+     de propósito; a razão fica gravada e nada é apagado. -- */
+  const foraDeGoiania = !/goi[aâ]nia/i.test(`${titulo}\n${descricao}\n${url}`);
+  if (foraDeGoiania) razoes.push("sem menção a Goiânia — cidade não confirmada");
+
   /* -- completude (fração dos campos-chave preenchidos) -- */
   const preenchidos = CAMPOS_CHAVE.filter(c => e[c] != null).length;
   const completenessScore = Math.round((preenchidos / CAMPOS_CHAVE.length) * 100) / 100;
 
-  /* -- sanidade de valores (erro de extração vira razão, nunca ajuste silencioso) -- */
+  /* -- sanidade de valores (erro de extração vira razão, nunca ajuste silencioso).
+     Área implausível REPROVA o comparável (19/07): o índice divide preço/área, então
+     área errada envenena o R$/m² mesmo quando a tipologia existe. -- */
   const area = e.privateAreaM2 ?? e.totalAreaM2;
-  if (area != null && (area < 10 || area > 100000)) razoes.push(`área implausível (${area} m²)`);
+  const areaImplausivel = area != null && (area < 10 || area > 100000);
+  if (areaImplausivel) razoes.push(`área implausível (${area} m²)`);
   if (e.askingPrice != null && (e.askingPrice < 20000 || e.askingPrice > 100000000)) razoes.push(`preço implausível (${e.askingPrice})`);
 
   /* -- grau de comparável (§6): preço confiável + tamanho/tipologia + localização -- */
   const temPreco = e.askingPrice != null && e.askingPrice >= 20000 && e.askingPrice <= 100000000;
   const temTamanho = (area != null && area >= 10 && area <= 100000) || e.bedrooms != null;
   const temLocal = !!e.neighborhood;
-  const comparableGrade = !isCatalogPage && !isRental && temPreco && temTamanho && temLocal;
+  const comparableGrade = !isCatalogPage && !isRental && !foraDeGoiania && !areaImplausivel
+    && temPreco && temTamanho && temLocal;
   if (!comparableGrade) {
     if (isCatalogPage) razoes.push("classificado como página-catálogo");
     if (!temPreco) razoes.push("sem preço confiável");
@@ -65,5 +76,5 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
     if (!temLocal) razoes.push("sem bairro");
   }
 
-  return { completenessScore, isCatalogPage, isRental, comparableGrade, razoes };
+  return { completenessScore, isCatalogPage, isRental, foraDeGoiania, comparableGrade, razoes };
 }
