@@ -507,3 +507,24 @@ desde 19/07 (verificado: 303 → /painel 200). Suíte **606/606**; deploy conjun
 (87959f9), tudo conferido ao vivo. Ficam como candidatas pós-G1 (inteligência congelada):
 proxy/cache da camada da Prefeitura, Cache-Control/TTFB do HTML e observabilidade do
 funil da análise de mercado.
+
+### 20/07/2026 — Tarde: os 3 estratégicos da auditoria resolvidos (proxy, borda, funil)
+
+**Proxy da Prefeitura blindado (AUD-03):** descoberta dupla — o app JÁ preferia o proxy
+do VPS com fallback JSONP (item 14, 15/07), mas o código do proxy vivia editado à mão em
+/opt/radar/proxy/server.js (drift) e sem defesa real: upstream fora do ar = erro na cara.
+Agora `motor/proxy-arcgis.js` é versionado (deploy-api.sh instala/reinicia só quando muda,
+preservando o cache), TTL fresco 60 min (era 10), **stale-if-error até 7 dias** (Prefeitura
+403/fora do ar → consultas já vistas seguem respondendo, X-Cache: STALE), teto de 64 MB por
+bytes e /health com contadores. **Borda (nginx):** sites-enabled/radar era uma CÓPIA morta
+de 16/07, não symlink — config editada nunca entrava em vigor; virou symlink. Config agora
+versionada em `motor/nginx/` (instalação manual consciente: nginx errado derruba tudo).
+gzip_types destravado (bairros-goiania.json 782 KB → 190 KB; nível 5: HTML 401 → 351 KB),
+**http2** ligado, Cache-Control honesto por tipo (HTML/sw.js no-cache + 304; json/js 1 h
+com stale-while-revalidate; marca 7 dias). **Funil do /motor/mercado (AUD-03):** cada
+chamada registra duração, cache-6h, erro e **abandono** (res close antes de writableEnded)
+no audit_log; Sala de Máquinas ganhou a seção "Análise de mercado · funil 7 dias"
+(chamadas, % cache, mediana/p90, desistências) + linha de saúde do proxy. Validado em
+produção: chamada fria real levou **177,7 s** (raspando o timeout de 180 s do front — o
+auditor tinha razão na dor) e a quente **55 ms**; ambas registradas. Suíte **606/606**,
+deploy conjunto ac2dc0e.
