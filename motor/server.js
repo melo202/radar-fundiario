@@ -200,9 +200,27 @@ http.createServer(async (req, res) => {
       /* avaliação AO VIVO: dispara busca nos portais (gasta cota Brave) e avalia.
          cache de 6h por bairro protege a cota global; rate limit por IP protege o pico */
       if (!autorizado(req) && estourou(req, 4, "mercado")) return json(res, 429, { erro: "aguarde 1 minuto entre buscas ao vivo" });
+      /* AUD-03 (funil, 20/07): a análise ao vivo vai de instantânea (cache 6h) a ~3 min a
+         frio — registrar duração, cache e ABANDONO é o que permite ver a taxa de desistência
+         na Sala de Máquinas. 'close' do res antes de writableEnded = cliente desistiu (fechou
+         a aba/abortou o fetch); o trabalho termina e o registro conta o abandono. */
+      const inicio = Date.now();
+      let clienteDesistiu = false;
+      res.on("close", () => { if (!res.writableEnded) clienteDesistiu = true; });
       const subject = JSON.parse(await readBody(req) || "{}");
+      const registraFunil = (extra) => pool.query(
+        "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('mercado',$1,'mercado-funil',$2)",
+        [`${subject.neighborhood || "?"}|${subject.propertyType || "?"}`,
+          JSON.stringify({ duracaoMs: Date.now() - inicio, abandonado: clienteDesistiu, ...extra })]).catch(() => {});
       const { avaliarAoVivo } = await import("./mercado-aovivo.js");
-      return json(res, 200, await avaliarAoVivo(subject));
+      try {
+        const resultado = await avaliarAoVivo(subject);
+        registraFunil({ ok: true, cache: resultado?.aoVivo?.buscou === false, status: resultado?.status || null });
+        return json(res, 200, resultado);
+      } catch (e) {
+        registraFunil({ ok: false, erro: String(e.message).slice(0, 200) });
+        throw e;
+      }
     }
     if (req.method === "POST" && req.url === "/motor/avaliar") {
       /* determinístico (só banco, sem IA/busca): público com rate limit p/ o app */

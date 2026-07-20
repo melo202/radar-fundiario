@@ -47,7 +47,17 @@ systemctl enable --now radar-revisita.timer >/dev/null 2>&1
 systemctl enable --now radar-agent-review.timer >/dev/null 2>&1
 systemctl enable --now radar-intelligence.timer >/dev/null 2>&1
 systemctl restart radar-api
+# AUD-03: o proxy ArcGIS agora é versionado no repo (motor/proxy-arcgis.js) — antes o
+# /opt/radar/proxy/server.js só existia editado à mão no VPS (drift). Instala e reinicia
+# apenas se mudou (o restart zera o cache em memória; sem mudança, cache preservado).
+node --check /opt/radar/api/proxy-arcgis.js
+if ! cmp -s /opt/radar/api/proxy-arcgis.js /opt/radar/proxy/server.js; then
+  mkdir -p /opt/radar/proxy
+  cp /opt/radar/api/proxy-arcgis.js /opt/radar/proxy/server.js
+  systemctl restart radar-proxy
+fi
 sleep 1
+curl -sf http://127.0.0.1:8130/health >/dev/null
 curl -sf http://127.0.0.1:8140/motor/health >/dev/null && echo "deploy motor ok: $(git -C /opt/radar/repo rev-parse --short HEAD)"
 }
 main "$@"

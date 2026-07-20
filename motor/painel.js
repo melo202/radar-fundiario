@@ -141,10 +141,26 @@ async function salaDeMaquinas() {
     `SELECT COALESCE(SUM((detail->>'bairros')::int),0)::int AS usadas FROM audit_log
      WHERE entity='varredura' AND action='executada'
        AND created_at >= date_trunc('month', now())`).then(r => r.rows[0]).catch(() => ({ usadas: 0 }));
+  /* AUD-03 (20/07): funil da análise de mercado ao vivo — registrado pelo /motor/mercado
+     (action='mercado-funil'). Mediana/p90 de duração, taxa de cache e ABANDONO (cliente
+     desistiu antes da resposta) dos últimos 7 dias. */
+  const funilMercado = await pool.query(
+    `SELECT count(*)::int AS chamadas,
+            count(*) FILTER (WHERE (detail->>'cache')::boolean)::int AS via_cache,
+            count(*) FILTER (WHERE (detail->>'abandonado')::boolean)::int AS abandonos,
+            count(*) FILTER (WHERE (detail->>'ok')::boolean IS NOT TRUE)::int AS erros,
+            COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY (detail->>'duracaoMs')::numeric),0)::int AS mediana_ms,
+            COALESCE(percentile_cont(0.9) WITHIN GROUP (ORDER BY (detail->>'duracaoMs')::numeric),0)::int AS p90_ms
+     FROM audit_log WHERE action='mercado-funil' AND created_at > now()-interval '7 days'`)
+    .then(r => r.rows[0]).catch(() => null);
+  /* saúde do proxy da Prefeitura (stale-if-error, AUD-03) — localhost, nunca gasta nada */
+  const proxyPrefeitura = await fetch("http://127.0.0.1:8130/health", { signal: AbortSignal.timeout(1500) })
+    .then(r => r.json()).catch(() => null);
   return {
     agora: { varredura, jobs },
     contadores: { ...contadores, bairrosComBase: indice.filter(i => i.n >= 3).length },
     cotaBrave: { usadas: cota.usadas, limite: 2000 },
+    funilMercado, proxyPrefeitura,
     porDia, feed, ia, noite, serverTime: new Date().toISOString(),
   };
 }

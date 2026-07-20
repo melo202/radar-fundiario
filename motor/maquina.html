@@ -91,6 +91,12 @@
       <div class="spark-rotulo" id="sparkRotulo"></div>
       <div class="turno" id="turno" style="margin-top:16px"></div>
     </section>
+    <!-- AUD-03 (20/07): funil da análise de mercado ao vivo + saúde do proxy da Prefeitura -->
+    <section class="painel">
+      <h2>Análise de mercado · funil 7 dias</h2>
+      <div class="tiles" id="funilTiles"></div>
+      <p class="agora-sub" id="proxyLinha" style="margin-top:12px"></p>
+    </section>
   </main>
   <p class="rodape">Atualiza sozinho a cada 20 s. Tudo aqui é registro do trabalho determinístico (audit_log, ai_logs, acervo)
     — nenhum número é inventado. A varredura ronda os 684 bairros do cadastro; a revisita confere preços; o índice engorda a base.</p>
@@ -176,6 +182,21 @@ function render(){
     ?`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2>`+(d.noite||[]).map(t=>{const x=t.detail||{};
         return`<p><span class="quando">${new Date(t.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>${t.entity==="varredura"?`varredura: <b>${fmt(x.bairros)}</b> bairros · <b>${fmt(x.novos)}</b> novos · ${fmt(x.comparaveis)} comparáveis`:`revisita: anúncios conferidos`}</p>`;}).join("")
     :`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2><p style="color:var(--muted);font-size:12.5px">Nenhum turno nas últimas 24 h — o próximo está no relógio acima.</p>`;
+
+  /* FUNIL da análise de mercado (AUD-03): quantos pedem, quantos saem do cache,
+     quanto demora a frio e quantos DESISTEM antes da resposta */
+  const f=d.funilMercado;
+  $("funilTiles").innerHTML=(f&&f.chamadas)?[
+    [fmt(f.chamadas),"análises pedidas"],
+    [Math.round(100*(f.via_cache||0)/f.chamadas)+"%","respondidas pelo cache de 6 h"],
+    [(f.mediana_ms/1000).toLocaleString("pt-BR",{maximumFractionDigits:1})+" s",`duração mediana · p90 ${(f.p90_ms/1000).toLocaleString("pt-BR",{maximumFractionDigits:0})} s`],
+    [fmt(f.abandonos),"desistiram antes da resposta"+(f.erros?` · ${fmt(f.erros)} erro(s)`:"")],
+  ].map(([v,r])=>`<div class="tile"><strong>${v}</strong><span>${r}</span></div>`).join("")
+  :`<div class="tile"><strong>—</strong><span>nenhuma análise ao vivo nos últimos 7 dias</span></div>`;
+  const px=d.proxyPrefeitura;
+  $("proxyLinha").innerHTML=px
+    ?`Proxy da Prefeitura: <b>${fmt(px.cache?.entradas)}</b> consultas em cache (${Math.round((px.cache?.bytes||0)/1048576)} MB) · ${fmt(px.cache?.hits)} hits · ${fmt(px.cache?.misses)} misses${px.cache?.stales?` · <b>${fmt(px.cache.stales)}</b> servidas do cache com a Prefeitura fora do ar`:""}`
+    :`Proxy da Prefeitura: sem resposta agora.`;
 
   /* FEED (audit + IA mesclados) */
   const eventos=[...(d.feed||[]).map(e=>({t:e.created_at,html:rotuloEvento(e)})),
