@@ -45,8 +45,17 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
        RETURNING id, (xmax = 0) AS novo`,
       [a.portal, a.url, a.titulo, a.descricao, hash, idt.externalId]);
     const { id, novo } = ins.rows[0];
-    if (!novo) { stats.jaConhecidos++; continue; }
-    stats.novos++;
+    if (!novo) {
+      /* auto-recuperação (incidente 22/07): listing conhecido mas SEM property = a
+         extração falhou na coleta anterior (IA fora do ar, cota estourada). Antes desta
+         guarda, uma falha transitória condenava o anúncio a ficar cru para sempre —
+         a varredura o pulava como "já conhecido" em toda recoleta. */
+      const tem = await pool.query("SELECT 1 FROM properties WHERE listing_id=$1 LIMIT 1", [id]);
+      if (tem.rows.length) { stats.jaConhecidos++; continue; }
+      stats.reprocessando = (stats.reprocessando || 0) + 1;
+    } else {
+      stats.novos++;
+    }
     if (!passaPreFiltro(a)) { stats.semGoiania = (stats.semGoiania || 0) + 1; continue; }
     stats.tentativasExtracao++;
     /* A1 (atualização contínua): o MESMO anúncio (portal + id) reaparecendo com conteúdo

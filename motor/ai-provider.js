@@ -4,7 +4,7 @@
    automático — mesmo padrão proxy→JSONP do app. Erro de transporte/limite do remoto
    abre um cooldown de 10 min e a fila segue no local sem intervenção.
 
-   Env LOCAL (sempre presente):
+   Env LOCAL (sempre presente, a menos que AI_LOCAL_ENABLED=false):
      AI_PROVIDER=ollama  AI_BASE_URL=http://localhost:11434
      AI_MODEL_FAST=qwen3:8b  AI_MODEL_ADVANCED=qwen3:14b
    Env REMOTO (opcional — se AI_REMOTE_API_KEY existir, a cadeia liga sozinha):
@@ -34,6 +34,11 @@ const LOCAL = {
     advanced: process.env.AI_MODEL_ADVANCED || "qwen3:14b",
   },
 };
+/* AI_LOCAL_ENABLED=false aposenta o degrau local SEM desligar nada no VPS: útil quando
+   o remoto assume e o Ollama sai de cena (incidente 22/07: com o Ollama desligado e os
+   remotos sem chave, TODA extração caía no localhost morto e falhava em 0,0 s — o
+   registro vivo virou um rio de falhas e nenhum anúncio novo virou property). */
+const LOCAL_ENABLED = (process.env.AI_LOCAL_ENABLED || "true") !== "false";
 /* NV1 (estudo NVIDIA Build 15/07/2026): a cadeia aceita DOIS remotos, cada um com o
    próprio cooldown. O tier decide a ordem — "fast" (extração em massa) prefere o
    remoto 1 (Groq, ~1,6 s); "advanced" (parecer §17, redação) prefere o remoto 2
@@ -129,7 +134,7 @@ async function logCall(task, model, promptHash, out, ok, error) {
 function chain(tier) {
   const ordem = tier === "advanced" ? [REMOTE2, REMOTE] : [REMOTE, REMOTE2];
   const degraus = ordem.filter(p => p && Date.now() >= p.deadUntil);
-  degraus.push(LOCAL);
+  if (LOCAL_ENABLED) degraus.push(LOCAL);
   return degraus;
 }
 
@@ -148,8 +153,11 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
     const hit = await pool.query("SELECT response FROM ai_cache WHERE prompt_hash=$1", [promptHash]);
     if (hit.rows.length) return { fromCache: true, ...hit.rows[0].response };
   }
+  const degraus = chain(tier);
+  if (!degraus.length) throw new Error(
+    "nenhum provedor de IA habilitado: remotos sem chave e AI_LOCAL_ENABLED=false");
   let lastErr;
-  for (const p of chain(tier)) {
+  for (const p of degraus) {
     for (let attempt = 0; attempt < 2; attempt++) { /* 1 retry por degrau (§21) */
       try {
         const out = await chatOnce(p, { system, prompt, tier, schema, maxTokens });
@@ -189,7 +197,7 @@ export const aiProvider = {
   models: LOCAL.models,
   provider: "ollama",
   status: () => ({
-    local: { base: LOCAL.base, models: LOCAL.models },
+    local: { base: LOCAL.base, models: LOCAL.models, habilitado: LOCAL_ENABLED },
     remote: REMOTE ? { base: REMOTE.base, models: REMOTE.models,
       emCooldown: Date.now() < REMOTE.deadUntil } : null,
     remote2: REMOTE2 ? { base: REMOTE2.base, models: REMOTE2.models,
