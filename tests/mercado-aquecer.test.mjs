@@ -21,8 +21,9 @@ const funil = [
 
 test("aquecimento: dedup pela chave do cache, carteira primeiro, teto respeitado", () => {
   const plano = planejarAquecimento(carteira, funil, 6);
-  assert.equal(plano.length, 3);
-  assert.deepEqual(plano.map(s => s.neighborhood), ["Setor Bueno", "Jardim Goiás", "Setor Oeste"]);
+  /* Jardim Goiás fica FORA: sem areaM2 não há estimativa (falha real da 1ª rodada 20/07) */
+  assert.equal(plano.length, 2);
+  assert.deepEqual(plano.map(s => s.neighborhood), ["Setor Bueno", "Setor Oeste"]);
   const chaves = plano.map(chaveDaPesquisa);
   assert.equal(new Set(chaves).size, chaves.length, "nenhuma chave repetida no plano");
   assert.equal(planejarAquecimento(carteira, funil, 2).length, 2, "teto corta o excedente");

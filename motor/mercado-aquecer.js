@@ -23,6 +23,10 @@ export function planejarAquecimento(carteira = [], funil = [], max = 6) {
   const vistos = new Set();
   const poe = (s) => {
     if (!s || !s.neighborhood || !s.propertyType) return;
+    /* sem área não há estimativa (avaliar exige areaM2>0) — provado na 1ª rodada real
+       20/07: "jardins quatro quartos|casa|sem-aream2" falhou; aquecer seria gastar cota
+       numa chamada que o próprio clique do corretor também rejeitaria. */
+    if (!(Number(s.areaM2) > 0)) return;
     const chave = chaveDaPesquisa(s);
     if (vistos.has(chave)) return;
     vistos.add(chave);
