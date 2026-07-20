@@ -528,3 +528,24 @@ no audit_log; Sala de Máquinas ganhou a seção "Análise de mercado · funil 7
 produção: chamada fria real levou **177,7 s** (raspando o timeout de 180 s do front — o
 auditor tinha razão na dor) e a quente **55 ms**; ambas registradas. Suíte **606/606**,
 deploy conjunto ac2dc0e.
+
+### 20/07/2026 — Noite: roadmap MI6 v2 recebido; Fase 0 executada (menos o que é humano)
+
+Roadmap v2 ("MI6 + Nubank") refletido contra a realidade: a Fase 0.B inteira (site) já
+tinha sido entregue de manhã; 0.7 e 0.8 não se reproduzem em navegador real (ferramenta
+da auditoria não dispara input nem espera toast); scraping noturno/fila (2.5), histórico
+de 2 coletas (2.6) e Postgres+PostGIS (1.4) já existem em embrião. Executado da Fase 0
+restante: **0.10, o bug mais caro** — "qual imóvel tá pendente" não casava gatilho nenhum
+(faltava "pendente" no regex!) e o modelo, sem a lista no contexto, afirmou "nenhuma
+pendência" com 8 ativas. Conversa geral agora SEMPRE abre com consultar_meu_dia, gatilho
+ampliado (pendente/vencido/atrasado/prazo/agenda…), e instrução nova no sistema: ausência
+de dado no contexto nunca vira afirmação de "não há". **0.11:** pendências do Para hoje
+levam o imóvel no título (LEFT JOIN em visaoHoje) — verificado no banco: "Solicitar
+autorização de divulgação · Apartamento · Setor Bueno". **0.13:** title do login virou
+"Corretor Inteligente". **0.3:** catch-all da api deixou de fingir sucesso — /query,
+/admin etc. agora 404 JSON (nginx versionado). **0.12 auditado e mantido:** o chip
+"Assistente" aceso é o CTA central por design, não bug de navegação. Suíte **606/606**
+(2 expectativas atualizadas + 3 casos de regressão da pergunta real da auditoria);
+deploy conjunto f6f88bd. **Pendências HUMANAS da Fase 0.A:** tornar privado o repo
+PAINEL-MC (clientes/ com nomes reais em repo público — LGPD; só o dono muda visibilidade)
+e trocar a PAINEL_SENHA no .env do VPS (nova senha não pode circular em chat).
