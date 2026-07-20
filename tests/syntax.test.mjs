@@ -6,7 +6,14 @@ import assert from "node:assert/strict";
 const inlineScripts = (arquivo) => {
   let html = readFileSync(new URL(arquivo, import.meta.url), "utf-8");
   html = html.replace(/<!--[\s\S]*?-->/g, "");
-  return [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+  /* AUD-02 (20/07/2026): só valem scripts EXECUTÁVEIS — <script type="application/ld+json">
+     (dados estruturados de SEO) é JSON, não JS, e não deve passar pelo vm.Script. */
+  return [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)]
+    .filter((m) => {
+      const t = /\btype\s*=\s*["']?([^"'\s>]+)/i.exec(m[1]);
+      return !t || /^(?:text\/javascript|module)$/i.test(t[1]);
+    })
+    .map((m) => m[2]);
 };
 
 test("todos os scripts inline do app compilam", () => {

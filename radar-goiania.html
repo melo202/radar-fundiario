@@ -21,6 +21,26 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="675">
 <meta name="twitter:card" content="summary_large_image">
+<!-- AUD-02 (auditoria SEO 20/07/2026): o Google NÃO usa og:description como description —
+     meta description própria + canonical (arquivo servido na raiz E como /radar-goiania.html;
+     o canonical aponta sempre para a raiz, evitando conteúdo duplicado). -->
+<meta name="description" content="Busca cadastral de imóveis em Goiânia por endereço, quadra e lote, edifício ou inscrição. Dossiê do imóvel, análise de preço e laudo com dados públicos da Prefeitura — fonte e limites declarados.">
+<link rel="canonical" href="https://corretorinteligente.tech/">
+<!-- AUD-02: dados estruturados — espelham a FAQ visível (#faq no rodapé do painel); mudou lá, muda aqui. -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"WebApplication","name":"Corretor Inteligente","url":"https://corretorinteligente.tech/",
+  "applicationCategory":"BusinessApplication","operatingSystem":"Web",
+  "description":"Busca cadastral de imóveis em Goiânia por endereço, quadra e lote, edifício ou inscrição, com dossiê do imóvel, análise de preço e documentos de apoio a partir de dados públicos da Prefeitura.",
+  "areaServed":{"@type":"City","name":"Goiânia","address":{"@type":"PostalAddress","addressRegion":"GO","addressCountry":"BR"}}},
+ {"@type":"FAQPage","mainEntity":[
+  {"@type":"Question","name":"O que é o Corretor Inteligente?","acceptedAnswer":{"@type":"Answer","text":"Ferramenta de busca cadastral e inteligência territorial de Goiânia para corretores de imóveis: consulta o cadastro público da Prefeitura, monta o dossiê do imóvel e gera documentos de apoio (ficha, relatório e minutas)."}},
+  {"@type":"Question","name":"Como buscar um imóvel em Goiânia?","acceptedAnswer":{"@type":"Answer","text":"Numa caixa só: endereço com número (ex.: rua portugal 582), quadra e lote (ex.: quadra 128 lote 5), nome do edifício (ex.: sumer park) ou inscrição cadastral (ex.: 3020150346). Também dá para tocar direto no lote pelo mapa."}},
+  {"@type":"Question","name":"Quais dados o dossiê traz?","acceptedAnswer":{"@type":"Answer","text":"Dados cadastrais e territoriais públicos: quadra, lote, área, testada, uso, valor venal, setor e vizinhança — sempre com a fonte declarada. A análise de preço usa anúncios de mercado da região como referência."}},
+  {"@type":"Question","name":"Valor venal é preço de mercado?","acceptedAnswer":{"@type":"Answer","text":"Não. O valor venal é a base de cálculo do IPTU e costuma ficar abaixo do preço de mercado. O Corretor Inteligente mostra os dois separados, cada um com sua fonte e seus limites."}},
+  {"@type":"Question","name":"Funciona em quais cidades?","acceptedAnswer":{"@type":"Answer","text":"Hoje a cobertura cadastral completa é de Goiânia (GO), incluindo todos os setores e bairros do município."}}]}
+]}
+</script>
 <!-- R6: aperto de mão adiantado com os hosts críticos do primeiro paint -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="preconnect" href="https://a.basemaps.cartocdn.com">
@@ -1506,6 +1526,13 @@
 </style>
 </head>
 <body>
+<!-- AUD-02: sem JS o app inteiro morria em silêncio (splash coberto pelo CSS) — mensagem
+     honesta p/ gente e p/ crawler sem JS. -->
+<noscript><div style="max-width:560px;margin:40px auto;padding:0 20px;font-family:system-ui,sans-serif;color:#212E40">
+  <h2>Corretor Inteligente · Goiânia</h2>
+  <p>Busca cadastral de imóveis de Goiânia por endereço, quadra e lote, edifício ou inscrição — com dossiê do imóvel, análise de preço e documentos de apoio, a partir de dados públicos da Prefeitura.</p>
+  <p><b>Este aplicativo precisa de JavaScript.</b> Habilite o JavaScript no navegador e recarregue a página para usar o mapa e a busca.</p>
+</div></noscript>
 <!-- Splash de boot (princípio UX 15/07/2026: nenhuma tela crua; esperar tem que PARECER
      carregando). Some quando a interface fica interativa (bootSplashOff no init) e tem
      válvula de 6s — nunca prende a tela, nem com JS quebrado no meio. -->
@@ -1681,6 +1708,20 @@
     <details class="foot">
       <summary>Fontes &amp; metodologia</summary>
       <div class="footbody">Fonte cadastral: ArcGIS público da Prefeitura de Goiânia. Coordenadas SIRGAS 2000 / UTM 22S convertidas para latitude/longitude. Imóveis da CAIXA vêm da lista pública de venda. Valores venais e amostras cadastrais não equivalem a preço de mercado, liquidez ou regularidade documental. O nome do titular não é lido pelo Corretor Inteligente — a consulta é manual na CND oficial. <a href="como-usar.html" target="_blank" rel="noopener">Guia completo: como usar →</a></div>
+    </details>
+
+    <!-- AUD-02 (auditoria SEO 20/07/2026): FAQ estática no HTML inicial — conteúdo indexável de
+         verdade (visível, mesmo padrão <details class="foot"> das seções acima), espelhada no
+         JSON-LD FAQPage do <head>. Texto novo aqui exige atualizar o JSON-LD junto. -->
+    <details class="foot" id="faq">
+      <summary>Perguntas frequentes</summary>
+      <div class="footbody">
+        <p><b>O que é o Corretor Inteligente?</b><br>Ferramenta de busca cadastral e inteligência territorial de Goiânia para corretores de imóveis: consulta o cadastro público da Prefeitura, monta o dossiê do imóvel e gera documentos de apoio (ficha, relatório e minutas).</p>
+        <p><b>Como buscar um imóvel em Goiânia?</b><br>Numa caixa só: endereço com número (ex.: rua portugal 582), quadra e lote (ex.: quadra 128 lote 5), nome do edifício (ex.: sumer park) ou inscrição cadastral (ex.: 3020150346). Também dá para tocar direto no lote pelo mapa.</p>
+        <p><b>Quais dados o dossiê traz?</b><br>Dados cadastrais e territoriais públicos: quadra, lote, área, testada, uso, valor venal, setor e vizinhança — sempre com a fonte declarada. A análise de preço usa anúncios de mercado da região como referência.</p>
+        <p><b>Valor venal é preço de mercado?</b><br>Não. O valor venal é a base de cálculo do IPTU e costuma ficar abaixo do preço de mercado. O Corretor Inteligente mostra os dois separados, cada um com sua fonte e seus limites.</p>
+        <p><b>Funciona em quais cidades?</b><br>Hoje a cobertura cadastral completa é de Goiânia (GO), incluindo todos os setores e bairros do município.</p>
+      </div>
     </details>
   </aside>
 
@@ -2341,7 +2382,7 @@ function detectMode(textoBruto,combo){
      "nome de logradouro + numero" ("quintino bocaiuva 210", "jamel cecilio 2496", "c-206 45") —
      e ate aqui caia na regra 6 (predio) e nunca achava o imovel. Regra (menor diff seguro): se a
      frase TERMINA em numero, TEM miolo alfabetico (nome de rua) e NAO contem palavra-chave de
-     predio -> ENDERECO, confianca MEDIA (o label leva "(?)" e a classe .media pinta o chip; o Enter
+     predio -> ENDERECO, confianca MEDIA (o label leva "(provável)" e a classe .media pinta o chip; o Enter
      ainda dispara — so "baixa" e bloqueado — e o menu de correcao cobre engano). Com palavra-chave
      de predio (ED/EDF/EDIF/EDIFICIO/RES/RESID/RESIDENCIAL/COND/CONDOMINIO/TORRE/BLOCO/APTO/
      APARTAMENTO) NAO vira addr: cai na regra 6 e segue Predio. Espelha os campos da regra 3
@@ -2352,11 +2393,13 @@ function detectMode(textoBruto,combo){
     let ruaVal=raw;
     const _semNum=raw.slice(0,_numFim.index).replace(/[\s,–-]+$/,"");
     if(temIdentidadeRua(_semNum))ruaVal=_semNum;
-    return attachSetor({mode:"addr",rua:ruaVal,numero:_numFim[1],confidence:"media",label:`Endereço (?) · ${raw}`});
+    return attachSetor({mode:"addr",rua:ruaVal,numero:_numFim[1],confidence:"media",label:`Endereço (provável) · ${raw}`});
   }
 
   // 6. Texto sem numero nem tipo de via — setor ja tentado no passo 0; resta assumir predio (media)
-  return attachSetor({mode:"bd",predio:raw,confidence:"media",label:`Prédio (?) · ${raw}`});
+  /* AUD-01 (20/07/2026): "(?)" literal parecia ícone quebrado/placeholder no chip — o marcador
+     de confiança média agora é a palavra "(provável)", mesma classe .media pintando o chip. */
+  return attachSetor({mode:"bd",predio:raw,confidence:"media",label:`Prédio (provável) · ${raw}`});
 }
 
 /* SCORE-01 (legado interno): posição do VALOR VENAL por m² do imóvel vs. amostra cadastral
@@ -4930,18 +4973,36 @@ function updateCaixaList(qtext){
   const inp=document.getElementById("caixaInput");
   const q=norm(qtext);
   if(!q){list.classList.remove("show");inp.setAttribute("aria-expanded","false");return;}
+  /* AUD-01 (auditoria 20/07/2026): a frase completa ("rua portugal 582") NUNCA é substring do
+     índice CNEFE, que guarda só o NOME da rua (sem tipo de via, sem número) — o exemplo nº 1 da
+     tela inicial, DIGITADO, devolvia "nenhuma sugestão". O match de rua usa o NÚCLEO da frase:
+     tipo de via removido (ruaCore) e número de porta final removido quando ainda sobra nome de
+     rua — mesma semântica da detectMode regra 3 (F5 BUSCA-14). Setor segue casando a frase inteira. */
+  let qRua=ruaCore(qtext);
+  const _mNumFim=qRua.match(/\s\d{1,5}$/);
+  if(_mNumFim&&/[A-Z]/.test(qRua.slice(0,_mNumFim.index)))qRua=qRua.slice(0,_mNumFim.index).replace(/[\s,–-]+$/,"");
   const setorHits=COMBO.filter(b=>b.search.includes(q)).map(b=>({kind:"setor",label:b.disp,sub:b.raw,
     code:b.code,id:"opt-bai-"+String(b.code).replace(/\D/g,""),pos:b.search.indexOf(q)}));
-  const ruaHits=(CNEFE||[]).filter(r=>r.search.includes(q)).map((r,i)=>({kind:"rua",label:titano(r.nome),sub:r.tipo,
-    id:"opt-rua-"+i,pos:r.search.indexOf(q),__nome:r.nome}));
+  const ruaHits=qRua?(CNEFE||[]).filter(r=>r.search.includes(qRua)).map((r,i)=>({kind:"rua",label:titano(r.nome),sub:r.tipo,
+    id:"opt-rua-"+i,pos:r.search.indexOf(qRua),__nome:r.nome})):[];
   let hits=setorHits.concat(ruaHits);
   hits.sort((a,b)=>a.pos-b.pos||a.label.localeCompare(b.label,"pt"));
   hits=hits.slice(0,50);
   caixaActive=-1;
   inp.setAttribute("aria-expanded","true");
   /* F5 EST-06: mesmo fix do combo de setor — aviso de vazio como option desabilitada, semântica
-     válida de listbox p/ NVDA/VoiceOver. */
-  if(!hits.length){list.innerHTML='<div class="combo-empty" role="option" aria-disabled="true" aria-selected="false">nenhuma sugestão</div>';list.classList.add("show");return;}
+     válida de listbox p/ NVDA/VoiceOver.
+     AUD-01: "nenhuma sugestão" seco era beco sem saída — a detecção do chip pode estar válida
+     mesmo sem sugestão no índice (rua fora do CNEFE, inscrição, quadra/lote). Quando LASTDETECT
+     tem modo e confiança ≥ média, o item vazio vira AÇÃO de busca (mesmo caminho do Enter). */
+  if(!hits.length){
+    if(LASTDETECT&&LASTDETECT.mode&&LASTDETECT.confidence!=="baixa"){
+      list.innerHTML=`<div class="combo-item" role="option" id="opt-buscar-direto" aria-selected="false"
+        data-kind="buscar" onclick="pickCaixaItem(this)">
+      <span class="code">Buscar</span>${esc(LASTDETECT.label||qtext)}<span class="raw">Enter</span></div>`;
+      list.classList.add("show");return;
+    }
+    list.innerHTML='<div class="combo-empty" role="option" aria-disabled="true" aria-selected="false">nenhuma sugestão</div>';list.classList.add("show");return;}
   list.innerHTML=hits.map(h=>`<div class="combo-item" role="option" id="${h.id}" aria-selected="false"
       data-kind="${h.kind}" data-code="${esc(h.code||"")}" data-nome="${esc(h.__nome||"")}"
       onclick="pickCaixaItem(this)">
@@ -4955,16 +5016,29 @@ function detectAnunciar(txt){const el=document.getElementById("detectLive");if(e
    fecha o dropdown, deixa o usuario confirmar com Enter/Buscar (nao dispara buscar() sozinho). */
 function pickCaixaItem(el){
   const kind=el.dataset.kind;
+  /* AUD-01: item de ação "Buscar …" (estado sem sugestão com detecção válida) — dispara o mesmo
+     caminho do Enter, tocável e navegável por ↑/↓ como qualquer option. */
+  if(kind==="buscar"){
+    if(!LASTDETECT||LASTDETECT.confidence==="baixa")return;
+    closeCaixaList();
+    applyDetectAndSearch(LASTDETECT.mode,LASTDETECT);
+    return;
+  }
   if(kind==="setor"){
     pickBairro(el.dataset.code);
     const disp=COMBO.find(x=>String(x.code)===String(el.dataset.code));
     if(disp)document.getElementById("caixaInput").value=disp.disp;
   }else{
     const nome=el.dataset.nome;
+    /* AUD-01: o número de porta digitado ("rua portugal 582") não pode se perder ao tocar a
+       sugestão de rua — segue para #numero e para o LASTDETECT (mesmo shape da detectMode regra 3). */
+    const _mNum=String(document.getElementById("caixaInput").value||"").match(/\b(\d{1,5})\b\s*$/);
+    const numero=_mNum?_mNum[1]:"";
     setMode("addr");
     document.getElementById("rua").value=nome;
-    document.getElementById("caixaInput").value=nome;
-    LASTDETECT={mode:"addr",rua:nome,numero:"",confidence:"alta",label:`Endereço · ${nome}`};
+    document.getElementById("numero").value=numero;
+    document.getElementById("caixaInput").value=numero?`${nome}, ${numero}`:nome;
+    LASTDETECT={mode:"addr",rua:nome,numero:numero,confidence:"alta",label:`Endereço · ${nome}${numero?", "+numero:""}`};
     document.getElementById("detectChip").textContent=LASTDETECT.label;
     document.getElementById("detectChip").hidden=false;document.getElementById("detectChip").classList.add("show");
     detectAnunciar(LASTDETECT.label); /* F5 D-13 */
