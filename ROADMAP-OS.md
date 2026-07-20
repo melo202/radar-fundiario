@@ -475,3 +475,16 @@ No caminho, a cadeia de IA foi consertada de verdade: qwen3-32b aposentado pela 
 extração**, testado COM `response_format json_object` (lição no .env.example).
 Requalificação retroativa do acervo: 1.964 imóveis → 331 comparáveis limpos (0 aluguéis);
 vigia no VPS requalifica de novo sozinho quando o backfill terminar. Suíte **605/605**.
+
+### 20/07/2026 — Desfecho do dia cidade-inteira (madrugada colhida)
+
+**Backfill concluído sem falhas:** 120 bairros → 1.241 anúncios novos (apto 644 · casa
+597), 121 comparáveis brutos. **Primeira varredura rotativa da madrugada:** 40 bairros,
+442 novos, 151 comparáveis — a rotação e o status ao vivo funcionaram na estreia. O vigia
+de requalificação morreu sem rodar (1 aluguel vazou); requalificação executada na colheita:
+**3.545 imóveis → 549 comparáveis limpos · 2.646 catálogos barrados · 0 aluguéis**.
+**Acervo: 1.655 → 3.547 anúncios em 24h (2,1×).** Base de preço limpa: **35 combinações
+bairro+tipo estimáveis (n≥3) · 26 avaliáveis (n≥5)** — contra 29/21 do baseline de ontem;
+a rotação noturna segue engordando (~35 noites por ciclo completo da cidade). Lição
+operacional: vigia descartável em /tmp não é confiável — a requalificação pós-varredura
+merece entrar no próprio fluxo noturno (candidata pós-G1; por ora a colheita manual cobre).
