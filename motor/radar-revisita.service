@@ -11,3 +11,7 @@ User=www-data
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=2h
+# Cota de CPU (alerta Hostinger 21/07): lote com prioridade baixa e teto de 1,5 nucleo.
+Nice=15
+CPUQuota=150%
+IOWeight=10

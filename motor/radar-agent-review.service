@@ -10,3 +10,6 @@ EnvironmentFile=/opt/radar/api/.env
 ExecStart=/usr/bin/node /opt/radar/api/agent-review.js
 NoNewPrivileges=true
 PrivateTmp=true
+# Cota de CPU (alerta Hostinger 21/07): leitura leve, mas nunca disputa nucleo de manha.
+Nice=15
+CPUQuota=100%

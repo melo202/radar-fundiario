@@ -11,3 +11,8 @@ ExecStart=/usr/bin/node /opt/radar/api/intelligence-orchestrator.js
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=3h
+# Cota de CPU (alerta Hostinger 21/07): a fila roda em loop o dia todo (timer 10 min);
+# quando um job dispara (plano + lotes + sintese K3), fica no ultimo nucleo disponivel.
+Nice=19
+CPUQuota=150%
+IOWeight=1

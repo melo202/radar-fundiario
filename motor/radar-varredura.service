@@ -11,3 +11,8 @@ User=www-data
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=4h
+# Cota de CPU (alerta Hostinger 21/07): trabalho de lote nunca passa de 2 dos 4 vCPUs
+# e cede prioridade para API/nginx/Postgres — a madrugada nao derruba o dia do corretor.
+Nice=15
+CPUQuota=200%
+IOWeight=10
