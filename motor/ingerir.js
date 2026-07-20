@@ -16,8 +16,22 @@ const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 /* Pré-filtro puro (auditoria 20/07): 21% da extração de IA estava sendo queimada em
    resultado de OUTRA cidade (a peneira reprovava depois, mas a chamada já era paga).
    Snippet que não menciona Goiânia em lugar nenhum não ganha IA; o listing bruto FICA
-   registrado (proveniência) — só não vira property nem custo. */
+   registrado (proveniência) — só não vira property nem custo.
+   Blindagem geo da URL (auditoria visual 22/07): um apartamento da VILA NIVI (São
+   Paulo) entrou no acervo e apareceu no card "Preços mudaram em Goiânia" porque o
+   texto do anúncio mencionava Goiânia. As URLs de anúncio carregam a cidade no slug
+   ("...-sp-sao-paulo-vila-nivi-50m2" / "...-go-goiania-goia-390m2"): quando o slug
+   declara UF+cidade, ele MANDA no texto — fora de Goiânia é rejeitado na hora. */
+const UFS_BR = new Set(["ac","al","ap","am","ba","ce","df","es","go","ma","mt","ms","mg","pa","pb","pr","pe","pi","rj","rn","rs","ro","rr","sc","sp","se","to"]);
+export function ufCidadeDaUrl(url = "") {
+  const m = String(url).toLowerCase().match(/-([a-z]{2})-([a-z-]+?)-\d+\s?m2/);
+  if (!m || !UFS_BR.has(m[1])) return null;
+  return { uf: m[1], cidade: m[2].replace(/-/g, " ") };
+}
+
 export function passaPreFiltro({ titulo = "", descricao = "", url = "" }) {
+  const geo = ufCidadeDaUrl(url);
+  if (geo && (geo.uf !== "go" || !geo.cidade.includes("goiania"))) return false;
   return /goi[aâ]nia/i.test(`${titulo}\n${descricao}\n${url}`);
 }
 

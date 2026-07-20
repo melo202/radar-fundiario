@@ -298,8 +298,7 @@ export async function visaoHoje() {
         (SELECT count(*)::int FROM opportunities WHERE organization_id=$1 AND stage NOT IN ('fechado','perdido')) AS opportunities,
         (SELECT count(*)::int FROM tasks WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')) AS tasks,
         (SELECT count(*)::int FROM intelligence_finding_links l JOIN intelligence_findings f ON f.id=l.finding_id
-         JOIN inventory_properties p ON p.id=l.inventory_property_id
-         WHERE p.organization_id=$1 AND p.status='ativo' AND l.status='candidate') AS intelligence_signals`, [org.id]),
+         JOIN inventory_properties p ON p.organization_id=$1 AND p.status='ativo' AND l.status='candidate') AS intelligence_signals`, [org.id]),
   ]);
 
   const acoes = tarefas.rows.map(acaoDeTarefa);
@@ -425,13 +424,23 @@ export async function visaoHoje() {
 export function selecionarNovidades(mudancas, bairrosCarteira, normaliza) {
   const alvo = new Set((bairrosCarteira || []).map(b => normaliza(b)).filter(Boolean));
   const validas = (mudancas || []).filter(m => Number(m.de) > 0 && Number(m.para) > 0 && Number(m.de) !== Number(m.para));
+  /* auditoria visual 22/07: o MESMO anúncio aparecia 2× no card ("subiu 4,3%" e
+     "baixou 12,5%" lado a lado, mesmo id-43950549) porque duas mudanças dele caíam na
+     janela de 7 dias. Um anúncio = UMA novidade: fica só a mudança mais recente. */
+  const porAnuncio = new Map();
+  for (const m of validas) {
+    const chave = m.externalId ? `id:${m.externalId}` : `url:${m.url}`;
+    const atual = porAnuncio.get(chave);
+    if (!atual || new Date(m.quando || 0) > new Date(atual.quando || 0)) porAnuncio.set(chave, m);
+  }
+  const unicas = [...porAnuncio.values()];
   const ordena = arr => [...arr].sort((a, b) => {
     const quedaA = Number(a.para) < Number(a.de), quedaB = Number(b.para) < Number(b.de);
     if (quedaA !== quedaB) return quedaA ? -1 : 1;
     return Math.abs(Number(b.variacaoPct || 0)) - Math.abs(Number(a.variacaoPct || 0));
   });
-  const daCarteira = validas.filter(m => alvo.has(normaliza(m.bairro)));
-  const escolhidas = ordena(daCarteira.length ? daCarteira : validas).slice(0, 3);
+  const daCarteira = unicas.filter(m => alvo.has(normaliza(m.bairro)));
+  const escolhidas = ordena(daCarteira.length ? daCarteira : unicas).slice(0, 3);
   if (!escolhidas.length) return null;
   return {
     escopo: daCarteira.length ? "carteira" : "cidade",
