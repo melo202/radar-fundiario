@@ -30,7 +30,9 @@ test("sala de máquinas: rotas atrás da sessão e dados só de leitura", () => 
   assert.ok(panel.includes('req.url === "/painel/admin/maquina"'));
   assert.ok(panel.includes('req.url === "/painel/api/os/maquina"'));
   const gate = panel.indexOf("daqui para baixo, tudo exige sessão válida");
-  assert.ok(panel.indexOf('req.url === "/painel/admin/maquina"') > gate, "página viva exige sessão");
+  assert.ok(panel.indexOf('req.url === "/painel/admin/maquina") {') > gate, "página viva exige sessão");
+  assert.ok(panel.includes('req.url === "/painel/os" || req.url === "/painel/admin/maquina"'),
+    "sem sessão, a página redireciona ao login em vez de cuspir JSON");
   assert.ok(panel.indexOf('req.url === "/painel/api/os/maquina"') > gate, "dados exigem sessão");
   assert.ok(panel.includes("varredura-status.json"), "status ao vivo da varredura entra no payload");
   assert.ok(panel.includes("async function salaDeMaquinas"), "função é leitura pura");

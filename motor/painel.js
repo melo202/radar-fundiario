@@ -197,7 +197,8 @@ export async function painel(req, res) {
   /* daqui para baixo, tudo exige sessão válida */
   const sessao = sessaoDe(req);
   if (!sessao) {
-    if (req.method === "GET" && req.url === "/painel/os") {
+    /* páginas navegáveis sem sessão voltam ao login — JSON de erro é para API, não para gente */
+    if (req.method === "GET" && (req.url === "/painel/os" || req.url === "/painel/admin/maquina")) {
       res.writeHead(303, Object.assign({ Location: "/painel", "Cache-Control": "no-store" }, SEC));
       return res.end();
     }
