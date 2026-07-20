@@ -56,7 +56,8 @@ test("amostra profissional: bairro diferente nunca entra automaticamente no valo
 test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e não o acervo estático", () => {
   /* pedido do usuário (15/07): "quando eu clicar em analisar tem que disparar e procurar nos sites" */
   assert.match(html, /fetch\(MOTOR_BASE\+"\/motor\/mercado"/);
-  assert.ok(html.includes("AbortSignal.timeout(180000)"), "timeout largo p/ a pesquisa progressiva");
+  /* AQUEC-01 (20/07): caminho frio real mediu 178s — 180s morria na boca do resultado */
+  assert.ok(html.includes("AbortSignal.timeout(240000)"), "timeout largo p/ a pesquisa progressiva (frio real: 178s)");
   assert.ok(html.includes("Procurando ofertas no bairro em vários portais"));
   const srv = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
   assert.ok(srv.includes('req.url === "/motor/mercado"'));
@@ -64,7 +65,11 @@ test("busca ao vivo: o clique dispara /motor/mercado (procura nos portais) e nã
   const ao = readFileSync(new URL("../motor/mercado-aovivo.js", import.meta.url), "utf-8");
   assert.ok(ao.includes('PORTAIS_PRINCIPAIS = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"]'));
   assert.ok(ao.includes('PORTAIS_APROFUNDADOS = ["62imoveis.com.br", "imovelweb.com.br", "chavesnamao.com.br", "wimoveis.com.br"]'));
-  assert.ok(ao.includes("CACHE_H = 6"), "cache de 6h por perfil protege a cota global");
+  /* AQUEC-01: cache subiu para 26h porque o aquecimento noturno re-coleta toda madrugada */
+  assert.ok(ao.includes("CACHE_H = 26"), "cache de ~24h+margem casa com o aquecimento noturno");
+  const aq = readFileSync(new URL("../motor/mercado-aquecer.js", import.meta.url), "utf-8");
+  assert.ok(aq.includes("maxIdadeH: 20"), "aquecedor força re-coleta diária");
+  assert.ok(aq.includes("economico: true"), "aquecedor nunca aprofunda (cota)");
   assert.ok(ao.includes("faixaArea") && ao.includes("quartos"), "cache distingue área e quartos");
   assert.ok(ao.includes("persist: false"), "prévia determinística decide se a busca precisa aprofundar");
   assert.ok(ao.includes('previa.status === "amostra_insuficiente"'));

@@ -208,10 +208,15 @@ http.createServer(async (req, res) => {
       let clienteDesistiu = false;
       res.on("close", () => { if (!res.writableEnded) clienteDesistiu = true; });
       const subject = JSON.parse(await readBody(req) || "{}");
+      /* AQUEC-01: o subject completo fica no registro — é a fonte do re-aquecimento
+         noturno ("quem perguntou ontem tende a perguntar de novo"). Só atributos do
+         imóvel (bairro/tipo/área/quartos), nenhum dado pessoal. */
       const registraFunil = (extra) => pool.query(
         "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('mercado',$1,'mercado-funil',$2)",
         [`${subject.neighborhood || "?"}|${subject.propertyType || "?"}`,
-          JSON.stringify({ duracaoMs: Date.now() - inicio, abandonado: clienteDesistiu, ...extra })]).catch(() => {});
+          JSON.stringify({ duracaoMs: Date.now() - inicio, abandonado: clienteDesistiu,
+            subject: { neighborhood: subject.neighborhood || null, propertyType: subject.propertyType || null,
+              areaM2: subject.areaM2 ?? null, bedrooms: subject.bedrooms ?? null }, ...extra })]).catch(() => {});
       const { avaliarAoVivo } = await import("./mercado-aovivo.js");
       try {
         const resultado = await avaliarAoVivo(subject);

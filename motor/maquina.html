@@ -118,6 +118,7 @@ function rotuloEvento(e){
   const d=e.detail||{};
   if(e.entity==="varredura"&&e.action==="executada")return`Varredura concluída: <b>${fmt(d.bairros)}</b> bairros, <b>${fmt(d.novos)}</b> anúncios novos, ${fmt(d.comparaveis)} comparáveis <small>(${d.tipo||""} · ${d.portalAlvo||"geral"})</small>`;
   if(e.entity==="revisita"&&e.action==="executada")return`Revisita noturna: ${fmt(d.alvos??d.total??"")} anúncios conferidos`;
+  if(e.entity==="mercado-aquecimento"&&e.action==="executada")return`Aquecimento de mercado: <b>${fmt(d.aquecidos)}</b> pesquisa(s) re-coletada(s) <small>(cache quente para o dia)</small>`;
   if(e.action==="mudanca-preco")return`<b>Preço ${Number(d.para)<Number(d.de)?"baixou":"subiu"}</b> ${d.variacaoPct!=null?Math.abs(d.variacaoPct).toLocaleString("pt-BR")+"%":""}: ${d.tipo||"imóvel"} ${d.bairro?`· ${d.bairro}`:""} <small>(verificado)</small>`;
   if(e.action==="mudanca-preco-suspeita")return`Salto de preço em quarentena <small>(fora do termômetro)</small>`;
   if(e.entity==="valuation"||e.entity==="avaliacao")return`Avaliação ${e.action}`;
@@ -180,7 +181,7 @@ function render(){
   /* TURNO 24h */
   $("turno").innerHTML=(d.noite||[]).length
     ?`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2>`+(d.noite||[]).map(t=>{const x=t.detail||{};
-        return`<p><span class="quando">${new Date(t.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>${t.entity==="varredura"?`varredura: <b>${fmt(x.bairros)}</b> bairros · <b>${fmt(x.novos)}</b> novos · ${fmt(x.comparaveis)} comparáveis`:`revisita: anúncios conferidos`}</p>`;}).join("")
+        return`<p><span class="quando">${new Date(t.created_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>${t.entity==="varredura"?`varredura: <b>${fmt(x.bairros)}</b> bairros · <b>${fmt(x.novos)}</b> novos · ${fmt(x.comparaveis)} comparáveis`:t.entity==="mercado-aquecimento"?`aquecimento de mercado: <b>${fmt(x.aquecidos)}</b> aquecido(s) · ${fmt(x.jaQuentes)} já quentes${x.falhas?` · ${fmt(x.falhas)} falha(s)`:""}`:`revisita: anúncios conferidos`}</p>`;}).join("")
     :`<h2 style="margin-bottom:9px">Turnos das últimas 24 h</h2><p style="color:var(--muted);font-size:12.5px">Nenhum turno nas últimas 24 h — o próximo está no relógio acima.</p>`;
 
   /* FUNIL da análise de mercado (AUD-03): quantos pedem, quantos saem do cache,

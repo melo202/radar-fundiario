@@ -8,12 +8,17 @@ import { normalizaBairro } from "./estatistica.js";
 
 const PORTAIS_PRINCIPAIS = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"];
 const PORTAIS_APROFUNDADOS = ["62imoveis.com.br", "imovelweb.com.br", "chavesnamao.com.br", "wimoveis.com.br"];
-const CACHE_H = 6;
+/* AQUEC-01 (roadmap v2 item 2.5, 20/07/2026): o cache subiu de 6h para 26h porque o
+   AQUECIMENTO NOTURNO (mercado-aquecer.js, 05h15) re-coleta os subjects da carteira e
+   os pedidos recentes TODA madrugada — o corretor pega dado de no máximo ~24h, sem a
+   espera fria de ~3 min (medida real 20/07: 178s, raspando o timeout do front). As 26h
+   (24+margem) garantem que o aquecido de ontem ainda vale quando o de hoje roda. */
+const CACHE_H = 26;
 const TETO_EXTRACAO_INICIAL = 6;
 const TETO_EXTRACAO_TOTAL = 18;
 const dormir = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function chaveDaPesquisa(subject) {
+export function chaveDaPesquisa(subject) {
   /* O cache antigo era só bairro+tipo e reaproveitava a busca de um apartamento de
      60 m² para outro de 250 m². Perfil arredondado reduz gasto sem misturar buscas. */
   const area = Number(subject.areaM2);
@@ -54,17 +59,22 @@ async function executarConsulta(consulta, fonte, limite, ingestao) {
   }
 }
 
-export async function avaliarAoVivo(subject) {
+/* opts (AQUEC-01): maxIdadeH — o aquecedor noturno passa ~20h para FORÇAR re-coleta
+   diária (senão o warm de ontem, ainda "fresco" pelas 26h, pularia a coleta e o cache
+   envelheceria em noites alternadas); economico — só a 1ª passagem (3 buscas), nunca o
+   aprofundamento: o aquecimento cabe na cota (~540 buscas/mês p/ 6 subjects/noite). */
+export async function avaliarAoVivo(subject, opts = {}) {
   const bairro = subject.neighborhood, tipo = subject.propertyType;
   if (!bairro || !tipo) { const e = new Error("subject precisa de neighborhood e propertyType"); e.status = 400; throw e; }
   const chave = chaveDaPesquisa(subject);
+  const maxIdadeH = Number(opts.maxIdadeH) > 0 ? Number(opts.maxIdadeH) : CACHE_H;
 
   const recente = await pool.query(
     `SELECT created_at AS quando, detail FROM audit_log
      WHERE action='mercado-aovivo' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`, [chave]);
   const q = recente.rows[0]?.quando;
   const coletaAnterior = recente.rows[0]?.detail || {};
-  const fresco = q && (Date.now() - new Date(q).getTime()) < CACHE_H * 3600 * 1000;
+  const fresco = q && (Date.now() - new Date(q).getTime()) < maxIdadeH * 3600 * 1000;
 
   let ingestao = null;
   if (!fresco) {
@@ -83,8 +93,10 @@ export async function avaliarAoVivo(subject) {
     const previa = await avaliar(subject, { persist: false });
 
     /* 2ª passagem: só gasta a cota maior se os filtros profissionais ainda não
-       encontraram o mínimo. Bairros vizinhos continuam proibidos no cálculo. */
-    if (previa.status === "amostra_insuficiente") {
+       encontraram o mínimo. Bairros vizinhos continuam proibidos no cálculo.
+       Modo econômico (AQUEC-01): o aquecedor noturno nunca aprofunda — se a amostra
+       ficou curta, o clique do corretor (ao vivo, não-econômico) ainda pode aprofundar. */
+    if (!opts.economico && previa.status === "amostra_insuficiente") {
       ingestao.aprofundou = true;
       for (const portal of PORTAIS_APROFUNDADOS) {
         const restante = TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao;

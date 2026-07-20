@@ -1,0 +1,13 @@
+[Unit]
+Description=Radar Fundiario - aquecimento noturno do cache de mercado (AQUEC-01)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/mercado-aquecer.js
+User=www-data
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=2h

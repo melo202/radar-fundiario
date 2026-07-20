@@ -22,7 +22,7 @@ cp limite-goiania.json /opt/radar/api/ # fundo Cidade Viva do login do painel
 cd /opt/radar/api
 [ -f .env ] || { echo "FALTA /opt/radar/api/.env (DATABASE_URL, AI_*)"; exit 1; }
 npm install --omit=dev --no-audit --no-fund --loglevel=error
-node --check server.js && node --check ai-provider.js && node --check agent-runtime.js && node --check assistente.js && node --check agent-review.js && node --check intelligence-orchestrator.js && node --check intelligence-feedback.js && node --check document-intake.js && node --check document-service.js && node --check extract.js && node --check painel.js && node --check os-core.js && node --check agent-tools.js && node --check os-app.js && node --check oportunidades.js && node --check varredura.js
+node --check server.js && node --check ai-provider.js && node --check agent-runtime.js && node --check assistente.js && node --check agent-review.js && node --check intelligence-orchestrator.js && node --check intelligence-feedback.js && node --check document-intake.js && node --check document-service.js && node --check extract.js && node --check painel.js && node --check os-core.js && node --check agent-tools.js && node --check os-app.js && node --check oportunidades.js && node --check varredura.js && node --check mercado-aquecer.js
 set -a; source .env; set +a
 node migrate.js
 cp radar-api.service /etc/systemd/system/radar-api.service
@@ -38,6 +38,8 @@ cp radar-agent-review.service /etc/systemd/system/radar-agent-review.service
 cp radar-agent-review.timer /etc/systemd/system/radar-agent-review.timer
 cp radar-intelligence.service /etc/systemd/system/radar-intelligence.service
 cp radar-intelligence.timer /etc/systemd/system/radar-intelligence.timer
+cp radar-mercado.service /etc/systemd/system/radar-mercado.service
+cp radar-mercado.timer /etc/systemd/system/radar-mercado.timer
 systemctl daemon-reload
 systemctl enable --now radar-api >/dev/null 2>&1
 systemctl enable --now radar-varredura.timer >/dev/null 2>&1
@@ -46,6 +48,7 @@ systemctl enable --now radar-indices.timer >/dev/null 2>&1
 systemctl enable --now radar-revisita.timer >/dev/null 2>&1
 systemctl enable --now radar-agent-review.timer >/dev/null 2>&1
 systemctl enable --now radar-intelligence.timer >/dev/null 2>&1
+systemctl enable --now radar-mercado.timer >/dev/null 2>&1
 systemctl restart radar-api
 # AUD-03: o proxy ArcGIS agora é versionado no repo (motor/proxy-arcgis.js) — antes o
 # /opt/radar/proxy/server.js só existia editado à mão no VPS (drift). Instala e reinicia

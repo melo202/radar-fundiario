@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - agenda do aquecimento de mercado (05h15, depois da varredura e da revisita)
+
+[Timer]
+OnCalendar=*-*-* 05:15:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

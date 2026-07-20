@@ -135,7 +135,7 @@ async function salaDeMaquinas() {
      ORDER BY created_at DESC LIMIT 10`).then(r => r.rows).catch(() => []);
   const noite = await pool.query(
     `SELECT entity, detail, created_at FROM audit_log
-     WHERE action='executada' AND entity IN ('varredura','revisita')
+     WHERE action='executada' AND entity IN ('varredura','revisita','mercado-aquecimento')
        AND created_at > now()-interval '24 hours' ORDER BY created_at DESC LIMIT 6`).then(r => r.rows);
   const cota = await pool.query(
     `SELECT COALESCE(SUM((detail->>'bairros')::int),0)::int AS usadas FROM audit_log
