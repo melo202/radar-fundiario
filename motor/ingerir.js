@@ -13,6 +13,14 @@ import { identidadeAnuncio } from "./identidade-anuncio.js";
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
+/* Pré-filtro puro (auditoria 20/07): 21% da extração de IA estava sendo queimada em
+   resultado de OUTRA cidade (a peneira reprovava depois, mas a chamada já era paga).
+   Snippet que não menciona Goiânia em lugar nenhum não ganha IA; o listing bruto FICA
+   registrado (proveniência) — só não vira property nem custo. */
+export function passaPreFiltro({ titulo = "", descricao = "", url = "" }) {
+  return /goi[aâ]nia/i.test(`${titulo}\n${descricao}\n${url}`);
+}
+
 export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair = Infinity }) {
   const achados = [];
   for (let p = 0; p < Math.min(paginas, 3); p++) {
@@ -39,6 +47,7 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
     const { id, novo } = ins.rows[0];
     if (!novo) { stats.jaConhecidos++; continue; }
     stats.novos++;
+    if (!passaPreFiltro(a)) { stats.semGoiania = (stats.semGoiania || 0) + 1; continue; }
     stats.tentativasExtracao++;
     /* A1 (atualização contínua): o MESMO anúncio (portal + id) reaparecendo com conteúdo
        novo = mudou desde a última varredura. A coleta anterior só conta se foi um

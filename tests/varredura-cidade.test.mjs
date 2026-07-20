@@ -48,3 +48,19 @@ test("varrer: aceita tipo explícito (backfill) e monta a noite com fixos + rota
   assert.ok(src.includes("[...BAIRROS_PADRAO, ...janelaRotacao(listaCidade(), diaIndex, lote)]"));
   assert.ok(deploy.includes("node --check varredura.js"), "deploy valida a varredura");
 });
+
+/* Auditoria 20/07: 21% do intake era outra cidade — o Brave relaxava o termo goiania
+   em bairros de cauda, e o pré-filtro não existia (a IA pagava pela peneira reprovar). */
+test("precisão de cidade: goiania ENTRE ASPAS na consulta e portal com override explícito", async () => {
+  assert.ok(src.includes('${bairro} "goiania" venda'), "termo citado é exigido pelo Brave");
+  assert.ok(src.includes('if (portal === undefined) portal = PORTAIS_ALVO['), "portal:\"\" (geral) é respeitado — só undefined cai na rotação do dia");
+  const { passaPreFiltro } = await import("../motor/ingerir.js");
+  assert.equal(passaPreFiltro({ titulo: "Apartamento no Cambuí, Campinas - SP", descricao: "2 quartos", url: "https://portal.com/x" }), false,
+    "snippet sem Goiânia não ganha extração de IA");
+  assert.equal(passaPreFiltro({ titulo: "Casa no Setor Bueno", descricao: "…", url: "https://www.olx.com.br/goiania-e-regiao/casa-123" }), true,
+    "Goiânia na URL basta");
+  const ingerirSrc = readFileSync(new URL("../motor/ingerir.js", import.meta.url), "utf-8");
+  assert.ok(ingerirSrc.includes("if (!passaPreFiltro(a)) { stats.semGoiania"), "descarte acontece ANTES de gastar IA");
+  const gate = ingerirSrc.indexOf("passaPreFiltro(a)");
+  assert.ok(gate > 0 && gate < ingerirSrc.indexOf("stats.tentativasExtracao++"), "pré-filtro vem antes da tentativa de extração");
+});

@@ -66,7 +66,7 @@ const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 export const PORTAIS_ALVO = ["", "zapimoveis.com.br", "vivareal.com.br", "olx.com.br",
   "imovelweb.com.br", "chavesnamao.com.br", "dfimoveis.com.br"];
 
-export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo = null } = {}) {
+export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo = null, portal = undefined } = {}) {
   const dia = new Date().getDate();
   tipo = tipo || ((dia % 2 === 0) ? "apartamento" : "casa");
   if (!bairros) {
@@ -74,7 +74,9 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
     const diaIndex = Math.floor(Date.now() / 86400000);
     bairros = [...BAIRROS_PADRAO, ...janelaRotacao(listaCidade(), diaIndex, lote)];
   }
-  const portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
+  /* portal explícito (ex.: backfill usa a busca GERAL — "" — em vez do portal do dia,
+     que pode ser péssimo para o alvo: dfimoveis é DF-cêntrico); undefined = rotação */
+  if (portal === undefined) portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
   const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
   const inicio = new Date().toISOString();
   let feitos = 0;
@@ -82,7 +84,9 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
     escreveStatus({ rodando: true, tipo, portalAlvo: portal || "geral", inicio,
       total: bairros.length, feitos, bairroAtual: bairro,
       novos: resumo.novos, comparaveis: resumo.comparaveis });
-    const consulta = `"R$" ${tipo} ${bairro} goiania venda m2${portal ? ` site:${portal}` : ""}`;
+    /* "goiania" ENTRE ASPAS (auditoria 20/07): sem aspas o Brave relaxava o termo em
+       bairros de cauda e devolvia São Paulo/DF — 21% do intake era outra cidade */
+    const consulta = `"R$" ${tipo} ${bairro} "goiania" venda m2${portal ? ` site:${portal}` : ""}`;
     try {
       const s = await ingerir({ consulta, paginas, tier });
       resumo.encontrados += s.encontrados; resumo.novos += s.novos; resumo.extraidos += s.extraidos;
