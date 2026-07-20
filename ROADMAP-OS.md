@@ -488,3 +488,22 @@ bairro+tipo estimáveis (n≥3) · 26 avaliáveis (n≥5)** — contra 29/21 do 
 a rotação noturna segue engordando (~35 noites por ciclo completo da cidade). Lição
 operacional: vigia descartável em /tmp não é confiável — a requalificação pós-varredura
 merece entrar no próprio fluxo noturno (candidata pós-G1; por ora a colheita manual cobre).
+
+### 20/07/2026 — Auditoria externa do site: busca digitada consertada + SEO básico no ar
+
+Auditoria do usuário (3 críticos, 5 importantes) respondida no mesmo dia. **AUD-01, o
+crítico nº 1:** "rua portugal 582" digitado devolvia "nenhuma sugestão" — o autocomplete
+casava a FRASE INTEIRA contra o índice CNEFE, que só guarda o nome da rua (e a rua real é
+AVENIDA Portugal). Agora o match usa o núcleo da frase (sem tipo de via, sem número), o
+toque na sugestão preserva o número de porta, e o estado sem sugestão com detecção válida
+virou item de ação "Buscar …" (mesmo caminho do Enter) em vez de beco. O "(?)" dos chips
+de confiança média (lido como ícone quebrado) virou "(provável)". **AUD-02, SEO:** meta
+description própria, canonical, JSON-LD (WebApplication+FAQPage), FAQ estática visível,
+noscript honesto, robots.txt e sitemap.xml servidos (deploy-app.sh copia; exceção ao
+*.txt do .gitignore). **Não reproduzidos em navegador real:** o dropdown de setor FILTRA
+("jardim goias" → 2 itens) e o Buscar vazio TEM toast — a ferramenta do auditor seta
+valor sem evento input e não espera toast; /painel/os sem sessão já redireciona ao login
+desde 19/07 (verificado: 303 → /painel 200). Suíte **606/606**; deploy conjunto ok
+(87959f9), tudo conferido ao vivo. Ficam como candidatas pós-G1 (inteligência congelada):
+proxy/cache da camada da Prefeitura, Cache-Control/TTFB do HTML e observabilidade do
+funil da análise de mercado.
