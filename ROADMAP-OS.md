@@ -549,3 +549,19 @@ autorização de divulgação · Apartamento · Setor Bueno". **0.13:** title do
 deploy conjunto f6f88bd. **Pendências HUMANAS da Fase 0.A:** tornar privado o repo
 PAINEL-MC (clientes/ com nomes reais em repo público — LGPD; só o dono muda visibilidade)
 e trocar a PAINEL_SENHA no .env do VPS (nova senha não pode circular em chat).
+
+### 20/07/2026 — Madrugada garantida: aquecimento noturno do cache de mercado (v2 item 2.5)
+
+O medidor do funil tinha dado o número: frio = 178s, quente = 55ms. Agora o robô paga a
+espera de madrugada: `mercado-aquecer.js` (timer 05h15, depois da varredura e revisita)
+re-coleta os perfis da CARTEIRA ativa + os PEDIDOS dos últimos 7 dias (o funil passou a
+registrar o subject completo), deduplicados pela mesma chave do cache, teto 6/noite em
+modo econômico (só a 1ª passagem ≈ 3 buscas Brave cada ≈ 540/mês — cabe na sobra da
+cota pós-varredura). CACHE_H subiu 6h→26h (o aquecedor renova diariamente com
+maxIdadeH=20; corretor pega dado de no máximo ~24h, instantâneo). Timeout do front
+180→240s (o frio real de 178s morria na boca). Sala de Máquinas mostra o turno do
+aquecimento. Validado em produção em 3 rodadas reais: 1ª aqueceu o Setor Bueno com 3
+consultas e REVELOU um caso real — imóvel sem área não tem estimativa, aquecê-lo é
+desperdício → planejador pula sem-área (guarda + teste); 3ª rodada limpa (0 falhas,
+0 cota, idempotente). Suíte **608/608**; deploy ceb2cfd; desligável com
+MERCADO_AQUECER=false.
