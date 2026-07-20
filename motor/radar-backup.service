@@ -1,0 +1,13 @@
+[Unit]
+Description=Radar Fundiario - backup diario do Postgres (retencao 14 dias)
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+ExecStart=/bin/bash /opt/radar/api/backup-bd.sh
+NoNewPrivileges=true
+PrivateTmp=true
+# Coleira padrão dos lotes (alerta Hostinger 21/07): dump nunca disputa núcleo com a API.
+Nice=15
+CPUQuota=100%
