@@ -144,3 +144,6 @@ textarea{width:100%;resize:vertical;border:1px solid #ccd8da;border-radius:14px;
 .plantao-line{margin:-18px 2px 24px;color:var(--muted);font-size:12px}
 .plantao-line::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:var(--brand);animation:plantao-pulso 2.4s ease-in-out infinite}
 @keyframes plantao-pulso{0%,100%{opacity:.35}50%{opacity:1}}
+.admin-door{margin:34px 2px 0;text-align:center;font-size:11.5px}
+.admin-door a{color:var(--muted);text-decoration:none;font-weight:700;letter-spacing:.04em}
+.admin-door a:hover{color:var(--brand-strong)}
