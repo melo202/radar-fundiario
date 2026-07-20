@@ -239,12 +239,16 @@ export async function confirmarCaptura(dados) {
 
 function acaoDeTarefa(t) {
   const vencida = t.due_at && new Date(t.due_at).getTime() < Date.now();
+  /* AUD-04 (auditoria do painel 21/07): pendências gêmeas sem contexto — "Solicitar
+     autorização de divulgação" aparecia 2× idêntica no Para hoje. O imóvel entra no
+     próprio título (property_title vem do LEFT JOIN em visaoHoje); o assistente herda
+     o mesmo texto via consultar_meu_dia. */
   return {
     id: t.id,
     source: "task",
     entityType: t.related_entity_type,
     entityId: t.related_entity_id,
-    title: t.title,
+    title: t.property_title ? `${t.title} · ${t.property_title}` : t.title,
     reason: vencida ? "O prazo já venceu." : "Esta ação está programada para o seu dia.",
     actionLabel: "Marcar como concluída",
     dueAt: t.due_at,
@@ -258,9 +262,13 @@ export async function visaoHoje() {
   const org = await garantirOrganizacao();
   const [tarefas, incompletos, oportunidades, sinais, contagens] = await Promise.all([
     db.query(
-      `SELECT id,related_entity_type,related_entity_id,title,due_at,priority,status
-       FROM tasks WHERE organization_id=$1 AND status IN ('pendente','em_andamento','adiada')
-       ORDER BY due_at ASC NULLS LAST, created_at ASC LIMIT 30`, [org.id]),
+      `SELECT t.id,t.related_entity_type,t.related_entity_id,t.title,t.due_at,t.priority,t.status,
+              p.title AS property_title
+       FROM tasks t
+       LEFT JOIN inventory_properties p
+         ON t.related_entity_type='inventory_property' AND p.id=t.related_entity_id
+       WHERE t.organization_id=$1 AND t.status IN ('pendente','em_andamento','adiada')
+       ORDER BY t.due_at ASC NULLS LAST, t.created_at ASC LIMIT 30`, [org.id]),
     db.query(
       `SELECT id,title,property_type,neighborhood,asking_price,owner_contact_id,capture_stage,created_at
        FROM inventory_properties

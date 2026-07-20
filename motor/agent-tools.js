@@ -277,6 +277,12 @@ export function chooseReadOnlyTools(prompt, session) {
   const text = norm(prompt);
   const chosen = [];
   const contagem = /\b(quantos|quantas|total)\b/.test(text);
+  /* AUD-04 (auditoria do painel 21/07 — o bug mais caro do produto): "qual imóvel tá
+     PENDENTE" não casava nenhum gatilho de dia ("pendencia|tarefa|hoje|…"), só
+     buscar_imovel rodava, e o modelo — sem a lista de pendências no contexto — afirmou
+     que não havia nenhuma (com 8 ativas). Conversa GERAL agora abre SEMPRE com o estado
+     do dia (consultar_meu_dia é 1 query local barata); o assistente nasce sabendo. */
+  if (session.object_type === "general") chosen.push("consultar_meu_dia");
   /* Uma visita já aponta para oportunidade, pessoa e imóvel exatos. Buscar por palavras
      novamente desperdiça tokens e pode misturar homônimos ou outros imóveis. */
   if (session.object_type === "visit") return /\b(documento|documentos|arquivo|arquivos|matricula|certidao|contrato|escritura|onus|penhora)\b/.test(text)
@@ -289,7 +295,9 @@ export function chooseReadOnlyTools(prompt, session) {
   if (session.object_type === "property" && chosen.length < 2) chosen.push("abrir_dossie");
   else if (session.object_type === "valuation" && !chosen.length) chosen.push("abrir_avaliacao");
   else if (session.object_type === "contact") chosen.push("buscar_cliente");
-  if (contagem || /\b(hoje|dia|prioridade|pendencia|tarefa|atencao|urgente)\b/.test(text)) chosen.push("consultar_meu_dia");
+  /* AUD-04: gatilho ampliado — a família toda de "pendente/vencido/atrasado/prazo/
+     prioridades/urgencias/agenda/resolver" também significa "consultar o dia". */
+  if (contagem || /\b(hoje|dia|prioridade|prioridades|pendencia|pendencias|pendente|pendentes|tarefa|tarefas|atencao|urgente|urgentes|urgencia|urgencias|vencido|vencida|vencidos|vencidas|atrasado|atrasada|atrasados|atrasadas|prazo|prazos|agenda|resolver|fazer)\b/.test(text)) chosen.push("consultar_meu_dia");
   if (!contagem && session.object_type !== "property" && /\b(imovel|imoveis|carteira|captacao|apartamento|apartamentos|casa|casas|terreno|terrenos)\b/.test(text)) chosen.push("buscar_imovel");
   if (!contagem && session.object_type !== "contact" && /\b(cliente|clientes|contato|contatos|proprietario|proprietarios|comprador|compradores|relacionamento|relacionamentos)\b/.test(text)) chosen.push("buscar_cliente");
   return [...new Set(chosen)].slice(0, 2);

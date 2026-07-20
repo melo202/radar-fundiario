@@ -52,9 +52,15 @@ test("assistente: rotas ficam sob sessão e CSRF; a tela oferece uma entrada cen
 test("assistente: ferramentas de leitura são escolhidas sem entregar o banco ao Hermes", () => {
   assert.deepEqual(READ_ONLY_AGENT_TOOLS, ["consultar_meu_dia", "buscar_imovel", "abrir_dossie", "buscar_cliente", "buscar_comparaveis", "abrir_avaliacao", "consultar_entorno", "preparar_visita", "ler_documentos"]);
   assert.deepEqual(chooseReadOnlyTools("Quantos imóveis eu tenho?", { object_type: "general" }), ["consultar_meu_dia"]);
-  assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["buscar_imovel"]);
-  assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["buscar_cliente"]);
-  assert.deepEqual(chooseReadOnlyTools("Analise as pendências deste imóvel", { object_type: "property" }), ["abrir_dossie"]);
+  /* AUD-04 (auditoria 21/07): conversa geral SEMPRE nasce com o estado do dia — foi a
+     pergunta real "qual imóvel tá pendente" (sem a palavra "pendência") que pegou o
+     assistente afirmando "nenhuma pendência" com 8 ativas. */
+  assert.deepEqual(chooseReadOnlyTools("Mostre apartamentos no Bueno", { object_type: "general" }), ["consultar_meu_dia", "buscar_imovel"]);
+  assert.deepEqual(chooseReadOnlyTools("Encontre compradores ativos", { object_type: "general" }), ["consultar_meu_dia", "buscar_cliente"]);
+  assert.deepEqual(chooseReadOnlyTools("qual imóvel tá pendente?", { object_type: "general" }), ["consultar_meu_dia", "buscar_imovel"]);
+  assert.ok(chooseReadOnlyTools("o que venceu essa semana?", { object_type: "general" }).includes("consultar_meu_dia"));
+  assert.ok(chooseReadOnlyTools("tem tarefa atrasada no apartamento?", { object_type: "property", object_id: null }).includes("consultar_meu_dia"));
+  assert.deepEqual(chooseReadOnlyTools("Analise as pendências deste imóvel", { object_type: "property" }), ["abrir_dossie", "consultar_meu_dia"]);
   assert.deepEqual(chooseReadOnlyTools("Critique os comparáveis e a avaliação", { object_type: "property" }), ["buscar_comparaveis", "abrir_avaliacao"]);
   assert.deepEqual(chooseReadOnlyTools("O que existe no entorno?", { object_type: "property" }), ["consultar_entorno", "abrir_dossie"]);
   assert.deepEqual(chooseReadOnlyTools("Leia esta avaliação", { object_type: "valuation" }), ["abrir_avaliacao"]);
