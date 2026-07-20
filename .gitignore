@@ -2,6 +2,8 @@
 __pycache__/
 .claude/
 *.txt
+# SEO: o robots.txt é servido na raiz do site — única exceção ao *.txt acima
+!robots.txt
 bairros-goiania.recon.json
 
 # segredos nunca entram no git (o .env real vive so no VPS)

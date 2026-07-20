@@ -13,6 +13,7 @@ main() {
   mkdir -p "$WEBROOT"
   cp index.html radar-goiania.html como-usar.html caixa-goiania.js sw.js manifest.json \
      icon-192.png icon-512.png apple-touch-icon.png README.md \
+     robots.txt sitemap.xml \
      bairros-goiania.json bairro-cdbairro.json limite-goiania.json "$WEBROOT/"
   for file in logradouros-goiania.json bairros-goiania.report.md prototipo-login-cidade-viva.html; do
     [ -f "$file" ] && cp "$file" "$WEBROOT/" || true
