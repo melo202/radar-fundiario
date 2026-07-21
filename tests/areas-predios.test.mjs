@@ -4,7 +4,7 @@
    anúncios é o contrapeso honesto, calculado por match determinístico de tokens. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normPredio, montarIndicePredios, prediosNoTitulo, mediana, cruzarAreas } from "../motor/areas-predios.js";
+import { normPredio, normRua, montarIndicePredios, prediosNoTitulo, prediosNoEndereco, mediana, cruzarAreas } from "../motor/areas-predios.js";
 import { areaDaUrl } from "../motor/identidade-anuncio.js";
 import { avaliarQualidade } from "../motor/qualidade.js";
 
@@ -23,12 +23,13 @@ test("areaDaUrl: metragem de vitrine do slug; fora do padrão = null", () => {
   assert.equal(areaDaUrl(""), null);
 });
 
-test("índice: nome com um único token curto (<6) fica de fora (genérico demais)", () => {
-  const { originais } = montarIndicePredios(["Cond Prime", "Ed Silverstone", "Residencial Liv Urban Marista"]);
-  const chaves = [...originais.keys()];
-  assert.ok(!chaves.some(c => c.includes("PRIME")), "PRIME sozinho casaria com meio mundo");
-  assert.ok(chaves.some(c => c.includes("SILVERSTONE")), "token único longo e raro entra");
-  assert.ok(chaves.some(c => c.includes("LIV URBAN MARISTA")));
+test("índice: token único curto (<6) não casa por NOME, mas segue pelo ENDEREÇO", () => {
+  const { originais, matchTokens, idx } = montarIndicePredios(["Cond Prime", "Ed Silverstone", "Residencial Liv Urban Marista"]);
+  const prime = normPredio("Cond Prime");
+  assert.equal(matchTokens.get(prime).length, 0, "PRIME fora do canal nome — casaria com meio mundo");
+  assert.ok(!idx.get("PRIME"), "e não indexa o token");
+  assert.ok(originais.has(prime), "mas continua no cruzamento pelo canal endereço");
+  assert.ok((matchTokens.get(normPredio("Ed Silverstone")) || []).length > 0, "token único longo e raro casa por nome");
 });
 
 test("match: todos os tokens distintivos precisam estar no título", () => {
@@ -46,6 +47,46 @@ test("mediana: par, ímpar, zeros e vazia", () => {
   assert.equal(mediana([40, 80]), 60);
   assert.equal(mediana([0, null, 50]), 50);
   assert.equal(mediana([]), null);
+});
+
+test("normRua: CNEFE e cadastro convergem (tipo de via fora, letra+número compacto)", () => {
+  assert.equal(normRua("R 1141"), "1141");
+  assert.equal(normRua("Rua 1141"), "1141");
+  assert.equal(normRua("AV T 43"), "T43");
+  assert.equal(normRua("Avenida Portugal"), "PORTUGAL");
+  assert.equal(normRua("av. portugal"), "PORTUGAL");
+});
+
+test("canal ENDEREÇO: anúncio sem nome no título casa pela rua+número (só apto/comercial)", () => {
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  const indice = montarIndicePredios(cadastro);
+  assert.deepEqual(prediosNoEndereco({ rua: "Rua 1141", numero: "337" }, indice), [normPredio("Cond Liv Urban Marista")]);
+  assert.deepEqual(prediosNoEndereco({ rua: "Rua 1141", numero: "339" }, indice), [], "número vizinho não é o condomínio");
+  assert.deepEqual(prediosNoEndereco({ rua: "Rua 1141" }, indice), [], "sem número não casa");
+});
+
+test("cruzarAreas: endereço alimenta prédio sem nome nos títulos; mesma unidade não conta 2x", () => {
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  const r = cruzarAreas(cadastro, [
+    { id: 1, titulo: "Apartamento à venda no Setor Marista", tipo: "apartamento", area: 56, rua: "Rua 1141", numero: "337" },
+    { id: 2, titulo: "Apto 2 quartos Marista", tipo: "apartamento", area: 64, rua: "Rua 1141", numero: "337" },
+    { id: 3, titulo: "Studio Liv Urban Marista", tipo: "apartamento", area: 38, rua: "Rua 1141", numero: "337" },
+    { id: 4, titulo: "Casa na Rua 1141, 337", tipo: "casa", area: 300, rua: "Rua 1141", numero: "337" },
+  ]);
+  const liv = r.predios[normPredio("Cond Liv Urban Marista")];
+  assert.equal(liv.n, 3, "a casa no mesmo endereço NÃO entra — tipo errado");
+  assert.equal(liv.medianaM2, 56);
+  assert.equal(r.versao, 2);
+});
+
+test("cruzarAreas: mesmo anúncio casando por nome E endereço conta uma vez só", () => {
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  const r = cruzarAreas(cadastro, [
+    { id: 1, titulo: "Studio Liv Urban Marista", tipo: "apartamento", area: 38, rua: "Rua 1141", numero: "337" },
+    { id: 2, titulo: "Apto Liv Urban Marista 2q", tipo: "apartamento", area: 56, rua: "Rua 1141", numero: "337" },
+    { id: 3, titulo: "Cobertura Liv Urban Marista", tipo: "apartamento", area: 107, rua: "Rua 1141", numero: "337" },
+  ]);
+  assert.equal(r.predios[normPredio("Cond Liv Urban Marista")].n, 3, "3 anúncios, não 6 — dedup por anúncio");
 });
 
 test("cruzarAreas: LIV URBAN — mediana de vitrine honesta mesmo com 1 anúncio inflado", () => {
