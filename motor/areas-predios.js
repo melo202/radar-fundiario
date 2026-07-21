@@ -208,7 +208,7 @@ async function prediosDoCadastro() {
 
 async function anunciosComArea(pool) {
   const r = await pool.query(
-    `SELECT p.id, l.titulo, p.property_type AS tipo,
+    `SELECT p.id, l.raw_title AS titulo, p.property_type AS tipo,
             COALESCE((p.characteristics->>'urlAreaM2')::numeric,
                      (p.characteristics->>'privateAreaM2')::numeric,
                      (p.characteristics->>'totalAreaM2')::numeric) AS area,
