@@ -116,7 +116,13 @@ function contagem(alvo){const s=Math.max(0,(alvo-new Date())/1000);
 
 function rotuloEvento(e){
   const d=e.detail||{};
-  if(e.entity==="varredura"&&e.action==="executada")return`Varredura concluída: <b>${fmt(d.bairros)}</b> bairros, <b>${fmt(d.novos)}</b> anúncios novos, ${fmt(d.comparaveis)} comparáveis <small>(${d.tipo||""} · ${d.portalAlvo||"geral"})</small>`;
+  if(e.entity==="varredura"&&e.action==="executada"){
+    /* 21/07: degradação NUNCA mais é silenciosa — falha de extração e abortos na cara */
+    const alertas=[d.abortadoPorCota?"⛔ cota de busca esgotada — ronda abortada":null,
+      d.abortadoPorExtracao?"⛔ extração no chão — ronda abortada":null,
+      d.falhasExtracao>0?`⚠ ${fmt(d.falhasExtracao)} extração(ões) falharam (2ª chance automática)`:null].filter(Boolean);
+    return`Varredura concluída: <b>${fmt(d.bairros)}</b> bairros, <b>${fmt(d.novos)}</b> anúncios novos, ${fmt(d.comparaveis)} comparáveis <small>(${d.tipo||""} · ${d.portalAlvo||"geral"})</small>${alertas.length?`<br><small style="color:var(--warm)">${alertas.join(" · ")}</small>`:""}`;
+  }
   if(e.entity==="revisita"&&e.action==="executada")return`Revisita noturna: ${fmt(d.alvos??d.total??"")} anúncios conferidos`;
   if(e.entity==="mercado-aquecimento"&&e.action==="executada")return`Aquecimento de mercado: <b>${fmt(d.aquecidos)}</b> pesquisa(s) re-coletada(s) <small>(cache quente para o dia)</small>`;
   if(e.action==="mudanca-preco")return`<b>Preço ${Number(d.para)<Number(d.de)?"baixou":"subiu"}</b> ${d.variacaoPct!=null?Math.abs(d.variacaoPct).toLocaleString("pt-BR")+"%":""}: ${d.tipo||"imóvel"} ${d.bairro?`· ${d.bairro}`:""} <small>(verificado)</small>`;

@@ -77,9 +77,13 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
   /* portal explícito (ex.: backfill usa a busca GERAL — "" — em vez do portal do dia,
      que pode ser péssimo para o alvo: dfimoveis é DF-cêntrico); undefined = rotação */
   if (portal === undefined) portal = PORTAIS_ALVO[dia % PORTAIS_ALVO.length];
-  const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, porBairro: [] };
+  const resumo = { tipo, portalAlvo: portal || "geral", bairros: bairros.length, encontrados: 0, novos: 0, extraidos: 0, comparaveis: 0, catalogos: 0, falhas: 0, falhasExtracao: 0, porBairro: [] };
   const inicio = new Date().toISOString();
   let feitos = 0;
+  /* 21/07 ("a onda de casas foi horrível"): 3 bairros seguidos com TODA extração falhando
+     = cadeia de IA no chão. Buscar mais só queima cota Brave para deixar snippet cru —
+     a auto-recuperação paga a IA depois, mas a busca gasta não volta. Aborta e AVISA. */
+  let extracaoNoChaoSeguidos = 0;
   for (const bairro of bairros) {
     escreveStatus({ rodando: true, tipo, portalAlvo: portal || "geral", inicio,
       total: bairros.length, feitos, bairroAtual: bairro,
@@ -91,7 +95,14 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
       const s = await ingerir({ consulta, paginas, tier });
       resumo.encontrados += s.encontrados; resumo.novos += s.novos; resumo.extraidos += s.extraidos;
       resumo.comparaveis += s.comparaveis; resumo.catalogos += s.catalogos;
+      resumo.falhasExtracao += s.falhasExtracao || 0;
       resumo.porBairro.push({ bairro, novos: s.novos, comparaveis: s.comparaveis });
+      const tentou = (s.tentativasExtracao || 0) > 0;
+      extracaoNoChaoSeguidos = tentou && (s.extraidos || 0) === 0 ? extracaoNoChaoSeguidos + 1 : 0;
+      if (extracaoNoChaoSeguidos >= 3) {
+        resumo.abortadoPorExtracao = true;
+        break;
+      }
     } catch (e) {
       resumo.falhas++;
       resumo.porBairro.push({ bairro, erro: String(e.message).slice(0, 120) });
@@ -107,7 +118,10 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
   }
   escreveStatus({ rodando: false, tipo, portalAlvo: portal || "geral", inicio,
     fim: new Date().toISOString(), total: bairros.length, feitos,
-    novos: resumo.novos, comparaveis: resumo.comparaveis, falhas: resumo.falhas });
+    novos: resumo.novos, comparaveis: resumo.comparaveis, falhas: resumo.falhas,
+    falhasExtracao: resumo.falhasExtracao,
+    ...(resumo.abortadoPorCota ? { abortadoPorCota: true } : {}),
+    ...(resumo.abortadoPorExtracao ? { abortadoPorExtracao: true } : {}) });
   await pool.query(
     "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('varredura', $1, 'executada', $2)",
     [tipo, JSON.stringify(resumo)]).catch(() => {});

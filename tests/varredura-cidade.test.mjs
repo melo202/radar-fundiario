@@ -76,3 +76,18 @@ test("cota esgotada (402): a ronda aborta na primeira e o corretor sabe de onde 
   const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
   assert.ok(app.includes("pesquisa?.aviso"), "o card do dossiê mostra o aviso nos dois caminhos");
 });
+
+/* 21/07 ("a onda de casas foi horrível, temos que rever"): 1.199 anúncios buscados com a
+   cadeia de IA no chão = cota Brave queimada para deixar snippet cru, e NINGUÉM avisado.
+   Regra nova: 3 bairros seguidos com toda extração falhando abortam a ronda, e toda
+   degradação aparece no resumo, no status ao vivo e na Sala de Máquinas. */
+test("extração no chão: ronda aborta após 3 bairros seguidos e a degradação nunca é silenciosa", () => {
+  assert.ok(src.includes("extracaoNoChaoSeguidos"), "contador de colapso da cadeia existe");
+  assert.ok(src.includes("extracaoNoChaoSeguidos >= 3"), "3 bairros seguidos sem nenhuma extração = para");
+  assert.ok(src.includes("abortadoPorExtracao = true"), "aborto por extração auditável no resumo");
+  assert.ok(src.includes("resumo.falhasExtracao += s.falhasExtracao"), "falhas de extração agregadas na ronda");
+  assert.ok(src.includes("falhasExtracao: resumo.falhasExtracao"), "status ao vivo carrega a degradação");
+  const maquina = readFileSync(new URL("../motor/maquina.html", import.meta.url), "utf-8");
+  assert.ok(maquina.includes("extração no chão — ronda abortada"), "Sala de Máquinas grita o aborto");
+  assert.ok(maquina.includes("2ª chance automática"), "falha de extração aparece com a promessa de recuperação");
+});
