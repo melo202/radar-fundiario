@@ -68,7 +68,7 @@ export async function documentoDaAvaliacao(id) {
 
   const linhas = aceitos.map((c, i) => {
     const ch = c.characteristics || {}, pr = c.pricing || {};
-    const area = ch.privateAreaM2 || ch.totalAreaM2 || null;
+    const area = ch.urlAreaM2 || ch.privateAreaM2 || ch.totalAreaM2 || null;
     const pm2 = area > 0 && pr.askingPrice > 0 ? Math.round(pr.askingPrice / area) : null;
     return `<tr><td class="num">${i + 1}</td><td><a href="${esc(c.url)}" rel="noopener">${esc(c.portal)}</a></td>
       <td>${esc(c.neighborhood || "—")}</td>

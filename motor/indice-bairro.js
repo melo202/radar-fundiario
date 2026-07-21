@@ -59,6 +59,7 @@ async function carregaComparaveis() {
   const { pool } = await import("./db.js");
   const r = await pool.query(
     `SELECT p.neighborhood AS bairro, p.property_type AS tipo,
+            (p.characteristics->>'urlAreaM2')::numeric AS area_url,
             (p.characteristics->>'privateAreaM2')::numeric AS area_priv,
             (p.characteristics->>'totalAreaM2')::numeric AS area_total,
             (p.characteristics->>'bedrooms')::int AS bedrooms,
@@ -71,7 +72,7 @@ async function carregaComparaveis() {
        AND (p.pricing->>'askingPrice') IS NOT NULL`);
   return r.rows.map(x => ({
     bairro: x.bairro, tipo: x.tipo, price: Number(x.price),
-    area: Number(x.area_priv ?? x.area_total) || null,
+    area: Number(x.area_url ?? x.area_priv ?? x.area_total) || null,
     bedrooms: x.bedrooms, completeness: Number(x.completeness ?? 0),
     lat: x.lat != null ? Number(x.lat) : null, lon: x.lon != null ? Number(x.lon) : null,
     portal: x.portal, url: x.url,

@@ -66,7 +66,7 @@ export async function avaliar(subject, opts = {}) {
   let foraDoBairro = 0, foraDaFaixaDeArea = 0, quartosIncompativeis = 0, semArea = 0, excluidosManual = 0;
   const monta = r => {
     const c = r.characteristics || {};
-    const area = c.privateAreaM2 ?? c.totalAreaM2 ?? null;
+    const area = c.urlAreaM2 ?? c.privateAreaM2 ?? c.totalAreaM2 ?? null;
     const price = Number(r.pricing?.askingPrice);
     return {
       id: r.id, portal: r.portal, url: r.url, collectedAt: r.collected_at,

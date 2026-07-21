@@ -36,7 +36,8 @@ const pares = await pool.query(
             l.id AS listing_id, l.url, l.portal, l.collected_at,
             (p.pricing->>'askingPrice')::numeric AS preco,
             p.neighborhood AS bairro, p.property_type AS tipo,
-            COALESCE((p.characteristics->>'privateAreaM2')::numeric,
+            COALESCE((p.characteristics->>'urlAreaM2')::numeric,
+                     (p.characteristics->>'privateAreaM2')::numeric,
                      (p.characteristics->>'totalAreaM2')::numeric) AS area
      FROM listings l JOIN properties p ON p.listing_id = l.id
      WHERE l.external_id IS NOT NULL

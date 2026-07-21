@@ -4,10 +4,23 @@
    + tamanho ou tipologia + localização)? Nada aqui apaga dado: só classifica,
    com as razões gravadas. Módulo puro (só depende de outro módulo puro, a
    identidade canônica) para ser testado na suíte do repo com node:test. */
-import { identidadeAnuncio } from "./identidade-anuncio.js";
+import { identidadeAnuncio, areaDaUrl } from "./identidade-anuncio.js";
 
 const CAMPOS_CHAVE = ["propertyType", "neighborhood", "privateAreaM2", "totalAreaM2",
   "bedrooms", "suites", "bathrooms", "parkingSpaces", "askingPrice"];
+
+/* Sanidade de área POR TIPO (22/07/2026): um apartamento de 3.000 m² (o prédio inteiro
+   extraído como unidade — caso LIV URBAN) passava no teto genérico de 100.000 e
+   envenenava o R$/m² do bairro. Limites calibrados para Goiânia: coberturas chegam a
+   ~600 m²; casa de condomínio grande a ~3.000; terreno urbano raramente > 10 ha. */
+const AREA_LIMITES = {
+  apartamento: [12, 600],
+  casa: [20, 3000],
+  terreno: [40, 100000],
+  comercial: [10, 10000],
+  rural: [500, 10000000],
+};
+const limiteArea = (tipo) => AREA_LIMITES[tipo] || [10, 100000];
 
 export function avaliarQualidade({ url = "", titulo = "", descricao = "", extracao = {} }) {
   const razoes = [];
@@ -57,15 +70,28 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
 
   /* -- sanidade de valores (erro de extração vira razão, nunca ajuste silencioso).
      Área implausível REPROVA o comparável (19/07): o índice divide preço/área, então
-     área errada envenena o R$/m² mesmo quando a tipologia existe. -- */
-  const area = e.privateAreaM2 ?? e.totalAreaM2;
-  const areaImplausivel = area != null && (area < 10 || area > 100000);
-  if (areaImplausivel) razoes.push(`área implausível (${area} m²)`);
+     área errada envenena o R$/m² mesmo quando a tipologia existe.
+     22/07: a área de VITRINE do slug da URL (curada pelo portal) é a referência
+     determinística — quando o texto cita vários números (privativa/total/prédio), a
+     IA pode pegar o errado; a da URL vem primeiro. Divergência grande vira razão
+     explícita, nunca troca silenciosa. -- */
+  const urlArea = areaDaUrl(url);
+  const areaExtraida = e.privateAreaM2 ?? e.totalAreaM2;
+  if (urlArea != null && areaExtraida != null) {
+    const razao = areaExtraida / urlArea;
+    if (razao > 1.4 || razao < 0.7) {
+      razoes.push(`área extraída (${areaExtraida} m²) diverge da URL (${urlArea} m²) — usada a da URL`);
+    }
+  }
+  const area = urlArea ?? areaExtraida;
+  const [areaMin, areaMax] = limiteArea(e.propertyType);
+  const areaImplausivel = area != null && (area < areaMin || area > areaMax);
+  if (areaImplausivel) razoes.push(`área implausível (${area} m² para ${e.propertyType || "tipo desconhecido"})`);
   if (e.askingPrice != null && (e.askingPrice < 20000 || e.askingPrice > 100000000)) razoes.push(`preço implausível (${e.askingPrice})`);
 
   /* -- grau de comparável (§6): preço confiável + tamanho/tipologia + localização -- */
   const temPreco = e.askingPrice != null && e.askingPrice >= 20000 && e.askingPrice <= 100000000;
-  const temTamanho = (area != null && area >= 10 && area <= 100000) || e.bedrooms != null;
+  const temTamanho = (area != null && area >= areaMin && area <= areaMax) || e.bedrooms != null;
   const temLocal = !!e.neighborhood;
   const comparableGrade = !isCatalogPage && !isRental && !foraDeGoiania && !areaImplausivel
     && temPreco && temTamanho && temLocal;

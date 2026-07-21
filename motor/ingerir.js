@@ -8,7 +8,7 @@ import { pool } from "./db.js";
 import { buscarWeb } from "./busca-web.js";
 import { extrairAnuncio } from "./extract.js";
 import { avaliarQualidade } from "./qualidade.js";
-import { identidadeAnuncio } from "./identidade-anuncio.js";
+import { identidadeAnuncio, areaDaUrl } from "./identidade-anuncio.js";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const dormir = (ms) => new Promise(r => setTimeout(r, ms));
@@ -95,7 +95,10 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
          VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
         [id, v.neighborhood, v.propertyType,
           JSON.stringify({ privateAreaM2: v.privateAreaM2, totalAreaM2: v.totalAreaM2, bedrooms: v.bedrooms,
-            suites: v.suites, bathrooms: v.bathrooms, parkingSpaces: v.parkingSpaces, isFurnished: v.isFurnished }),
+            suites: v.suites, bathrooms: v.bathrooms, parkingSpaces: v.parkingSpaces, isFurnished: v.isFurnished,
+            /* metragem de vitrine do slug (curada pelo portal) — referência determinística
+               quando a IA pega o número errado do texto (privativa/total/prédio). 22/07 */
+            urlAreaM2: areaDaUrl(a.url) }),
           JSON.stringify({ askingPrice: v.askingPrice, condominiumFee: v.condominiumFee, isLaunch: v.isLaunch }),
           JSON.stringify(q),
           JSON.stringify({ confirmados: v.confirmados, inferidos: v.inferidos, model: ex.model, provider: ex.provider })]);
@@ -121,7 +124,7 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
             JSON.stringify({ url: a.url, portal: a.portal, externalId: idt.externalId, verificada,
               de, para, variacaoPct: Math.round(variacao * 1000) / 10,
               bairro: v.neighborhood, tipo: v.propertyType,
-              area: v.privateAreaM2 ?? v.totalAreaM2 ?? null,
+              area: areaDaUrl(a.url) ?? v.privateAreaM2 ?? v.totalAreaM2 ?? null,
               listingAnterior: anterior.listing_id })]).catch(() => {});
       }
       /* geocodificação determinística pelo CNEFE (§10): endereço no texto -> coordenada

@@ -7,6 +7,11 @@ Type=oneshot
 WorkingDirectory=/opt/radar/api
 EnvironmentFile=/opt/radar/api/.env
 ExecStart=/usr/bin/node /opt/radar/api/varredura.js
+# AREAS-PREDIOS-01 (22/07): logo apos a varredura, recalcula as medianas de area de
+# vitrine por condominio (o contrapeso de mercado a area cadastral c/ rateio de area
+# comum). Sem timer novo — mesma governanca do backup (1f636ac). Falha ali nao derruba
+# a varredura: o job mantem o JSON de ontem e sai 0 (ver areas-predios.js).
+ExecStartPost=/usr/bin/node /opt/radar/api/areas-predios.js
 User=www-data
 NoNewPrivileges=true
 PrivateTmp=true

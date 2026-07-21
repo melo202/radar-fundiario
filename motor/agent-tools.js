@@ -130,7 +130,7 @@ async function buscarComparaveis(session) {
   return { valuationId: v.id, status: v.status, sample: v.result?.sample,
     comparables: q.rows.map(c => ({
       portal: c.portal, url: c.url, collectedAt: c.collected_at, neighborhood: c.neighborhood,
-      areaM2: c.characteristics?.privateAreaM2 ?? c.characteristics?.totalAreaM2 ?? null,
+      areaM2: c.characteristics?.urlAreaM2 ?? c.characteristics?.privateAreaM2 ?? c.characteristics?.totalAreaM2 ?? null,
       bedrooms: c.characteristics?.bedrooms ?? null, askingPrice: c.pricing?.askingPrice ?? null,
       accepted: c.accepted, outlier: c.is_outlier, score: c.total_score,
       rejectionReasons: c.rejection_reasons, warnings: c.warnings, manualReview: c.manual_change,
@@ -230,7 +230,7 @@ async function prepararVisita(session) {
       estimatedValue: vr.estimatedValue, probableRange: vr.probableRange, confidence: vr.confidence,
       sample: vr.sample, warnings: vr.warnings, reportUrl: `/motor/avaliacoes/${row.valuation_id}/documento` } : { unavailable: true },
     acceptedComparables: comparables.rows.map(c => ({ portal: c.portal, url: c.url, neighborhood: c.neighborhood,
-      areaM2: c.characteristics?.privateAreaM2 ?? c.characteristics?.totalAreaM2 ?? null,
+      areaM2: c.characteristics?.urlAreaM2 ?? c.characteristics?.privateAreaM2 ?? c.characteristics?.totalAreaM2 ?? null,
       bedrooms: c.characteristics?.bedrooms ?? null, askingPrice: c.pricing?.askingPrice ?? null, score: c.total_score })),
     pendingTasks: tasks.rows,
     documents: docs,

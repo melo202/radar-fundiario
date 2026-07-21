@@ -11,6 +11,9 @@ main() {
 
   WEBROOT=/var/www/radar
   mkdir -p "$WEBROOT"
+  # AREAS-PREDIOS-01 (22/07): destino do JSON de medianas de area por condominio,
+  # gravado toda noite pelo radar-varredura (ExecStartPost -> areas-predios.js, www-data)
+  mkdir -p "$WEBROOT/dados"
   cp index.html radar-goiania.html como-usar.html caixa-goiania.js sw.js manifest.json \
      icon-192.png icon-512.png apple-touch-icon.png README.md \
      robots.txt sitemap.xml \

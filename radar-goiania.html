@@ -1288,6 +1288,8 @@
   .bldg-head .tomap{min-height:38px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);color:var(--brand)}
   .bldg-head .tomap:hover{border-color:var(--brand);background:var(--surface);color:var(--brand-strong)}
   .bldg-sumario{border-top:1px solid var(--line)}
+  .bldg-area-nota{margin-top:8px;font:500 11px/1.45 "Archivo";color:var(--muted)}
+  .bldg-area-nota b{color:var(--ink)}
   .bm b{color:var(--ink)}
   .bm span{color:var(--muted)}
   .bm-faixa b{color:var(--brand)}
@@ -3351,6 +3353,14 @@ function analisePredicoTexto(resumo,meta){
   if(r.areaMedia!=null)partes.push("área média "+Math.round(r.areaMedia)+" m²");
   if(r.venalMedio!=null)partes.push("venal médio "+rs(r.venalMedio));
   if(r.estimadoMedio!=null)partes.push("referência indicativa média "+rs(r.estimadoMedio)+" · faixa "+rs(r.faixaLo)+"–"+rs(r.faixaHi));
+  /* AREAS-PREDIOS-01 (22/07): contrapeso de mercado à área cadastral — em condomínio ela
+     inclui rateio de áreas comuns (LIV URBAN: cadastro 103 m² de média, plantas 38–107 m²).
+     Só entra quando o caller trouxe a mediana (dado, nunca suposição). */
+  if(m.areaMercadoM2!=null&&m.areaMercadoN!=null){
+    let linha="área de mercado ≈ "+Math.round(m.areaMercadoM2)+" m² (mediana de "+m.areaMercadoN+" anúncios)";
+    if(r.areaMedia!=null&&r.areaMedia>m.areaMercadoM2*1.3)linha+=" — a área média cadastral inclui rateio de áreas comuns";
+    partes.push(linha);
+  }
   let texto="🏢 "+(m.nome||"Edifício")+" — Q "+(m.quadra||"—")+" · L "+(m.lote||"—")+"\n";
   texto+=partes.join(" · ");
   if(m.endereco)texto+="\n\n📍 "+m.endereco;
@@ -6527,6 +6537,13 @@ function bldgSumarioHTML(ci){
   const nounUnid=todasGaragem?"vagas/boxes":"unidades";
   const nUnidTxt=String(resumo.n);
   const areaMediaTxt=resumo.areaMedia!=null?Math.round(resumo.areaMedia)+" m²":"—";
+  /* AREAS-PREDIOS-01: o nome do prédio vem de LAST (nmedificio do cadastro) e a chave do
+     JSON é a MESMA norm() dos dois lados — sem ela, merc fica null e mostramos só o aviso. */
+  const _nmPred=(LAST.find(a=>clean(a.ci)===ci&&clean(a.nmedificio))||{}).nmedificio;
+  const _merc=_nmPred?AREASMERCADO[norm(clean(_nmPred))]:null;
+  const notaArea=_merc
+    ?`<div class="bldg-area-nota">área de mercado ≈ <b>${Math.round(_merc.medianaM2)} m²</b> (mediana de ${_merc.n} anúncios) — a área cadastral inclui rateio de áreas comuns</div>`
+    :`<div class="bldg-area-nota bldg-area-nota--so">área cadastral — em prédio, pode incluir rateio de áreas comuns</div>`;
   const venalMedioTxt=resumo.venalMedio!=null?brlC(resumo.venalMedio):"—";
   const faixaTxt=resumo.estimadoMedio!=null?("~"+brlC(resumo.estimadoMedio)+" · "+brlC(resumo.faixaLo)+"–"+brlC(resumo.faixaHi)):"indisponível";
   return `<div class="bldg-sumario">
@@ -6536,6 +6553,7 @@ function bldgSumarioHTML(ci){
       <div class="bm"><b>${esc(venalMedioTxt)}</b><span>venal médio</span></div>
       <div class="bm bm-faixa"><b>${esc(faixaTxt)}</b><span>referência indicativa</span></div>
     </div>
+    ${notaArea}
     <div class="bldg-acoes">
       <button type="button" class="bldg-ord-toggle" data-ci="${esc(ci)}" onclick="toggleBldgOrd(this)" aria-expanded="${(BLDGSTATE[ci]&&BLDGSTATE[ci].aberto)?"true":"false"}">Ordenar / filtrar</button>
       <button type="button" class="bldg-zap" onclick="copyZapPredio(this)">Copiar análise do prédio</button>
@@ -6648,7 +6666,10 @@ function copyZapPredio(ciOuBtn){
   const enriquecidas=unidadesEnriquecidasDoPredio(ci);
   const resumo=resumoPredio(enriquecidas);
   const a0=LAST.find(a=>clean(a.ci)===ci);
-  const meta={nome:clean(a0&&a0.nmedificio)||null,quadra:clean(a0&&a0.nrquadra)||null,lote:clean(a0&&a0.nrlote)||null,endereco:(a0?addrDe(a0):null)||null};
+  const _nm=clean(a0&&a0.nmedificio);
+  const _merc=_nm?AREASMERCADO[norm(_nm)]:null;
+  const meta={nome:_nm||null,quadra:clean(a0&&a0.nrquadra)||null,lote:clean(a0&&a0.nrlote)||null,endereco:(a0?addrDe(a0):null)||null,
+    areaMercadoM2:_merc?_merc.medianaM2:null,areaMercadoN:_merc?_merc.n:null};
   copyTexto(analisePredicoTexto(resumo,meta),"Copiado! Cole no WhatsApp.");
 }
 
@@ -6743,7 +6764,7 @@ function cardHTML(a,i,isUnit){
       <div class="ql-tag">Q ${esc(a.nrquadra)||"—"} · L ${esc(a.nrlote)||"—"}${a.__matchScore===2?` <span class="matchapprox" title="Este item casou por aproximação — confira quadra/lote/rua">~aproximado</span>`:""}</div>
       <div class="grid2">
         <div>${isUnit?"Área const.":"Terreno"} <b>${isUnit?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</b></div>
-        <div>${isUnit?"Terreno":"Construção"} <b>${isUnit?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</b></div>
+        <div>${isUnit?"Terreno cond.":"Construção"} <b>${isUnit?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</b></div>
         <div>Uso <b>${USO[a.uso]||"—"}</b></div>
         <div>R$/m² ${isUnit?"const.":"terr"} <b>${pm2?brl(pm2):"—"}</b></div>
       </div>
@@ -7802,7 +7823,7 @@ function showDetail(a,ll){
 
   document.getElementById("dGrid").innerHTML=`
     <div class="cell"><div class="k">${isU?"Área total (c/ comum)":"Terreno"}</div><div class="v">${isU?(a.areaedif?Math.round(a.areaedif)+" m²":"—"):(a.areaterr?Math.round(a.areaterr)+" m²":"—")}</div></div>
-    <div class="cell"><div class="k">${isU?"Terreno (fração)":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
+    <div class="cell"><div class="k">${isU?"Terreno do condomínio":"Construção"}</div><div class="v">${isU?(a.areaterr?Math.round(a.areaterr)+" m²":"—"):(a.areaedif?Math.round(a.areaedif)+" m²":"—")}</div></div>
     <div class="cell"><div class="k">Uso</div><div class="v">${USO[a.uso]||"—"}</div></div>
     <div class="cell"><div class="k">Valor venal</div><div class="v">${venalTxt(a.vlvenal)}</div></div>
     <div class="cell hl"><div class="k">Referência indicativa</div><div class="v">${estM?brlC(estM.lo)+"–"+brlC(estM.hi):"—"}</div></div>
@@ -10318,7 +10339,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
   bootSplashOff(); /* a mensagem de erro tem que aparecer — splash nunca a esconde */
 }else{
-  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();avisoFollowups();loadBairros();loadBairroPolys();loadLimite();
+  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();avisoFollowups();loadBairros();loadBairroPolys();loadLimite();loadAreasMercado();
   bootSplashOff(); /* mapa criado e view definida = interface interativa */
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
@@ -10558,6 +10579,15 @@ function parseGeoPaste(text){
    ja cobre offline). Flag de modulo evita fetch duplicado; token proprio evita que uma resposta fora
    de ordem (digitacao rapida) sobrescreva um estado mais novo (mesma disciplina de SEARCHTOKEN). */
 let CNEFE=null,cnefeLoading=false,CNEFETOKEN=0;
+/* AREAS-PREDIOS-01 (22/07): medianas de área de VITRINE por condomínio — geradas toda
+   noite pelo radar (areas-predios.js, ExecStartPost da varredura). É o contrapeso de
+   mercado à área cadastral, que em prédio inclui rateio de áreas comuns. Sem o arquivo
+   (ainda não gerado), o card segue só com o cadastro — degradação silenciosa e honesta. */
+let AREASMERCADO={};
+async function loadAreasMercado(){
+  try{const r=await fetch("dados/areas-mercado-predios.json",{cache:"no-store"});
+    if(r.ok){const j=await r.json();AREASMERCADO=(j&&j.predios)||{};}}catch(e){/* sem o arquivo, segue só cadastral */}
+}
 function loadCnefe(){
   if(CNEFE||cnefeLoading)return;
   cnefeLoading=true;

@@ -39,6 +39,18 @@ export function portalRaiz(host) {
   return partes.slice(-Math.min(n, partes.length)).join(".");
 }
 
+/* Metragem declarada no slug da URL (22/07/2026): portais como chavesnamao carimbam a
+   área anunciada no fim do caminho ("…-go-goiania-bueno-71m2"). É a metragem de VITRINE
+   do anúncio — curada pelo portal, não interpretada por IA — e vira a referência
+   determinística quando a área extraída do texto divergir (caso real: "apto" de 183 m²
+   no LIV URBAN Marista, cujo teto de planta real é 107 m²). */
+export function areaDaUrl(url = "") {
+  const m = String(url).toLowerCase().match(/-(\d{2,6})\s?m2(?:\b|\/|[?#]|$)/);
+  if (!m) return null;
+  const a = Number(m[1]);
+  return a >= 10 && a <= 100000 ? a : null;
+}
+
 export function identidadeAnuncio(url) {
   let u;
   try { u = new URL(String(url)); } catch {
