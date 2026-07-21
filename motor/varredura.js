@@ -106,9 +106,10 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
     } catch (e) {
       resumo.falhas++;
       resumo.porBairro.push({ bairro, erro: String(e.message).slice(0, 120) });
-      /* 402 = cota MENSAL esgotada: martelar os bairros restantes só suja o log.
-         Aborta a ronda inteira; a rotação retoma dali quando a cota renascer. */
-      if (/brave http 402/.test(String(e.message))) {
+      /* cota esgotada no degrau final OU cadeia inteira em cooldown: martelar os
+         bairros restantes só suja o log. Aborta a ronda; a rotação retoma quando
+         algum degrau renascer (Google renova por DIA, Brave por MÊS). */
+      if (/brave http 402|google-cse http (429|403)|todos os degraus em cooldown/.test(String(e.message))) {
         resumo.abortadoPorCota = true;
         break;
       }

@@ -68,7 +68,8 @@ test("precisão de cidade: goiania ENTRE ASPAS na consulta e portal com override
 /* 21/07: a cota mensal do Brave ESGOTOU no meio do mega (http 402) — as 3 ondas finais
    martelaram 515 buscas mortas. Cota esgotada é estado do MÊS, não do bairro. */
 test("cota esgotada (402): a ronda aborta na primeira e o corretor sabe de onde veio o número", async () => {
-  assert.ok(src.includes('/brave http 402/.test(String(e.message))'), "varredura detecta cota morta");
+  assert.ok(src.includes("brave http 402|google-cse http (429|403)|todos os degraus em cooldown"),
+    "varredura detecta cota morta em QUALQUER degrau da cadeia (e a cadeia inteira em cooldown)");
   assert.ok(src.includes("abortadoPorCota = true"), "aborto registrado no resumo (auditável)");
   const mercadoSrc = readFileSync(new URL("../motor/mercado-aovivo.js", import.meta.url), "utf-8");
   assert.ok(mercadoSrc.includes("ingestao.falhas >= ingestao.consultas"), "aviso só quando TODA busca ao vivo falhou");
