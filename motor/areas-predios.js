@@ -53,7 +53,9 @@ const normNumero = (n) => String(n ?? "").replace(/\D/g, "");
 
 /* tokens que não distinguem condomínio nenhum */
 const STOP = new Set(["COND", "ED", "EDIFICIO", "RESIDENCIAL", "CONDOMINIO", "TORRE", "BLOCO",
-  "RESIDENCE", "RESERVA", "HOME", "CLUB", "VILLAGE", "GOIANIA", "GOIAS", "SETOR", "DAS", "DOS"]); /* RESIDENCIAL já consta na 1ª linha */
+  "RESIDENCE", "RESERVA", "HOME", "CLUB", "VILLAGE", "GOIANIA", "GOIAS", "SETOR", "DAS", "DOS",
+  /* marcas de portal — nunca são nome de condomínio */
+  "OLX", "ZAP", "VIVAREAL", "WIMOVEIS", "QUINTOANDAR"]);
 
 export function tokensDistintivos(nomeNormMatch) {
   return nomeNormMatch.split(" ").filter((t) => t.length >= 3 && !STOP.has(t));
@@ -109,7 +111,9 @@ export function montarIndicePredios(predios = []) {
    ordem) — "LIV URBAN MARISTA" casa "Apto Liv Urban Marista 2q", mas não "Apto Liv
    Urban Bueno" (falta MARISTA) nem "Reserva Marista" (falta LIV/URBAN). */
 export function prediosNoTitulo(titulo, indice) {
-  const t = normMatch(titulo);
+  /* o raw_title vem com o sufixo de marca do portal ("… | Chaves na Mão") — a marca
+     NÃO é nome de condomínio (contaminou 26% do acervo no 1º run, 22/07) */
+  const t = normMatch(String(titulo || "").split("|")[0]);
   if (!t) return [];
   const tokTitulo = new Set(t.split(" "));
   const cand = new Set();
@@ -152,9 +156,14 @@ export function cruzarAreas(prediosCadastro = [], anuncios = [], minAnuncios = M
     }
   });
   const predios = {};
+  const suspeitos = [];
+  const tetoContaminacao = Math.max(50, Math.ceil(anuncios.length * 0.03));
   for (const [chave, porId] of areasPorPredio) {
     const areas = [...porId.values()];
     if (areas.length < minAnuncios) continue;
+    /* >3% de TODO o acervo num "prédio" só é contaminação de match (o CHAVES R.D.C de
+       n=1364 do 1º run) — condomínio grande de verdade tem dezenas, não milhares */
+    if (areas.length > tetoContaminacao) { suspeitos.push(chave); continue; }
     const med = mediana(areas);
     if (!med) continue;
     predios[chave] = { nome: indice.originais.get(chave), medianaM2: Math.round(med), n: areas.length };
@@ -165,6 +174,7 @@ export function cruzarAreas(prediosCadastro = [], anuncios = [], minAnuncios = M
     fonte: "área de vitrine de anúncios públicos coletados pelo radar (ofertas, não transações); "
       + "mediana por condomínio com >=" + minAnuncios + " anúncios casados por nome no título e/ou endereço (rua+número CNEFE)",
     minAnuncios,
+    suspeitosContaminacao: suspeitos,
     predios,
   };
 }
@@ -229,6 +239,8 @@ async function main() {
     renameSync(SAIDA + ".tmp", SAIDA);
     console.log(`[areas-predios] ${predios.length} prédios nomeados no cadastro · ${anuncios.length} anúncios · ` +
       `${Object.keys(saida.predios).length} condomínios cruzados (>=${MIN_ANUNCIOS}, nome e/ou endereço) -> ${SAIDA}`);
+    if (saida.suspeitosContaminacao.length)
+      console.log(`[areas-predios] cortados por suspeita de contaminação (>3% do acervo): ${saida.suspeitosContaminacao.join(", ")}`);
   } finally {
     await pool.end(); /* AUDITORIA-04: sem o finally, falha no meio deixava o processo pendurado */
   }

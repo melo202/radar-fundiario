@@ -107,6 +107,26 @@ test("cruzarAreas: LIV URBAN — mediana de vitrine honesta mesmo com 1 anúncio
   assert.ok(r.fonte.includes("ofertas"), "fonte declarada sempre");
 });
 
+test("marca do portal no título NÃO contamina o match (o CHAVES R.D.C de n=1364)", () => {
+  const indice = montarIndicePredios(["Residencial Chaves R.D.C"]);
+  const chaves = normPredio("Residencial Chaves R.D.C");
+  assert.deepEqual(prediosNoTitulo("Apartamento 2 quartos, Setor Marista | Chaves na Mão", indice), [],
+    "o sufixo '| Chaves na Mão' é a marca do portal, não o condomínio");
+  assert.deepEqual(prediosNoTitulo("Apartamento no Residencial Chaves, 3 quartos | Chaves na Mão", indice), [chaves],
+    "menção GENUÍNA ao condomínio casa — o corte é no sufixo, não na palavra");
+});
+
+test("guarda anti-contaminação: >3% do acervo num 'prédio' é cortado e registrado", () => {
+  const anuncios = Array.from({ length: 100 }, (_, i) =>
+    ({ id: i, titulo: "Apto Residencial Chaves R.D.C", tipo: "apartamento", area: 60 + i }));
+  const deVerdade = Array.from({ length: 4 }, (_, i) =>
+    ({ id: 1000 + i, titulo: "Apto no Joinville", tipo: "apartamento", area: 68 }));
+  const r = cruzarAreas(["Residencial Chaves R.D.C", "Joinville"], [...anuncios, ...deVerdade]);
+  assert.ok(!r.predios[normPredio("Residencial Chaves R.D.C")], "100 anúncios (>3% de 104) = contaminação, cortado");
+  assert.ok(r.suspeitosContaminacao.includes(normPredio("Residencial Chaves R.D.C")), "o corte é REGISTRADO, nunca silencioso");
+  assert.equal(r.predios[normPredio("Joinville")].medianaM2, 68, "prédio legítimo passa normal");
+});
+
 test("cruzarAreas: menos de 3 anúncios não sustenta mediana", () => {
   const r = cruzarAreas(["Cond Liv Urban Marista"], [
     { titulo: "Studio Liv Urban Marista", area: 38 },
