@@ -565,3 +565,16 @@ consultas e REVELOU um caso real — imóvel sem área não tem estimativa, aque
 desperdício → planejador pula sem-área (guarda + teste); 3ª rodada limpa (0 falhas,
 0 cota, idempotente). Suíte **608/608**; deploy ceb2cfd; desligável com
 MERCADO_AQUECER=false.
+
+### 21/07/2026 — Colheita do mega-backfill + cota esgotada tratada com honestidade
+
+**Base de preço da cidade: 29 → 84 combinações estimáveis (n≥3), 21 → 40 avaliáveis
+(n≥5), 70 bairros** — 1.353 comparáveis limpos de 6.493 extraídos (requalificação
+embutida). As 3 ondas finais morreram em `brave http 402`: a cota mensal (2.000)
+esgotou no meio — minha projeção subestimou o consumo das buscas ao vivo do dossiê e
+do aquecedor. Tratamento (commit 574604f): busca ao vivo com falha total agora DECLARA
+no card que o número veio do acervo (P0: nunca beco, nunca silêncio) e a varredura
+aborta a ronda no primeiro 402 (cota morta é estado do mês). Reextração dos 2.104
+listings do incidente de extração em curso (sequenciador pós-mega). Cota renova 01/08;
+a rotação noturna retoma sozinha. **Decisão humana em aberto:** Brave pago (~US$5/mil)
+se quiser varredura contínua em ritmo de semana, não de mês. Suíte 626/626.
