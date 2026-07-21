@@ -37,6 +37,18 @@ test("cadeia: Google primeiro quando configurado; sem GOOGLE_CSE_* opera só com
   }
 });
 
+test("trava de gasto: teto diário local impede o Google de virar fatura (projeto tem billing)", async () => {
+  const { GOOGLE_TETO_DIA, cotaGoogleDoDia } = await import("../motor/busca-web.js");
+  assert.equal(GOOGLE_TETO_DIA, 95, "margem abaixo dos 100 grátis/dia");
+  const c = cotaGoogleDoDia();
+  assert.equal(typeof c.google, "number");
+  assert.match(c.dia, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(src.includes('timeZone: "America/Los_Angeles"'), "o dia zera quando a cota do Google zera (meia-noite do Pacífico)");
+  assert.ok(src.includes("cotaGoogleDoDia().google >= GOOGLE_TETO_DIA) continue"), "teto atingido = degrau pulado, cadeia desce");
+  assert.ok(src.includes("só o 200 fatura"), "4xx não conta no teto — só resposta que o Google cobra");
+  assert.ok(src.includes("busca-cota-dia.json"), "contador em arquivo: vale entre varredura, aquecedor e API");
+});
+
 test("cooldowns honestos por tipo de cota: Brave 402 = mês (24h), Google 429/403 = dia (2h)", () => {
   assert.ok(src.includes('esfriar("brave", 24 * 3600 * 1000)'), "402 = cota mensal morta");
   assert.ok(src.includes('esfriar("google", 2 * 3600 * 1000)'), "429/403 = cota diária; renova sozinha");

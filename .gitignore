@@ -17,3 +17,4 @@ node_modules/
 
 # status ao vivo da varredura (runtime, nunca versionado)
 motor/varredura-status.json
+motor/busca-cota-dia.json

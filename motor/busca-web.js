@@ -13,6 +13,25 @@ const COOLDOWN = new Map(); /* provedor -> timestamp de quando pode voltar */
 const emCooldown = (p) => (COOLDOWN.get(p) || 0) > Date.now();
 const esfriar = (p, ms) => COOLDOWN.set(p, Date.now() + ms);
 
+/* TRAVA DE GASTO (21/07): o projeto Google do usuário tem faturamento vinculado — acima
+   de 100 buscas/dia a API COBRA (US$5/mil). Teto local de 95/dia, contado em arquivo
+   (vale entre processos: varredura, aquecedor, API), zerando à meia-noite do PACÍFICO
+   (é quando a cota do Google vira). Só resposta 200 conta: 4xx não fatura. */
+import { readFileSync, writeFileSync } from "node:fs";
+const COTA_URL = new URL("./busca-cota-dia.json", import.meta.url);
+export const GOOGLE_TETO_DIA = Number(process.env.GOOGLE_CSE_TETO_DIA ?? 95);
+export function cotaGoogleDoDia() {
+  const dia = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  try {
+    const d = JSON.parse(readFileSync(COTA_URL, "utf-8"));
+    if (d.dia === dia) return d;
+  } catch {}
+  return { dia, google: 0 };
+}
+function registraGoogle() {
+  try { const d = cotaGoogleDoDia(); d.google++; writeFileSync(COTA_URL, JSON.stringify(d)); } catch {}
+}
+
 /* mapeadores puros e exportados — a suíte valida o contrato sem rede */
 export const mapGoogle = (d) => (d.items || [])
   .filter(x => x.link && (x.snippet || x.title))
@@ -41,6 +60,7 @@ async function buscarGoogle(consulta, { offset = 0 } = {}) {
     if (r.status === 429 || r.status === 403) esfriar("google", 2 * 3600 * 1000);
     throw new Error(`google-cse http ${r.status}: ${corpo}`);
   }
+  registraGoogle(); /* só o 200 fatura — é o que conta no teto do dia */
   return mapGoogle(await r.json());
 }
 
@@ -77,6 +97,7 @@ export async function buscarWeb(consulta, opts = {}) {
   let ultimoErro = null;
   for (const p of degraus) {
     if (emCooldown(p)) continue;
+    if (p === "google" && cotaGoogleDoDia().google >= GOOGLE_TETO_DIA) continue; /* teto do dia: nunca vira fatura */
     try {
       return p === "google" ? await buscarGoogle(consulta, opts) : await buscarBrave(consulta, opts);
     } catch (e) {
