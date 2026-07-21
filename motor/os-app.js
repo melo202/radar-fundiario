@@ -43,10 +43,13 @@ function renderPlantao(p){const alvo=$("todayPlantao");if(!alvo)return;if(!p){al
 function renderNovidade(n){const target=$("todayNews");if(!target)return;if(!n||!n.itens?.length)return target.replaceChildren();
   const cab=n.escopo==="carteira"?"Preços mudaram nos bairros da sua carteira":"Preços mudaram em Goiânia";
   const tipoRotulo=t=>({apartamento:"Apartamento",casa:"Casa",terreno:"Terreno",galpao:"Galpão",sala_comercial:"Sala comercial",loja:"Loja"})[t]||"Imóvel";
+  /* preposição certa: logradouro ("Rua…/Avenida…") pede "na", bairro pede "em" —
+     fim do "Casa no Rua Portugal" (auditoria visual 21/07/2026) */
+  const prepLocal=b=>{const t=String(b||"").trim();return /^(rua|avenida|alameda|travessa|rodovia|estrada|praça)\b/i.test(t)?`na ${t}`:`em ${t}`;};
   const itens=n.itens.map(i=>{const queda=Number(i.para)<Number(i.de);
     const pct=i.variacaoPct!=null?` ${String(Math.abs(Number(i.variacaoPct))).replace(".",",")}%`:"";
     return el("div",{class:"news-item"},[
-      el("p",{text:`${tipoRotulo(i.tipo)} no ${i.bairro}${i.area?` · ${i.area} m²`:""} — ${queda?"baixou":"subiu"}${pct}: de ${money(i.de)} para ${money(i.para)}`}),
+      el("p",{text:`${tipoRotulo(i.tipo)} ${prepLocal(i.bairro)}${i.area?` · ${i.area} m²`:""} — ${queda?"baixou":"subiu"}${pct}: de ${money(i.de)} para ${money(i.para)}`}),
       i.url?el("a",{class:"text-button as-link",href:i.url,target:"_blank",rel:"noopener",text:`Ver anúncio${i.portal?` (${i.portal})`:""} ↗`}):null,
     ]);});
   target.replaceChildren(el("article",{class:"action-card news-card"},[

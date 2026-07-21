@@ -1218,6 +1218,15 @@
   .atlas-search-copy{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:550}
   .atlas-search-trigger.has-query .atlas-search-copy{color:var(--ink);font-weight:650}
   .atlas-search-trigger kbd{padding:4px 7px;border:1px solid var(--line);border-bottom-color:var(--line-strong);border-radius:6px;background:var(--surface);color:var(--muted);font:600 10px/1 "JetBrains Mono",monospace}
+  /* Busca no topo, estilo Google (22/07/2026): a barra do cabeçalho é um input REAL — o clique
+     nunca mais "vaza" para o painel. Enquanto a digitação vem do topo (body.busca-no-topo),
+     o dropdown de sugestões flutua sob a barra. */
+  .atlas-search-box{cursor:text}
+  .atlas-search-field{min-width:0;flex:1;border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:550;outline:none;padding:0}
+  .atlas-search-field::placeholder{color:var(--muted)}
+  body.busca-no-topo #caixaList{position:fixed;top:calc(72px + env(safe-area-inset-top));left:50%;right:auto;transform:translateX(-50%);
+    width:min(640px,94vw);max-height:min(56vh,460px);z-index:1200;box-shadow:0 18px 50px rgba(20,40,50,.25)}
+  @media (max-width:820px){.atlas-search-field{font-size:16px}}
   .atlas-meta{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
   .atlas-source{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:0 11px;border:1px solid var(--line);border-radius:999px;
     color:var(--ink-soft);background:var(--surface);font-size:12px;font-weight:650;white-space:nowrap}
@@ -1564,11 +1573,14 @@
         <span class="atlas-brandplace">Goiânia · GO</span>
       </span>
     </div>
-    <button type="button" class="atlas-search-trigger" id="atlasSearchTrigger" aria-controls="caixaInput" aria-expanded="false" aria-keyshortcuts="/" onclick="atlasOpenSearch()">
+    <div class="atlas-search-trigger atlas-search-box" id="atlasSearchTrigger" role="search" aria-controls="caixaInput" aria-expanded="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
-      <span class="atlas-search-copy" id="atlasSearchCopy">Buscar endereço, prédio, quadra/lote ou inscrição</span>
+      <input type="text" id="atlasSearchInput" class="atlas-search-field" autocomplete="off" spellcheck="false"
+        placeholder="Buscar endereço, prédio, quadra/lote ou inscrição"
+        aria-label="Buscar endereço, prédio, quadra/lote ou inscrição"
+        role="combobox" aria-expanded="false" aria-controls="caixaList" aria-autocomplete="list">
       <kbd aria-hidden="true">/</kbd>
-    </button>
+    </div>
     <div class="atlas-meta">
       <span class="atlas-source" id="atlasSource" role="status">Cadastro público · fontes rastreáveis</span>
       <a class="app-back" id="appBack" href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao painel">
@@ -1668,12 +1680,9 @@
       <button class="caixabtn" id="btnCaixa" onclick="toggleCaixa()" style="display:none">Ver oportunidades CAIXA (<span id="caixaN">0</span>)</button>
     </div>
 
-    <!-- Fase 10 SALV-01: container ESTATICO, irmao de #results — nenhuma rota de busca o toca.
-         renderSavedBlocks() so preenche o innerHTML; visibilidade 100% via CSS :has (ver <style>). -->
-    <div id="savedBlocks"></div>
-    <!-- Fase 16 (16-02, TERR-05): container ESTATICO, análogo a #savedBlocks — renderCadernoBlock()
-         (assíncrona, IndexedDB) só preenche o innerHTML; NUNCA reescreve renderSavedBlocks(). -->
-    <div id="cadernoBlock"></div>
+    <!-- #results no TOPO do painel (22/07/2026): a resposta da busca aparece imediatamente
+         abaixo da caixa — antes ela nascia abaixo de Salvos/Caderno, fora da tela, e a busca
+         parecia "não fazer nada" (achado do teste real do usuário). -->
     <div class="results" id="results">
       <div class="empty" id="emptyState">
         <div class="big">Encontre qualquer imóvel de Goiânia</div>
@@ -1687,6 +1696,13 @@
         <p class="empty-explore">Prefere explorar pelo mapa? <b>Aproxime o zoom</b> até as divisas dos lotes aparecerem e toque num lote — ou toque num <b>bairro</b> para ver o território.</p>
       </div>
     </div>
+
+    <!-- Fase 10 SALV-01: container ESTATICO, irmao de #results — nenhuma rota de busca o toca.
+         renderSavedBlocks() so preenche o innerHTML; visibilidade 100% via CSS :has (ver <style>). -->
+    <div id="savedBlocks"></div>
+    <!-- Fase 16 (16-02, TERR-05): container ESTATICO, análogo a #savedBlocks — renderCadernoBlock()
+         (assíncrona, IndexedDB) só preenche o innerHTML; NUNCA reescreve renderSavedBlocks(). -->
+    <div id="cadernoBlock"></div>
 
     <!-- Fase 13 DESC-01: "O que o Corretor Inteligente faz" — segunda <details class="foot"> irmã, entrada
          discreta de descoberta; cada item chama a AÇÃO REAL (nunca texto explicativo genérico). -->
@@ -4983,8 +4999,11 @@ function updateCaixaList(qtext){
   if(_mNumFim&&/[A-Z]/.test(qRua.slice(0,_mNumFim.index)))qRua=qRua.slice(0,_mNumFim.index).replace(/[\s,–-]+$/,"");
   const setorHits=COMBO.filter(b=>b.search.includes(q)).map(b=>({kind:"setor",label:b.disp,sub:b.raw,
     code:b.code,id:"opt-bai-"+String(b.code).replace(/\D/g,""),pos:b.search.indexOf(q)}));
-  const ruaHits=qRua?(CNEFE||[]).filter(r=>r.search.includes(qRua)).map((r,i)=>({kind:"rua",label:titano(r.nome),sub:r.tipo,
-    id:"opt-rua-"+i,pos:r.search.indexOf(qRua),__nome:r.nome})):[];
+  /* rua de letra+número digitada colada ("s3") casa o CNEFE grafado com espaço ("S 3") —
+     compara também a forma compacta dos dois lados (ver searchC no loadCnefe) */
+  const qRuaC=qRua.replace(/([A-Z])[\s-]+(?=\d)/g,"$1");
+  const ruaHits=qRua?(CNEFE||[]).filter(r=>r.search.includes(qRua)||(r.searchC&&r.searchC.includes(qRuaC))).map((r,i)=>({kind:"rua",label:titano(r.nome),sub:r.tipo,
+    id:"opt-rua-"+i,pos:Math.max(r.search.indexOf(qRua),r.searchC?r.searchC.indexOf(qRuaC):-1),__nome:r.nome})):[];
   let hits=setorHits.concat(ruaHits);
   hits.sort((a,b)=>a.pos-b.pos||a.label.localeCompare(b.label,"pt"));
   hits=hits.slice(0,50);
@@ -5044,7 +5063,11 @@ function pickCaixaItem(el){
     detectAnunciar(LASTDETECT.label); /* F5 D-13 */
   }
   closeCaixaList();
-  document.getElementById("caixaInput").focus();
+  /* espelha o valor aplicado na barra do topo e devolve o foco para ela quando a digitação veio de lá */
+  const _top=document.getElementById("atlasSearchInput");
+  if(_top)_top.value=document.getElementById("caixaInput").value;
+  if(_top&&document.body.classList.contains("busca-no-topo"))_top.focus();
+  else document.getElementById("caixaInput").focus();
 }
 /* Enter com o dropdown aberto e um item ativo (seta): seleciona o item ativo em vez de disparar
    detectMode/buscar direto — chamado pelo listener de keydown do #caixaInput (Task 2). Retorna
@@ -5165,21 +5188,31 @@ const SKELETON_HTML=Array.from({length:3},()=>
   `<div class="skel-card"><div class="skel-line w80"></div><div class="skel-line w60"></div><div class="skel-line w40"></div></div>`
 ).join("");
 function mostrarSkeleton(){
-  const box=document.getElementById("results");if(box)box.innerHTML=SKELETON_HTML;
+  const box=document.getElementById("results");
+  if(!box)return;
+  box.innerHTML=SKELETON_HTML;
+  /* cinto e suspensório da visibilidade: além do #results no topo do painel, toda busca
+     rola o painel até ele — "busquei e nada aconteceu" não pode mais acontecer */
+  box.scrollIntoView({block:"nearest"});
 }
 
 /* ---------------- telas mobile: Busca ⇄ Mapa ---------------- */
 const isMobile=()=>window.matchMedia("(max-width:820px)").matches;
 function atlasSyncSearch(){
   const input=document.getElementById("caixaInput"),copy=document.getElementById("atlasSearchCopy"),trigger=document.getElementById("atlasSearchTrigger");
-  if(!input||!copy||!trigger)return;
+  if(!input||!trigger)return;
   const query=input.value.trim();
-  copy.textContent=query||"Buscar endereço, prédio, quadra/lote ou inscrição";
+  /* a barra do topo é um input real: texto aplicado no painel (ex.: escolher uma sugestão)
+     espelha nela — o #atlasSearchCopy virou o próprio campo */
+  const field=document.getElementById("atlasSearchInput");
+  if(field&&field.value!==input.value)field.value=input.value;
+  if(copy)copy.textContent=query||"Buscar endereço, prédio, quadra/lote ou inscrição";
   trigger.classList.toggle("has-query",!!query);
 }
 function atlasOpenSearch(){
   setView("busca");
-  setTimeout(()=>{const input=document.getElementById("caixaInput");if(input)input.focus();},40);
+  /* o foco vai para a barra do TOPO (input real) — a #caixaInput segue como motor da busca */
+  setTimeout(()=>{const top=document.getElementById("atlasSearchInput")||document.getElementById("caixaInput");if(top)top.focus();},40);
 }
 function atlasCloseSearch(){
   setView("mapa");
@@ -6176,9 +6209,14 @@ async function buscar(){
       if(!rCore&&!rD){toast("Digite o nome da rua (além de \"rua/av\").");return;}
       /* BUSCA-15: geocoder CNEFE em paralelo — o resultado só é desenhado depois do finish() */
       geoAncora=buscarAncoraEnd(rua,num).then(d=>({d,rua,num}));
+      /* LIKE de rua: letra+número ("S3", "C206") vira padrão letra%dígito ("%S%3%") — o cadastro
+         grafa "R S 3"/"R S3". Dígito puro ("%3%") arrastava TODA rua com "3" do setor — a busca
+         "demorada e zoada" do teste real (22/07/2026). Rua numerada pura ("135") segue em dígitos. */
+      const letrasRua=rCore.replace(/[^A-Z]/g,"");
+      const likeRua=(letrasRua&&rD)?`%${letrasRua}%${rD}%`:`%${rD}%`;
       let whereA=`cdbairro=${b} AND vlvenal>0`;
       if(nN)whereA+=` AND nrimovel LIKE '%${nN}%'`;
-      else if(rD)whereA+=` AND nmlogradou LIKE '%${rD}%'`;
+      else if(rD)whereA+=` AND nmlogradou LIKE '${likeRua}'`;
       else whereA+=` AND UPPER(nmlogradou) LIKE '%${rCore}%'`;
       let all=await fetchWhere(whereA);
       /* rua com acento no cadastro pode não casar o LIKE — cai para varredura limitada do setor */
@@ -6196,7 +6234,7 @@ async function buscar(){
       if(!items.length&&nN){
         loading(true,"número não achado — varrendo a rua…");
         let all2;
-        if(rD)all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND nmlogradou LIKE '%${rD}%'`);
+        if(rD)all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND nmlogradou LIKE '${likeRua}'`,5);
         else all2=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND UPPER(nmlogradou) LIKE '%${rCore}%'`,8);
         items=all2.filter(a=>{
           const s=ruaScore(a);
@@ -10526,7 +10564,8 @@ function loadCnefe(){
   const tk=++CNEFETOKEN;
   fetch("logradouros-goiania.json").then(r=>r.json()).then(d=>{
     if(tk!==CNEFETOKEN)return; /* focus->fetch->outro focus mais novo: descarta a resposta velha */
-    CNEFE=Array.isArray(d)?d.map(x=>({nome:clean(x.nome),tipo:clean(x.tipo),search:norm(clean(x.nome))})):[];
+    CNEFE=Array.isArray(d)?d.map(x=>({nome:clean(x.nome),tipo:clean(x.tipo),search:norm(clean(x.nome)),
+      searchC:norm(clean(x.nome)).replace(/([A-Z])[\s-]+(?=\d)/g,"$1")})):[];
   }).catch(e=>{CNEFE=[];console.warn("logradouros-goiania.json:",e);}).finally(()=>{cnefeLoading=false;});
 }
 (function(){
@@ -10721,6 +10760,62 @@ function loadCnefe(){
   });
 })();
 
+/* Busca no topo, estilo Google (22/07/2026): a barra do cabeçalho (#atlasSearchInput) é um
+   input REAL. Digitação, setas, Enter e Esc são espelhados na #caixaInput — que segue como
+   FONTE ÚNICA da lógica (detectMode, sugestões, busca). Enquanto a digitação vem do topo,
+   body.busca-no-topo faz o dropdown flutuar sob a barra (CSS). Nenhuma lógica duplicada. */
+(function(){
+  const top=document.getElementById("atlasSearchInput"),inp=document.getElementById("caixaInput");
+  if(!top||!inp)return;
+  const list=document.getElementById("caixaList");
+  /* o dropdown flutuante sai do painel e vira filho do <body>: no mobile o painel fica
+     display:none na visão do mapa, o que zeraria a lista mesmo com position:fixed */
+  let listHome=null,listNext=null;
+  const listProTopo=()=>{
+    if(!list||list.parentElement===document.body)return;
+    listHome=list.parentElement;listNext=list.nextElementSibling;
+    document.body.appendChild(list);
+  };
+  const listProPainel=()=>{
+    if(!list||!listHome||list.parentElement!==document.body)return;
+    listHome.insertBefore(list,listNext||null);listHome=null;listNext=null;
+  };
+  top.addEventListener("input",()=>{
+    inp.value=top.value;
+    inp.dispatchEvent(new Event("input",{bubbles:true}));
+  });
+  top.addEventListener("focus",()=>{
+    /* ORDEM IMPORTA: o focus sintético na inp (carrega o CNEFE) dispara o listener dela, que
+       remove body.busca-no-topo — então a classe entra DEPOIS do dispatch, nunca antes */
+    inp.dispatchEvent(new Event("focus"));
+    document.body.classList.add("busca-no-topo");
+    listProTopo();
+  });
+  top.addEventListener("blur",()=>{
+    setTimeout(()=>{
+      if(document.activeElement!==top){document.body.classList.remove("busca-no-topo");listProPainel();}
+    },140);
+  });
+  inp.addEventListener("focus",()=>{
+    document.body.classList.remove("busca-no-topo");
+    listProPainel();
+    if(top.value!==inp.value)top.value=inp.value;
+  });
+  top.addEventListener("keydown",e=>{
+    if(!["ArrowDown","ArrowUp","Enter","Escape"].includes(e.key))return;
+    e.preventDefault();
+    /* o Enter compromete a busca e o resultado mora no painel — revela a visão de busca
+       (no desktop também: com o painel oculto, o resultado nasceria invisível) */
+    if(e.key==="Enter"&&typeof setView==="function")setView("busca");
+    inp.dispatchEvent(new KeyboardEvent("keydown",{key:e.key,bubbles:true,cancelable:true}));
+  });
+  /* clique num item do dropdown flutuante: o mousedown não pode roubar o foco (o blur
+     esconderia a lista ANTES do onclick do item disparar) */
+  if(list)list.addEventListener("mousedown",e=>{
+    if(document.body.classList.contains("busca-no-topo"))e.preventDefault();
+  });
+})();
+
 /* combobox de setor: digitar, navegar, fechar */
 (function(){
   const inp=document.getElementById("bairroInput"), list=document.getElementById("bairroList");
@@ -10749,7 +10844,9 @@ function loadCnefe(){
   const DOWNEV=window.PointerEvent?"pointerdown":"touchstart";
   document.addEventListener(DOWNEV,e=>{
     if(!e.target.closest(".combo")){list.classList.remove("show");comboExpanded(false);}
-    if(!e.target.closest(".caixa")&&!e.target.closest("#caixaList"))closeCaixaList();
+    /* a barra do topo (#atlasSearchInput, dentro de .atlas-search-box) é uma EXTENSÃO da caixa —
+       digitar nela nunca fecha o próprio dropdown (achado do teste 22/07/2026) */
+    if(!e.target.closest(".caixa")&&!e.target.closest("#caixaList")&&!e.target.closest(".atlas-search-box"))closeCaixaList();
     if(!e.target.closest("#correctMenu")&&!e.target.closest("#detectChip")&&!e.target.closest("#cIN"))closeCorrectMenu();
   });
 })();
