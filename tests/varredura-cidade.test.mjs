@@ -64,3 +64,15 @@ test("precisão de cidade: goiania ENTRE ASPAS na consulta e portal com override
   const gate = ingerirSrc.indexOf("passaPreFiltro(a)");
   assert.ok(gate > 0 && gate < ingerirSrc.indexOf("stats.tentativasExtracao++"), "pré-filtro vem antes da tentativa de extração");
 });
+
+/* 21/07: a cota mensal do Brave ESGOTOU no meio do mega (http 402) — as 3 ondas finais
+   martelaram 515 buscas mortas. Cota esgotada é estado do MÊS, não do bairro. */
+test("cota esgotada (402): a ronda aborta na primeira e o corretor sabe de onde veio o número", async () => {
+  assert.ok(src.includes('/brave http 402/.test(String(e.message))'), "varredura detecta cota morta");
+  assert.ok(src.includes("abortadoPorCota = true"), "aborto registrado no resumo (auditável)");
+  const mercadoSrc = readFileSync(new URL("../motor/mercado-aovivo.js", import.meta.url), "utf-8");
+  assert.ok(mercadoSrc.includes("ingestao.falhas >= ingestao.consultas"), "aviso só quando TODA busca ao vivo falhou");
+  assert.ok(mercadoSrc.includes("Resultado calculado sobre o acervo"), "fallback determinístico declarado, nunca beco (P0)");
+  const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
+  assert.ok(app.includes("pesquisa?.aviso"), "o card do dossiê mostra o aviso nos dois caminhos");
+});

@@ -95,6 +95,12 @@ export async function varrer({ bairros = null, paginas = 1, tier = "fast", tipo 
     } catch (e) {
       resumo.falhas++;
       resumo.porBairro.push({ bairro, erro: String(e.message).slice(0, 120) });
+      /* 402 = cota MENSAL esgotada: martelar os bairros restantes só suja o log.
+         Aborta a ronda inteira; a rotação retoma dali quando a cota renascer. */
+      if (/brave http 402/.test(String(e.message))) {
+        resumo.abortadoPorCota = true;
+        break;
+      }
     }
     feitos++;
     await dormir(2000); /* folga entre bairros (Brave 1 req/s + gentileza geral) */

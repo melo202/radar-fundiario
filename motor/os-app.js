@@ -428,11 +428,14 @@ function renderMercado(d){
       el("p",{text:`Para calcular um preço com segurança são necessárias pelo menos ${min}. Por isso nenhum valor foi inventado — mas todas as evidências e exclusões estão no relatório.`}),
       d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório da pesquisa"}):null,
     ]);
+    card.append(box);
+    if(d.result?.pesquisa?.aviso)card.append(el("p",{class:"field-help market-result",text:d.result.pesquisa.aviso}));
     const painelIns=painelComparaveis(d);if(painelIns)card.append(painelIns);
-    card.append(box,mercadoAssistantAction(d.status));return;
+    card.append(mercadoAssistantAction(d.status));return;
   }
   const r=d.result;if(!r)return;
   card.append(el("div",{class:"mercado-num market-result"},[el("strong",{text:money(r.estimatedValue)}),el("span",{text:`${money(r.probableRange?.minimum)} a ${money(r.probableRange?.maximum)} · ${r.sample?.totalAccepted??"—"} oferta(s) do mesmo bairro · confiança ${r.confidence?.rotulo||"—"}`}),el("span",{text:"Referência por ofertas públicas com filtro profissional; bairros diferentes ficam fora da conta."}),d.id?el("a",{class:"card-action secondary as-link",href:`/motor/avaliacoes/${d.id}/documento`,target:"_blank",rel:"noopener",text:"Abrir relatório completo"}):null]));
+  if(r.pesquisa?.aviso)card.append(el("p",{class:"field-help market-result",text:r.pesquisa.aviso}));
   const painel=painelComparaveis(d);if(painel)card.append(painel);
   card.append(mercadoAssistantAction(d.status));
 }

@@ -122,6 +122,11 @@ export async function avaliarAoVivo(subject, opts = {}) {
     anunciosNovos: ingestao.novos,
     extraidos: ingestao.extraidos,
     falhas: ingestao.falhas,
+    /* 21/07 (cota Brave esgotou no mega): quando TODA busca ao vivo falha, o corretor
+       precisa saber que o número veio do acervo — nunca beco, nunca silêncio (P0) */
+    ...(ingestao.consultas > 0 && ingestao.falhas >= ingestao.consultas ? {
+      aviso: "Busca ao vivo indisponível agora (cota mensal de pesquisa esgotada — renova na virada do mês). Resultado calculado sobre o acervo já coletado pela varredura.",
+    } : {}),
   } : { modo: "cache-recente", cacheHoras: CACHE_H,
     fontesConsultadas: coletaAnterior.fontes || [],
     consultas: coletaAnterior.consultas ?? null,
