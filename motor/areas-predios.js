@@ -23,7 +23,11 @@ import { writeFileSync, renameSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const LOTSVC = "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/0/query";
+/* AUDITORIA-01 (22/07): os campos cadastrais (nmedificio, nmlogradou, nrimovel) vivem na
+   LAYER 3 — a MESMA que o mapa consulta (const SVC do radar-goiania.html). A layer 0 NÃO
+   tem esses campos: qualquer query com eles devolve "Failed to execute query" (provado
+   com curl na auditoria). Não "otimizar" para a layer 0 sem testar de novo. */
+const LOTSVC = "https://portalmapa.goiania.go.gov.br/servicogyn/rest/services/MapaServer/Feature_Base/MapServer/3/query";
 const SAIDA = process.env.AREAS_PREDIOS_JSON || "/var/www/radar/dados/areas-predios.json";
 const MIN_ANUNCIOS = 3;
 const PAGINA = 2000;
@@ -49,7 +53,7 @@ const normNumero = (n) => String(n ?? "").replace(/\D/g, "");
 
 /* tokens que não distinguem condomínio nenhum */
 const STOP = new Set(["COND", "ED", "EDIFICIO", "RESIDENCIAL", "CONDOMINIO", "TORRE", "BLOCO",
-  "RESIDENCE", "RESERVA", "HOME", "CLUB", "VILLAGE", "GOIANIA", "GOIAS", "SETOR", "DAS", "DOS"]);
+  "RESIDENCE", "RESERVA", "HOME", "CLUB", "VILLAGE", "GOIANIA", "GOIAS", "SETOR", "DAS", "DOS"]); /* RESIDENCIAL já consta na 1ª linha */
 
 export function tokensDistintivos(nomeNormMatch) {
   return nomeNormMatch.split(" ").filter((t) => t.length >= 3 && !STOP.has(t));
@@ -63,7 +67,9 @@ const predioNorm = (p) => {
   return {
     chave, nome,
     toks: chave.length >= 4 && nm ? tokensDistintivos(nm) : [],
-    rua: typeof p === "object" ? normRua([p.tplogradou, p.nmlogradou].filter(Boolean).join(" ") || p.rua || "") : "",
+    /* AUDITORIA-02: o nmlogradou do cadastro JÁ traz o tipo embutido ("R  1141") —
+       concatenar tplogradou duplicava ("R R 1141") e quebrava o normRua */
+    rua: typeof p === "object" ? normRua(p.nmlogradou || p.rua || "") : "",
     numero: typeof p === "object" ? normNumero(p.nrimovel ?? p.numero) : "",
   };
 };
@@ -170,23 +176,32 @@ async function prediosDoCadastro() {
     const u = new URL(LOTSVC);
     u.search = new URLSearchParams({
       where: "nmedificio IS NOT NULL AND nmedificio <> ''",
-      outFields: "nmedificio,tplogradou,nmlogradou,nrimovel", returnGeometry: "false",
-      resultRecordCount: String(PAGINA), resultOffset: String(offset), f: "json",
+      outFields: "nmedificio,nmlogradou,nrimovel",
+      /* AUDITORIA-05 (22/07): returnDistinctValues — as 365.462 UNIDADES com nome de
+         prédio colapsam em ~20.550 combinações nome+endereço: 11 páginas (~30s) em
+         vez de 183 páginas (~12 min). Medido contra o serviço real na auditoria. */
+      returnDistinctValues: "true", returnGeometry: "false",
+      resultRecordCount: String(PAGINA), resultOffset: String(offset),
+      orderByFields: "nmedificio", f: "json",
     });
     const r = await fetch(u, { signal: AbortSignal.timeout(45000) });
     if (!r.ok) throw new Error(`ArcGIS respondeu ${r.status}`);
     const j = await r.json();
     const feats = j.features || [];
+    const antes = vistos.size;
     for (const f of feats) {
       const a = f.attributes || {};
       const nome = String(a.nmedificio || "").trim();
       if (!nome) continue;
       const chave = normPredio(nome);
       if (!vistos.has(chave)) {
-        vistos.set(chave, { nome, tplogradou: a.tplogradou, nmlogradou: a.nmlogradou, nrimovel: a.nrimovel });
+        vistos.set(chave, { nome, nmlogradou: a.nmlogradou, nrimovel: a.nrimovel });
       }
     }
     if (feats.length < PAGINA) break;
+    /* AUDITORIA-03: se o servidor ignorar resultOffset, a mesma página volta para
+       sempre — sem prédio novo, para aqui em vez de girar 200 páginas à toa */
+    if (vistos.size === antes) break;
   }
   return [...vistos.values()];
 }
@@ -205,15 +220,18 @@ async function anunciosComArea(pool) {
 
 async function main() {
   const { pool } = await import("./db.js");
-  const predios = await prediosDoCadastro();
-  const anuncios = await anunciosComArea(pool);
-  const saida = cruzarAreas(predios, anuncios);
-  mkdirSync(dirname(SAIDA), { recursive: true });
-  writeFileSync(SAIDA + ".tmp", JSON.stringify(saida));
-  renameSync(SAIDA + ".tmp", SAIDA);
-  console.log(`[areas-predios] ${predios.length} prédios nomeados no cadastro · ${anuncios.length} anúncios · ` +
-    `${Object.keys(saida.predios).length} condomínios cruzados (>=${MIN_ANUNCIOS}, nome e/ou endereço) -> ${SAIDA}`);
-  await pool.end();
+  try {
+    const predios = await prediosDoCadastro();
+    const anuncios = await anunciosComArea(pool);
+    const saida = cruzarAreas(predios, anuncios);
+    mkdirSync(dirname(SAIDA), { recursive: true });
+    writeFileSync(SAIDA + ".tmp", JSON.stringify(saida));
+    renameSync(SAIDA + ".tmp", SAIDA);
+    console.log(`[areas-predios] ${predios.length} prédios nomeados no cadastro · ${anuncios.length} anúncios · ` +
+      `${Object.keys(saida.predios).length} condomínios cruzados (>=${MIN_ANUNCIOS}, nome e/ou endereço) -> ${SAIDA}`);
+  } finally {
+    await pool.end(); /* AUDITORIA-04: sem o finally, falha no meio deixava o processo pendurado */
+  }
 }
 
 /* falha operacional mantém o JSON de ontem e NÃO derruba a varredura (ExecStartPost):

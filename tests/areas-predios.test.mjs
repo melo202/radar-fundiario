@@ -58,7 +58,8 @@ test("normRua: CNEFE e cadastro convergem (tipo de via fora, letra+número compa
 });
 
 test("canal ENDEREÇO: anúncio sem nome no título casa pela rua+número (só apto/comercial)", () => {
-  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  /* formato REAL do cadastro (auditoria 22/07): nmlogradou já traz o tipo — "R  1141" */
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R  ", nmlogradou: "R  1141", nrimovel: "337" }];
   const indice = montarIndicePredios(cadastro);
   assert.deepEqual(prediosNoEndereco({ rua: "Rua 1141", numero: "337" }, indice), [normPredio("Cond Liv Urban Marista")]);
   assert.deepEqual(prediosNoEndereco({ rua: "Rua 1141", numero: "339" }, indice), [], "número vizinho não é o condomínio");
@@ -66,7 +67,7 @@ test("canal ENDEREÇO: anúncio sem nome no título casa pela rua+número (só a
 });
 
 test("cruzarAreas: endereço alimenta prédio sem nome nos títulos; mesma unidade não conta 2x", () => {
-  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R  ", nmlogradou: "R  1141", nrimovel: "337" }];
   const r = cruzarAreas(cadastro, [
     { id: 1, titulo: "Apartamento à venda no Setor Marista", tipo: "apartamento", area: 56, rua: "Rua 1141", numero: "337" },
     { id: 2, titulo: "Apto 2 quartos Marista", tipo: "apartamento", area: 64, rua: "Rua 1141", numero: "337" },
@@ -80,7 +81,7 @@ test("cruzarAreas: endereço alimenta prédio sem nome nos títulos; mesma unida
 });
 
 test("cruzarAreas: mesmo anúncio casando por nome E endereço conta uma vez só", () => {
-  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R", nmlogradou: "1141", nrimovel: "337" }];
+  const cadastro = [{ nome: "Cond Liv Urban Marista", tplogradou: "R  ", nmlogradou: "R  1141", nrimovel: "337" }];
   const r = cruzarAreas(cadastro, [
     { id: 1, titulo: "Studio Liv Urban Marista", tipo: "apartamento", area: 38, rua: "Rua 1141", numero: "337" },
     { id: 2, titulo: "Apto Liv Urban Marista 2q", tipo: "apartamento", area: 56, rua: "Rua 1141", numero: "337" },
