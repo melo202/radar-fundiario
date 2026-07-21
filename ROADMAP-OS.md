@@ -578,3 +578,17 @@ aborta a ronda no primeiro 402 (cota morta é estado do mês). Reextração dos 
 listings do incidente de extração em curso (sequenciador pós-mega). Cota renova 01/08;
 a rotação noturna retoma sozinha. **Decisão humana em aberto:** Brave pago (~US$5/mil)
 se quiser varredura contínua em ritmo de semana, não de mês. Suíte 626/626.
+
+### 21/07/2026 — 🎉 G1 APROVADO (declaração do usuário) — Fase 1 ABERTA; spike ADR-001 decidido
+
+O usuário declarou **G0-dogfood + G1 aprovados**. Com o gate caído: **Fase 1 (Identidade)
+iniciada NA HORA**, começando pelo spike ADR-001 conforme desenhado. Resultado do spike,
+medido em produção: **Logto self-hosted APROVADO** — instalação isolada no KVM4 (Docker,
+banco próprio no Postgres, nada exposto publicamente), seed OIDC ok, discovery 200,
+**RAM 222 MB / CPU 0,03%** (Keycloak custaria ~1 GB de JVM). Decisão e pendências em
+**ADR-001-AUTENTICACAO.md**. Próximos passos da F1: console admin via túnel ssh, DNS
+auth.corretorinteligente.tech (ação do dono do domínio) + nginx/TLS, app OIDC + PKCE no
+painel, members/roles + RLS (ADR-002). **Sequenciamento pós-G1:** Ondas 1–2 do
+ULTRAROADMAP ficam ELEGÍVEIS mas entram DEPOIS da F1; Ondas 3–14 e E2–E10 seguem
+congeladas até o G2 (2 semanas de uso real). Pendente de registro: a planilha do G1
+(G1-KIT) com os números das entrevistas — pedir ao usuário para anexar ao repo.
