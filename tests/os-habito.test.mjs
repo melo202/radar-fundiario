@@ -21,12 +21,21 @@ const mudanca = (bairro, de, para, pct, extra = {}) => ({
 
 test("novidade: prioriza bairros da carteira; queda vem antes de alta; maior variação primeiro", () => {
   const sel = selecionarNovidades(
-    [mudanca("Setor Oeste", 100, 80, -20), mudanca("Setor Bueno", 500000, 520000, 4),
-     mudanca("Setor Bueno", 500000, 460000, -8), mudanca("Setor Bueno", 500000, 490000, -2)],
+    [mudanca("Setor Oeste", 100, 80, -20, { url: "https://portal/a" }), mudanca("Setor Bueno", 500000, 520000, 4, { url: "https://portal/b" }),
+     mudanca("Setor Bueno", 500000, 460000, -8, { url: "https://portal/c" }), mudanca("Setor Bueno", 500000, 490000, -2, { url: "https://portal/d" })],
     ["setor bueno"], normalizaBairro);
   assert.equal(sel.escopo, "carteira");
   assert.deepEqual(sel.itens.map(i => i.variacaoPct), [-8, -2, 4],
     "só bairros da carteira; quedas primeiro, maior primeiro; alta por último");
+});
+
+test("novidade: o MESMO anúncio duplicado na janela mostra só a mudança mais recente", () => {
+  const sel = selecionarNovidades(
+    [mudanca("Setor Oeste", 100, 90, -10, { quando: "2026-07-20T10:00:00Z" }),
+     mudanca("Setor Oeste", 100, 85, -15, { quando: "2026-07-21T10:00:00Z" })],
+    [], normalizaBairro);
+  assert.equal(sel.itens.length, 1, "mesma url = mesmo anúncio: nunca duas linhas contraditórias no card");
+  assert.equal(sel.itens[0].variacaoPct, -15, "fica a mudança mais recente");
 });
 
 test("novidade: carteira sem bairro cai para a cidade; sem mudança válida = sem card", () => {
@@ -38,7 +47,7 @@ test("novidade: carteira sem bairro cai para a cidade; sem mudança válida = se
 });
 
 test("novidade: no máximo 3 itens", () => {
-  const sel = selecionarNovidades([1, 2, 3, 4].map(i => mudanca("Setor Oeste", 100 + i, 90, -i)), [], normalizaBairro);
+  const sel = selecionarNovidades([1, 2, 3, 4].map(i => mudanca("Setor Oeste", 100 + i, 90, -i, { url: `https://portal/x${i}` })), [], normalizaBairro);
   assert.equal(sel.itens.length, 3);
 });
 
