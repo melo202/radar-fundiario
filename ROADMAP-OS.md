@@ -592,3 +592,14 @@ painel, members/roles + RLS (ADR-002). **Sequenciamento pós-G1:** Ondas 1–2 d
 ULTRAROADMAP ficam ELEGÍVEIS mas entram DEPOIS da F1; Ondas 3–14 e E2–E10 seguem
 congeladas até o G2 (2 semanas de uso real). Pendente de registro: a planilha do G1
 (G1-KIT) com os números das entrevistas — pedir ao usuário para anexar ao repo.
+
+### 22/07/2026 — Recuperação do incidente CONCLUÍDA: base de preço 4x em 3 dias
+
+As duas passadas da reextração terminaram (2ª passada: 372 extraídos, 72 comparáveis,
+**0 falhas**; resíduo final de 83 = material de outra cidade que o pré-filtro
+corretamente nunca extrairá). Dos 2.104 anúncios crus do incidente, **2.021 recuperados**.
+**ÍNDICE FINAL: 116 combinações estimáveis (n≥3) · 58 avaliáveis (n≥5) · 95 bairros** —
+contra 29/21/~25 do baseline de sábado: a base de preço da cidade QUADRUPLICOU em 3 dias,
+com peneira blindada e sem uma linha de IA decidindo número. Acervo: 8.596 anúncios
+brutos, 1.753 comparáveis limpos. A rotação noturna segue engordando (quando a cadeia de
+busca reviver — Google em 403 de provisionamento, plano C pronto; Brave renasce 01/08).
