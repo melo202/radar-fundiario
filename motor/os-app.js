@@ -240,7 +240,7 @@ function prefeituraCard(propId){
         return el("div",{class:"pref-pessoa"},[
           el("div",{class:"pref-pessoa-t",text:"Uso interno · CND da pessoa (vendedor)"}),
           el("div",{class:"pref-pessoa-form"},[cpf,nome,emitir]),
-          el("p",{class:"pref-pessoa-dica",text:"Pegue nome e CPF na certidão cadastral do imóvel (botão acima) ou com o cliente. Só existe aqui no painel — nunca no mapa público."})]);
+          el("p",{class:"pref-pessoa-dica",text:"A prefeitura exige os DOIS (CPF/CNPJ válido + nome) — o par sai pronto na certidão cadastral do imóvel (botão acima) ou com o cliente. Só existe aqui no painel — nunca no mapa público."})]);
       })());
   };
   const renderErro=(msg)=>{
