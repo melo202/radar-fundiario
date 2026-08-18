@@ -79,6 +79,15 @@ test("UX-P: erro acionável — endereço rola ao formulário, rede ganha retry"
   assert.ok(app.includes("Tentar de novo"), "falha de rede tem retry sem F5");
 });
 
+test("UX-P: CND da pessoa é USO INTERNO — mini-form no painel, ZERO no mapa público", () => {
+  assert.ok(app.includes("sccer00203f0.asp?txt_nr_cpfcnpj="), "painel abre o form oficial da CND da pessoa pré-preenchido");
+  assert.ok(app.includes("Uso interno · CND da pessoa (vendedor)"), "rótulo honesto de uso interno");
+  assert.ok(app.includes("Nada é salvo aqui"), "compromisso declarado: CPF/nome não persistem");
+  assert.ok(!html.includes("sccer00203"), "o mapa público NUNCA linka serviço de pessoa");
+  assert.ok(!links.includes("sistemas/sccer/asp/sccer00203"), "o motor não gera URL do serviço de pessoa (só documenta a decisão)");
+  assert.match(css, /\.pref-pessoa-form input\{[^}]*min-height:44px/, "piso mobile de 44px nos campos");
+});
+
 test("UX-P: CSS do callout e do chip existe no design system do painel", () => {
   assert.ok(css.includes(".pref-dica{"), "callout com fundo brand-soft");
   assert.ok(css.includes(".pref-num{"), "chip mono");

@@ -221,7 +221,27 @@ function prefeituraCard(propId){
         atalho(r.links.dadosCadastrais,"Titular (certidão cadastral) ↗","EMITE na hora, sem captcha: NOME e CPF do titular registrado, valor venal e área. É onde o titular aparece."),
         atalho(r.links.cnd,"CND de débitos ↗","EMITE na hora, sem captcha: regularidade fiscal imobiliária (negativa/positiva de débitos)."),
         atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.")]),
-      el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}));
+      el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}),
+      /* USO INTERNO (só painel — NUNCA no mapa público): CND da pessoa por CPF/CNPJ+nome
+         (sccer00203). A prefeitura protege dado de PESSOA com captcha de propósito — a
+         gente não contorna: o botão abre o formulário oficial PRÉ-PREENCHIDO; o captcha
+         e a emissão são seus. Nada digitado aqui é salvo ou passa pelo nosso servidor —
+         o valor vai direto para a URL do portal oficial, na sua aba. */
+      (()=>{
+        const cpf=el("input",{type:"text",inputmode:"numeric",placeholder:"CPF/CNPJ da pessoa","aria-label":"CPF ou CNPJ da pessoa",autocomplete:"off"});
+        const nome=el("input",{type:"text",placeholder:"Nome (como saiu na certidão)","aria-label":"Nome da pessoa",autocomplete:"off"});
+        const emitir=el("button",{class:"card-action secondary",type:"button",text:"Emitir CND da pessoa ↗",title:"Uso interno. Abre o formulário oficial já preenchido — o captcha e a emissão são seus. Nada é salvo aqui."});
+        emitir.addEventListener("click",()=>{
+          const doc=cpf.value.replace(/\D/g,"");
+          if(doc.length!==11&&doc.length!==14){toast("Digite o CPF (11 dígitos) ou CNPJ (14) da pessoa.");cpf.focus();return;}
+          const u="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00203f0.asp?txt_nr_cpfcnpj="+encodeURIComponent(doc)+"&txt_nome="+encodeURIComponent(nome.value.trim());
+          window.open(u,"_blank","noopener");
+        });
+        return el("div",{class:"pref-pessoa"},[
+          el("div",{class:"pref-pessoa-t",text:"Uso interno · CND da pessoa (vendedor)"}),
+          el("div",{class:"pref-pessoa-form"},[cpf,nome,emitir]),
+          el("p",{class:"pref-pessoa-dica",text:"Pegue nome e CPF na certidão cadastral do imóvel (botão acima) ou com o cliente. Só existe aqui no painel — nunca no mapa público."})]);
+      })());
   };
   const renderErro=(msg)=>{
     /* erro ACIONÁVEL (auditoria UX O4): a mensagem certa com o botão certo — falta de
