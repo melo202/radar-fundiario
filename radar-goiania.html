@@ -7163,7 +7163,7 @@ function diligenciaDocumentoHTML(a){
 function montarPacoteDiligencia(){
   const a=DCUR;if(!a)return;
   const hoje=new Date().toLocaleDateString("pt-BR"),reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
-  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci),cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(insc.replace(/\D/g,""));
+  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci),cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(insc.replace(/\D/g,""));
   const situacao=[res.conferidos+" de "+res.total+" itens marcados como conferidos pelo usuário"];
   if(res.emCurso)situacao.push(res.emCurso+" em andamento");
   if(res.revisoesAtrasadas)situacao.push(res.revisoesAtrasadas+" "+(res.revisoesAtrasadas===1?"revisão atrasada":"revisões atrasadas"));
@@ -8062,7 +8062,7 @@ function renderChecklistDocumental(a){
     '<option value="'+esc(status)+'" '+(status===it.status?"selected":"")+'>'+esc(DOC_STATUS_LBL[status])+'</option>'
   ).join("");
   const insc=clean(a.nrinscr||a.ci).replace(/\D/g,"");
-  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(insc);
+  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(insc);
   const atualizado=reg.updatedAt?fmtVisita(reg.updatedAt).replace("consultado","atualizado"):"Ainda sem marcações";
   const alertaHtml=(res.revisoesAtrasadas||res.revisoesProximas)
     ?'<div class="doc-alert '+(res.revisoesAtrasadas?'has-late':'')+'">'+esc(revResumo.join(" · "))+'. Datas escolhidas pelo usuário; confirme vigência e conteúdo nas fontes oficiais.</div>'
