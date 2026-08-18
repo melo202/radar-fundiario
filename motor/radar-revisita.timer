@@ -1,8 +1,8 @@
 [Unit]
-Description=Radar Fundiario - agenda da revisita dirigida (04h45, depois da varredura das 03h30)
+Description=Radar Fundiario - agenda da revisita dirigida (09h55 UTC, depois da varredura das 08h40 — mesma folga de ~75 min de antes)
 
 [Timer]
-OnCalendar=*-*-* 04:45:00
+OnCalendar=*-*-* 09:55:00
 Persistent=true
 RandomizedDelaySec=600
 

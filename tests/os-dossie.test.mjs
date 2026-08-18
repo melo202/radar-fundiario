@@ -5,7 +5,21 @@ import assert from "node:assert/strict";
 import {
   montarAtualizacaoImovel, rotuloEvento, idValido, ESTAGIOS_CAPTACAO, TEMPERATURAS,
   montarAtualizacaoOportunidade, ESTAGIOS_OPORTUNIDADE, OBJECOES_PERDA, mensagemFunil,
+  parsePrecoBR,
 } from "../motor/os-core.js";
+
+test("D-1: parser de preço aceita os formatos reais de digitação (auditoria 18/08/2026)", () => {
+  assert.equal(parsePrecoBR(2150000), 2150000);
+  assert.equal(parsePrecoBR("2.150.000"), 2150000);
+  assert.equal(parsePrecoBR("2.150.000,00"), 2150000);
+  assert.equal(parsePrecoBR("850 mil"), 850000);
+  assert.equal(parsePrecoBR("R$ 900k"), 900000);
+  assert.equal(parsePrecoBR("1,5 milhão"), 1500000);
+  assert.equal(parsePrecoBR("2,3 mi"), 2300000);
+  assert.equal(parsePrecoBR("abc"), null);
+  assert.equal(parsePrecoBR(""), null);
+  assert.equal(parsePrecoBR(0), null);
+});
 
 const atual = {
   neighborhood: "Jardins", address: null, asking_price: "2300000",

@@ -1,4 +1,4 @@
-# Runner residencial da Caixa (projeto Oportunidades, 17/07/2026).
+﻿# Runner residencial da Caixa (projeto Oportunidades, 17/07/2026).
 # O VPS recebe HTTP 403 do Radware ao baixar o CSV da Caixa; ESTA maquina (IP
 # residencial) baixa, geocodifica no cadastro e ENVIA o JSON ao VPS, que faz o
 # diff/eventos/desconto. Roda 1x/dia pela Tarefa Agendada (instalar-tarefa.ps1).

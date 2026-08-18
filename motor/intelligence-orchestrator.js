@@ -167,7 +167,7 @@ async function saveEvidence(job, item) {
   const url = qualification.canonicalUrl || canonicalizeEvidenceUrl(item.url);
   if (!url) return null;
   const title = clean(item.title, 500);
-  const excerpt = clean(item.excerpt, 2500);
+  const excerpt = clean(item.excerpt, 800); /* custo K3 (auditoria 18/08/2026): 2.500→800 chars corta ~65% dos tokens do lote sem perda de sinal */
   const hash = /^[a-f0-9]{64}$/.test(item.contentHash || "") ? item.contentHash : sha(`${title}\n${excerpt}`);
   const result = await pool.query(
     `INSERT INTO intelligence_evidence

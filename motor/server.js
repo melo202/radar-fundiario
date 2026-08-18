@@ -19,12 +19,24 @@ const json = (res, code, obj) => { res.writeHead(code, Object.assign({ "Content-
    avaliação consumir o limite do resumo — cada rota tem seu escopo) */
 const RATE = new Map();
 function estourou(req, limite = 10, escopo = "geral") {
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
+  /* SEC (auditoria 18/08/2026): X-Forwarded-For só é confiável quando o peer é o nginx
+     em loopback; conexão direta forjando o header não muda a identidade real do socket */
+  const peer = req.socket.remoteAddress || "";
+  const viaProxy = peer === "127.0.0.1" || peer === "::1" || peer === "::ffff:127.0.0.1";
+  const ip = (viaProxy && req.headers["x-forwarded-for"]?.split(",")[0]?.trim()) || peer || "?";
   const chave = `${escopo}:${ip}`;
   const agora = Date.now();
   const usos = (RATE.get(chave) || []).filter(t => agora - t < 60000);
   usos.push(agora); RATE.set(chave, usos);
-  if (RATE.size > 5000) RATE.clear(); /* válvula de memória */
+  /* válvula de memória SEM reset global: poda as chaves vencidas, nunca zera o limite
+     de todo mundo — um flood de IPs forjados não pode mais esvaziar o balde */
+  if (RATE.size > 5000) {
+    for (const [k, ts] of RATE) {
+      const vivos = ts.filter(t => agora - t < 60000);
+      if (vivos.length) RATE.set(k, vivos); else RATE.delete(k);
+    }
+    if (RATE.size > 5000) RATE.clear(); /* última válvula: memória acima de tudo */
+  }
   return usos.length > limite;
 }
 const readBody = (req) => new Promise((ok, ko) => {
@@ -63,7 +75,17 @@ http.createServer(async (req, res) => {
       const ia = await fetch((process.env.AI_BASE_URL || "http://localhost:11434") + "/api/version",
         { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(e => ({ erro: e.message }));
       const acervo = await pool.query("SELECT (SELECT count(*)::int FROM listings) AS anuncios, (SELECT count(*)::int FROM properties) AS imoveis").then(r => r.rows[0]).catch(() => null);
-      return json(res, 200, { ok: true, db, ia, cadeia: aiProvider.status(), acervo, busca: !!process.env.BRAVE_API_KEY });
+      /* FRESCOR (18/08/2026): a API viva não basta — a varredura morreu 5 dias sem
+         ninguém ver. As datas de cada pipeline ficam públicas aqui, para o monitor
+         (P1.8) alertar quando qualquer uma envelhece além do esperado. */
+      const frescor = await pool.query(
+        `SELECT
+           (SELECT max(created_at) FROM properties) AS ultimo_imovel,
+           (SELECT max(gerado_em) FROM oportunidades WHERE fonte='caixa') AS caixa_lista_de,
+           (SELECT max(created_at) FROM audit_log WHERE entity='varredura' AND action='executada') AS ultima_varredura,
+           (SELECT max(created_at) FROM audit_log WHERE entity='revisita' AND action='executada') AS ultima_revisita`)
+        .then(r => r.rows[0]).catch(() => null);
+      return json(res, 200, { ok: true, db, ia, cadeia: aiProvider.status(), acervo, frescor, busca: !!process.env.BRAVE_API_KEY });
     }
     if (req.method === "GET" && req.url.startsWith("/motor/imoveis")) {
       const u = new URL(req.url, "http://x");
@@ -277,7 +299,11 @@ http.createServer(async (req, res) => {
     json(res, 404, { erro: "rota desconhecida" });
   } catch (e) {
     /* módulos sinalizam erro de USO com e.status (400 etc.) — devolver 500 neles
-       quebrava o contrato da rota pública (revisão 17/07) */
-    json(res, Number.isInteger(e.status) ? e.status : 500, { erro: String(e.message).slice(0, 400) });
+       quebrava o contrato da rota pública (revisão 17/07).
+       SEC (auditoria 18/08/2026): erro INTERNO (500) vira mensagem genérica — o
+       detalhe (SQL, paths, providers) fica no console do servidor, nunca no cliente */
+    const status = Number.isInteger(e.status) ? e.status : 500;
+    if (status >= 500) console.error("erro interno:", e);
+    json(res, status, { erro: status >= 500 ? "erro interno — tente de novo em instantes" : String(e.message).slice(0, 400) });
   }
 }).listen(PORT, "127.0.0.1", () => console.log(`radar-motor em 127.0.0.1:${PORT}`));

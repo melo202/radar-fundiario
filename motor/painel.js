@@ -5,7 +5,7 @@ import { createReadStream, readFileSync } from "node:fs";
 import { pool } from "./db.js";
 import {
   painelAtivo, verificaSenha, criaSessao, cookieSessao, cookieLimpa,
-  sessaoDe, csrfDe, csrfOk, bloqueado, registraFalha, tentativasRestantes,
+  sessaoDe, revogaSessao, csrfDe, csrfOk, bloqueado, registraFalha, tentativasRestantes,
 } from "./auth.js";
 
 const HTML_BASE = readFileSync(new URL("./painel.html", import.meta.url), "utf-8");
@@ -171,7 +171,7 @@ export async function painel(req, res) {
   if (req.method === "GET" && (req.url === "/painel" || req.url === "/painel/")) {
     /* Quem já entrou vai direto ao produto. O painel técnico existe em /painel/admin,
        fora da navegação cotidiana, para o cérebro não parecer a página principal. */
-    if (sessaoDe(req)) {
+    if (await sessaoDe(req)) {
       res.writeHead(303, Object.assign({ Location: "/painel/os", "Cache-Control": "no-store" }, SEC));
       return res.end();
     }
@@ -207,11 +207,11 @@ export async function painel(req, res) {
       const resta = tentativasRestantes(ip);
       return json(res, 401, { erro: "Senha incorreta." + (resta <= 2 ? ` ${resta} tentativa(s) antes do bloqueio.` : "") });
     }
-    return json(res, 200, { ok: true }, { "Set-Cookie": cookieSessao(criaSessao()) });
+    return json(res, 200, { ok: true }, { "Set-Cookie": cookieSessao(await criaSessao({ ip, userAgent: req.headers["user-agent"] })) });
   }
 
   /* daqui para baixo, tudo exige sessão válida */
-  const sessao = sessaoDe(req);
+  const sessao = await sessaoDe(req);
   if (!sessao) {
     /* páginas navegáveis sem sessão voltam ao login — JSON de erro é para API, não para gente */
     if (req.method === "GET" && (req.url === "/painel/os" || req.url === "/painel/admin/maquina")) {
@@ -456,6 +456,7 @@ export async function painel(req, res) {
   }
 
   if (req.method === "POST" && req.url === "/painel/sair") {
+    await revogaSessao(sessao); /* P1.4: o token morre no servidor, não só no cookie */
     return json(res, 200, { ok: true }, { "Set-Cookie": cookieLimpa() });
   }
   if (req.method === "POST" && req.url === "/painel/api/requalificar") {

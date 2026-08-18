@@ -1,8 +1,8 @@
 [Unit]
-Description=Radar Fundiario - agenda da varredura noturna (03h30, horario do servidor)
+Description=Radar Fundiario - agenda da varredura noturna (08h40 UTC, DEPOIS do reset da cota Google a meia-noite do Pacífico — 07/08h UTC; antes ela rodava 03h30 com a cota de ONTEM já gasta e morria no degrau Brave, apagão de 14/08/2026)
 
 [Timer]
-OnCalendar=*-*-* 03:30:00
+OnCalendar=*-*-* 08:40:00
 Persistent=true
 RandomizedDelaySec=600
 

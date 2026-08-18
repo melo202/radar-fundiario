@@ -513,6 +513,26 @@ export const idValido = (v) => UUID_RE.test(String(v || ""));
 export const ESTAGIOS_CAPTACAO = ["prospect", "visited", "captured", "ready_to_publish", "qualified", "inactive", "sold", "rented"];
 export const TEMPERATURAS = ["quente", "morno", "frio"];
 
+/* pura: preço digitado pelo corretor → número. Aceita os formatos reais de digitação:
+   2150000 · "2.150.000" · "2.150.000,00" · "850 mil" · "1,5 milhão" · "R$ 900k".
+   (auditoria 18/08/2026: o parser anterior lia "850 mil" como 850) */
+export function parsePrecoBR(valor) {
+  if (typeof valor === "number") return Number.isFinite(valor) && valor > 0 ? Math.round(valor) : null;
+  const t = String(valor ?? "").toLowerCase().trim();
+  if (!t) return null;
+  const m = /([\d]+(?:[.,]\d+)*)\s*(milh(?:ão|oes|ões)|milhões|mil|mi|k)?\b/.exec(t);
+  if (!m) return null;
+  let n = m[1];
+  if (n.includes(",")) n = n.replace(/\./g, "").replace(",", "."); /* vírgula = decimal */
+  else if (/^\d{1,3}(\.\d{3})+$/.test(n)) n = n.replace(/\./g, ""); /* ponto = milhar */
+  let numero = Number(n);
+  if (!Number.isFinite(numero) || numero <= 0) return null;
+  const unidade = m[2] || "";
+  if (/^milh|^mi$/.test(unidade)) numero *= 1_000_000;
+  else if (/^mil$|^k$/.test(unidade)) numero *= 1_000;
+  return Math.round(numero);
+}
+
 /* pura: whitelist de atualização + diff por campo. Coluna fora da lista NUNCA entra
    (injeção de coluna impossível); characteristics preserva o que já existia. */
 export function montarAtualizacaoImovel(atual, campos) {
@@ -525,8 +545,7 @@ export function montarAtualizacaoImovel(atual, campos) {
   if ("neighborhood" in c) poe("neighborhood", limparTexto(c.neighborhood, 80) || null, atual.neighborhood);
   if ("address" in c) poe("address", limparTexto(c.address, 160) || null, atual.address);
   if ("askingPrice" in c) {
-    const v = Number(String(c.askingPrice).replace(/\D/g, "") || c.askingPrice);
-    poe("asking_price", Number.isFinite(v) && v > 0 ? Math.round(v) : null,
+    poe("asking_price", parsePrecoBR(c.askingPrice),
       atual.asking_price == null ? null : Number(atual.asking_price));
   }
   if ("captureStage" in c && ESTAGIOS_CAPTACAO.includes(c.captureStage)) poe("capture_stage", c.captureStage, atual.capture_stage);

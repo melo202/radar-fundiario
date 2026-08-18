@@ -170,9 +170,15 @@ async function run({ task, system, prompt, tier = "fast", schema = null, cache =
         await logCall(task, out.model, promptHash, out, true, null);
         const result = { value, model: out.model, provider: p === LOCAL ? "local" : p.rotulo,
           evalTokens: out.evalTokens, durationMs: out.durationMs };
-        if (cache) await pool.query(
-          "INSERT INTO ai_cache (prompt_hash, model, response) VALUES ($1,$2,$3) ON CONFLICT (prompt_hash) DO NOTHING",
-          [promptHash, out.model, result]).catch(() => {});
+        if (cache) {
+          await pool.query(
+            "INSERT INTO ai_cache (prompt_hash, model, response) VALUES ($1,$2,$3) ON CONFLICT (prompt_hash) DO NOTHING",
+            [promptHash, out.model, result]).catch(() => {});
+          /* poda oportunista (auditoria 18/08/2026): ~2,5% dos inserts varrem o TTL de
+             90 dias — cache eterno vira cache com validade, sem job agendado extra */
+          if (Math.random() < 0.025) pool.query(
+            "DELETE FROM ai_cache WHERE created_at < now()-interval '90 days'").catch(() => {});
+        }
         return result;
       } catch (e) {
         lastErr = e;

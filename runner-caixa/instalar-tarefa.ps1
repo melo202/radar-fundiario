@@ -1,4 +1,4 @@
-# Registra a Tarefa Agendada do runner da Caixa (roda 1x/dia, 22:40 — logo apos a Caixa
+﻿# Registra a Tarefa Agendada do runner da Caixa (roda 1x/dia, 22:40 — logo apos a Caixa
 # regenerar o CSV da madrugada seguinte, com folga). Idempotente: re-registra se ja existe.
 # Rode UMA vez, no PowerShell do seu usuario:  powershell -ExecutionPolicy Bypass -File instalar-tarefa.ps1
 

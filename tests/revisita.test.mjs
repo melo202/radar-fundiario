@@ -38,5 +38,9 @@ test("revisita: instalada no deploy como timer noturno pós-varredura", () => {
   assert.ok(d.includes("radar-revisita.service") && d.includes("radar-revisita.timer"));
   assert.ok(d.includes("systemctl enable --now radar-revisita.timer"));
   const t = src("../motor/radar-revisita.timer");
-  assert.ok(t.includes("04:45"), "roda depois da varredura das 03:30");
+  const v = src("../motor/radar-varredura.timer");
+  const minutos = (s) => { const m = /OnCalendar=\*-\*-\* (\d{2}):(\d{2})/.exec(s); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+  assert.ok(minutos(t) > minutos(v), "revisita roda depois da varredura");
+  assert.ok(minutos(v) >= 8 * 60 + 30,
+    "varredura roda DEPOIS do reset da cota Google (meia-noite do Pacífico = 07/08h UTC) — apagão de 14/08/2026");
 });

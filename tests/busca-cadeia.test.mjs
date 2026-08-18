@@ -44,7 +44,7 @@ test("trava de gasto: teto diário local impede o Google de virar fatura (projet
   assert.equal(typeof c.google, "number");
   assert.match(c.dia, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(src.includes('timeZone: "America/Los_Angeles"'), "o dia zera quando a cota do Google zera (meia-noite do Pacífico)");
-  assert.ok(src.includes("cotaGoogleDoDia().google >= GOOGLE_TETO_DIA) continue"), "teto atingido = degrau pulado, cadeia desce");
+  assert.ok(src.includes("cotaGoogleDoDia().google >= GOOGLE_TETO_DIA"), "teto atingido = degrau pulado, cadeia desce");
   assert.ok(src.includes("só o 200 fatura"), "4xx não conta no teto — só resposta que o Google cobra");
   assert.ok(src.includes("busca-cota-dia.json"), "contador em arquivo: vale entre varredura, aquecedor e API");
 });
@@ -52,8 +52,9 @@ test("trava de gasto: teto diário local impede o Google de virar fatura (projet
 test("cooldowns honestos por tipo de cota: Brave 402 = mês (24h), Google 429/403 = dia (2h)", () => {
   assert.ok(src.includes('esfriar("brave", 24 * 3600 * 1000)'), "402 = cota mensal morta");
   assert.ok(src.includes('esfriar("google", 2 * 3600 * 1000)'), "429/403 = cota diária; renova sozinha");
-  assert.ok(src.includes("if (emCooldown(p)) continue;"), "degrau esfriado é pulado, não martelado");
-  assert.ok(src.includes("todos os degraus em cooldown"), "cadeia toda morta tem erro próprio (a varredura aborta nele)");
+  assert.ok(src.includes("if (emCooldown(p))"), "degrau esfriado é pulado, não martelado");
+  assert.ok(src.includes("busca indisponível"), "cadeia toda morta tem erro próprio (a varredura aborta nele)");
+  assert.ok(src.includes("falhas.push(`${p}:"), "o erro de CADA degrau sobe no log — um 403 do Google nunca mais fica invisível atrás do 402 do Brave");
   assert.ok(src.includes("não fazemos scraping dos portais"), "regra da fonte A preservada");
   assert.ok(deploy.includes("node --check busca-web.js"), "deploy valida a cadeia");
 });

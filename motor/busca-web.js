@@ -94,15 +94,18 @@ export function cadeiaDisponivel() {
 export async function buscarWeb(consulta, opts = {}) {
   const degraus = cadeiaDisponivel();
   if (!degraus.length) throw new Error("nenhum provedor de busca no env (GOOGLE_CSE_KEY/GOOGLE_CSE_CX ou BRAVE_API_KEY)");
-  let ultimoErro = null;
+  const falhas = [];
   for (const p of degraus) {
-    if (emCooldown(p)) continue;
-    if (p === "google" && cotaGoogleDoDia().google >= GOOGLE_TETO_DIA) continue; /* teto do dia: nunca vira fatura */
+    if (emCooldown(p)) { falhas.push(`${p}: em cooldown`); continue; }
+    if (p === "google" && cotaGoogleDoDia().google >= GOOGLE_TETO_DIA) { falhas.push("google: teto do dia atingido"); continue; } /* teto do dia: nunca vira fatura */
     try {
       return p === "google" ? await buscarGoogle(consulta, opts) : await buscarBrave(consulta, opts);
     } catch (e) {
-      ultimoErro = e; /* esfriar() já foi decidido dentro do degrau; tenta o próximo */
+      /* VISIBILIDADE (18/08/2026): o erro de CADA degrau entra na mensagem final.
+         Antes só o ÚLTIMO subia — um 403 do Google ficou semanas invisível porque
+         o 402 do Brave o mascarava no log da varredura. */
+      falhas.push(`${p}: ${String(e && e.message || e).slice(0, 160)}`);
     }
   }
-  throw ultimoErro || new Error("busca indisponível: todos os degraus em cooldown");
+  throw new Error(`busca indisponível — ${falhas.join(" | ")}`);
 }
