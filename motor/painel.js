@@ -292,6 +292,13 @@ export async function painel(req, res) {
     const r = await dossieImovel(req.url.split("/").pop());
     return json(res, r.ok ? 200 : 404, r);
   }
+  if (req.method === "GET" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/prefeitura$/.test(req.url)) {
+    /* Kit Prefeitura (18/08/2026): inscrição imobiliária + links oficiais do imóvel
+       (espelho/BIC, CND, guia IPTU — onde o titular aparece quando a CND positiva não mostra) */
+    const { kitPrefeituraImovel } = await import("./os-core.js");
+    const r = await kitPrefeituraImovel(req.url.split("/")[5]);
+    return json(res, r.ok ? 200 : 404, r);
+  }
   if (req.method === "GET" && /^\/painel\/api\/os\/documentos\/[0-9a-f-]{36}\/arquivo$/.test(req.url)) {
     const { resolvePrivateDocument } = await import("./document-service.js");
     const document = await resolvePrivateDocument(req.url.split("/")[5]).catch(() => null);

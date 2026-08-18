@@ -195,6 +195,31 @@ async function saveOpportunity(id,dados,btn){
   }catch(e){toast(e.message);btn.disabled=false;btn.textContent="Salvar andamento";}
 }
 const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
+/* Kit Prefeitura (18/08/2026 — Fases 0/1): inscrição imobiliária resolvida pelo motor +
+   os 3 atalhos oficiais. O titular aparece na GUIA do IPTU quando a CND positiva não
+   mostra — a dica fica à vista no card. Nada de titular no banco: quem emite é você. */
+function prefeituraCard(propId){
+  const card=el("article",{class:"entity-card"},[el("h3",{text:"Prefeitura de Goiânia"}),el("p",{text:"Localizando a inscrição no cadastro oficial…"})]);
+  api(`/painel/api/os/imoveis/${propId}/prefeitura`).then(r=>{
+    if(state.property.id!==propId)return;
+    const copiar=el("button",{class:"card-action secondary",type:"button",text:"⧉ Copiar inscrição"});
+    copiar.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(r.inscricao);toast("Inscrição copiada — cole no portal da prefeitura.");}catch{prompt("Copie a inscrição:",r.inscricao);}});
+    const atalho=(href,text)=>el("a",{class:"card-action secondary as-link",href,target:"_blank",rel:"noopener",text});
+    card.replaceChildren(
+      el("h3",{text:"Prefeitura de Goiânia"}),
+      el("p",{text:`Inscrição imobiliária ${r.inscricao} · ${r.fonte}`}),
+      el("div",{class:"opp-actions"},[
+        atalho(r.links.espelhoBic,"Espelho do imóvel (BIC) ↗"),
+        atalho(r.links.cnd,"CND do imóvel ↗"),
+        atalho(r.links.guiaIptu,"Guia do IPTU ↗"),
+        copiar]),
+      el("p",{class:"meta",text:r.links.dicaTitular}));
+  }).catch(e=>{
+    if(state.property.id!==propId)return;
+    card.replaceChildren(el("h3",{text:"Prefeitura de Goiânia"}),el("p",{text:e.message||"Não foi possível localizar a inscrição agora — tente de novo em instantes."}));
+  });
+  return card;
+}
 function invalidateLists(){state.loaded.today=false;state.loaded.portfolio=false;state.loaded.relationships=false;}
 function stopPropertyIntelligencePoll(){if(state.property.pollTimer){clearTimeout(state.property.pollTimer);state.property.pollTimer=null;}}
 function propertyViewActive(){const view=document.querySelector('.view[data-view="property"]');return !!view&&!view.hidden;}
@@ -310,6 +335,7 @@ function renderPropTab(){
     /* Dados do imóvel PRIMEIRO; o radar apoia a decisão, não abre a página */
     body.replaceChildren(
       el("article",{class:"entity-card"},[el("h3",{text:"Dados do imóvel"}),grid]),
+      prefeituraCard(p.id),
       pend.length?el("div",{},[el("p",{class:"eyebrow",text:`Pendências (${pend.length})`}),el("div",{class:"stack"},pendCards)]):el("div",{class:"empty-card"},[el("h3",{text:"Nenhuma pendência aberta"}),el("p",{text:"O cadastro deste imóvel está em dia para o estágio atual."})]),
       el("article",{class:"entity-card"},[el("h3",{text:"Completar cadastro"}),el("p",{text:"Pendências que a atualização resolver se concluem sozinhas."}),form]),
       intelligencePanel(d));

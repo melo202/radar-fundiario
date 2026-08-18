@@ -770,6 +770,23 @@ export async function dossieImovel(id) {
   };
 }
 
+/* Kit Prefeitura do imóvel (Fase 1, 18/08/2026): a inscrição imobiliária é resolvida
+   pelo PONTO (geom) na camada de lotes do ArcGIS público, e os 3 atalhos oficiais
+   (espelho/BIC, CND, guia IPTU) saem prontos. Titular NUNCA entra no banco — quem
+   emite os documentos é o corretor, no portal dele (LGPD, ver links-prefeitura.js). */
+export async function kitPrefeituraImovel(id) {
+  if (!idValido(id)) return { ok: false, erro: "imóvel inválido" };
+  const db = await banco();
+  const org = await garantirOrganizacao();
+  const p = await db.query(
+    `SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon FROM inventory_properties
+     WHERE id=$1 AND organization_id=$2`, [id, org.id]);
+  if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
+  const { kitPrefeitura } = await import("./links-prefeitura.js");
+  const { lat, lon } = p.rows[0];
+  return kitPrefeitura({ geom: lat != null && lon != null ? { lat, lon } : null });
+}
+
 async function avaliacaoRecenteDoImovel(db, property) {
   const r = await db.query(
     `SELECT id,subject,status,result,version,parent_id,created_at
