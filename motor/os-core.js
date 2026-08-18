@@ -779,12 +779,21 @@ export async function kitPrefeituraImovel(id) {
   const db = await banco();
   const org = await garantirOrganizacao();
   const p = await db.query(
-    `SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon FROM inventory_properties
+    `SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon, address, neighborhood FROM inventory_properties
      WHERE id=$1 AND organization_id=$2`, [id, org.id]);
   if (!p.rowCount) return { ok: false, erro: "imóvel não encontrado" };
-  const { kitPrefeitura } = await import("./links-prefeitura.js");
-  const { lat, lon } = p.rows[0];
-  return kitPrefeitura({ geom: lat != null && lon != null ? { lat, lon } : null });
+  const { kitPrefeitura, separaEndereco } = await import("./links-prefeitura.js");
+  const { lat, lon, address, neighborhood } = p.rows[0];
+  /* sem geom gravada, o endereço vira ponto pelo geocodificador local (CNEFE/PostGIS,
+     zero cota) — a precisão do degrau vai declarada na resposta */
+  if (lat != null && lon != null) return kitPrefeitura({ geom: { lat, lon } });
+  const { rua, numero } = separaEndereco(address);
+  if (!rua) return kitPrefeitura({ geom: null });
+  const { geocodificar } = await import("./geocodificar.js");
+  const g = await geocodificar({ rua, numero, bairro: neighborhood }).catch(() => null);
+  const c = g?.candidatos?.[0];
+  if (!c) return kitPrefeitura({ geom: null });
+  return kitPrefeitura({ geom: { lat: c.lat, lon: c.lon }, precisao: g.precisao });
 }
 
 async function avaliacaoRecenteDoImovel(db, property) {

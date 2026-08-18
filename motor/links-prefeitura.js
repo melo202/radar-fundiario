@@ -25,6 +25,18 @@ const PROXY = process.env.ARCGIS_PROXY_URL || "http://127.0.0.1:8130/arcgis";
 
 export const soDigitos = (v) => String(v ?? "").replace(/\D/g, "");
 
+/* pura: "Rua T-37, 1000" → { rua, numero } — o endereço do formulário do dossiê
+   guarda rua e número num campo só; o último ", <número>" separa os dois */
+export function separaEndereco(address) {
+  const t = String(address || "").trim();
+  if (!t) return { rua: null, numero: null };
+  const i = t.indexOf(",");
+  if (i < 0) return { rua: t, numero: null }; /* "Av. 85" sem número: a rua É o número */
+  const rua = t.slice(0, i).trim();
+  const m = /(\d{1,6})/.exec(t.slice(i + 1)); /* 1º número após a vírgula; complemento fica fora */
+  return { rua: rua || t, numero: m ? Number(m[1]) : null };
+}
+
 /* pura: inscrição → os 3 atalhos oficiais. Inscrições reais do cadastro têm
    6 a 15 dígitos (o app trata >10 como nrinscr de unidade, senão ci do lote);
    fora disso é lixo de entrada e a resposta honesta é null. */
@@ -73,11 +85,15 @@ export async function inscricaoPorPonto({ lat, lon }, { fetchImpl = fetch } = {}
   return { inscricao: inscricaoDeLote(feats[0].attributes), unidades: feats.length };
 }
 
-/* imóvel da carteira (tem geom Point 4326) → kit completo ou motivo honesto */
-export async function kitPrefeitura({ geom = null } = {}, deps = {}) {
-  if (!geom) return { ok: false, erro: "Imóvel sem localização no mapa — preencha o endereço e salve para geocodificar." };
+/* imóvel da carteira → kit completo ou motivo honesto.
+   precisao: null = geom exata do cadastro do imóvel; senão o degrau do geocodificador
+   CNEFE ("numero" / "numero-proximo" / "logradouro") — declarado na resposta. */
+export async function kitPrefeitura({ geom = null, precisao = null } = {}, deps = {}) {
+  if (!geom) return { ok: false, erro: "Imóvel sem endereço nem localização — preencha o endereço no dossiê e salve." };
   const achado = await inscricaoPorPonto(geom, deps).catch(() => null);
   if (!achado || !achado.inscricao) return { ok: false, erro: "O cadastro da prefeitura não devolveu a inscrição deste ponto — confira o endereço no mapa oficial." };
   return { ok: true, inscricao: achado.inscricao, unidadesNoPonto: achado.unidades,
-    links: linksPrefeitura(achado.inscricao), fonte: "Cadastro ArcGIS público da Prefeitura de Goiânia" };
+    links: linksPrefeitura(achado.inscricao),
+    fonte: "Cadastro ArcGIS público da Prefeitura de Goiânia" +
+      (precisao && precisao !== "cadastro" ? ` · ponto por geocodificação CNEFE (${precisao}) — confira no mapa` : "") };
 }

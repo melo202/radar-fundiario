@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { soDigitos, linksPrefeitura, inscricaoDeLote, inscricaoPorPonto, kitPrefeitura } from "../motor/links-prefeitura.js";
+import { soDigitos, separaEndereco, linksPrefeitura, inscricaoDeLote, inscricaoPorPonto, kitPrefeitura } from "../motor/links-prefeitura.js";
 
 const src = (p) => readFileSync(new URL(p, import.meta.url), "utf-8");
 
@@ -69,6 +69,14 @@ test("inscricaoPorPonto: upstream quebrado ou sem feature = null honesto", async
   assert.equal(await inscricaoPorPonto({ lat: -16.68, lon: -49.25 }, { fetchImpl: async () => ({ ok: false }) }), null);
   assert.equal(await inscricaoPorPonto({ lat: -16.68, lon: -49.25 }, { fetchImpl: async () => ({ ok: true, json: async () => ({ features: [] }) }) }), null);
   assert.equal(await inscricaoPorPonto({ lat: null, lon: null }, { fetchImpl: async () => { throw new Error("não devia chamar"); } }), null);
+});
+
+test("separaEndereco: rua e número do campo único do formulário", () => {
+  assert.deepEqual(separaEndereco("Rua T-37, 1000"), { rua: "Rua T-37", numero: 1000 });
+  assert.deepEqual(separaEndereco("Av. 85, 1450, apto 302"), { rua: "Av. 85", numero: 1450 });
+  assert.deepEqual(separaEndereco("Rua das Flores"), { rua: "Rua das Flores", numero: null });
+  assert.deepEqual(separaEndereco(""), { rua: null, numero: null });
+  assert.deepEqual(separaEndereco(null), { rua: null, numero: null });
 });
 
 test("kitPrefeitura: sem geom pede endereço; com geom devolve o kit completo", async () => {
