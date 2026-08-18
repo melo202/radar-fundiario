@@ -42,8 +42,13 @@ test("lgpd: rota autenticada + botão no front (contrato de fonte)", () => {
   assert.match(painel, /POST" && \/\^\\\/painel\\\/api\\\/os\\\/contatos\\\/\[0-9a-f-\]\{36\}\\\/anonimizar\$/,
     "rota POST /painel/api/os/contatos/<uuid>/anonimizar");
   assert.ok(painel.includes("anonimizarContato(req.url.split(\"/\")[5])"));
-  /* CSRF: a barreira de todo POST autenticado (linha do csrfOk) cobre a rota nova */
+  /* CSRF: a rota precisa estar DEPOIS do portão no fonte — o smoke ao vivo de 18/08
+     pegou a primeira versão respondendo 404 (executando!) sem CSRF em vez de 403 */
   assert.ok(painel.includes('if (req.method === "POST" && !csrfOk(req, sessao))'));
+  const posPortao = painel.indexOf('!csrfOk(req, sessao)');
+  const posRota = painel.indexOf("\\/anonimizar$/"); /* texto literal da regex no fonte */
+  assert.ok(posPortao > -1 && posRota > -1 && posPortao < posRota,
+    "a rota de anonimização fica DEPOIS do portão CSRF");
 
   const app = readFileSync(new URL("../motor/os-app.js", import.meta.url), "utf-8");
   assert.ok(app.includes('text:"Anonimizar (LGPD)"'), "botão visível no card do relacionamento");
