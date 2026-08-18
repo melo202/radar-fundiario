@@ -5,6 +5,7 @@
 import { pool } from "./db.js";
 import { ingerir } from "./ingerir.js";
 import { normalizaBairro } from "./estatistica.js";
+import { criaFilaFria } from "./fila-fria.js";
 
 const PORTAIS_PRINCIPAIS = ["zapimoveis.com.br", "vivareal.com.br", "olx.com.br"];
 const PORTAIS_APROFUNDADOS = ["62imoveis.com.br", "imovelweb.com.br", "chavesnamao.com.br", "wimoveis.com.br"];
@@ -59,6 +60,61 @@ async function executarConsulta(consulta, fonte, limite, ingestao) {
   }
 }
 
+/* FILA-01 (P1.5 do roadmap, 18/08/2026): a fase fria isolada — SÓ roda dentro da fila
+   de concorrência 1 (fila-fria.js explica o porquê: cota do buscador a 1 req/s, frio
+   real de ~3 min, pool pg max 5). Retorna o resumo da ingestão, ou null se a chave
+   aqueceu entre o clique e a vez na fila. */
+async function coletarAoVivo(subject, opts, chave, maxIdadeH) {
+  /* re-checa o frescor ao ganhar a vez: entre o clique e a execução, outro caminho
+     (o clique que dividiu a mesma coleta pelo single-flight, ou o aquecedor noturno)
+     pode ter preenchido o cache. 1 SELECT indexado evita queimar cota à toa. */
+  const deNovo = await pool.query(
+    `SELECT created_at AS quando FROM audit_log
+     WHERE action='mercado-aovivo' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`, [chave]);
+  const qa = deNovo.rows[0]?.quando;
+  if (qa && (Date.now() - new Date(qa).getTime()) < maxIdadeH * 3600 * 1000) return null;
+
+  const ingestao = { consultas: 0, fontes: [], encontrados: 0, novos: 0, comparaveis: 0, tentativasExtracao: 0,
+    extraidos: 0, falhas: 0, aprofundou: false };
+
+  /* 1ª passagem: diversidade obrigatória — no máximo 2 extrações por portal evita
+     que um único site consuma todo o clique. */
+  for (const portal of PORTAIS_PRINCIPAIS) {
+    const restante = TETO_EXTRACAO_INICIAL - ingestao.tentativasExtracao;
+    if (restante <= 0) break;
+    await executarConsulta(consultaPortal(subject, portal), portal, Math.min(2, restante), ingestao);
+  }
+
+  const { avaliar } = await import("./avaliacao.js");
+  const previa = await avaliar(subject, { persist: false });
+
+  /* 2ª passagem: só gasta a cota maior se os filtros profissionais ainda não
+     encontraram o mínimo. Bairros vizinhos continuam proibidos no cálculo.
+     Modo econômico (AQUEC-01): o aquecedor noturno nunca aprofunda — se a amostra
+     ficou curta, o clique do corretor (ao vivo, não-econômico) ainda pode aprofundar. */
+  if (!opts.economico && previa.status === "amostra_insuficiente") {
+    ingestao.aprofundou = true;
+    for (const portal of PORTAIS_APROFUNDADOS) {
+      const restante = TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao;
+      if (restante <= 0) break;
+      await executarConsulta(consultaPortal(subject, portal, true), portal, Math.min(2, restante), ingestao);
+    }
+    const restante = TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao;
+    if (restante > 0) await executarConsulta(consultaGeral(subject), "busca geral", Math.min(4, restante), ingestao);
+  }
+
+  ingestao.fontes = [...new Set(ingestao.fontes)];
+  const algumaConsultaFuncionou = ingestao.consultas > ingestao.falhas;
+  await pool.query(
+    "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('mercado',$1,$2,$3)",
+    [chave, algumaConsultaFuncionou ? "mercado-aovivo" : "mercado-aovivo-falhou", JSON.stringify(ingestao)]).catch(() => {});
+  return ingestao;
+}
+
+/* singleton da fila: as duas entradas deste processo (rota /motor/mercado e os-core)
+   dividem a mesma fila — é o processo da API que atende os cliques simultâneos */
+const filaFria = criaFilaFria({ maxFila: 2 });
+
 /* opts (AQUEC-01): maxIdadeH — o aquecedor noturno passa ~20h para FORÇAR re-coleta
    diária (senão o warm de ontem, ainda "fresco" pelas 26h, pularia a coleta e o cache
    envelheceria em noites alternadas); economico — só a 1ª passagem (3 buscas), nunca o
@@ -73,45 +129,25 @@ export async function avaliarAoVivo(subject, opts = {}) {
     `SELECT created_at AS quando, detail FROM audit_log
      WHERE action='mercado-aovivo' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`, [chave]);
   const q = recente.rows[0]?.quando;
-  const coletaAnterior = recente.rows[0]?.detail || {};
+  let coletaAnterior = recente.rows[0]?.detail || {};
   const fresco = q && (Date.now() - new Date(q).getTime()) < maxIdadeH * 3600 * 1000;
 
   let ingestao = null;
   if (!fresco) {
-    ingestao = { consultas: 0, fontes: [], encontrados: 0, novos: 0, comparaveis: 0, tentativasExtracao: 0,
-      extraidos: 0, falhas: 0, aprofundou: false };
-
-    /* 1ª passagem: diversidade obrigatória — no máximo 2 extrações por portal evita
-       que um único site consuma todo o clique. */
-    for (const portal of PORTAIS_PRINCIPAIS) {
-      const restante = TETO_EXTRACAO_INICIAL - ingestao.tentativasExtracao;
-      if (restante <= 0) break;
-      await executarConsulta(consultaPortal(subject, portal), portal, Math.min(2, restante), ingestao);
+    /* FILA-01: a coleta fria passa pela fila — o clique duplicado divide a MESMA
+       coleta, buscas diferentes esperam a vez (1 executando + 1 na espera), e do 3º
+       pedido em diante o corretor recebe 429 com motivo claro em vez de pendurar até
+       o timeout. Cache fresco nunca entra na fila: responde direto, mesmo com coleta
+       em andamento. */
+    ingestao = await filaFria.executar(chave, () => coletarAoVivo(subject, opts, chave, maxIdadeH));
+    if (!ingestao) {
+      /* a chave aqueceu enquanto esta chamada esperava a vez — relê o resumo da
+         coleta que vale agora, para o rótulo de cache não mostrar a coleta de ontem */
+      const r = await pool.query(
+        `SELECT detail FROM audit_log
+         WHERE action='mercado-aovivo' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`, [chave]);
+      coletaAnterior = r.rows[0]?.detail || {};
     }
-
-    const { avaliar } = await import("./avaliacao.js");
-    const previa = await avaliar(subject, { persist: false });
-
-    /* 2ª passagem: só gasta a cota maior se os filtros profissionais ainda não
-       encontraram o mínimo. Bairros vizinhos continuam proibidos no cálculo.
-       Modo econômico (AQUEC-01): o aquecedor noturno nunca aprofunda — se a amostra
-       ficou curta, o clique do corretor (ao vivo, não-econômico) ainda pode aprofundar. */
-    if (!opts.economico && previa.status === "amostra_insuficiente") {
-      ingestao.aprofundou = true;
-      for (const portal of PORTAIS_APROFUNDADOS) {
-        const restante = TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao;
-        if (restante <= 0) break;
-        await executarConsulta(consultaPortal(subject, portal, true), portal, Math.min(2, restante), ingestao);
-      }
-      const restante = TETO_EXTRACAO_TOTAL - ingestao.tentativasExtracao;
-      if (restante > 0) await executarConsulta(consultaGeral(subject), "busca geral", Math.min(4, restante), ingestao);
-    }
-
-    ingestao.fontes = [...new Set(ingestao.fontes)];
-    const algumaConsultaFuncionou = ingestao.consultas > ingestao.falhas;
-    await pool.query(
-      "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('mercado',$1,$2,$3)",
-      [chave, algumaConsultaFuncionou ? "mercado-aovivo" : "mercado-aovivo-falhou", JSON.stringify(ingestao)]).catch(() => {});
   }
 
   const pesquisa = ingestao ? {
@@ -137,6 +173,8 @@ export async function avaliarAoVivo(subject, opts = {}) {
 
   const { avaliar } = await import("./avaliacao.js");
   const resultado = await avaliar(subject, { searchSummary: pesquisa });
-  return { ...resultado, aoVivo: { buscou: !fresco, cacheHoras: CACHE_H,
+  /* buscou = ESTA chamada gastou buscador. Se a chave aqueceu durante a espera na fila
+     (ingestao null), a resposta veio do cache — declarar "buscou" seria mentira. */
+  return { ...resultado, aoVivo: { buscou: !!ingestao, cacheHoras: CACHE_H,
     ...(ingestao || {}), portais: (ingestao?.fontes || coletaAnterior.fontes || []).length } };
 }
