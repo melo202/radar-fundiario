@@ -241,7 +241,8 @@ function prefeituraCard(propId){
         return el("div",{class:"pref-pessoa"},[
           el("div",{class:"pref-pessoa-t",text:"Uso interno · CND da pessoa (vendedor)"}),
           el("div",{class:"pref-pessoa-form"},[cpf,nome,emitir]),
-          el("p",{class:"pref-pessoa-dica",text:"A prefeitura exige os DOIS (CPF/CNPJ válido + nome) — o par sai pronto na certidão cadastral do imóvel (botão acima) ou com o cliente. Só existe aqui no painel — nunca no mapa público."})]);
+          el("p",{class:"pref-pessoa-dica",text:"A prefeitura exige os DOIS (CPF/CNPJ válido + nome) — o par sai pronto na certidão cadastral do imóvel (botão acima) ou com o cliente. Só existe aqui no painel — nunca no mapa público."}),
+          el("a",{class:"pref-pessoa-link",href:"https://www.registrodeimoveis.org.br/servicos-interno/pesquisa-de-bens",target:"_blank",rel:"noopener",title:"Serviço oficial pago do Registro de Imóveis (ONR/CRI): por CPF/CNPJ, lista os imóveis registrados no nome da pessoa na cidade. É o ÚNICO caminho oficial titular→imóveis — a prefeitura não abre essa busca.",text:"Ver outros imóveis no nome dela (Pesquisa de Bens · cartório, pago) ↗"})]);
       })());
   };
   const renderErro=(msg)=>{

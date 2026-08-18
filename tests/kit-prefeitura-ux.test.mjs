@@ -89,6 +89,8 @@ test("UX-P: CND da pessoa é USO INTERNO — mini-form no painel, ZERO no mapa p
   assert.ok(!html.includes("sccer00203"), "o mapa público NUNCA linka serviço de pessoa");
   assert.ok(!links.includes("sistemas/sccer/asp/sccer00203"), "o motor não gera URL do serviço de pessoa (só documenta a decisão)");
   assert.match(css, /\.pref-pessoa-form input\{[^}]*min-height:44px/, "piso mobile de 44px nos campos");
+  assert.ok(app.includes("pesquisa-de-bens"), "o caminho oficial titular→imóveis (cartório) está no painel");
+  assert.ok(html.includes("pesquisa-de-bens"), "e também no pacote de diligência do mapa");
 });
 
 test("UX-P: CSS do callout e do chip existe no design system do painel", () => {
