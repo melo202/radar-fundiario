@@ -402,9 +402,12 @@ export async function painel(req, res) {
     return json(res, r.ok ? 200 : 400, r);
   }
   if (req.method === "POST" && req.url === "/painel/api/os/captura/confirmar") {
+    /* IDEMP-01: o front manda Idempotency-Key (hash do conteúdo) — retry/duplo clique
+       não duplica o imóvel. r.status cobre o 409 de "envio idêntico em andamento" */
     const { confirmarCaptura } = await import("./os-core.js");
-    const r = await confirmarCaptura(JSON.parse(await readBody(req) || "{}"));
-    return json(res, r.ok ? 200 : 400, r);
+    const r = await confirmarCaptura(JSON.parse(await readBody(req) || "{}"),
+      { idemKey: req.headers["idempotency-key"] });
+    return json(res, r.ok ? 200 : (r.status || 400), r);
   }
   if (req.method === "POST" && /^\/painel\/api\/os\/tarefas\/[0-9a-f-]{36}\/concluir$/.test(req.url)) {
     const { concluirTarefa } = await import("./os-core.js");
@@ -424,9 +427,11 @@ export async function painel(req, res) {
     return json(res, r.ok ? 200 : 400, r);
   }
   if (req.method === "POST" && /^\/painel\/api\/os\/imoveis\/[0-9a-f-]{36}\/oportunidade$/.test(req.url)) {
+    /* IDEMP-01: Idempotency-Key — retry não duplica o interessado no funil */
     const { criarOportunidade } = await import("./os-core.js");
-    const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"));
-    return json(res, r.ok ? 200 : 400, r);
+    const r = await criarOportunidade(req.url.split("/")[5], JSON.parse(await readBody(req) || "{}"),
+      { idemKey: req.headers["idempotency-key"] });
+    return json(res, r.ok ? 200 : (r.status || 400), r);
   }
   if (req.method === "POST" && /^\/painel\/api\/os\/oportunidades\/[0-9a-f-]{36}\/contato$/.test(req.url)) {
     /* D-3: "registrei contato" em 1 toque — só a data da interação; a conversa fica no WhatsApp */

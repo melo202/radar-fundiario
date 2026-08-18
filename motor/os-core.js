@@ -3,6 +3,8 @@
    ao acervo público de mercado. A IA não decide prioridade nesta fase: regras determinísticas,
    explicáveis e testáveis alimentam a tela Hoje. */
 
+import { reivindicar, concluir, abortar } from "./idempotencia.js";
+
 let _pool = null;
 async function banco() {
   if (!_pool) ({ pool: _pool } = await import("./db.js"));
@@ -167,15 +169,19 @@ function tituloImovel(p) {
   return p.neighborhood ? `${tipo} · ${p.neighborhood}` : tipo;
 }
 
-export async function confirmarCaptura(dados) {
+export async function confirmarCaptura(dados, opts = {}) {
   const property = dados?.property || {};
   const owner = dados?.owner || null;
   if (!property.propertyType) return { ok: false, erro: "Confirme o tipo do imóvel antes de criar o cadastro." };
   const db = await banco();
+  /* IDEMP-01 (P1.6, 18/08/2026): a chave é reivindicada ANTES da transação — retry de
+     rede ou duplo clique com o mesmo Idempotency-Key recebe replay/409, nunca imóvel gêmeo */
+  const org = await garantirOrganizacao(db);
+  const idem = await reivindicar(db, org.id, "captura-confirmar", opts.idemKey);
+  if (idem.modo === "replay" || idem.modo === "em-andamento") return idem.corpo;
   const client = await db.connect();
   try {
     await client.query("BEGIN");
-    const org = await garantirOrganizacao(client);
     let ownerId = null;
     const telefone = normalizarTelefone(owner?.phone);
     const nome = limparTexto(owner?.name || (telefone ? "Proprietário a identificar" : ""), 100);
@@ -228,9 +234,13 @@ export async function confirmarCaptura(dados) {
     await registrarEvento(client, org.id, "property.created", "inventory_property", row.id,
       { title: row.title, captureStage: row.capture_stage, missingCount: pendencias.length });
     await client.query("COMMIT");
-    return { ok: true, property: row, nextSteps: pendencias.map(p => p[0]) };
+    const resultado = { ok: true, property: row, nextSteps: pendencias.map(p => p[0]) };
+    await concluir(db, org.id, "captura-confirmar", idem.chave, resultado);
+    return resultado;
   } catch (e) {
     await client.query("ROLLBACK");
+    /* exceção libera a chave: o retry legítimo tem direito de tentar de verdade */
+    await abortar(db, org.id, "captura-confirmar", idem.chave);
     throw e;
   } finally {
     client.release();
@@ -882,33 +892,47 @@ export async function atualizarImovel(id, campos) {
   } finally { client.release(); }
 }
 
-export async function criarOportunidade(propertyId, dados) {
+export async function criarOportunidade(propertyId, dados, opts = {}) {
   if (!idValido(propertyId)) return { ok: false, erro: "imóvel inválido" };
   const nome = limparTexto(dados?.name, 100);
   const tel = normalizarTelefone(dados?.phone);
   if (!nome && !tel) return { ok: false, erro: "Informe nome ou telefone do interessado." };
   const temp = TEMPERATURAS.includes(dados?.temperature) ? dados.temperature : "morno";
   const db = await banco();
+  /* IDEMP-01 (P1.6, 18/08/2026): retry/duplo clique com o mesmo Idempotency-Key recebe
+     replay/409 — nunca interessado duplicado no funil */
+  const org = await garantirOrganizacao(db);
+  const idem = await reivindicar(db, org.id, "oportunidade-criar", opts.idemKey);
+  if (idem.modo === "replay" || idem.modo === "em-andamento") return idem.corpo;
   const client = await db.connect();
+  let resultado;
   try {
     await client.query("BEGIN");
-    const org = await garantirOrganizacao(client);
     const prop = await client.query(
       "SELECT id FROM inventory_properties WHERE id=$1 AND organization_id=$2", [propertyId, org.id]);
-    if (!prop.rowCount) { await client.query("ROLLBACK"); return { ok: false, erro: "imóvel não encontrado" }; }
-    const contactId = await vincularContato(client, org.id, { name: nome, phone: tel, type: "comprador", source: "dossie" });
-    const o = await client.query(
-      `INSERT INTO opportunities (organization_id,contact_id,inventory_property_id,stage,origin,temperature,last_interaction_at)
-       VALUES ($1,$2,$3,'novo_interessado','dossie',$4,now()) RETURNING id,stage,temperature,created_at`,
-      [org.id, contactId, propertyId, temp]);
-    await registrarEvento(client, org.id, "opportunity.created", "opportunity", o.rows[0].id,
-      { inventoryPropertyId: propertyId, contactName: nome || null, temperature: temp });
-    await client.query("COMMIT");
-    return { ok: true, opportunity: o.rows[0] };
+    if (!prop.rowCount) {
+      await client.query("ROLLBACK");
+      resultado = { ok: false, erro: "imóvel não encontrado" };
+    } else {
+      const contactId = await vincularContato(client, org.id, { name: nome, phone: tel, type: "comprador", source: "dossie" });
+      const o = await client.query(
+        `INSERT INTO opportunities (organization_id,contact_id,inventory_property_id,stage,origin,temperature,last_interaction_at)
+         VALUES ($1,$2,$3,'novo_interessado','dossie',$4,now()) RETURNING id,stage,temperature,created_at`,
+        [org.id, contactId, propertyId, temp]);
+      await registrarEvento(client, org.id, "opportunity.created", "opportunity", o.rows[0].id,
+        { inventoryPropertyId: propertyId, contactName: nome || null, temperature: temp });
+      await client.query("COMMIT");
+      resultado = { ok: true, opportunity: o.rows[0] };
+    }
   } catch (e) {
     await client.query("ROLLBACK");
+    await abortar(db, org.id, "oportunidade-criar", idem.chave);
     throw e;
   } finally { client.release(); }
+  /* erro de negócio (imóvel não encontrado) também é gravado: a resposta é
+     determinística e o retry honesto recebe a mesma explicação */
+  await concluir(db, org.id, "oportunidade-criar", idem.chave, resultado);
+  return resultado;
 }
 
 export async function concluirTarefa(id) {
