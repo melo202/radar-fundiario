@@ -514,6 +514,58 @@ export async function listarRelacionamentos() {
   return { organization: org, contacts: r.rows };
 }
 
+/* ---------------- LGPD-01 (P1.7 do roadmap, 18/08/2026): anonimização do titular ----------------
+   Direito de eliminação: o titular pede para sair, a PII some, a TRILHA fica.
+   Não é DELETE (as FKs de opportunities/inventory_properties barrariam, e apagar a
+   linha destruiria o histórico de negócios): é anonimização irreversível em cascata.
+   Limite honesto: mensagens de texto livre do assistente que mencionem o nome não são
+   varridas — lá não dá para separar PII de contexto sem risco de apagar demais. */
+export async function anonimizarContato(contactId) {
+  if (!idValido(contactId)) return { ok: false, erro: "contato inválido" };
+  const db = await banco();
+  const org = await garantirOrganizacao();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const atual = await client.query(
+      "SELECT id, status FROM contacts WHERE id=$1 AND organization_id=$2", [contactId, org.id]);
+    if (!atual.rowCount) { await client.query("ROLLBACK"); return { ok: false, erro: "Contato não encontrado." }; }
+    if (atual.rows[0].status === "arquivado") {
+      await client.query("ROLLBACK");
+      return { ok: false, erro: "Este contato já foi anonimizado." };
+    }
+
+    /* 1) PII some da tabela principal; o id e os vínculos ficam — o funil e o
+       histórico seguem íntegros sem identificar a pessoa. status='arquivado' já a
+       tira de TODAS as listagens (listarRelacionamentos e dedup por telefone). */
+    await client.query(
+      `UPDATE contacts SET name='Titular anonimizado (LGPD)', phone=NULL, email=NULL,
+         document_number=NULL, notes=NULL, metadata='{}'::jsonb, status='arquivado',
+         consent_status='revogado', updated_at=now()
+       WHERE id=$1 AND organization_id=$2`, [contactId, org.id]);
+    /* 2) preferências de busca (bairros/faixas desejados) são perfil da pessoa — fora */
+    const prefs = await client.query(
+      "DELETE FROM contact_preferences WHERE contact_id=$1", [contactId]);
+    /* 3) trilha de eventos: o FATO fica, o IDENTIFICADOR sai — eventos do contato
+       viram payload neutro; eventos das oportunidades dele perdem o campo contactName */
+    const evContato = await client.query(
+      `UPDATE domain_events SET payload='{"anonimizado":true}'::jsonb
+       WHERE organization_id=$1 AND entity_type='contact' AND entity_id=$2`, [org.id, contactId]);
+    const evOport = await client.query(
+      `UPDATE domain_events SET payload=payload-'contactName'
+       WHERE organization_id=$1 AND entity_type='opportunity' AND payload ? 'contactName'
+         AND entity_id IN (SELECT id FROM opportunities WHERE contact_id=$2)`, [org.id, contactId]);
+    /* 4) a própria anonimização entra na trilha — com payload vazio de propósito */
+    await registrarEvento(client, org.id, "contact.anonymized", "contact", contactId, {});
+    await client.query("COMMIT");
+    return { ok: true, contato: contactId, preferenciasRemovidas: prefs.rowCount,
+      eventosLimpos: evContato.rowCount + evOport.rowCount };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally { client.release(); }
+}
+
 /* ---------------- D-1: dossiê do imóvel da carteira ----------------
    Quatro abas (Visão geral · Comercial · Arquivos · Histórico). As decisões de
    O QUE pode mudar (whitelist) e de COMO um evento vira frase são funções PURAS —

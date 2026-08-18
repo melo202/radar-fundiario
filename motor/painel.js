@@ -269,6 +269,13 @@ export async function painel(req, res) {
     const { listarRelacionamentos } = await import("./os-core.js");
     return json(res, 200, await listarRelacionamentos());
   }
+  if (req.method === "POST" && /^\/painel\/api\/os\/contatos\/[0-9a-f-]{36}\/anonimizar$/.test(req.url)) {
+    /* LGPD-01 (P1.7, 18/08/2026): direito de eliminação do titular — PII some em
+       cascata, a trilha de negócios fica. CSRF já foi exigido p/ todo POST acima */
+    const { anonimizarContato } = await import("./os-core.js");
+    const r = await anonimizarContato(req.url.split("/")[5]);
+    return json(res, r.ok ? 200 : 404, r);
+  }
   if (req.method === "GET" && req.url === "/painel/api/os/melhorias") {
     const { listImprovementProposals } = await import("./agent-review.js");
     return json(res, 200, await listImprovementProposals());
