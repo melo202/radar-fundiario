@@ -609,6 +609,16 @@
   .dleitura{background:var(--paper);border:1px solid var(--line);border-radius:2px;padding:14px 16px;margin-bottom:16px}
   .dleitura p{font:500 13.5px/1.55 "Archivo";color:var(--ink);margin:0}
 
+  /* UX-M1 (18/08, auditoria UX Kit Prefeitura): bloco Prefeitura visível na aba Resumo.
+     As 3 ações reutilizam .detail .acts a verbatim (só o próprio bloco é novo). */
+  .dpref{background:var(--paper);border:1.5px solid var(--line);border-left:4px solid var(--accent);border-radius:2px;padding:12px 14px;margin-bottom:16px}
+  .dpref-head{font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .dpref-insc{display:flex;align-items:center;gap:10px;margin:9px 0 11px}
+  .dpref-num{font:700 17px/1 "JetBrains Mono",monospace;color:var(--ink);letter-spacing:.05em}
+  .dpref-copy{min-height:44px;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink);font:600 12px/1 "Archivo";border-radius:2px;padding:0 14px;cursor:pointer}
+  .dpref-copy:hover{border-color:var(--ink)}
+  .dpref-dica{font:500 12.5px/1.5 "Archivo";color:var(--ink);background:var(--paper-2);border-left:3px solid var(--gold);padding:8px 10px;margin:11px 0 0}
+
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
     text-transform:uppercase;color:var(--muted);padding:9px 0;list-style:none}
@@ -1833,6 +1843,8 @@
         <div class="dscores" id="dScores"></div>
         <div class="dleitura" id="dLeitura"></div>
         <div class="acts" id="dActsPrim"></div>
+        <!-- UX-M1 (18/08, auditoria UX): kit Prefeitura VISÍVEL na aba Resumo — renderPrefeituraUI() -->
+        <div class="dpref" id="dPref"></div>
       </section>
 
       <section class="dossier-view" id="dViewTerritorio" role="tabpanel" aria-labelledby="dTabTerritorio" hidden>
@@ -7845,10 +7857,10 @@ function showDetail(a,ll){
   let nota=estM?"Fonte da estimativa: "+estM.metodo+". É estimativa, não avaliação oficial.":"Sem dados para estimar o preço.";
   if(dtCad)nota+=" Cadastro da prefeitura atualizado em "+dtCad+".";
   document.getElementById("dNote").textContent=nota;
-  /* CND da prefeitura (sccer00202f0): aceita a inscrição via querystring (testado) —
-     abre JÁ PREENCHIDA; o usuário só resolve o CAPTCHA e a certidão sai com o titular. */
+  /* UX-M1 (18/08): o kit Prefeitura (BIC/CND/IPTU + copiar inscrição) virou bloco
+     visível na aba Resumo — ver renderPrefeituraUI(). inscUse segue p/ o copyLink. */
   const inscUse=esc(insc||ci);
-  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu="+encodeURIComponent(clean(insc||ci).replace(/\D/g,""));
+  renderPrefeituraUI(insc||ci);
   /* 5. #dActsPrim — Lei da Tela: 1 primária (Gerar documento) + 2 secundárias (Ver comparáveis,
      ⭐ Salvar oportunidade). O botão de copiar a inscrição foi movido para o bloco de Mais opções
      abaixo (Fase 10 SALV-01) — nunca 3 secundárias visíveis. Salvar sincronizado por renderSaveBtn(). */
@@ -7866,16 +7878,15 @@ function showDetail(a,ll){
     <a href="https://earth.google.com/web/search/${lat.toFixed(6)},${lon.toFixed(6)}" target="_blank" rel="noopener">Earth ↗</a>`;
   }
   /* A-04 (20): a inscrição vai num data-attribute do container (nunca interpolada em string JS de
-     on*, que permitia breakout via aspas); copyInsc(this)/copyLink(this) leem via closest. */
+     on*, que permitia breakout via aspas); copyLink(this) lê via closest. copyInsc/CND saíram
+     daqui (UX-M1): viraram o bloco Prefeitura visível na aba Resumo. */
   const dActsMore=document.getElementById("dActsMore");
   dActsMore.dataset.insc=clean(insc||ci);
   dActsMore.innerHTML=`
     ${(a.x_coord&&a.y_coord)?`<button type="button" onclick="setDossierView('territorio');compare()">Analisar vizinhança</button>`:""}
     <button type="button" class="acts-save" id="cadernoBtn" onclick="salvarNoCadernoUI()" aria-pressed="false">Salvar no caderno</button>
-    <button type="button" onclick="copyInsc(this)">Copiar inscrição ⧉</button>
     <button type="button" onclick="abrirCustos()">Calcular custos de compra (ITBI + cartório)</button>
     <button type="button" onclick="abrirMkt()">Gerar material de divulgação</button>
-    <a href="${cnd}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre a CND da prefeitura já com a inscrição ${inscUse} preenchida — só resolver o CAPTCHA; a certidão sai com o nome do titular">Titular (CND) ⧉↗</a>
     <button type="button" onclick="copyLink(this)" title="Copia um link direto para este imóvel (?insc=${inscUse}) — cole no WhatsApp/e-mail">Copiar link deste imóvel ⧉</button>
     ${mapLinks}
     <div class="zapgroup">
@@ -8738,6 +8749,33 @@ function copyInsc(x){
   const v=inscDoEl(x);
   /* B-12: via copyTexto — fallback (execCommand) + feedback garantido, nunca falha silenciosa. */
   if(v)copyTexto(v,"Inscrição "+v+" copiada — cole na consulta oficial.");
+}
+/* UX-M1 (18/08 — auditoria UX do Kit Prefeitura): os 3 serviços oficiais da Prefeitura
+   VISÍVEIS na aba Resumo da ficha. Antes só a CND existia — enterrada em Diligência ▸
+   Ferramentas, com rótulo-jargão e tooltip explicativo invisível no mobile. Sem
+   custo de rede: a ficha já tem a inscrição e os URLs são fixos — os MESMOS do motor
+   (motor/links-prefeitura.js; o teste de contrato prega a sincronia). BIC/IPTU não
+   aceitam deep-link: o clique já COPIA a inscrição (copyInsc), é só colar no portal. */
+function renderPrefeituraUI(inscRaw){
+  const el=document.getElementById("dPref");
+  if(!el)return;
+  const d=String(inscRaw||"").replace(/\D/g,"");
+  if(d.length<6||d.length>15){
+    /* honesto: sem inscrição os serviços não abrem — o bloco explica, não some em silêncio */
+    el.innerHTML=`<div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
+      <p class="dpref-dica">Este registro não trouxe a inscrição cadastral — sem ela, os serviços oficiais (BIC, CND, IPTU) não abrem. Confira o endereço no mapa oficial.</p>`;
+    return;
+  }
+  el.dataset.insc=d; /* copyInsc(this) lê via closest("[data-insc]") */
+  el.innerHTML=`
+    <div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
+    <div class="dpref-insc"><span class="dpref-num">${d}</span><button type="button" class="dpref-copy" onclick="copyInsc(this)">Copiar ⧉</button></div>
+    <div class="acts">
+      <a class="primary" href="https://www.goiania.go.gov.br/sistemas/saces/asp/saces00000f0.asp?sigla=siptu" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. O clique já copia a inscrição: é só colar no portal.">Espelho do imóvel (BIC) ↗</a>
+      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — só resolver o CAPTCHA. Positiva lista débitos, mas não identifica o titular.">CND do imóvel ↗</a>
+      <a href="https://iptu.goiania.go.gov.br/sistemas/scarr/asp/scarr50000f0.asp" target="_blank" rel="noopener" onclick="copyInsc(this)" title="A guia traz o NOME DO CONTRIBUINTE — onde o titular aparece quando a CND positiva não mostra.">Guia do IPTU ↗</a>
+    </div>
+    <p class="dpref-dica">💡 Procurando o titular? CND positiva não mostra o nome — a <b>guia do IPTU</b> mostra (vem como contribuinte).</p>`;
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
 function copyLink(x){

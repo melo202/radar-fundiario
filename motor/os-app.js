@@ -200,28 +200,51 @@ async function saveOpportunity(id,dados,btn){
   }catch(e){toast(e.message);btn.disabled=false;btn.textContent="Salvar andamento";}
 }
 const stageOpts=[["prospect","Prospecção"],["visited","Visitado"],["captured","Captado"],["ready_to_publish","Pronto para divulgar"],["qualified","Qualificado"],["inactive","Inativo"],["sold","Vendido"],["rented","Alugado"]];
-/* Kit Prefeitura (18/08/2026 — Fases 0/1): inscrição imobiliária resolvida pelo motor +
-   os 3 atalhos oficiais. O titular aparece na GUIA do IPTU quando a CND positiva não
-   mostra — a dica fica à vista no card. Nada de titular no banco: quem emite é você. */
+/* Kit Prefeitura (18/08 — Fases 0/1 + UX-P da auditoria UX): inscrição em chip copiável
+   (era uma frase cinza), BIC como ação PRIMÁRIA, dica do titular como CALLOUT (era meta
+   12px no rodapé — o insight mais valioso com o menor peso visual). Resultado fica em
+   cache em state.property.prefKit: reabrir o dossiê não espera a API de novo.
+   Nada de titular no banco: quem emite é você. */
 function prefeituraCard(propId){
-  const card=el("article",{class:"entity-card"},[el("h3",{text:"Prefeitura de Goiânia"}),el("p",{text:"Localizando a inscrição no cadastro oficial…"})]);
+  const cached=state.property.prefKit&&state.property.prefKit.propId===propId?state.property.prefKit.r:null;
+  const card=el("article",{class:"entity-card prefeitura-card"},[el("h3",{text:"Documentos oficiais · Prefeitura"}),el("p",{text:"Localizando a inscrição no cadastro oficial…"})]);
+  const render=r=>{
+    const copiar=el("button",{class:"pref-copy",type:"button",text:"Copiar ⧉"});
+    copiar.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(r.inscricao);toast("Inscrição copiada — cole no portal da prefeitura.");}catch{prompt("Copie a inscrição:",r.inscricao);}});
+    const atalho=(href,text,title)=>el("a",{class:"card-action secondary as-link",href,target:"_blank",rel:"noopener",title,text});
+    card.replaceChildren(
+      el("h3",{text:"Documentos oficiais · Prefeitura"}),
+      el("div",{class:"pref-insc"},[el("span",{class:"pref-num",text:r.inscricao}),copiar]),
+      el("p",{class:"pref-fonte",text:r.fonte}),
+      el("a",{class:"card-action as-link",href:r.links.espelhoBic,target:"_blank",rel:"noopener",title:"Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Cole a inscrição copiada acima.",text:"Espelho do imóvel (BIC) ↗"}),
+      el("div",{class:"pref-acts"},[
+        atalho(r.links.cnd,"CND do imóvel ↗","Abre com a inscrição preenchida — só o CAPTCHA. Positiva lista débitos, não identifica o titular."),
+        atalho(r.links.guiaIptu,"Guia do IPTU ↗","A guia traz o NOME DO CONTRIBUINTE — onde o titular aparece.")]),
+      el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}));
+  };
+  const renderErro=(msg)=>{
+    /* erro ACIONÁVEL (auditoria UX O4): a mensagem certa com o botão certo — falta de
+       endereço rola até o formulário; falha de rede oferece tentar de novo */
+    const filhos=[el("h3",{text:"Documentos oficiais · Prefeitura"}),el("p",{text:msg})];
+    if(/endereço/i.test(msg)){
+      const ir=el("button",{class:"card-action secondary",type:"button",text:"Preencher endereço agora ↓"});
+      ir.addEventListener("click",()=>{const f=$("propForm");if(!f)return;f.scrollIntoView({behavior:"smooth",block:"center"});const i=f.querySelector('input[name="address"]');if(i)i.focus({preventScroll:true});});
+      filhos.push(ir);
+    }else{
+      const deNovo=el("button",{class:"card-action secondary",type:"button",text:"Tentar de novo"});
+      deNovo.addEventListener("click",()=>{state.property.prefKit=null;card.replaceWith(prefeituraCard(propId));});
+      filhos.push(deNovo);
+    }
+    card.replaceChildren(...filhos);
+  };
+  if(cached){render(cached);return card;}
   api(`/painel/api/os/imoveis/${propId}/prefeitura`).then(r=>{
     if(state.property.id!==propId)return;
-    const copiar=el("button",{class:"card-action secondary",type:"button",text:"⧉ Copiar inscrição"});
-    copiar.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(r.inscricao);toast("Inscrição copiada — cole no portal da prefeitura.");}catch{prompt("Copie a inscrição:",r.inscricao);}});
-    const atalho=(href,text)=>el("a",{class:"card-action secondary as-link",href,target:"_blank",rel:"noopener",text});
-    card.replaceChildren(
-      el("h3",{text:"Prefeitura de Goiânia"}),
-      el("p",{text:`Inscrição imobiliária ${r.inscricao} · ${r.fonte}`}),
-      el("div",{class:"opp-actions"},[
-        atalho(r.links.espelhoBic,"Espelho do imóvel (BIC) ↗"),
-        atalho(r.links.cnd,"CND do imóvel ↗"),
-        atalho(r.links.guiaIptu,"Guia do IPTU ↗"),
-        copiar]),
-      el("p",{class:"meta",text:r.links.dicaTitular}));
+    state.property.prefKit={propId,r};
+    render(r);
   }).catch(e=>{
     if(state.property.id!==propId)return;
-    card.replaceChildren(el("h3",{text:"Prefeitura de Goiânia"}),el("p",{text:e.message||"Não foi possível localizar a inscrição agora — tente de novo em instantes."}));
+    renderErro(e.message||"Não foi possível localizar a inscrição agora — tente de novo em instantes.");
   });
   return card;
 }

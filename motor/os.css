@@ -89,6 +89,16 @@ textarea{width:100%;resize:vertical;border:1px solid #ccd8da;border-radius:14px;
 .opp-actions{display:grid;gap:8px;margin-top:12px}
 .opp-actions .card-action{margin-top:0}
 .card-action.as-link{display:block;text-align:center;text-decoration:none}
+/* UX-P (18/08, auditoria UX Kit Prefeitura): inscrição copiável em destaque (chip mono),
+   dica do titular como callout (não meta cinza), BIC primário + CND/IPTU lado a lado */
+.pref-insc{display:flex;align-items:center;gap:10px;margin-top:12px}
+.pref-num{font:700 18px/1.1 ui-monospace,"JetBrains Mono",monospace;letter-spacing:.04em;color:var(--ink);background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.pref-copy{min-height:44px;border:0;border-radius:12px;padding:0 14px;background:var(--brand-soft);color:var(--brand-strong);font-weight:800;cursor:pointer}
+.pref-fonte{margin:6px 0 0;color:var(--muted);font-size:12px}
+.pref-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.pref-acts .card-action{margin-top:0;width:auto}
+.pref-dica{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--brand-soft);color:var(--brand-strong);font-size:12.5px;font-weight:750;line-height:1.45}
+@media(max-width:520px){.pref-acts{grid-template-columns:1fr}}
 .opp-msg{border:1px solid var(--line);border-radius:12px;background:var(--canvas);padding:10px 13px}
 .opp-msg summary{font-size:13px;font-weight:750;color:var(--brand-strong);cursor:pointer}
 .opp-msg p{margin:8px 0 2px;font-size:13.5px;line-height:1.5;color:var(--ink)}
