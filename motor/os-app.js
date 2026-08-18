@@ -220,7 +220,8 @@ function prefeituraCard(propId){
       el("div",{class:"pref-acts"},[
         atalho(r.links.dadosCadastrais,"Titular (certidão cadastral) ↗","EMITE na hora, sem captcha: NOME e CPF do titular registrado, valor venal e área. É onde o titular aparece."),
         atalho(r.links.cnd,"CND de débitos ↗","EMITE na hora, sem captcha: regularidade fiscal imobiliária (negativa/positiva de débitos)."),
-        atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.")]),
+        atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular."),
+        atalho(r.links.limpezaPublica,"Limpeza pública (TLP) ↗","Abre com a inscrição preenchida. ATENÇÃO: débito de limpeza pública NÃO aparece na CND do imóvel — confira sempre antes de fechar.")]),
       el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}),
       /* USO INTERNO (só painel — NUNCA no mapa público): CND da pessoa por CPF/CNPJ+nome
          (sccer00203). A prefeitura protege dado de PESSOA com captcha de propósito — a

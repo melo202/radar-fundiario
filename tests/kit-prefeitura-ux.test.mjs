@@ -24,14 +24,16 @@ test("UX-M: bloco Prefeitura visível na aba Resumo, logo após as ações princ
   assert.ok(html.includes("renderPrefeituraUI(insc||ci)"), "chamado a cada abertura de ficha");
 });
 
-test("UX-M: os 4 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
-  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202w0.asp?txt_nr_iptu=", "sccer00201w0.asp?txt_nr_iptu=", "ConsultaTributos?InscricaoCadastral="]) {
+test("UX-M: os 5 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
+  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202w0.asp?txt_nr_iptu=", "sccer00201w0.asp?txt_nr_iptu=", "ConsultaTributos?InscricaoCadastral=", "TaxaLimpezaPublica?InscricaoCadastral="]) {
     assert.ok(html.includes(trecho), `mapa tem ${trecho}`);
     assert.ok(links.includes(trecho), `motor tem ${trecho} (fonte única de verdade)`);
   }
   assert.ok(html.includes("Espelho do imóvel (BIC) ↗"), "espelho vira 1 toque no mapa");
   assert.ok(html.includes("Titular (certidão cadastral) ↗"), "a virada de jogo: titular com NOME+CPF, emitido na hora");
   assert.ok(html.includes("Guia do IPTU ↗") && html.includes("CND de débitos ↗"));
+  assert.ok(html.includes("Limpeza pública (TLP) ↗"), "a pendência invisível entrou no kit");
+  assert.ok(html.includes("NÃO aparece na CND"), "o aviso da TLP nasce junto com o botão");
 });
 
 test("UX-M: a dica de ouro existe no mapa, como callout — e o rótulo-jargão morreu", () => {
@@ -45,12 +47,13 @@ test("UX-M: inscrição copiável em chip mono + cópia automática ao abrir ser
   assert.ok(html.includes('class="dpref-num"'), "chip mono destacado, não frase cinza");
   assert.ok(html.includes("el.dataset.insc=d"), "copyInsc lê via closest data-insc (A-04)");
   assert.match(html, /class="dpref-copy" onclick="copyInsc\(this\)"/, "copiar de 1 toque");
-  /* os 4 abrem preenchidos (deep-link; as certidões EMITEM na hora); o clique
+  /* os 5 abrem preenchidos (deep-link; as certidões EMITEM na hora); o clique
      ainda copia a inscrição — sobra para qualquer outro sistema do corretor */
   assert.match(html, /siptu00020a0\.asp\?ninsc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /sccer00202w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /sccer00201w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /ConsultaTributos\?InscricaoCadastral=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  assert.match(html, /TaxaLimpezaPublica\?InscricaoCadastral=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
 });
 
 test("UX-M: sem inscrição o bloco explica em vez de sumir em silêncio", () => {

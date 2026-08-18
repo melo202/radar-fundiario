@@ -16,7 +16,7 @@ test("soDigitos: só números, de qualquer máscara", () => {
   assert.equal(soDigitos(undefined), "");
 });
 
-test("linksPrefeitura: inscrição válida gera os 4 atalhos oficiais", () => {
+test("linksPrefeitura: inscrição válida gera os 5 atalhos oficiais", () => {
   const l = linksPrefeitura("12.345.678-9");
   assert.ok(l, "inscrição de 9 dígitos é válida");
   assert.equal(l.inscricao, "123456789");
@@ -24,6 +24,7 @@ test("linksPrefeitura: inscrição válida gera os 4 atalhos oficiais", () => {
   assert.ok(l.dadosCadastrais.includes("sccer00202w0.asp?txt_nr_iptu=123456789"), "dados cadastrais EMITEM na hora e mostram NOME+CPF do titular");
   assert.ok(l.cnd.includes("sccer00201w0.asp?txt_nr_iptu=123456789"), "CND de débitos (regularidade fiscal) EMITE na hora, sem captcha");
   assert.ok(l.guiaIptu.includes("ConsultaTributos?InscricaoCadastral=123456789"), "guia do IPTU abre preenchida no PortalTributos (DUAM)");
+  assert.ok(l.limpezaPublica.includes("TaxaLimpezaPublica?InscricaoCadastral=123456789"), "TLP abre preenchida — o débito que a CND não mostra");
   assert.ok(l.dicaTitular.includes("Dados Cadastrais"), "a dica do titular aponta para a certidão cadastral");
 });
 

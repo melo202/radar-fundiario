@@ -7184,6 +7184,8 @@ function montarPacoteDiligencia(){
     ${checklistDocumentoHTML(a)}
     <div class="lcard"><h3>Canais oficiais para continuidade</h3>
       <p><a href="${esc(cnd)}">Prefeitura de Goiânia · emissão de CND municipal</a></p>
+      <p><a href="https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(insc.replace(/\D/g,""))}">Prefeitura de Goiânia · limpeza pública (TLP) — débito que não aparece na CND</a></p>
+      <p><a href="https://www.goiania.go.gov.br/sing_servicos/transmissao-de-imoveis/">Prefeitura de Goiânia · ITBI e transmissão de imóveis (como emitir a guia)</a></p>
       <p><a href="https://www.registrodeimoveis.org.br/servicos-interno/certidao-de-matricula">Registro de Imóveis do Brasil · certidão de matrícula</a></p>
       <p class="lmiudo">Confirme o cartório competente, a vigência, a autenticidade e o conteúdo de cada documento diretamente nas fontes oficiais e com a orientação profissional aplicável.</p></div>
     <div class="foot">RADAR FUNDIÁRIO · PACOTE DE DILIGÊNCIA · EMITIDO EM ${hoje}</div>`;
@@ -8777,6 +8779,7 @@ function renderPrefeituraUI(inscRaw){
       <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: a Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado, valor venal e área. É onde o titular aparece.">Titular (certidão cadastral) ↗</a>
       <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: Certidão Negativa/Positiva de Débitos do imóvel (regularidade fiscal imobiliária).">CND de débitos ↗</a>
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — é só clicar em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.">Guia do IPTU ↗</a>
+      <a href="https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida. ATENÇÃO: débito de limpeza pública NÃO aparece na CND do imóvel — confira sempre antes de fechar.">Limpeza pública (TLP) ↗</a>
     </div>
     <p class="dpref-dica">💡 Procurando o titular? A <b>certidão cadastral</b> (2º botão) mostra NOME e CPF registrados — emitida na hora, sem captcha.</p>`;
 }

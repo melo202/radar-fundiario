@@ -11,11 +11,17 @@
      na hora, SEM captcha. É onde o titular aparece — a virada de jogo.
    - CND de débitos (sccer00201): Regularidade Fiscal Imobiliária (negativa/
      positiva de débitos). GET direto no w0 também EMITE sem captcha.
-     (Existe ainda a sccer00203, busca por CPF/nome de PESSOA — não linkamos:
-     sensível e fora do caso de uso imóvel→titular.)
+     (sccer00203 = CND da PESSOA por CPF/nome: entra SÓ no painel, formulário
+     pré-preenchido — o captcha de pessoa a prefeitura protege e a gente respeita.)
    - Guia do IPTU (DUAM): PortalTributos/ConsultaTributos — aceita deep-link
      ?InscricaoCadastral=<14 dígitos> (campo vem preenchido; o antigo
      scarr50000f0.asp redireciona pra lá). Plano B do titular (contribuinte na guia).
+   - Limpeza pública (TLP): PortalTributos/TaxaLimpezaPublica — mesmo deep-link
+     ?InscricaoCadastral= (verificado com render real 18/08/2026). DÉBITO DE TLP
+     NÃO APARECE NA CND imobiliária — é a pendência que estoura depois da revenda.
+   - (Descobertos no mesmo estudo: siptu00040 = valor venal rápido, redundante com
+     a certidão cadastral; sccer00301 = validação de laudo ISTI, nicho; sisti = ITBI,
+     processo com sessão, sem deep-link; ListaDebitos exige token de sessão.)
 
    LGPD: aqui NÃO entra nome/CPF de ninguém — só a inscrição e os links oficiais.
    O que o corretor emitir no portal dele vira PDF arquivado (document-service),
@@ -44,7 +50,7 @@ export function separaEndereco(address) {
   return { rua: rua || t, numero: m ? Number(m[1]) : null };
 }
 
-/* pura: inscrição → os 4 atalhos oficiais. Inscrições reais do cadastro têm
+/* pura: inscrição → os 5 atalhos oficiais. Inscrições reais do cadastro têm
    6 a 15 dígitos (o app trata >10 como nrinscr de unidade, senão ci do lote);
    fora disso é lixo de entrada e a resposta honesta é null. */
 export function linksPrefeitura(inscricao) {
@@ -56,6 +62,7 @@ export function linksPrefeitura(inscricao) {
     dadosCadastrais: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
     cnd: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
     guiaIptu: `https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}`,
+    limpezaPublica: `https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(d)}`,
     dicaTitular: "A Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado — emitida na hora, sem captcha.",
   };
 }
