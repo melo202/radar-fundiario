@@ -1,7 +1,8 @@
 // UX-M + UX-P (18/08/2026 — auditoria UX do Kit Prefeitura): os serviços oficiais da
 // Prefeitura VISÍVEIS onde a dor acontece. Achados que este teste trava contra regressão:
 // M1 — Espelho BIC e Guia do IPTU não existiam no mapa; M2 — CND enterrada a 3-4 toques
-// com rótulo-jargão "Titular (CND)"; M3 — a dica de ouro (titular está na guia do IPTU)
+// com rótulo-jargão "Titular (CND)"; M3 — a dica de ouro (o titular está na Certidão de
+// Dados Cadastrais, sccer00202, emitida na hora sem captcha — verificado ao vivo 18/08)
 // não existia no mapa; O1 — no painel a dica era meta cinza 12px; O2 — a inscrição ia
 // embutida numa frase; O4 — erro sem caminho e sem retry.
 import { readFileSync } from "node:fs";
@@ -23,18 +24,19 @@ test("UX-M: bloco Prefeitura visível na aba Resumo, logo após as ações princ
   assert.ok(html.includes("renderPrefeituraUI(insc||ci)"), "chamado a cada abertura de ficha");
 });
 
-test("UX-M: os 3 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
-  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202f0.asp?txt_nr_iptu=", "ConsultaTributos?InscricaoCadastral="]) {
+test("UX-M: os 4 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
+  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202w0.asp?txt_nr_iptu=", "sccer00201w0.asp?txt_nr_iptu=", "ConsultaTributos?InscricaoCadastral="]) {
     assert.ok(html.includes(trecho), `mapa tem ${trecho}`);
     assert.ok(links.includes(trecho), `motor tem ${trecho} (fonte única de verdade)`);
   }
   assert.ok(html.includes("Espelho do imóvel (BIC) ↗"), "espelho vira 1 toque no mapa");
-  assert.ok(html.includes("Guia do IPTU ↗") && html.includes("CND do imóvel ↗"));
+  assert.ok(html.includes("Titular (certidão cadastral) ↗"), "a virada de jogo: titular com NOME+CPF, emitido na hora");
+  assert.ok(html.includes("Guia do IPTU ↗") && html.includes("CND de débitos ↗"));
 });
 
 test("UX-M: a dica de ouro existe no mapa, como callout — e o rótulo-jargão morreu", () => {
   assert.ok(html.includes("Procurando o titular?"), "a dica nasce onde a dúvida nasce");
-  assert.match(html, /guia do IPTU<\/b> mostra/, "CND positiva → guia do IPTU, explícito");
+  assert.match(html, /certidão cadastral<\/b> \(2º botão\) mostra NOME e CPF/, "titular → certidão cadastral, explícito");
   assert.ok(!html.includes("Titular (CND)"), "rótulo-jargão enterrado não existe mais");
   assert.ok(!html.includes(">Copiar inscrição ⧉<"), "copiar solto em Ferramentas saiu — vive no bloco");
 });
@@ -43,9 +45,11 @@ test("UX-M: inscrição copiável em chip mono + cópia automática ao abrir ser
   assert.ok(html.includes('class="dpref-num"'), "chip mono destacado, não frase cinza");
   assert.ok(html.includes("el.dataset.insc=d"), "copyInsc lê via closest data-insc (A-04)");
   assert.match(html, /class="dpref-copy" onclick="copyInsc\(this\)"/, "copiar de 1 toque");
-  /* os 3 abrem preenchidos (deep-link); o clique ainda copia a inscrição —
-     sobra para qualquer outro sistema do corretor */
+  /* os 4 abrem preenchidos (deep-link; as certidões EMITEM na hora); o clique
+     ainda copia a inscrição — sobra para qualquer outro sistema do corretor */
   assert.match(html, /siptu00020a0\.asp\?ninsc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  assert.match(html, /sccer00202w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  assert.match(html, /sccer00201w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /ConsultaTributos\?InscricaoCadastral=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
 });
 
@@ -64,7 +68,7 @@ test("UX-P: hierarquia do card no painel — chip, primária, callout, cache", (
   assert.ok(app.includes("Documentos oficiais · Prefeitura"), "título comunica valor, não origem");
   assert.ok(app.includes('class:"pref-num"'), "inscrição em chip mono copiável");
   assert.match(app, /class:"card-action as-link",href:r\.links\.espelhoBic/, "BIC é a ação PRIMÁRIA");
-  assert.ok(app.includes('class:"pref-acts"'), "CND + IPTU lado a lado, secundárias");
+  assert.ok(app.includes('class:"pref-acts"'), "titular + CND + IPTU lado a lado, secundárias");
   assert.ok(app.includes('class:"pref-dica"'), "dica do titular vira callout, não meta");
   assert.ok(app.includes("state.property.prefKit={propId,r}"), "resultado em cache — reabrir não espera");
 });

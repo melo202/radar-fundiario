@@ -1,6 +1,7 @@
-/* Kit Prefeitura (Fases 0/1, 18/08/2026) — a inscrição imobiliária abre os 3
-   serviços oficiais; o titular mora na guia do IPTU, não na CND nem no BIC.
-   Rede é injetada (fetchImpl) — a suíte não bate na prefeitura. */
+/* Kit Prefeitura (Fases 0/1, 18/08/2026) — a inscrição imobiliária abre os 4
+   serviços oficiais; o titular mora na Certidão de Dados Cadastrais (sccer00202),
+   emitida na hora sem captcha. Rede é injetada (fetchImpl) — a suíte não bate
+   na prefeitura. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -15,14 +16,15 @@ test("soDigitos: só números, de qualquer máscara", () => {
   assert.equal(soDigitos(undefined), "");
 });
 
-test("linksPrefeitura: inscrição válida gera os 3 atalhos oficiais", () => {
+test("linksPrefeitura: inscrição válida gera os 4 atalhos oficiais", () => {
   const l = linksPrefeitura("12.345.678-9");
   assert.ok(l, "inscrição de 9 dígitos é válida");
   assert.equal(l.inscricao, "123456789");
   assert.ok(l.espelhoBic.includes("siptu00020a0.asp?ninsc=123456789"), "BIC abre JÁ PREENCHIDO (deep-link ?ninsc=, verificado ao vivo 18/08/2026)");
-  assert.ok(l.cnd.includes("sccer00202f0.asp?txt_nr_iptu=123456789"), "CND aceita deep-link com a inscrição");
+  assert.ok(l.dadosCadastrais.includes("sccer00202w0.asp?txt_nr_iptu=123456789"), "dados cadastrais EMITEM na hora e mostram NOME+CPF do titular");
+  assert.ok(l.cnd.includes("sccer00201w0.asp?txt_nr_iptu=123456789"), "CND de débitos (regularidade fiscal) EMITE na hora, sem captcha");
   assert.ok(l.guiaIptu.includes("ConsultaTributos?InscricaoCadastral=123456789"), "guia do IPTU abre preenchida no PortalTributos (DUAM)");
-  assert.ok(l.dicaTitular.includes("guia do IPTU"), "a dica do titular aponta para a guia");
+  assert.ok(l.dicaTitular.includes("Dados Cadastrais"), "a dica do titular aponta para a certidão cadastral");
 });
 
 test("linksPrefeitura: inscrição curta demais ou vazia é recusada (nunca inventa link)", () => {

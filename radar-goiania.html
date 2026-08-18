@@ -8754,9 +8754,10 @@ function copyInsc(x){
    VISÍVEIS na aba Resumo da ficha. Antes só a CND existia — enterrada em Diligência ▸
    Ferramentas, com rótulo-jargão e tooltip explicativo invisível no mobile. Sem
    custo de rede: a ficha já tem a inscrição e os URLs são fixos — os MESMOS do motor
-   (motor/links-prefeitura.js; o teste de contrato prega a sincronia). Os 3 serviços
-   abrem JÁ PREENCHIDOS (deep-link ?ninsc= / ?txt_nr_iptu= / ?InscricaoCadastral=);
-   o clique ainda COPIA a inscrição (copyInsc) — sobra pra qualquer outro sistema. */
+   (motor/links-prefeitura.js; o teste de contrato prega a sincronia). Os 4 serviços
+   abrem JÁ PREENCHIDOS — BIC e as 2 certidões EMITEM o documento na hora, sem captcha
+   (GET direto no endpoint de resultado); a guia preenche o campo. O clique ainda
+   COPIA a inscrição (copyInsc) — sobra pra qualquer outro sistema. */
 function renderPrefeituraUI(inscRaw){
   const el=document.getElementById("dPref");
   if(!el)return;
@@ -8773,10 +8774,11 @@ function renderPrefeituraUI(inscRaw){
     <div class="dpref-insc"><span class="dpref-num">${d}</span><button type="button" class="dpref-copy" onclick="copyInsc(this)">Copiar ⧉</button></div>
     <div class="acts">
       <a class="primary" href="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição (o clique também copia, caso precise colar em outro sistema).">Espelho do imóvel (BIC) ↗</a>
-      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — só resolver o CAPTCHA. Positiva lista débitos, mas não identifica o titular.">CND do imóvel ↗</a>
-      <a href="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — é só clicar em Consultar. A guia (DUAM) traz o NOME DO CONTRIBUINTE: onde o titular aparece quando a CND positiva não mostra.">Guia do IPTU ↗</a>
+      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: a Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado, valor venal e área. É onde o titular aparece.">Titular (certidão cadastral) ↗</a>
+      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: Certidão Negativa/Positiva de Débitos do imóvel (regularidade fiscal imobiliária).">CND de débitos ↗</a>
+      <a href="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — é só clicar em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.">Guia do IPTU ↗</a>
     </div>
-    <p class="dpref-dica">💡 Procurando o titular? CND positiva não mostra o nome — a <b>guia do IPTU</b> mostra (vem como contribuinte).</p>`;
+    <p class="dpref-dica">💡 Procurando o titular? A <b>certidão cadastral</b> (2º botão) mostra NOME e CPF registrados — emitida na hora, sem captcha.</p>`;
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
 function copyLink(x){

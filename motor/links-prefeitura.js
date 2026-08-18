@@ -1,19 +1,21 @@
 /* Kit Prefeitura (18/08/2026 — PLANO-ESPELHO-E-TITULAR, Fases 0 e 1).
-   A mesma chave abre os 3 serviços oficiais: a INSCRIÇÃO IMOBILIÁRIA, que o motor
+   A mesma chave abre os 4 serviços oficiais: a INSCRIÇÃO IMOBILIÁRIA, que o motor
    resolve sozinho pelo ponto (lat/lon) na camada de lotes do ArcGIS público.
 
-   O que cada serviço entrega (verificado na Carta de Serviços e nas páginas oficiais):
+   O que cada serviço entrega (verificado AO VIVO emitindo documentos reais 18/08/2026):
    - BIC ("espelho do imóvel"): Boletim de Informações Cadastrais — siptu00020a0.asp,
      que aceita GET com ?ninsc=<14 dígitos> e devolve o espelho JÁ PREENCHIDO
-     (verificado ao vivo 18/08/2026 — sem captcha no GET direto).
-     NÃO mostra o titular (é desenho da prefeitura, não falha nossa).
-   - CND do imóvel: sccer — aceita deep-link com a inscrição (o app já usava).
-     Quando POSITIVA, lista débitos mas não identifica o titular.
+     (sem captcha no GET direto). NÃO mostra o titular (desenho da prefeitura).
+   - Certidão de DADOS CADASTRAIS (sccer00202): mostra NOME + CPF do titular
+     registrado, valor venal e área. GET direto no w0 EMITE a certidão numerada
+     na hora, SEM captcha. É onde o titular aparece — a virada de jogo.
+   - CND de débitos (sccer00201): Regularidade Fiscal Imobiliária (negativa/
+     positiva de débitos). GET direto no w0 também EMITE sem captcha.
+     (Existe ainda a sccer00203, busca por CPF/nome de PESSOA — não linkamos:
+     sensível e fora do caso de uso imóvel→titular.)
    - Guia do IPTU (DUAM): PortalTributos/ConsultaTributos — aceita deep-link
-     ?InscricaoCadastral=<14 dígitos> (campo vem preenchido; verificado ao vivo
-     18/08/2026 com render real — o antigo scarr50000f0.asp redireciona pra lá).
-     A guia traz o NOME DO CONTRIBUINTE. É onde o titular
-     aparece quando a CND positiva não mostra. (A dica vai na UI.)
+     ?InscricaoCadastral=<14 dígitos> (campo vem preenchido; o antigo
+     scarr50000f0.asp redireciona pra lá). Plano B do titular (contribuinte na guia).
 
    LGPD: aqui NÃO entra nome/CPF de ninguém — só a inscrição e os links oficiais.
    O que o corretor emitir no portal dele vira PDF arquivado (document-service),
@@ -42,7 +44,7 @@ export function separaEndereco(address) {
   return { rua: rua || t, numero: m ? Number(m[1]) : null };
 }
 
-/* pura: inscrição → os 3 atalhos oficiais. Inscrições reais do cadastro têm
+/* pura: inscrição → os 4 atalhos oficiais. Inscrições reais do cadastro têm
    6 a 15 dígitos (o app trata >10 como nrinscr de unidade, senão ci do lote);
    fora disso é lixo de entrada e a resposta honesta é null. */
 export function linksPrefeitura(inscricao) {
@@ -51,9 +53,10 @@ export function linksPrefeitura(inscricao) {
   return {
     inscricao: d,
     espelhoBic: `https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}`,
-    cnd: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
+    dadosCadastrais: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
+    cnd: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
     guiaIptu: `https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}`,
-    dicaTitular: "CND positiva não mostra o titular — emita a guia do IPTU: o nome do contribuinte está nela.",
+    dicaTitular: "A Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado — emitida na hora, sem captcha.",
   };
 }
 

@@ -218,8 +218,9 @@ function prefeituraCard(propId){
       el("p",{class:"pref-fonte",text:r.fonte}),
       el("a",{class:"card-action as-link",href:r.links.espelhoBic,target:"_blank",rel:"noopener",title:"Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição.",text:"Espelho do imóvel (BIC) ↗"}),
       el("div",{class:"pref-acts"},[
-        atalho(r.links.cnd,"CND do imóvel ↗","Abre com a inscrição preenchida — só o CAPTCHA. Positiva lista débitos, não identifica o titular."),
-        atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o NOME DO CONTRIBUINTE: onde o titular aparece.")]),
+        atalho(r.links.dadosCadastrais,"Titular (certidão cadastral) ↗","EMITE na hora, sem captcha: NOME e CPF do titular registrado, valor venal e área. É onde o titular aparece."),
+        atalho(r.links.cnd,"CND de débitos ↗","EMITE na hora, sem captcha: regularidade fiscal imobiliária (negativa/positiva de débitos)."),
+        atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.")]),
       el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}));
   };
   const renderErro=(msg)=>{
