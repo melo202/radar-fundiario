@@ -24,7 +24,7 @@ test("UX-M: bloco Prefeitura visível na aba Resumo, logo após as ações princ
 });
 
 test("UX-M: os 3 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
-  for (const trecho of ["saces00000f0.asp?sigla=siptu", "sccer00202f0.asp?txt_nr_iptu=", "scarr50000f0.asp"]) {
+  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202f0.asp?txt_nr_iptu=", "scarr50000f0.asp"]) {
     assert.ok(html.includes(trecho), `mapa tem ${trecho}`);
     assert.ok(links.includes(trecho), `motor tem ${trecho} (fonte única de verdade)`);
   }
@@ -43,8 +43,9 @@ test("UX-M: inscrição copiável em chip mono + cópia automática ao abrir ser
   assert.ok(html.includes('class="dpref-num"'), "chip mono destacado, não frase cinza");
   assert.ok(html.includes("el.dataset.insc=d"), "copyInsc lê via closest data-insc (A-04)");
   assert.match(html, /class="dpref-copy" onclick="copyInsc\(this\)"/, "copiar de 1 toque");
-  /* BIC e IPTU não aceitam deep-link — o clique já copia a inscrição para colar */
-  assert.match(html, /saces00000f0\.asp\?sigla=siptu"[^>]*onclick="copyInsc\(this\)"/);
+  /* BIC e CND abrem preenchidos (deep-link); o clique ainda copia a inscrição —
+     sobra para o IPTU e para qualquer outro sistema do corretor */
+  assert.match(html, /siptu00020a0\.asp\?ninsc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /scarr50000f0\.asp"[^>]*onclick="copyInsc\(this\)"/);
 });
 

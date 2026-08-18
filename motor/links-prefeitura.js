@@ -3,7 +3,9 @@
    resolve sozinho pelo ponto (lat/lon) na camada de lotes do ArcGIS público.
 
    O que cada serviço entrega (verificado na Carta de Serviços e nas páginas oficiais):
-   - BIC ("espelho do imóvel"): Boletim de Informações Cadastrais — saces/siptu.
+   - BIC ("espelho do imóvel"): Boletim de Informações Cadastrais — siptu00020a0.asp,
+     que aceita GET com ?ninsc=<14 dígitos> e devolve o espelho JÁ PREENCHIDO
+     (verificado ao vivo 18/08/2026 — sem captcha no GET direto).
      NÃO mostra o titular (é desenho da prefeitura, não falha nossa).
    - CND do imóvel: sccer — aceita deep-link com a inscrição (o app já usava).
      Quando POSITIVA, lista débitos mas não identifica o titular.
@@ -45,7 +47,7 @@ export function linksPrefeitura(inscricao) {
   if (d.length < 6 || d.length > 15) return null;
   return {
     inscricao: d,
-    espelhoBic: "https://www.goiania.go.gov.br/sistemas/saces/asp/saces00000f0.asp?sigla=siptu",
+    espelhoBic: `https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}`,
     cnd: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
     guiaIptu: "https://iptu.goiania.go.gov.br/sistemas/scarr/asp/scarr50000f0.asp",
     dicaTitular: "CND positiva não mostra o titular — emita a guia do IPTU: o nome do contribuinte está nela.",
