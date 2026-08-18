@@ -9,7 +9,10 @@
      NÃO mostra o titular (é desenho da prefeitura, não falha nossa).
    - CND do imóvel: sccer — aceita deep-link com a inscrição (o app já usava).
      Quando POSITIVA, lista débitos mas não identifica o titular.
-   - Guia do IPTU: scarr — a guia traz o NOME DO CONTRIBUINTE. É onde o titular
+   - Guia do IPTU (DUAM): PortalTributos/ConsultaTributos — aceita deep-link
+     ?InscricaoCadastral=<14 dígitos> (campo vem preenchido; verificado ao vivo
+     18/08/2026 com render real — o antigo scarr50000f0.asp redireciona pra lá).
+     A guia traz o NOME DO CONTRIBUINTE. É onde o titular
      aparece quando a CND positiva não mostra. (A dica vai na UI.)
 
    LGPD: aqui NÃO entra nome/CPF de ninguém — só a inscrição e os links oficiais.
@@ -49,7 +52,7 @@ export function linksPrefeitura(inscricao) {
     inscricao: d,
     espelhoBic: `https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}`,
     cnd: `https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202f0.asp?txt_nr_iptu=${encodeURIComponent(d)}`,
-    guiaIptu: "https://iptu.goiania.go.gov.br/sistemas/scarr/asp/scarr50000f0.asp",
+    guiaIptu: `https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}`,
     dicaTitular: "CND positiva não mostra o titular — emita a guia do IPTU: o nome do contribuinte está nela.",
   };
 }

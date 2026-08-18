@@ -216,10 +216,10 @@ function prefeituraCard(propId){
       el("h3",{text:"Documentos oficiais · Prefeitura"}),
       el("div",{class:"pref-insc"},[el("span",{class:"pref-num",text:r.inscricao}),copiar]),
       el("p",{class:"pref-fonte",text:r.fonte}),
-      el("a",{class:"card-action as-link",href:r.links.espelhoBic,target:"_blank",rel:"noopener",title:"Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Cole a inscrição copiada acima.",text:"Espelho do imóvel (BIC) ↗"}),
+      el("a",{class:"card-action as-link",href:r.links.espelhoBic,target:"_blank",rel:"noopener",title:"Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição.",text:"Espelho do imóvel (BIC) ↗"}),
       el("div",{class:"pref-acts"},[
         atalho(r.links.cnd,"CND do imóvel ↗","Abre com a inscrição preenchida — só o CAPTCHA. Positiva lista débitos, não identifica o titular."),
-        atalho(r.links.guiaIptu,"Guia do IPTU ↗","A guia traz o NOME DO CONTRIBUINTE — onde o titular aparece.")]),
+        atalho(r.links.guiaIptu,"Guia do IPTU ↗","Abre com a inscrição preenchida — clique em Consultar. A guia (DUAM) traz o NOME DO CONTRIBUINTE: onde o titular aparece.")]),
       el("p",{class:"pref-dica",text:"💡 "+r.links.dicaTitular}));
   };
   const renderErro=(msg)=>{

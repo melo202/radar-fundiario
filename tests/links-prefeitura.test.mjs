@@ -21,7 +21,7 @@ test("linksPrefeitura: inscrição válida gera os 3 atalhos oficiais", () => {
   assert.equal(l.inscricao, "123456789");
   assert.ok(l.espelhoBic.includes("siptu00020a0.asp?ninsc=123456789"), "BIC abre JÁ PREENCHIDO (deep-link ?ninsc=, verificado ao vivo 18/08/2026)");
   assert.ok(l.cnd.includes("sccer00202f0.asp?txt_nr_iptu=123456789"), "CND aceita deep-link com a inscrição");
-  assert.ok(l.guiaIptu.includes("scarr50000f0.asp"), "guia do IPTU é o scarr");
+  assert.ok(l.guiaIptu.includes("ConsultaTributos?InscricaoCadastral=123456789"), "guia do IPTU abre preenchida no PortalTributos (DUAM)");
   assert.ok(l.dicaTitular.includes("guia do IPTU"), "a dica do titular aponta para a guia");
 });
 
