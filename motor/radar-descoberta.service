@@ -9,7 +9,7 @@ EnvironmentFile=/opt/radar/api/.env
 ExecStart=/usr/bin/node /opt/radar/api/descoberta-sitemap.js
 # logo apos descobrir, le a pagina dos anuncios novos (teto 60/noite) — o sitemap traz
 # identidade, o enriquecimento traz o PRECO. Falha ali nao derruba a descoberta.
-ExecStartPost=/usr/bin/node /opt/radar/api/ingerir-pagina.js 60
+ExecStartPost=/usr/bin/node /opt/radar/api/ingerir-pagina.js 150
 User=www-data
 NoNewPrivileges=true
 PrivateTmp=true
