@@ -70,8 +70,26 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
     } else {
       stats.novos++;
     }
-    if (!passaPreFiltro(a)) { stats.semGoiania = (stats.semGoiania || 0) + 1; continue; }
-    stats.tentativasExtracao++;
+    await processarListing({ id, novo, portal: a.portal, url: a.url,
+      titulo: a.titulo, descricao: a.descricao, tier, stats });
+  }
+  await pool.query(
+    "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('ingestao', $1, 'executada', $2)",
+    [sha(consulta).slice(0, 12), JSON.stringify(stats)]).catch(() => {});
+  return stats;
+}
+
+/* Processamento de UM listing (extraído do laço de ingerir em 19/08/2026 para reuso
+   pela leitura direta de página — ingerir-pagina.js): pré-filtro geo, extração por IA,
+   peneira determinística §6, properties, price_history, auditoria de mudança de preço
+   e geocodificação-bônus. Comportamento idêntico ao caminho de snippet — só mudou o
+   empacotamento (a suíte inteira trava isso). */
+export async function processarListing({ id, novo, portal, url, titulo, descricao, tier, stats }) {
+  const a = { portal, url, titulo, descricao };
+  if (!passaPreFiltro(a)) { stats.semGoiania = (stats.semGoiania || 0) + 1; return; }
+  stats.tentativasExtracao++;
+  /* identidade canônica (17/07): o id que o portal dá ao anúncio ancora histórico e dedup */
+  const idt = identidadeAnuncio(url);
     /* A1 (atualização contínua): o MESMO anúncio (portal + id) reaparecendo com conteúdo
        novo = mudou desde a última varredura. A coleta anterior só conta se foi um
        comparável de verdade (peneira §6) — página-catálogo não tem "preço anterior";
@@ -152,8 +170,3 @@ export async function ingerir({ consulta, paginas = 1, tier = "fast", maxExtrair
     }
     await dormir(500); /* gentileza com o rate do provedor de IA */
   }
-  await pool.query(
-    "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('ingestao', $1, 'executada', $2)",
-    [sha(consulta).slice(0, 12), JSON.stringify(stats)]).catch(() => {});
-  return stats;
-}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Radar Fundiario - descoberta gratuita de anuncios via sitemap dos portais (19/08/2026)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/descoberta-sitemap.js
+User=www-data
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=2h
+# mesma governanca da varredura (alerta Hostinger 21/07): lote nunca passa de 2 vCPUs
+Nice=15
+CPUQuota=200%
+IOWeight=10

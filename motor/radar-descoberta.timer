@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - agenda da descoberta por sitemap (07h43 UTC, ANTES da varredura 08h40: o que o sitemap acha de novo, a varredura/revisita enriquece na mesma madrugada)
+
+[Timer]
+OnCalendar=*-*-* 07:43:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target
