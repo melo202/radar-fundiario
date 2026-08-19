@@ -4,6 +4,7 @@
 // nosso banco — incluindo as páginas-catálogo que NÃO podem entrar (bug de 17/07).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { extrairLocs, ehIndiceSitemap, urlDeAnuncioGyn, PORTAIS } from "../motor/descoberta-sitemap.js";
 
 const cfg = (host) => PORTAIS.find(p => p.host === host);
@@ -49,4 +50,15 @@ test("PORTAIS: todo portal configurado tem padrão de anúncio e host válido", 
     assert.ok(/^[a-z0-9.-]+\.[a-z.]+$/.test(p.host), `host válido: ${p.host}`);
     assert.ok(p.anuncio instanceof RegExp, `regex de anúncio: ${p.host}`);
   }
+});
+
+test("FIO PEGADO: o caminho do preço existe de ponta a ponta (sitemap → página → funil)", () => {
+  const ip = readFileSync(new URL("../motor/ingerir-pagina.js", import.meta.url), "utf-8");
+  const rev = readFileSync(new URL("../motor/revisita.js", import.meta.url), "utf-8");
+  const svc = readFileSync(new URL("../motor/radar-descoberta.service", import.meta.url), "utf-8");
+  assert.ok(ip.includes("enriquecerPendentes"), "enriquecimento dos descobertos existe");
+  assert.ok(ip.includes("processarListing"), "página entra no MESMO funil do snippet");
+  assert.ok(rev.indexOf("ingerirPagina") > -1 && rev.indexOf("ingerirPagina") < rev.indexOf("site:${host}"),
+    "revisita tenta a página direto ANTES de gastar busca");
+  assert.ok(svc.includes("ingerir-pagina.js"), "descoberta encadeia o enriquecimento no systemd");
 });

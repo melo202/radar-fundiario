@@ -8,11 +8,12 @@
    histórico e auditoria de mudança caem de graça pelo caminho A1. */
 import { createHash } from "node:crypto";
 import { pool } from "./db.js";
-import { buscarPagina } from "./fonte-pagina.js";
+import { buscarPagina, PAUSA_MS } from "./fonte-pagina.js";
 import { processarListing } from "./ingerir.js";
 import { identidadeAnuncio, portalRaiz } from "./identidade-anuncio.js";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
+const dormir = (ms) => new Promise(r => setTimeout(r, ms));
 
 export async function ingerirPagina({ url, tier = "fast", fetchImpl } = {}) {
   const pg = await buscarPagina(url, { fetchImpl });
@@ -40,4 +41,41 @@ export async function ingerirPagina({ url, tier = "fast", fetchImpl } = {}) {
   }
   await processarListing({ id, novo, portal, url, titulo: pg.titulo, descricao: pg.texto, tier, stats });
   return { ok: true, stats };
+}
+
+/* Enriquecimento (19/08/2026): o sitemap descobre identidade e "está no ar"; aqui a
+   página de cada anúncio descoberto é lida e o PREÇO entra — é o que transforma os
+   5.220 registros da primeira descoberta em precificação de verdade. Teto por noite:
+   IA e portal não são infinitos; amanhã continua de onde parou (quem já tem property
+   sai da fila sozinho). */
+export async function enriquecerPendentes({ teto = 60, tier = "fast" } = {}) {
+  const alvos = await pool.query(
+    `SELECT DISTINCT l.url FROM listings l
+     WHERE l.raw_payload->>'fonte' = 'sitemap'
+       AND NOT EXISTS (SELECT 1 FROM listings l2 JOIN properties p ON p.listing_id = l2.id
+                       WHERE l2.url = l.url)
+       AND l.collected_at > now() - make_interval(days => 30)
+     ORDER BY l.url LIMIT $1`, [teto]);
+  const resumo = { alvos: alvos.rows.length, ok: 0, robots: 0, bloqueados: 0,
+    extraidos: 0, comparaveis: 0, falhas: 0 };
+  for (const a of alvos.rows) {
+    try {
+      const d = await ingerirPagina({ url: a.url, tier });
+      if (d.ok) { resumo.ok++; resumo.extraidos += d.stats.extraidos || 0; resumo.comparaveis += d.stats.comparaveis || 0; }
+      else if (d.motivo === "robots") resumo.robots++;
+      else resumo.bloqueados++;
+    } catch { resumo.falhas++; }
+    await dormir(PAUSA_MS);
+  }
+  await pool.query(
+    "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('enriquecimento','sitemap','executada',$1)",
+    [JSON.stringify(resumo)]).catch(() => {});
+  return resumo;
+}
+
+/* execução direta (ExecStartPost da descoberta): node ingerir-pagina.js [teto] */
+if (process.argv[1] && process.argv[1].endsWith("ingerir-pagina.js")) {
+  const teto = Number(process.argv[2] || 60);
+  enriquecerPendentes({ teto }).then(r => { console.log(JSON.stringify(r)); return pool.end(); })
+    .catch(e => { console.error(e); process.exit(1); });
 }
