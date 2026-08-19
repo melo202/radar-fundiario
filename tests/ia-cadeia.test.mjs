@@ -37,10 +37,11 @@ test("PERF: max_tokens declarado por tarefa e 429 respeitando o 'try again' do G
   const ex = readFileSync(new URL("../motor/extract.js", import.meta.url), "utf-8");
   /* 19/08/2026: os modelos atuais do Groq RACIOCINAM antes de responder e o raciocínio
      debita do max_tokens — 500 nascia truncado (400 "Failed to validate JSON" do Groq).
-     reasoning_effort=low (só Groq, ver ai-provider) + tetos maiores resolvem. */
+     reasoning_effort=none (qwen3.6 do Groq só aceita none|default — testado ao vivo:
+     "low" é rejeitado com 400) + tetos maiores resolvem. */
   assert.ok(ex.includes("maxTokens: 1400"), "extração: saída ~200 + respiro de raciocínio");
-  assert.ok(src.includes('reasoning_effort = "low"') || src.includes('reasoning_effort: "low"') || src.includes('reasoning_effort'),
-    "Groq recebe reasoning_effort=low — sem ele o raciocínio come o JSON");
+  assert.ok(src.includes('reasoning_effort = "none"'),
+    "Groq recebe reasoning_effort=none — sem ele o raciocínio come o JSON");
   const re = readFileSync(new URL("../motor/resumo-entorno.js", import.meta.url), "utf-8");
   assert.ok(re.includes("maxTokens: 1200"), "resumo idem");
 });
