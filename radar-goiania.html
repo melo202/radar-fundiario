@@ -777,6 +777,10 @@
   .chips button{padding:11px 15px;border-radius:20px;border:1.5px solid var(--line);background:var(--paper);
     font:500 14px/1 "Archivo";color:var(--ink);cursor:pointer;min-height:44px}
   .chips button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* GOOGLE-BUSCA: bloco "Você quis dizer?" — chip destaca a grafia oficial do cadastro */
+  .sug-box{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);text-align:center}
+  .sug-t{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:9px;letter-spacing:.02em}
+  .sug-chip{border-color:var(--accent)!important;font-weight:700!important}
   .winput{width:100%;font:500 17px/1.3 "Archivo";padding:14px;border-radius:12px;border:1.5px solid var(--line);
     background:var(--paper);color:var(--ink);margin-bottom:4px}
   .winput:focus{outline:none;border-color:var(--ink)} /* IN-01 (19-REVIEW.md): unifica com select/input/.caixa-input (linhas 147/170) */
@@ -2263,6 +2267,73 @@ function matchScoreRua(log,rCore,rD){
     if(before&&after)return 2; // fallback com boundary nos 2 lados
   }
   return null;
+}
+/* GOOGLE-BUSCA (18/08/2026 — pedido do Bruno: "escrito da forma mais burra possível, e o app
+   entende ou sugere"). Três peças PURAS (testadas em tests/busca-google.test.mjs):
+   - levDist: Damerau-Levenshtein com early-exit por limiar — só nos interessa "perto o bastante",
+     distância exata acima do limiar é desperdício de CPU.
+   - scoreVocab: quão perto a frase digitada está de um candidato do VOCABULÁRIO oficial
+     (rua/condomínio do cadastro), 0..1. Cobertura token a token com fuzzy por token —
+     typo de 1 letra em palavra curta, 2 em longa, e ORDEM LIVRE ("bocaiuva quintino" casa
+     "QUINTINO BOCAIUVA": cada token acha seu par, a posição não importa).
+   - ranquearVocab: filtra pelo limiar, ordena, deduplica pelo núcleo (mesma rua com grafia
+     de padding diferente não aparece 2x). */
+function levDist(a,b,max){
+  a=String(a||"");b=String(b||"");max=max==null?2:max;
+  if(a===b)return 0;
+  const la=a.length,lb=b.length;
+  if(Math.abs(la-lb)>max)return max+1;
+  if(!la)return lb;if(!lb)return la;
+  let p2=[],p0=[];
+  let p1=[];for(let j=0;j<=lb;j++)p1[j]=j;
+  for(let i=1;i<=la;i++){
+    p2=p0;p0=p1;p1=[i];
+    let rowMin=i;
+    for(let j=1;j<=lb;j++){
+      const c=a[i-1]===b[j-1]?0:1;
+      let v=Math.min(p0[j]+1,p1[j-1]+1,p0[j-1]+c);
+      if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])v=Math.min(v,p2[j-2]+1); /* transposição */
+      p1[j]=v;if(v<rowMin)rowMin=v;
+    }
+    if(rowMin>max)return max+1; /* linha inteira acima do limiar: desiste cedo */
+  }
+  return p1[lb];
+}
+/* tipos de via e palavras genéricas de prédio não carregam identidade — saem da comparação
+   ("AVENIDA portugual" ≈ "AV PORTUGAL": o tipo nunca derruba o score). VIA reusa TIPOVIA_WORDS
+   (fonte única) com fronteira de palavra global. */
+const VIA_TOKEN_RE=new RegExp("\\b(?:"+TIPOVIA_WORDS+")\\b\\.?","g");
+const PREDIO_STOP=new Set(["RES","ED","EDF","EDIFICIO","RESIDENCIAL","COND","CONDOMINIO","PREDIO","TORRE","BLOCO","APTO","APARTAMENTO"]);
+function vocabTokens(s){
+  return norm(s).replace(VIA_TOKEN_RE," ").replace(/[^A-Z0-9 ]/g," ")
+    .split(" ").filter(t=>t.length>=2&&!PREDIO_STOP.has(t));
+}
+function scoreVocab(query,cand){
+  const qs=vocabTokens(query),cs=vocabTokens(cand);
+  if(!qs.length||!cs.length)return 0;
+  let soma=0;
+  for(const q of qs){
+    let best=0;
+    for(const c of cs){
+      const lim=q.length<=4?1:2; /* palavra curta perdoa 1 letra; longa perdoa 2 */
+      const d=levDist(q,c,lim);
+      if(d>lim)continue;
+      const sc=1-d/Math.max(q.length,c.length);
+      if(sc>best)best=sc;
+    }
+    if(best===0)return 0; /* um token sem par = candidato errado, não "mais ou menos" */
+    soma+=best;
+  }
+  return soma/qs.length;
+}
+function ranquearVocab(query,candidatos,campo,limiar){
+  const seen=new Set(),lim=limiar==null?0.66:limiar;
+  return (candidatos||[])
+    .map(v=>({valor:v,core:campo==="nmlogradou"?ruaCore(v):norm(v)}))
+    .map(s=>Object.assign(s,{score:scoreVocab(query,s.core)}))
+    .filter(s=>s.score>=lim)
+    .sort((a,b)=>b.score-a.score)
+    .filter(s=>{const k=s.core;if(seen.has(k))return false;seen.add(k);return true;});
 }
 /* setor embutido na frase (BUSCA-04, SEARCH.md secao 3.2) — funcao pura: recebe o array de setores
    como PARAMETRO (combo), nunca le uma global implicita, para ser testavel sem depender do boot do
@@ -6188,6 +6259,39 @@ function buscarNoSetor(btn){
   pickBairro(btn.dataset.code);
   buscar();
 }
+/* GOOGLE-BUSCA (runtime): "você quis dizer?" com o VOCABULÁRIO OFICIAL do cadastro.
+   Quando a busca exata zera, perguntamos ao ArcGIS os valores DISTINTOS do campo
+   (rua: nmlogradou / prédio: nmedificio) que contêm o prefixo do token mais forte
+   digitado — 1 consulta leve (returnDistinctValues, sem geometria, ≤300 valores,
+   provado ao vivo 18/08/2026) — e ranqueamos fuzzy no cliente (ranquearVocab, puro).
+   Cache de sessão por (campo,prefixo): repetir a mesma falha não refaz a rede.
+   Falha de rede AQUI nunca derruba a busca — quem chama usa try/catch e segue sem sugestão. */
+const VOCAB_CACHE={};
+async function sugerirVocab(campo,frase){
+  const nucleo=campo==="nmlogradou"?ruaCore(frase):norm(frase).replace(/'/g,"");
+  /* token mais forte = a palavra mais longa com 4+ letras — o prefixo de 3 delimita o
+     universo sem pesar o servidor; sem token forte não há base honesta pra sugerir. */
+  const toks=vocabTokens(nucleo).filter(t=>t.length>=4);
+  if(!toks.length)return [];
+  const prefix=toks.sort((a,b)=>b.length-a.length)[0].slice(0,3);
+  const chave=campo+"|"+prefix;
+  if(!(chave in VOCAB_CACHE)){
+    const d=await jsonp({where:`vlvenal>0 AND UPPER(${campo}) LIKE '%${prefix}%'`,outFields:campo,
+      returnDistinctValues:"true",returnGeometry:"false",orderByFields:campo,resultRecordCount:300,f:"json"});
+    VOCAB_CACHE[chave]=(d.features||[]).map(f=>clean(f.attributes[campo])).filter(Boolean);
+  }
+  return ranquearVocab(nucleo,VOCAB_CACHE[chave],campo).slice(0,3);
+}
+/* clique no chip "você quis dizer?": aplica a grafia oficial no campo do modo e rebusca.
+   Lê data-campo/data-valor via .dataset (CR-01: NUNCA texto do usuário reanalisado como JS). */
+function aplicarSugestao(btn){
+  const campo=btn.dataset.campo,valor=btn.dataset.valor||"";
+  if(!campo||!valor)return;
+  if(campo==="nmlogradou"){document.getElementById("rua").value=valor;forceMode("addr");}
+  else if(campo==="nmedificio"){document.getElementById("predio").value=valor;forceMode("bd");}
+  else return;
+  buscar();
+}
 async function buscar(){
   const btn=document.getElementById("btnGo");
   if(btn.disabled)return; /* Enter repetido durante busca em andamento */
@@ -6251,6 +6355,27 @@ async function buscar(){
         a.__matchScore=s;
         return true;
       });
+      /* GOOGLE-BUSCA (ordem livre): "bocaiuva quintino" não casa o LIKE da frase inteira —
+         cada palavra vira um LIKE independente (o servidor acha em qualquer ordem) e o
+         cliente exige TODAS como tokens da rua. Só com 2+ palavras alfabéticas de 3+ letras;
+         ruas numeradas ("135") e letra+número ("T 37") nunca entram (tokens filtrados). */
+      if(!items.length){
+        const tks=rCore.split(" ").filter(t=>t.length>=3&&!/^\d+$/.test(t));
+        if(tks.length>=2){
+          loading(true,"tentando as palavras da rua em qualquer ordem…");
+          const likes=tks.map(t=>`UPPER(nmlogradou) LIKE '%${t}%'`).join(" AND ");
+          const allTok=await fetchWhere(`cdbairro=${b} AND vlvenal>0 AND ${likes}`,5);
+          items=allTok.filter(a=>{
+            const log=norm(a.nmlogradou);
+            const okTok=tks.every(t=>(" "+log+" ").includes(" "+t+" "));
+            const okN=!num||clean(a.nrimovel)===num||clean(a.nrimovel).replace(/\D/g,"")===nN;
+            if(!okTok||!okN)return false;
+            a.__matchScore=3; /* aproximado: ordem livre — fica depois dos matches exatos */
+            return true;
+          });
+          if(items.length)aviso="Encontrado pelas palavras da rua em qualquer ordem — confira o endereço na lista.";
+        }
+      }
       /* prédios costumam estar SEM número no cadastro (nrimovel vazio/"S/N"):
          se o número não casar, mostra a rua inteira em vez de "nada encontrado" */
       if(!items.length&&nN){
@@ -6327,8 +6452,20 @@ async function buscar(){
         return true;
       });
     }
+    /* GOOGLE-BUSCA: resultado zero NUNCA é beco sem saída — antes do finish, busca grafias
+       parecidas no vocabulário oficial (sugerirVocab) e o finish renderiza "você quis dizer?".
+       Só rua/prédio têm vocabulário; inscrição e quadra/lote são identificadores exatos.
+       Falha aqui não derruba a busca: sem sugestão, o finish mostra o vazio de sempre. */
+    let sug=[];
+    if(!items.length){
+      try{
+        loading(true,"procurando grafias parecidas…");
+        if(MODE==="addr")sug=await sugerirVocab("nmlogradou",clean(document.getElementById("rua").value));
+        else if(MODE==="bd")sug=await sugerirVocab("nmedificio",clean(document.getElementById("predio").value));
+      }catch(e){sug=[];}
+    }
     if(tk!==SEARCHTOKEN)return;
-    finish(items);
+    finish(items,false,sug);
     if(geoAncora)geoAncora.then(({d,rua,num})=>{if(tk===SEARCHTOKEN)desenharAncoraEnd(d,rua,num,!items.length);});
     if(aviso&&items.length)setTimeout(()=>toast(aviso),450); /* depois do toast do finish */
   }catch(e){
@@ -6363,7 +6500,7 @@ async function buscar(){
 /* aplica filtro de apto/garagem, ordena, renderiza e plota.
    fromMap=true quando veio de um clique no MAPA (pino/lote/ponto): aí um prédio abre
    o SELETOR de imóvel em vez de jogar o corretor na aba de busca. */
-function finish(items,fromMap){
+function finish(items,fromMap,sug){
     fecharConfirmacaoIdentidade(false); /* resultado novo invalida qualquer confirmação pendente */
     closeChooser(); /* resultado novo: descarta qualquer seletor de prédio anterior (evita sheet fantasma) */
     fecharTerrPanel(); /* WR-03 15-REVIEW.md: "1 sheet por vez" — #terrPanel some antes de qualquer resultado novo (senão fica atrás do #detail/#chooser, mesmo z-index) */
@@ -6393,6 +6530,12 @@ function finish(items,fromMap){
         (MODE==="addr")?"Nenhum imóvel nesse endereço. Confira a rua — ou, se for prédio, use o modo \"Prédio\" com o nome do edifício.":
         (MODE!=="insc"&&document.getElementById("apto").value?"Nenhum imóvel com esse número. Tente sem o apartamento para ver o prédio inteiro.":"Nada encontrado. Confira quadra/lote ou tente só a quadra.");
       toast(msg);
+      /* GOOGLE-BUSCA: "você quis dizer?" — chips com a grafia OFICIAL do cadastro (sugerirVocab,
+         fuzzy sobre valores distintos do ArcGIS). data-* escapado por esc(); aplicarSugestao lê
+         via .dataset (CR-01: nunca texto do usuário reanalisado como JS inline). */
+      const chipsSug=(sug&&sug.length)?`<div class="sug-box"><div class="sug-t">Você quis dizer?</div><div class="chips" style="justify-content:center">`+
+        sug.map(s=>`<button type="button" class="sug-chip" data-campo="${esc(s.campo)}" data-valor="${esc(s.valor)}" onclick="aplicarSugestao(this)">${esc(s.valor)}</button>`).join("")+
+        `</div></div>`:"";
       /* proxima acao em 1 toque, roteada pelo MODE (SEARCH.md §3.6): addr vazio reusa a rua digitada
          como palpite de nome de predio; bd vazio so foca a caixa unica p/ tentar outro nome. */
       let acao="";
@@ -6406,7 +6549,7 @@ function finish(items,fromMap){
       }else if(MODE==="bd"){
         acao=`<button type="button" onclick="document.getElementById('caixaInput').focus()">Tentar outro nome</button>`;
       }
-      document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}${acao?`<div class="chips" style="justify-content:center;margin-top:14px">${acao}</div>`:""}</div>`;
+      document.getElementById("results").innerHTML=`<div class="empty"><div class="big">Sem resultado</div>${msg}${chipsSug}${acao?`<div class="chips" style="justify-content:center;margin-top:14px">${acao}</div>`:""}</div>`;
       return;}
     setAdvancedSearch(false); /* resultado válido devolve o protagonismo à lista; o usuário pode reabrir os campos */
     /* Fase 13 MOT-01: mensagem 3, imediatamente antes de render() real (fase real de finish()) */
