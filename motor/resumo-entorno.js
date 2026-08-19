@@ -58,7 +58,9 @@ export async function resumirEntorno({ lat, lon }) {
   for (let tentativa = 0; tentativa < 2 && texto == null; tentativa++) {
     try {
       const g = await aiProvider.generateText({
-        task: "resumo-entorno", tier: "fast", maxTokens: 400,
+        /* 19/08: modelos Groq raciocinam antes de responder — 400 era engolido pelo
+           raciocínio e o texto nascia vazio; 1200 deixa respiro (ver extract.js) */
+        task: "resumo-entorno", tier: "fast", maxTokens: 1200,
         system: SYSTEM + (problema ? `\n\nATENÇÃO: tentativa anterior rejeitada (${problema}). Cite menos números.` : ""),
         prompt: JSON.stringify(payload),
       });

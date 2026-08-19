@@ -95,6 +95,12 @@ async function chatOnce(p, { system, prompt, tier, schema, maxTokens }) {
       model, temperature: 0.1, max_tokens: maxTokens || 2048,
       messages: [{ role: "system", content: sys }, { role: "user", content: prompt }],
     };
+    /* Groq 2026 (19/08): os modelos clássicos saíram do ar e só restaram famílias com
+       RACIOCÍNIO (qwen3.6, gpt-oss) — o raciocínio consome o max_tokens ANTES do JSON
+       nascer e a extração morria com 400 "Failed to validate JSON" / failed_generation
+       vazio. O /no_think no prompt não é honrado pelo Groq (testado ao vivo); o corte
+       certo é reasoning_effort=low, campo específico do Groq — por isso só entra aqui. */
+    if (/groq/i.test(p.base)) body.reasoning_effort = "low";
     if (schema) body.response_format = { type: "json_object" };
   }
   const doFetch = () => fetch(url, {

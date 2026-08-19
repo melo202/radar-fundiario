@@ -49,9 +49,11 @@ export async function extrairAnuncio({ titulo, descricao, tier = "fast" }) {
     task: "extracao-anuncio",
     tier,
     system: SYSTEM,
-    /* saída real da extração é ~200 tokens — declarar 500 (folga) em vez dos 2048
-       padrão triplica quantas extrações cabem na cota por minuto do Groq */
-    maxTokens: 500,
+    /* saída real da extração é ~200 tokens. 19/08/2026: os modelos atuais do Groq
+       RACIOCINAM antes de responder (mesmo com reasoning_effort=low) e o raciocínio
+       debita do max_tokens — com 500 o JSON nascia truncado/vazio (400 do provedor).
+       1400 = ~800 de respiro de raciocínio + folga sobre os ~200 de saída. */
+    maxTokens: 1400,
     prompt: `TÍTULO: ${titulo || "(sem título)"}\n\nDESCRIÇÃO:\n${descricao || "(sem descrição)"}`,
   }, EXTRACAO_SCHEMA);
 }

@@ -35,9 +35,14 @@ test("PERF: max_tokens declarado por tarefa e 429 respeitando o 'try again' do G
   assert.match(src, /try again in \(/, "espera o tempo que o provedor pediu");
   assert.ok(src.includes("Math.min("), "espera com teto — nunca trava a fila");
   const ex = readFileSync(new URL("../motor/extract.js", import.meta.url), "utf-8");
-  assert.ok(ex.includes("maxTokens: 500"), "extração declara o que precisa (~200 de saída)");
+  /* 19/08/2026: os modelos atuais do Groq RACIOCINAM antes de responder e o raciocínio
+     debita do max_tokens — 500 nascia truncado (400 "Failed to validate JSON" do Groq).
+     reasoning_effort=low (só Groq, ver ai-provider) + tetos maiores resolvem. */
+  assert.ok(ex.includes("maxTokens: 1400"), "extração: saída ~200 + respiro de raciocínio");
+  assert.ok(src.includes('reasoning_effort = "low"') || src.includes('reasoning_effort: "low"') || src.includes('reasoning_effort'),
+    "Groq recebe reasoning_effort=low — sem ele o raciocínio come o JSON");
   const re = readFileSync(new URL("../motor/resumo-entorno.js", import.meta.url), "utf-8");
-  assert.ok(re.includes("maxTokens: 400"), "resumo idem");
+  assert.ok(re.includes("maxTokens: 1200"), "resumo idem");
 });
 
 test("PERF: cooldown proporcional — 429 (cota/min) derruba o degrau por 65s, não 10min", () => {
