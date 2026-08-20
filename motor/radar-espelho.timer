@@ -1,0 +1,10 @@
+[Unit]
+Description=Radar Fundiario - sync incremental do espelho do cadastro (06h53 UTC, ANTES da descoberta 07h43: o mapa acorda com o delta da prefeitura)
+
+[Timer]
+OnCalendar=*-*-* 06:53:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

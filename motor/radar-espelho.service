@@ -1,0 +1,18 @@
+[Unit]
+Description=Radar Fundiario - espelho local do cadastro da prefeitura (ArcGIS -> PostGIS; P0.2, 20/08/2026)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/radar/api
+EnvironmentFile=/opt/radar/api/.env
+ExecStart=/usr/bin/node /opt/radar/api/espelho-cadastro.js
+User=www-data
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=10h
+# carga cheia da 1a vez demora (centenas de milhares de poligonos, servidor lento):
+# mesmo teto de governanca da varredura — a madrugada nao derruba o dia do corretor
+Nice=15
+CPUQuota=200%
+IOWeight=10
