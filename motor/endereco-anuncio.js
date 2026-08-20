@@ -14,7 +14,7 @@ const GENERICOS = new Set(["setor", "jardim", "vila", "parque", "residencial", "
   /* nome da cidade e numerais romanos NUNCA identificam bairro sozinhos (bug real:
      "Goiânia II" casava com qualquer localidade que tivesse "goiania" no nome) */
   "goiania", "go", "ii", "iii", "iv"]);
-const tokensSig = (s) => semAcento(String(s || "")).toLowerCase().split(/[^a-z0-9]+/)
+export const tokensSig = (s) => semAcento(String(s || "")).toLowerCase().split(/[^a-z0-9]+/)
   .filter(t => t.length > 1 && !GENERICOS.has(t));
 export function localidadeCasa(localidade, neighborhood) {
   const a = tokensSig(localidade), b = new Set(tokensSig(neighborhood));

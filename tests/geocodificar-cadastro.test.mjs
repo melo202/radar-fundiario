@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { normRuaEspelho, normEdificio, extraiCondominioAnuncio } from "../motor/geocodificar-cadastro.js";
+import { normRuaEspelho, normEdificio, extraiCondominioAnuncio, escolheBairro } from "../motor/geocodificar-cadastro.js";
 import { extraiEnderecoAnuncio } from "../motor/endereco-anuncio.js";
 
 test("normRuaEspelho: letra+número COLADOS como o cadastro grava", () => {
@@ -42,6 +42,18 @@ test("backfill em massa: requalifica antes, pula páginas-lista, registra audito
   assert.ok(src.includes("requalificarAcervo"), "passo 1 = requalificar (flag isCatalogPage fresca)");
   assert.ok(src.includes("isCatalogPage')::boolean IS NOT TRUE"), "página-lista nunca ganha pino");
   assert.ok(src.includes("geocodificacao-massa"), "estatística registrada em audit_log");
+});
+
+test("escolheBairro: exato, desempate por cobertura, ambíguo = null", () => {
+  const B = ["Bueno", "João Bueno", "Marista", "Oeste", "Sul", "Sul II", "Goiás", "Goiás - Área I", "Campos Dourados"].map(nm => ({ nm }));
+  assert.equal(escolheBairro(B, "Setor Bueno")?.nm, "Bueno", "cobertura 1.0 vence João Bueno 0.5");
+  assert.equal(escolheBairro(B, "Setor Marista")?.nm, "Marista");
+  assert.equal(escolheBairro(B, "MARISTA")?.nm, "Marista", "exato normalizado");
+  assert.equal(escolheBairro(B, "Jardim Goiás")?.nm, "Goiás", "Goiás 1/1 vence 'Goiás - Área I' 1/3");
+  assert.equal(escolheBairro(B, "Setor Sul"), null, "Sul × Sul II empatam — ambíguo honesto");
+  assert.equal(escolheBairro(B, "Setor Inexistente"), null);
+  assert.equal(escolheBairro(B, "Goiânia"), null, "nome da cidade nunca vira bairro");
+  assert.equal(escolheBairro(B, ""), null);
 });
 
 test("degrau bairro: último da cadeia, confiança 0.2 declarada, pino aproximado no front", () => {

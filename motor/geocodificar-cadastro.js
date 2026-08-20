@@ -8,7 +8,7 @@
    PRECISA casar por token com o nmbairro do cadastro (localidadeCasa) — senão null. */
 import { pool } from "./db.js";
 import { normalizaLogradouro, semAcento } from "./normaliza-endereco.js";
-import { localidadeCasa } from "./endereco-anuncio.js";
+import { localidadeCasa, tokensSig } from "./endereco-anuncio.js";
 
 /* Forma do nome de rua no espelho: tipo fora, letra+número COLADOS ("R  T27"→"T27",
    "AV T63"→"T63") — diferente do CNEFE, que grava com espaço ("T 63"). PURO. */
@@ -71,6 +71,30 @@ export async function geocodificarCadastro({ rua, numero, bairro }) {
    por token significativo nos DOIS sentidos, e só com candidato ÚNICO — ambíguo = null.
    precisao "bairro" / confidence 0.2: o pino existe p/ contexto de preço, e o front
    declara "posição aproximada" no tooltip. */
+/* escolha do polígono do bairro — PURA (testada sem banco). Exato normalizado ganha;
+   senão, match de token nos dois sentidos com desempate por cobertura (tokens em comum /
+   max(len)). Só aceita vencedor único com cobertura >= 0.5 — empate/zero = null. */
+export function escolheBairro(bairros, bairro) {
+  if (!bairro) return null;
+  const alvo = semAcento(bairro).toUpperCase().trim();
+  const exato = bairros.filter(b => semAcento(b.nm).toUpperCase() === alvo);
+  if (exato.length === 1) return exato[0];
+  const tb = tokensSig(bairro);
+  if (!tb.length) return null;
+  const pontuados = bairros
+    .filter(b => localidadeCasa(b.nm, bairro) && localidadeCasa(bairro, b.nm))
+    .map(b => {
+      const tn = tokensSig(b.nm);
+      const inter = tn.filter(t => tb.includes(t)).length;
+      return { b, score: inter / Math.max(tn.length, tb.length) };
+    })
+    .filter(p => p.score >= 0.5)
+    .sort((x, y) => y.score - x.score);
+  if (!pontuados.length) return null;
+  if (pontuados.length > 1 && pontuados[0].score === pontuados[1].score) return null; /* empate = ambíguo */
+  return pontuados[0].b;
+}
+
 let BAIRROS_CACHE = null;
 export async function geocodificarBairro({ bairro }) {
   if (!bairro) return null;
@@ -80,17 +104,10 @@ export async function geocodificarBairro({ bairro }) {
     BAIRROS_CACHE = r.rows;
     setTimeout(() => { BAIRROS_CACHE = null; }, 6 * 3600e3).unref?.(); /* espelho é diário — cache de 6h basta */
   }
-  const alvo = semAcento(bairro).toUpperCase().trim();
-  const exato = BAIRROS_CACHE.filter(b => semAcento(b.nm).toUpperCase() === alvo);
-  let cand;
-  if (exato.length === 1) cand = exato;
-  else {
-    const porToken = BAIRROS_CACHE.filter(b => localidadeCasa(b.nm, bairro) && localidadeCasa(bairro, b.nm));
-    if (porToken.length !== 1) return null; /* zero ou ambíguo ("Setor Sul" × Sul/Sul II) — não inventa */
-    cand = porToken;
-  }
-  return { lat: cand[0].lat, lon: cand[0].lon, precisao: "bairro", confidence: 0.2,
-    detalhe: `centroide do bairro "${cand[0].nm}" (espelho da divisas oficial)` };
+  const cand = escolheBairro(BAIRROS_CACHE, bairro);
+  if (!cand) return null;
+  return { lat: cand.lat, lon: cand.lon, precisao: "bairro", confidence: 0.2,
+    detalhe: `centroide do bairro "${cand.nm}" (espelho da divisas oficial)` };
 }
 
 /* nome do condomínio → centroide das unidades cadastradas com aquele nmedificio */
