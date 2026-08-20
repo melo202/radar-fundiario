@@ -3,6 +3,7 @@
 // e o where do incremental. Sem rede, sem banco.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { esriParaWkt, anelArea, montarWhere } from "../motor/espelho-cadastro.js";
 
 /* quadrado 1x1 no sentido HORÁRIO (exterior esri) */
@@ -45,4 +46,12 @@ test("montarWhere: cheio = 1=1; incremental ancorado na marca", () => {
   assert.equal(montarWhere(null, "2026-08-19T00:00:00Z"), "1=1", "camada sem campo de data é sempre cheia");
   assert.equal(montarWhere("dtultalter", "2026-08-19T03:00:00.000Z"),
     "dtultalter >= TIMESTAMP '2026-08-19 03:00:00'");
+});
+
+test("INCIDENTES DA 1ª CARGA (20/08) travados: oid único, MultiPolygon, PD sem paginação", () => {
+  const src = readFileSync(new URL("../motor/espelho-cadastro.js", import.meta.url), "utf-8");
+  assert.ok(src.includes('oid: "ESRI_OID"'), "cadastro usa ESRI_OID — OBJECTID tem duplicados reais");
+  assert.ok((src.match(/ST_Multi\(ST_GeomFromText/g) || []).length >= 3,
+    "bairro/lote/cadastro: MultiPolygon de verdade no ArcGIS");
+  assert.ok(src.includes("semPaginacao"), "Mapa_ModeloEspacial não pagina (resultOffset = 400)");
 });

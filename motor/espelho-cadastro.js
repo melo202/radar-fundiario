@@ -23,8 +23,10 @@ export const CAMADAS = {
   lote: { url: `${FB}/0/query`, oid: "OBJECTID", campoData: "last_edited_date",
     mapa: (a) => [a.OBJECTID, TXT(a.nm_lot), TXT(a.id_qdr), TXT(a.ci_qdr), TXT(a.ci),
       TXT(a.nm_cond), TXT(a.in_cond), DATA(a.last_edited_date)] },
-  cadastro: { url: `${FB}/3/query`, oid: "OBJECTID", campoData: "dtultalter",
-    mapa: (a) => [a.OBJECTID, TXT(a.nrinscr), TXT(a.nmlogradou), TXT(a.tplogradou),
+  cadastro: { url: `${FB}/3/query`, oid: "ESRI_OID", campoData: "dtultalter",
+    /* 1ª carga (20/08): OBJECTID da camada 3 tem DUPLICADOS ("ON CONFLICT cannot affect
+       row a second time") — o rowid único registrado da camada é ESRI_OID */
+    mapa: (a) => [a.ESRI_OID, TXT(a.nrinscr), TXT(a.nmlogradou), TXT(a.tplogradou),
       TXT(a.nrimovel), TXT(a.nrquadra), TXT(a.nrlote), TXT(a.cdbairro), TXT(a.nmbairro),
       NUM(a.areaterr), NUM(a.areaedif), NUM(a.vlvenal), TXT(a.cdzona), TXT(a.nmedificio),
       TXT(a.in_valido), DATA(a.dtultalter)] },
@@ -37,13 +39,13 @@ export const PD_CAMADAS = [0, 31, 14, 28];
 
 const SQL_INSERT = {
   bairro: `INSERT INTO espelho_bairro (objectid, nm, editado_em, geom)
-           SELECT o, nm, e, ST_GeomFromText(w, 4326) FROM unnest($1::int[], $2::text[], $3::timestamptz[], $4::text[]) AS u(o, nm, e, w)
+           SELECT o, nm, e, ST_Multi(ST_GeomFromText(w, 4326)) FROM unnest($1::int[], $2::text[], $3::timestamptz[], $4::text[]) AS u(o, nm, e, w)
            ON CONFLICT (objectid) DO UPDATE SET nm=EXCLUDED.nm, editado_em=EXCLUDED.editado_em, geom=EXCLUDED.geom`,
   lote: `INSERT INTO espelho_lote (objectid, nm_lot, id_qdr, ci_qdr, ci, nm_cond, in_cond, editado_em, geom)
-         SELECT o, l, q, cq, c, nc, ic, e, ST_GeomFromText(w, 4326) FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::timestamptz[], $9::text[]) AS u(o, l, q, cq, c, nc, ic, e, w)
+         SELECT o, l, q, cq, c, nc, ic, e, ST_Multi(ST_GeomFromText(w, 4326)) FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::timestamptz[], $9::text[]) AS u(o, l, q, cq, c, nc, ic, e, w)
          ON CONFLICT (objectid) DO UPDATE SET nm_lot=EXCLUDED.nm_lot, id_qdr=EXCLUDED.id_qdr, ci_qdr=EXCLUDED.ci_qdr, ci=EXCLUDED.ci, nm_cond=EXCLUDED.nm_cond, in_cond=EXCLUDED.in_cond, editado_em=EXCLUDED.editado_em, geom=EXCLUDED.geom`,
   cadastro: `INSERT INTO espelho_cadastro (objectid, nrinscr, nmlogradou, tplogradou, nrimovel, nrquadra, nrlote, cdbairro, nmbairro, areaterr, areaedif, vlvenal, cdzona, nmedificio, in_valido, alterado_em, geom)
-         SELECT o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, ST_GeomFromText(w, 4326)
+         SELECT o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, ST_Multi(ST_GeomFromText(w, 4326))
          FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::numeric[], $11::numeric[], $12::numeric[], $13::text[], $14::text[], $15::text[], $16::timestamptz[], $17::text[]) AS u(o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, w)
          ON CONFLICT (objectid) DO UPDATE SET nrinscr=EXCLUDED.nrinscr, nmlogradou=EXCLUDED.nmlogradou, tplogradou=EXCLUDED.tplogradou, nrimovel=EXCLUDED.nrimovel, nrquadra=EXCLUDED.nrquadra, nrlote=EXCLUDED.nrlote, cdbairro=EXCLUDED.cdbairro, nmbairro=EXCLUDED.nmbairro, areaterr=EXCLUDED.areaterr, areaedif=EXCLUDED.areaedif, vlvenal=EXCLUDED.vlvenal, cdzona=EXCLUDED.cdzona, nmedificio=EXCLUDED.nmedificio, in_valido=EXCLUDED.in_valido, alterado_em=EXCLUDED.alterado_em, geom=EXCLUDED.geom`,
   num_predial: `INSERT INTO espelho_num_predial (objectid, nrinscr, nm_npo, geom)
@@ -92,9 +94,15 @@ export function montarWhere(campoData, marca) {
 
 /* ---------------- IO: página do ArcGIS com retry ---------------- */
 async function buscarPagina(cfg, { where, offset, teto = 2000, fetchImpl = fetch }) {
-  const q = new URLSearchParams({ where, orderByFields: cfg.oid, resultOffset: String(offset),
-    resultRecordCount: String(teto), outFields: "*", returnGeometry: "true", outSR: "4326",
-    geometryPrecision: "6", f: "json" });
+  const q = new URLSearchParams({ where, outFields: "*", returnGeometry: "true",
+    outSR: "4326", geometryPrecision: "6", f: "json" });
+  /* o Mapa_ModeloEspacial NÃO pagina (resultOffset → 400, 1ª carga 20/08) — as camadas
+     do PD são pequenas, vêm numa chamada só (maxRecordCount do serviço cobre) */
+  if (!cfg.semPaginacao) {
+    q.set("orderByFields", cfg.oid);
+    q.set("resultOffset", String(offset));
+    q.set("resultRecordCount", String(teto));
+  }
   let ultimo;
   for (let t = 0; t < 3; t++) {
     try {
@@ -160,7 +168,7 @@ export async function espelharCamada(nome, { cheio = false, fetchImpl } = {}) {
 async function espelharPd({ fetchImpl } = {}) {
   let total = 0;
   for (const id of PD_CAMADAS) {
-    const cfg = { url: `${PD}/${id}/query`, oid: "OBJECTID" };
+    const cfg = { url: `${PD}/${id}/query`, oid: "OBJECTID", semPaginacao: true };
     let offset = 0, n = 0;
     for (;;) {
       const feats = await buscarPagina(cfg, { where: "1=1", offset, fetchImpl });
@@ -178,7 +186,7 @@ async function espelharPd({ fetchImpl } = {}) {
         await pool.query(SQL_INSERT.pd, [fatiaL.map(() => id), fatiaL.map(l => l[0]), fatiaL.map(l => l[1]), fatiaW]);
       }
       n += feats.length; offset += feats.length;
-      if (feats.length < 2000) break;
+      break; /* semPaginacao: uma chamada traz a camada inteira */
       await dormir(800);
     }
     await pool.query(
