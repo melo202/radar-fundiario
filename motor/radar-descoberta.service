@@ -13,7 +13,7 @@ ExecStartPost=/usr/bin/node /opt/radar/api/ingerir-pagina.js 150
 User=www-data
 NoNewPrivileges=true
 PrivateTmp=true
-TimeoutStartSec=2h
+TimeoutStartSec=6h
 # mesma governanca da varredura (alerta Hostinger 21/07): lote nunca passa de 2 vCPUs
 Nice=15
 CPUQuota=200%
