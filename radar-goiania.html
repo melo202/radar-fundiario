@@ -1397,6 +1397,35 @@
   .dmercado-portais-lbl{flex-basis:100%;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
   .dmercado-portal{font:600 12px/1 var(--font-ui);padding:7px 12px;border:1px solid var(--line-strong);border-radius:99px;
     background:var(--surface);color:var(--ink-soft);text-decoration:none;min-height:30px;display:inline-flex;align-items:center}
+
+  /* P1.4 (20/08): tríade Diligência·Avaliação·Mercado (Resumo) + calculadora "Quanto sobra?" */
+  .dtriade{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 var(--space-4)}
+  .dtcard{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px;border:1px solid var(--line);
+    border-radius:var(--radius-md);background:var(--surface);cursor:pointer;font:inherit;color:inherit;
+    transition:border-color var(--motion-fast) var(--ease-out),box-shadow var(--motion-fast) var(--ease-out)}
+  .dtcard:hover{border-color:var(--brand);box-shadow:0 1px 6px rgba(33,46,64,.08)}
+  .dtcard:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+  .dtcard-k{font:600 10px/1 var(--font-code);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .dtcard-v{font:700 14px/1.3 var(--font-ui);color:var(--ink)}
+  .dtcard-s{font-size:11.5px;line-height:1.45;color:var(--ink-soft)}
+  .dtcard-cta{margin-top:auto;padding-top:6px;font:600 12px/1 var(--font-ui);color:var(--brand)}
+  @media (max-width:640px){.dtriade{grid-template-columns:1fr}}
+  .dsobra{margin-top:var(--space-3);border-top:1px dashed var(--line-strong);padding-top:var(--space-3)}
+  .dsobra:empty{display:none}
+  .dsobra-head{font:700 13px/1.3 var(--font-ui);color:var(--ink)}
+  .dsobra-head em{font-style:normal;font-weight:600;color:var(--brass)}
+  .dsobra-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .dsobra-in{display:flex;flex-direction:column;gap:3px;font:600 11px/1.3 var(--font-ui);color:var(--muted)}
+  .dsobra-in input{font:600 13px/1 var(--font-ui);padding:8px 10px;border:1px solid var(--line-strong);
+    border-radius:var(--radius-sm);color:var(--ink);background:var(--surface);min-height:34px}
+  .dsobra-in input:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  @media (max-width:640px){.dsobra-grid{grid-template-columns:1fr}}
+  .dsobra-res{margin-top:10px;font-size:12.5px;line-height:1.7;color:var(--ink-soft)}
+  .dsobra-l{display:flex;justify-content:space-between;gap:10px}
+  .dsobra-l b{white-space:nowrap;color:var(--ink)}
+  .dsobra-l .is-neg{color:var(--warning)}
+  .dsobra-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--line);display:flex;
+    justify-content:space-between;gap:10px;font:700 14px/1.3 var(--font-ui);color:var(--ink)}
   .dmercado-portal:hover{border-color:var(--brand);color:var(--brand)}
   /* FU-1: interessados/follow-up (vocabulário ImobRadar) */
   .lead-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
@@ -1864,6 +1893,11 @@
         <div class="dvalor" id="dValor"></div>
         <div class="dscores" id="dScores"></div>
         <div class="dleitura" id="dLeitura"></div>
+        <!-- P1.4 (20/08): tríade Diligência · Avaliação · Mercado SEMPRE visível no Resumo —
+             fim das ferramentas escondidas. Cada card mostra o status AO VIVO da frente
+             (atualizarTriade) e é atalho que abre a seção correspondente já expandida.
+             Card nunca some: estado vazio vira convite honesto ("toque para calcular"). -->
+        <div class="dtriade" id="dTriade"></div>
         <div class="acts" id="dActsPrim"></div>
         <!-- UX-M1 (18/08, auditoria UX): kit Prefeitura VISÍVEL na aba Resumo — renderPrefeituraUI() -->
         <div class="dpref" id="dPref"></div>
@@ -1879,6 +1913,10 @@
           <div class="dmercado-head"><span class="dmercado-title">Quanto vale — análise de mercado <em>(beta)</em></span>
             <button type="button" id="btnMercado" onclick="analisarMercado()">Pesquisar mercado e gerar relatório</button></div>
           <div class="dmercado-body" id="dMercadoBody"></div>
+          <!-- P1.4 (20/08): calculadora "Quanto sobra?" — visível DENTRO do card de mercado,
+               assim que existe valor estimado (imediato ou avaliação completa). Toda a conta
+               na mesa: cada parcela com a fórmula declarada (renderSobra/sobraAtualizarRes). -->
+          <div class="dsobra" id="dSobra"></div>
         </div>
 
         <!-- Inteligência de Localização (MVP): entorno medido com dados abertos do OSM
@@ -4214,6 +4252,52 @@ function proximoEstadoCamada(atual,modo){
    layers com returnGeometry:true para um envelope arbitrariamente grande. */
 function zonasZoomGateOk(zoom){
   return typeof zoom==="number"&&zoom>=13;
+}
+/* P1.4 (20/08) linhaUrbTriade(estadoPD,areaterr): UMA linha de status urbanístico para o card
+   "Avaliação" da tríade — traduz o MESMO objeto de resolverZonaUI para linguagem de corretor,
+   sem interpretação jurídica nova: rótulo oficial da camada + aritmética de CA já conferida.
+   REGRA DE OURO herdada (T-18-01): dígito de CA SÓ quando regra.conferido===true. Retorna
+   string PLANA (o chamador usa textContent/esc — nunca innerHTML cru) ou null (omissão
+   honesta: parcial/erro/ausente não afirmam nada — o accordion Território mostra o retry). */
+function linhaUrbTriade(estadoPD,areaterr){
+  const e=estadoPD||{};
+  if(e.estado==="rural")return "Zona rural — os índices urbanos (CA) não se aplicam aqui.";
+  if(e.estado!=="resolvido"&&e.estado!=="resolvido_sem_unidade")return null;
+  const r=e.regra||null;
+  if(!r||r.conferido!==true){
+    return e.unidade?("Zona "+e.unidade.sigla+" identificada — índices de construção ainda não conferidos; ver Território."):null;
+  }
+  let base;
+  if(e.unidade){
+    base="Zona "+e.unidade.sigla+" — CA básico "+fmtCA(r.ca_basico)+"x"
+      +(r.ca_maximo!=null?(" · teto "+fmtCA(r.ca_maximo)+"x"):"")
+      +(r.altura_max!=null?(" · altura máx "+r.altura_max+" m"):"");
+  }else{
+    base="Macrozona Construída — CA básico universal "+fmtCA(r.ca_basico)+"x";
+  }
+  const at=+areaterr;
+  if(at>0&&r.ca_basico!=null){
+    base+=" · potencial de ~"+Math.round(at*r.ca_basico).toLocaleString("pt-BR")+" m² (básico, sem outorga)";
+  }
+  return base+".";
+}
+/* P1.4 (20/08) quantoSobra({valorEstimado,precoPedido,comissaoPct,debitos}): a calculadora
+   transparente da revenda — a conta INTEIRA exposta, cada parcela com sua fórmula declarada
+   na UI. Sobra = valorEstimado − precoPedido − ITBI − comissão − débitos: o que a revenda
+   estimada deixa depois dos custos da operação. ITBI de Goiânia: 2% sobre o preço negociado
+   (a prefeitura pode exigir base de referência própria se maior — declarado na legenda).
+   Entrada inválida/ausente -> null (NUNCA inventa número). PURA. */
+function quantoSobra(o){
+  const est=+((o||{}).valorEstimado), ped=+((o||{}).precoPedido);
+  if(!(est>0&&ped>0))return null;
+  const comPct=o.comissaoPct==null?6:+o.comissaoPct;
+  if(!(comPct>=0&&comPct<=100))return null;
+  const deb=Math.max(0,+o.debitos||0);
+  const itbi=Math.round(ped*0.02);
+  const comissao=Math.round(ped*comPct/100);
+  const margem=est-ped;
+  return {valorEstimado:est,precoPedido:ped,itbiPct:2,itbi,comissaoPct:comPct,comissao,
+    debitos:deb,margem,margemPct:margem/est,sobra:margem-itbi-comissao-deb};
 }
 // RADAR_PURE_END
 
@@ -7551,6 +7635,7 @@ function mercadoReset(a){
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
   const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Calcular valor";}
   if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
+  VALOR_EST=null;SOBRA_PEDIDO=null;SOBRA_DEBITOS=null;renderSobra(); /* P1.4: conta da revenda é deste imóvel, nunca herdada */
   estimativaImediata(a,MERCADO_EPOCH); /* Mercado em Movimento 17/07: o valor chega SOZINHO */
 }
 /* ESTIMATIVA IMEDIATA (projeto Mercado em Movimento, 17/07): assim que o imóvel abre,
@@ -7589,6 +7674,10 @@ async function estimativaImediata(a,epoca){
       <div style="font-size:12px;color:#5b6b6a">faixa ${brlC(d.faixa.de)} – ${brlC(d.faixa.ate)} · ${brlC(d.pm2Mediana)}/m² · sobre ${Math.round(t.area)} ${t.rotuloArea} · ${d.amostra.n} oferta(s) no bairro · confiança ${esc(d.confianca.rotulo)}</div>
       <div style="font-size:11px;color:#8a9695;margin-top:2px">Mediana do acervo diário de ofertas anunciadas — não são transações; o botão abaixo faz a avaliação completa.</div>`;
     body.prepend(el);
+    /* P1.4: alimenta a calculadora "Quanto sobra?" e o card Avaliação da tríade — fonte declarada */
+    VALOR_EST={valor:d.valorEstimado,fonte:"bairro",
+      detalhe:"mediana "+brlC(d.pm2Mediana)+"/m² × "+Math.round(t.area)+" "+t.rotuloArea+" · "+d.amostra.n+" oferta(s) no bairro"};
+    renderSobra();atualizarTriade();
   }catch(e){/* bônus: nunca atrapalha o card */}
 }
 /* ofertas comparáveis no MAPA (§10): pinos discretos em latão, com distância real ao
@@ -7632,6 +7721,117 @@ function irParaAvaliacao(){
   const btL=document.getElementById('btnLocal');
   if(btL&&!btL.disabled&&!btL.dataset.rodou&&LOCAL_LL){btL.dataset.rodou="1";analisarLocal();}
 }
+/* ---------------- P1.4 (20/08): tríade visível no Resumo + calculadora "Quanto sobra?" ----------------
+   Fim das ferramentas escondidas (pedido do usuário: "tem muita coisa escondida, quero as
+   ferramentas mais visíveis"): o Resumo mostra o status AO VIVO das 3 frentes de trabalho
+   (Diligência/Avaliação/Mercado) sem entrar em aba nenhuma, e a conta da revenda fica aberta
+   no card de mercado, cada parcela com a fórmula declarada. Nenhuma consulta nova — tudo
+   deriva de estado já existente (DCUR, __docChecklistSummary, __pdEstado, LOCAL_LAST). */
+let VALOR_EST=null; /* {valor,fonte:"bairro"|"avaliacao",detalhe} — zera a cada imóvel (mercadoReset) */
+let SOBRA_PEDIDO=null,SOBRA_DEBITOS=null;
+const brlSinal=n=>(n>=0?"+":"−")+brlC(Math.abs(n));
+const brlMenos=n=>"−"+brlC(Math.abs(n));
+function sobraComissaoPct(){
+  try{const v=parseFloat(String(localStorage.getItem("radar_comissao_pct")).replace(",","."));
+    if(v>=0&&v<=100)return v;}catch(e){}
+  return 6;
+}
+function parseMoedaInput(v){const n=parseInt(String(v||"").replace(/\D/g,""),10);return n>0?n:null;}
+/* triadeIr: cada card é atalho que abre a seção correspondente JÁ expandida. Diligência rola ao
+   kit prefeitura (mora no Resumo, UX-M1); Avaliação segue o caminho existente de irParaAvaliacao
+   e ainda abre o accordion Urbanístico ("pode construir?" respondido sem caça); Mercado rola ao
+   entorno e dispara a medição uma vez (mesmo padrão de irParaAvaliacao — nunca duplica). */
+function triadeIr(qual){
+  if(qual==="diligencia"){
+    const p=document.getElementById("dPref");
+    if(p)p.scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
+  if(qual==="avaliacao"){
+    irParaAvaliacao();
+    const u=document.getElementById("dUrbanistico");if(u)u.open=true;
+    return;
+  }
+  setDossierView("territorio");
+  const card=document.getElementById("dLocal");
+  if(card)setTimeout(()=>card.scrollIntoView({behavior:"smooth",block:"start"}),80);
+  const btL=document.getElementById("btnLocal");
+  if(btL&&!btL.disabled&&!btL.dataset.rodou&&LOCAL_LL){btL.dataset.rodou="1";analisarLocal();}
+}
+function atualizarTriade(){
+  const box=document.getElementById("dTriade");if(!box)return;
+  const a=DCUR;if(!a){box.innerHTML="";return;}
+  const chk=a.__docChecklistSummary;
+  const digS=(chk?chk.conferidos+" de "+chk.total+" documentos conferidos":"Checklist documental ainda não iniciado")
+    +(clean(a.nrinscr||a.ci)?" · BIC, titular, CND, IPTU e TLP a 1 clique":"");
+  const est=VALOR_EST;
+  const urb=linhaUrbTriade(a.__pdEstado,a.areaterr);
+  const urbS=urb||((a.x_coord&&a.y_coord)?"Plano Diretor: consultando…":"Sem coordenada para consultar o Plano Diretor");
+  const avV=est?brlC(est.valor):"Toque para calcular o valor";
+  const avS=(est?((est.fonte==="avaliacao"?"Avaliação completa":"Índice do bairro")+" · "):"")+urbS;
+  let mercS="Toque para medir o entorno (escolas, mercados, saúde…)";
+  if(LOCAL_LAST){
+    const tops=Object.values(LOCAL_LAST.categorias||{}).filter(c=>c.count>0)
+      .sort((x,y)=>y.count-x.count).slice(0,3)
+      .map(c=>c.count+" "+String(c.rotulo||"").toLowerCase());
+    if(tops.length)mercS="Entorno medido: "+tops.join(" · ");
+  }
+  const r=quantoSobra({valorEstimado:est&&est.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:sobraComissaoPct(),debitos:SOBRA_DEBITOS});
+  const avSobra=r?("<br>Sobra estimada na revenda: <b>"+esc(brlSinal(r.sobra))+"</b>"):"";
+  box.innerHTML=`
+    <button type="button" class="dtcard" onclick="triadeIr('diligencia')">
+      <span class="dtcard-k">Diligência</span><span class="dtcard-v">Documentos e titular</span>
+      <span class="dtcard-s">${esc(digS)}</span><span class="dtcard-cta">Ver serviços ↓</span></button>
+    <button type="button" class="dtcard" onclick="triadeIr('avaliacao')">
+      <span class="dtcard-k">Avaliação</span><span class="dtcard-v">${esc(avV)}</span>
+      <span class="dtcard-s">${esc(avS)}${avSobra}</span><span class="dtcard-cta">Abrir avaliação →</span></button>
+    <button type="button" class="dtcard" onclick="triadeIr('mercado')">
+      <span class="dtcard-k">Mercado</span><span class="dtcard-v">Ofertas e entorno</span>
+      <span class="dtcard-s">${esc(mercS)}</span><span class="dtcard-cta">Ver território →</span></button>`;
+}
+/* renderSobra: a calculadora visível DENTRO do card de mercado — aparece assim que existe valor
+   estimado (imediato ou completo). Inputs NUNCA re-renderizam a si mesmos (foco preservado):
+   cada tecla atualiza só o painel de resultado (#dSobraRes) e a tríade. */
+function renderSobra(){
+  const box=document.getElementById("dSobra");if(!box)return;
+  const est=VALOR_EST;
+  if(!est||!(est.valor>0)){box.innerHTML="";return;}
+  box.innerHTML=`
+    <div class="dsobra-head">Quanto sobra neste negócio? <em>(conta aberta)</em></div>
+    <div class="dsobra-l" style="margin-top:8px"><span>Valor de mercado estimado<small style="display:block;font-weight:400;color:var(--muted)">${esc(est.detalhe)}</small></span><b>${brlC(est.valor)}</b></div>
+    <div class="dsobra-grid">
+      <label class="dsobra-in">Preço pedido / negociado (R$)
+        <input id="dSobraPedido" inputmode="numeric" placeholder="ex.: 850000" value="${SOBRA_PEDIDO||""}"></label>
+      <label class="dsobra-in">Comissão (%)
+        <input id="dSobraCom" inputmode="decimal" value="${String(sobraComissaoPct()).replace(".",",")}"></label>
+      <label class="dsobra-in">Débitos do imóvel (R$ — ver CND)
+        <input id="dSobraDeb" inputmode="numeric" placeholder="0" value="${SOBRA_DEBITOS||""}"></label>
+    </div>
+    <div class="dsobra-res" id="dSobraRes"></div>`;
+  ["dSobraPedido","dSobraCom","dSobraDeb"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.addEventListener("input",sobraAtualizarRes);
+  });
+  sobraAtualizarRes();
+}
+function sobraAtualizarRes(){
+  const res=document.getElementById("dSobraRes");if(!res)return;
+  const elP=document.getElementById("dSobraPedido"),elC=document.getElementById("dSobraCom"),elD=document.getElementById("dSobraDeb");
+  SOBRA_PEDIDO=parseMoedaInput(elP&&elP.value);
+  SOBRA_DEBITOS=parseMoedaInput(elD&&elD.value);
+  const comPct=parseFloat(String((elC&&elC.value)||"").replace(",","."));
+  try{localStorage.setItem("radar_comissao_pct",String(comPct>=0&&comPct<=100?comPct:6));}catch(e){}
+  const r=quantoSobra({valorEstimado:VALOR_EST&&VALOR_EST.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:comPct,debitos:SOBRA_DEBITOS});
+  if(!r){res.innerHTML='<p class="dmercado-hint">Informe o preço pedido para ver a conta completa: margem, ITBI, comissão e a sobra estimada da revenda.</p>';atualizarTriade();return;}
+  res.innerHTML=`
+    <div class="dsobra-l"><span>Margem de revenda — estimado ${brlC(r.valorEstimado)} menos pedido ${brlC(r.precoPedido)}</span><b class="${r.margem<0?"is-neg":""}">${brlSinal(r.margem)} (${(r.margemPct*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%)</b></div>
+    <div class="dsobra-l"><span>ITBI — 2% do preço</span><b>${brlMenos(r.itbi)}</b></div>
+    <div class="dsobra-l"><span>Comissão — ${String(r.comissaoPct).replace(".",",")}% do preço</span><b>${brlMenos(r.comissao)}</b></div>
+    <div class="dsobra-l"><span>Débitos (CND/TLP — quitados na venda)</span><b>${brlMenos(r.debitos)}</b></div>
+    <div class="dsobra-total"><span>Sobra estimada da revenda</span><b class="${r.sobra<0?"is-neg":""}" style="${r.sobra<0?"color:var(--warning)":""}">${brlSinal(r.sobra)}</b></div>
+    <p class="dmercado-hint">Estimativa sobre ofertas anunciadas — não é garantia de preço de venda. O ITBI real pode ter base de referência do município maior que o preço negociado; os débitos exatos constam na CND e na TLP (aba Resumo).</p>`;
+  atualizarTriade();
+}
+
 async function analisarMercado(){
   const a=MERCADO_A; if(!a)return;
   const body=document.getElementById("dMercadoBody"), bt=document.getElementById("btnMercado");
@@ -7739,6 +7939,10 @@ function renderMercado(d,subject){
     return;
   }
   const r=d.result;
+  /* P1.4: a avaliação completa substitui a estimativa de bairro na calculadora e na tríade */
+  VALOR_EST={valor:r.estimatedValue,fonte:"avaliacao",
+    detalhe:brlC(r.estimatedPricePerM2)+"/m² ponderado × "+subject.areaM2+" m² · "+r.sample.totalAccepted+" oferta(s) aceita(s)"};
+  renderSobra();atualizarTriade();
   const comps=(d.comparaveis||[]).map((c,i)=>`<li><b>${i+1}.</b> ${c.area} m²${c.quartos!=null?` · ${c.quartos} q`:""} · <b>${brlC(c.preco)}</b> <small>(${brlC(c.pm2)}/m²${c.distanciaM!=null?` · a ${fmtDist(c.distanciaM)}`:""} · ${esc(c.bairro)})</small> <a href="${esc(c.url)}" target="_blank" rel="noopener" class="dmercado-verlink">ver na ${esc(c.portal)} ↗</a></li>`).join("");
   const outs=(d.outliers||[]).map(o=>`<li>${esc(o.portal)} — ${esc(o.razao)}</li>`).join("");
   const subjLL=(MERCADO_A&&MERCADO_A.x_coord&&MERCADO_A.y_coord)?toWGS(MERCADO_A.x_coord,MERCADO_A.y_coord):null;
@@ -7830,6 +8034,7 @@ function renderLocal(d){
     ${at.length?`<div style="margin-top:8px"><b style="font-size:12px">Pontos de atenção</b><ul class="dmercado-list">${at.join("")}</ul></div>`:""}
     ${pos.length||at.length?`<div class="dmercado-parecer" id="dLocalResumo"><button type="button" class="dmercado-iabtn" onclick="resumirEntorno()">Resumir o entorno</button></div>`:""}
     <p class="dmercado-hint">Cobertura ${esc(q.coverageConfidence||"?")} · extrato de ${esc(q.extractDate||"?")} · ${esc(q.attribution||"© OpenStreetMap contributors")}.</p>`;
+  atualizarTriade(); /* P1.4: card Mercado do Resumo reflete a medição na hora */
 }
 /* Resumo do entorno: IA explica os dados medidos (números validados contra a medição no
    motor; se a validação reprovar, o motor devolve um resumo determinístico — nunca some). */
@@ -8142,6 +8347,7 @@ function showDetail(a,ll){
   renderCadernoBtn(); /* Fase 16 (16-02): IRMÃ ASSÍNCRONA de renderSaveBtn() (Pitfall 4) — cadernoTem() bate no IndexedDB, nunca trava o resto do render */
   renderDiffUI(a); /* Fase 17 (17-02, TERR-06): IRMÃ ASSÍNCRONA de renderCadernoBtn() — bate no IndexedDB, chave clean(a.ci||a.nrinscr) (Pitfall 1) */
   renderUrbanisticoUI(a); /* Fase 18 (18-02, PD-03): IRMÃ ASSÍNCRONA de renderDiffUI — consulta lazy do Plano Diretor pro lote em foco, nunca trava o render síncrono da ficha */
+  atualizarTriade(); /* P1.4: tríade do Resumo com o estado inicial desta ficha (checklist já renderizado acima) */
   /* 9. #dMetodologia — texto estático (mesmo p/ todo imóvel), UI-SPEC Component 6 */
   document.getElementById("dMetodologia").innerHTML=`
     <p><b>Posição cadastral:</b> compara o valor venal por m² com registros fiscais semelhantes em um raio de 400–800 m. Não é comparação de preços de venda nem score de oportunidade comercial.</p>
@@ -8561,12 +8767,13 @@ function renderUrbanisticoUI(a,isRetry){
     renderEvidence(a); /* a mesma resposta atualiza fonte/data/status no dossiê */
     histAtualizarUltimo(a); /* o snapshot local acompanha a evidência urbanística resolvida */
     atualizarScorePorquePD(a,estado); /* PD-04: acrescenta "Em {zona}..." ao porquê do score JÁ renderizado, quando conferido */
+    atualizarTriade(); /* P1.4: card Avaliação do Resumo ganha a linha "pode construir?" traduzida */
   }).catch(()=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return;
     /* B-01: mesmo HTML de erro do estado "erro" (com botão de retry) e binding — antes era um
        .dnote sem botão dizendo "Toque para tentar de novo", que não fazia nada. */
     body.innerHTML=montarUrbBodyHTML({estado:"erro"});
-    a.__pdEstado={estado:"erro"};renderEvidence(a);histAtualizarUltimo(a);
+    a.__pdEstado={estado:"erro"};renderEvidence(a);histAtualizarUltimo(a);atualizarTriade();
     const retryBtn=document.getElementById("urbRetry");
     if(retryBtn)retryBtn.addEventListener("click",()=>renderUrbanisticoUI(DCUR,true));
     toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
