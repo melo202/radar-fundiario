@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { esriParaWkt, anelArea, montarWhere } from "../motor/espelho-cadastro.js";
+import { esriParaWkt, anelArea, montarWhere, CAMADAS } from "../motor/espelho-cadastro.js";
 
 /* quadrado 1x1 no sentido HORÁRIO (exterior esri) */
 const EXTERNO = [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]];
@@ -54,4 +54,9 @@ test("INCIDENTES DA 1ª CARGA (20/08) travados: oid único, MultiPolygon, PD sem
   assert.ok((src.match(/ST_Multi\(ST_GeomFromText/g) || []).length >= 3,
     "bairro/lote/cadastro: MultiPolygon de verdade no ArcGIS");
   assert.ok(src.includes("semPaginacao"), "Mapa_ModeloEspacial não pagina (resultOffset = 400)");
+});
+
+test("bairro usa nm_bai (nome oficial), NÃO nm (loteamento) — bug apanhado ao vivo em 20/08", () => {
+  const linha = CAMADAS.bairro.mapa({ OBJECTID: 7, nm: "Res Campos Dourados", nm_bai: "JARDIM GOIÁS", last_edited_date: null });
+  assert.equal(linha[1], "JARDIM GOIÁS", "espelho_bairro.nm deve guardar o nome OFICIAL que o mapa consulta");
 });

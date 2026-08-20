@@ -19,7 +19,10 @@ const FB = `${BASE}/MapaServer/Feature_Base/MapServer`;
 const PD = `${BASE}/MapaServer/Mapa_ModeloEspacial/MapServer`;
 export const CAMADAS = {
   bairro: { url: `${FB}/2/query`, oid: "OBJECTID", campoData: "last_edited_date",
-    mapa: (a) => [a.OBJECTID, TXT(a.nm), DATA(a.last_edited_date)] },
+    /* nm_bai = nome OFICIAL do bairro (o que o mapa consulta); o campo nm da camada é
+       o nome do LOTEAMENTO ("Res Campos Dourados", "Gleba") — erro apanhado na verificação
+       ao vivo de 20/08, quando JARDIM GOIÁS voltou vazio do espelho */
+    mapa: (a) => [a.OBJECTID, TXT(a.nm_bai), DATA(a.last_edited_date)] },
   lote: { url: `${FB}/0/query`, oid: "OBJECTID", campoData: "last_edited_date",
     mapa: (a) => [a.OBJECTID, TXT(a.nm_lot), TXT(a.id_qdr), TXT(a.ci_qdr), TXT(a.ci),
       TXT(a.nm_cond), TXT(a.in_cond), DATA(a.last_edited_date)] },
