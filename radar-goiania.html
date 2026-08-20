@@ -403,6 +403,16 @@
     background:var(--paper-2);border:1px solid var(--line);border-radius:2px;box-shadow:var(--elev-1);
     max-width:calc(100vw - 24px);color:var(--muted)}
   .terr-legenda[hidden]{display:none}
+  /* LOTES-LOADING (20/08): feedback sutil enquanto a malha de lotes carrega — sem ele,
+     prefeitura lenta parecia mapa "travado" (relato real). Canto inf-esquerdo, acima da
+     atribuição; some sozinho quando a consulta termina. */
+  .lots-loading{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));left:12px;z-index:395;
+    display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--paper-2);
+    border:1px solid var(--line);border-radius:2px;box-shadow:var(--elev-1);
+    font:600 11px/1 "Archivo";color:var(--muted)}
+  .lots-loading[hidden]{display:none}
+  .lots-loading i{width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite}
   .terr-legend-head{display:flex;align-items:center;gap:4px;padding:0 4px}
   .terr-toggle{min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--ink);
     font:600 12.5px/1 "Archivo";cursor:pointer}
@@ -1767,6 +1777,7 @@
   <!-- MAPA -->
   <div class="mapwrap">
     <div id="map"></div>
+    <div id="lotsLoading" class="lots-loading" hidden aria-live="polite"><i aria-hidden="true"></i>carregando lotes…</div>
     <button id="searchPill" class="searchpill" aria-label="Abrir busca de imóvel" aria-haspopup="dialog" onclick="atlasOpenSearch();dismissCoach()">
       <svg class="pill-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><span class="pill-lb">O que você procura?</span>
     </button>
@@ -4250,9 +4261,10 @@ let SHEETGEN = 0; /* geração do sheet: invalida cleanups async de close obsole
 const ARCGIS_UPSTREAM="https://portalmapa.goiania.go.gov.br";
 const ARCGIS_PROXY="https://api.corretorinteligente.tech/arcgis";
 let PROXY_DEAD=false;
-async function arcgisFetch(params,url){
+async function arcgisFetch(params,url,signal){
   const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
-  const r=await fetch(url.replace(ARCGIS_UPSTREAM,ARCGIS_PROXY)+"?"+qs,{signal:AbortSignal.timeout(30000)});
+  const r=await fetch(url.replace(ARCGIS_UPSTREAM,ARCGIS_PROXY)+"?"+qs,
+    {signal:signal?AbortSignal.any([signal,AbortSignal.timeout(30000)]):AbortSignal.timeout(30000)});
   if(!r.ok)throw Object.assign(new Error("upstream http "+r.status),{upstream:true});
   const d=await r.json();
   if(d&&d.error)throw Object.assign(new Error(d.error.message||"erro do servidor"),{upstream:true});
@@ -4267,37 +4279,49 @@ async function arcgisFetch(params,url){
 const ESPELHO_CAMADA=new Map([[SVC,"cadastro"],[LOTSVC,"lote"],[BAISVC,"bairro"]]);
 const ESPELHO_FALHAS={};
 const ESPELHO_MORTO={};
-async function espelhoFetch(params,url){
+async function espelhoFetch(params,url,signal){
   const camada=ESPELHO_CAMADA.get(url);
   const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
-  const r=await fetch("https://api.corretorinteligente.tech/espelho/"+camada+"/query?"+qs,{signal:AbortSignal.timeout(12000)});
+  /* 8s: nosso espelho responde em <1s; mais que isso é falha — cai pro caminho histórico */
+  const r=await fetch("https://api.corretorinteligente.tech/espelho/"+camada+"/query?"+qs,
+    {signal:signal?AbortSignal.any([signal,AbortSignal.timeout(8000)]):AbortSignal.timeout(8000)});
   if(!r.ok)throw new Error("espelho http "+r.status);
   const d=await r.json();
   if(d&&d.error)throw new Error(d.error.message||"espelho indisponível");
   return d;
 }
+/* PREFEITURA_MORTA (20/08): quando o portal deles 502ia em sequência, o fallback histórico
+   queimava 30s+30s por tentativa e o mapa parecia TRAVADO (relato real). 3 falhas de
+   upstream seguidas → 60s de fail-fast com erro claro, em vez de minutos de spinner. */
+let UPSTREAM_FALHAS=0,PREFEITURA_MORTA_ATE=0;
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
-async function jsonp(params,retries=1,url=SVC){
+async function jsonp(params,retries=1,url=SVC,signal){
   const camada=ESPELHO_CAMADA.get(url);
   if(camada&&!ESPELHO_MORTO[camada]){
-    try{const d=await espelhoFetch(params,url);ESPELHO_FALHAS[camada]=0;return d;}
+    try{const d=await espelhoFetch(params,url,signal);ESPELHO_FALHAS[camada]=0;return d;}
     catch(e){
+      if(e.name==="AbortError")throw e; /* pan/zoom mais novo cancelou — não é falha do espelho */
       ESPELHO_FALHAS[camada]=(ESPELHO_FALHAS[camada]||0)+1;
       if(ESPELHO_FALHAS[camada]>=2){ESPELHO_MORTO[camada]=true;console.warn("espelho "+camada+" degradado — sessão segue no ArcGIS ao vivo:",e.message);}
     }
   }
+  if(Date.now()<PREFEITURA_MORTA_ATE)throw new Error("servidor da prefeitura instável no momento — aguarde ~1 minuto e tente de novo");
   for(;;){
     try{
       if(!PROXY_DEAD){
-        try{return await arcgisFetch(params,url);}
+        try{const d=await arcgisFetch(params,url,signal);UPSTREAM_FALHAS=0;return d;}
         catch(e){
-          if(e.upstream)throw e; /* upstream respondeu — segue o retry normal, ainda via proxy */
+          if(e.upstream){if(++UPSTREAM_FALHAS>=3){PREFEITURA_MORTA_ATE=Date.now()+60000;console.warn("prefeitura 502 em sequência — fail-fast por 60s");}throw e;}
           PROXY_DEAD=true;console.warn("proxy indisponível — sessão segue via JSONP:",e.message);
         }
       }
-      return await jsonpOnce(params,url);
+      const d=await jsonpOnce(params,url);UPSTREAM_FALHAS=0;return d;
     }
-    catch(e){if(retries-->0){await new Promise(r=>setTimeout(r,900));continue;}throw e;}
+    catch(e){
+      if(e.name==="AbortError")throw e;
+      if(retries-->0){await new Promise(r=>setTimeout(r,900));continue;}
+      throw e;
+    }
   }
 }
 function jsonpOnce(params,url=SVC){
@@ -4455,7 +4479,7 @@ const MAP_INK=mapTok("--ink","#14231d"),MAP_BRAND=mapTok("--brand","#18513e"),
       MAP_MUTED=mapTok("--muted","#68776f"),MAP_SELECT=mapTok("--focus","#2e73c7");
 const LOT_STYLE={pane:"lots",color:MAP_BRAND,weight:1,fillColor:MAP_BRAND,fillOpacity:.05,bubblingMouseEvents:false};
 const LOT_HOVER={weight:2.5,color:MAP_BRAND_STRONG,fillOpacity:.14};/* hover de lote = brand-strong Atlas */
-let lotLayer=null,LOTTOKEN=0,LOTHINT=false,LOTLBL=false;
+let lotLayer=null,LOTTOKEN=0,LOTHINT=false,LOTLBL=false,LOTABORT=null;
 const LOTINFO={};
 
 /* ---------------- lookup id<->cdbairro (Fase 15, TERR-02): resolve o gap entre a malha visual
@@ -4885,6 +4909,8 @@ async function refreshLots(){
   if(!sz.x||!sz.y)return; /* mapa oculto (tela Busca no mobile) — bounds colapsam num ponto */
   if(map.getZoom()<17){
     LOTTOKEN++; /* invalida qualquer consulta pendente — senão ela re-adiciona a camada */
+    if(LOTABORT){LOTABORT.abort();LOTABORT=null;}
+    const llEl=document.getElementById("lotsLoading");if(llEl)llEl.hidden=true;
     LOTLAST=null;
     if(map.hasLayer(lotLayer)){map.removeLayer(lotLayer);lotLayer.clearLayers();}
     return;
@@ -4894,6 +4920,13 @@ async function refreshLots(){
   const wantLbl=map.getZoom()>=18;
   if(LOTLAST&&LOTLAST.contains(map.getBounds())&&map.hasLayer(lotLayer)&&LOTLBL===wantLbl)return;
   const tk=++LOTTOKEN;
+  /* pan/zoom novo ABORTA a consulta anterior (antes ela corria até o fim em vão e, lenta,
+     empilhava spinners — parte do "travou" de 20/08) e acende o feedback sutil no mapa */
+  if(LOTABORT)LOTABORT.abort();
+  const ctl=LOTABORT=new AbortController();
+  const llEl=document.getElementById("lotsLoading");
+  const hideLL=()=>{if(tk===LOTTOKEN&&llEl)llEl.hidden=true;};
+  if(llEl)llEl.hidden=false;
   const b=map.getBounds();
   const p1=proj4("EPSG:4326","EPSG:31982",[b.getWest(),b.getSouth()]);
   const p2=proj4("EPSG:4326","EPSG:31982",[b.getEast(),b.getNorth()]);
@@ -4901,8 +4934,9 @@ async function refreshLots(){
   try{
     d=await jsonp({geometry:`${p1[0].toFixed(1)},${p1[1].toFixed(1)},${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,
       geometryType:"esriGeometryEnvelope",inSR:"31982",spatialRel:"esriSpatialRelIntersects",
-      outFields:"ci,nm_lot",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC);
-  }catch(e){return;}
+      outFields:"ci,nm_lot",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC,ctl.signal);
+  }catch(e){hideLL();if(e.name!=="AbortError"&&tk===LOTTOKEN)toast(/prefeitura/.test(e.message)?e.message:"Não foi possível carregar os lotes agora. Tente de novo.");return;}
+  hideLL();
   if(tk!==LOTTOKEN)return; /* o mapa já se moveu de novo */
   /* Fase 6 Plano 03: só stagger na PRIMEIRA revelação (transição sem-lotes -> com-lotes) —
      capturado ANTES do addTo abaixo. Pans/refetches seguintes (mesmo com bounds novos) nunca resta-geram. */

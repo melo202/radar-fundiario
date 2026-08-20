@@ -11,17 +11,30 @@ const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "ut
 test("item 14: proxy próprio é o transporte preferido, com JSONP de fallback", () => {
   assert.ok(html.includes('const ARCGIS_PROXY="https://api.corretorinteligente.tech/arcgis"'));
   assert.ok(html.includes("url.replace(ARCGIS_UPSTREAM,ARCGIS_PROXY)"));
-  /* fallback vivo: jsonpOnce continua definido e é chamado no caminho degradado */
+  /* fallback vivo: jsonpOnce continua definido e é chamado no caminho degradado
+     (20/08: com reset do contador de upstream após sucesso) */
   assert.match(html, /function jsonpOnce\(params,url=SVC\)/);
-  assert.ok(html.includes("return await jsonpOnce(params,url);"));
+  assert.ok(html.includes("const d=await jsonpOnce(params,url);UPSTREAM_FALHAS=0;return d;"));
 });
 
 test("item 14: erro de transporte marca PROXY_DEAD; erro do upstream propaga sem fallback", () => {
   assert.ok(html.includes("PROXY_DEAD=true"));
-  assert.ok(html.includes("if(e.upstream)throw e;"));
+  /* 20/08: erro de upstream ainda propaga (throw e), mas agora conta — 3 seguidas ligam
+     o fail-fast PREFEITURA_MORTA por 60s em vez de queimar 30s+30s por tentativa */
+  assert.ok(html.includes("if(e.upstream){if(++UPSTREAM_FALHAS>=3)"));
+  assert.ok(html.includes("throw e;}"));
+  assert.ok(html.includes("PREFEITURA_MORTA_ATE=Date.now()+60000"));
+  assert.ok(html.includes("servidor da prefeitura instável no momento"));
   /* upstream:true nos dois casos que NÃO são culpa do proxy: status HTTP repassado e {error} do ArcGIS */
   assert.match(html, /\{upstream:true\}/);
   assert.ok(html.includes('new Error("upstream http "+r.status)'));
+});
+
+test("transporte 20/08: espelho primeiro (8s), AbortError nunca conta como falha", () => {
+  assert.ok(html.includes("AbortSignal.timeout(8000)"), "espelho com timeout curto — falha rápida pro fallback");
+  assert.ok((html.match(/e\.name==="AbortError"\)throw e/g) || []).length >= 2,
+    "AbortError propaga sem sujar ESPELHO_FALHAS nem acionar retry");
+  assert.ok(html.includes("AbortSignal.any"), "pan/zoom novo cancela a consulta velha");
 });
 
 test("item 14: CSP libera o fetch para o proxy e mantém o host do JSONP", () => {
