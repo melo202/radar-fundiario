@@ -966,6 +966,49 @@
     font:700 14px/1 "Archivo","Segoe UI",sans-serif;padding:0 16px;min-height:44px;border-radius:9px;
     text-decoration:none;cursor:pointer}
   #laudoView .lvzap[hidden]{display:none}
+  /* P1.7 (20/08): sino de alertas da carteira no header + central (mesma linguagem do laudoView) */
+  .bell{position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;
+    border:1.5px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);cursor:pointer;
+    transition:background var(--motion-fast) var(--ease-out)}
+  .bell:hover{background:var(--paper-2)}
+  .bell svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bell-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;
+    background:var(--accent);color:#fff;font:700 11px/20px "Archivo";text-align:center;padding:0 5px}
+  .bell-badge[hidden]{display:none}
+  #alertasOv{position:fixed;inset:0;z-index:2090;background:var(--l-bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #alertasOv[hidden]{display:none}
+  #alertasOv .alov-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;
+    background:var(--l-ink);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+    font:700 14px/1.4 "Archivo"}
+  #alertasOv .alov-body{max-width:780px;margin:0 auto;padding:18px 16px 48px;color:var(--l-text);
+    font:400 13.5px/1.55 "Archivo","Segoe UI",system-ui,sans-serif}
+  #alertasOv .alov-sec{font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--muted);margin:18px 0 8px}
+  #alertasOv .alov-chips{display:flex;flex-wrap:wrap;gap:6px}
+  #alertasOv .alov-chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);
+    border-radius:20px;padding:6px 12px;font:600 12.5px/1 "Archivo";background:var(--paper);color:var(--ink)}
+  #alertasOv .alov-chip button{border:0;background:transparent;color:var(--muted);font-size:15px;cursor:pointer;
+    min-width:32px;min-height:32px;margin:-6px -8px -6px 0}
+  #alertasOv .alov-add{display:flex;gap:8px;margin-top:10px}
+  #alertasOv .alov-add input{flex:1;min-height:44px;border:1.5px solid var(--line);border-radius:9px;
+    padding:0 12px;font:500 14px/1 "Archivo";background:var(--paper);color:var(--ink)}
+  #alertasOv .alov-add button{min-height:44px;border:0;border-radius:9px;background:var(--accent);color:#fff;
+    font:700 13px/1 "Archivo";padding:0 16px;cursor:pointer}
+  #alertasOv .alov-card{border:1.5px solid var(--line);border-radius:9px;background:var(--paper);
+    padding:12px 14px;margin-top:10px}
+  #alertasOv .alov-card.is-novo{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  #alertasOv .alov-card .t{font:700 14px/1.3 "Archivo";color:var(--ink)}
+  #alertasOv .alov-card .l{font:500 12.5px/1.45 "Archivo";color:var(--l-text);margin-top:4px}
+  #alertasOv .alov-card .p{font:800 17px/1.2 "Archivo";color:var(--ink);margin-top:6px}
+  #alertasOv .alov-card .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  #alertasOv .alov-card .acts a,#alertasOv .alov-card .acts button{flex:1;min-width:110px;min-height:44px;
+    display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--ink);border-radius:9px;
+    font:600 12.5px/1 "Archivo";color:var(--ink);background:var(--paper);text-decoration:none;cursor:pointer}
+  #alertasOv .alov-vazio{font:500 13px/1.6 "Archivo";color:var(--muted);margin-top:10px}
+  #alertasOv .alov-foot{margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  #alertasOv .alov-foot small{font:500 11px/1.5 "Archivo";color:var(--muted)}
+  #alertasOv .alov-foot button{border:1.5px solid var(--line);background:transparent;color:var(--ink);
+    font:600 12px/1 "Archivo";border-radius:9px;padding:0 14px;min-height:44px;cursor:pointer}
   #laudoView .lvx{width:44px;height:44px;flex:none;border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}
   #laudoView .lvbody{max-width:780px;margin:0 auto;padding:22px 18px 48px;color:var(--l-text);background:var(--l-bg);
     font:400 13.5px/1.55 "Archivo","Segoe UI",system-ui,sans-serif}
@@ -1665,6 +1708,10 @@
     </div>
     <div class="atlas-meta">
       <span class="atlas-source" id="atlasSource" role="status">Cadastro público · fontes rastreáveis</span>
+      <button type="button" class="bell" id="btnAlertas" onclick="toggleAlertas()" aria-label="Alertas da carteira" title="Alertas da carteira — imóveis abaixo da mediana e quedas de preço nos seus bairros">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4 16h16l-2-3.8V9a6 6 0 0 0-6-6Zm-2 14a2 2 0 0 0 4 0"/></svg>
+        <span class="bell-badge" id="alertasBadge" hidden>0</span>
+      </button>
       <a class="app-back" id="appBack" href="https://api.corretorinteligente.tech/painel/os" onclick="voltarEscritorio(event)" aria-label="Voltar ao painel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7M8 12h11"/></svg><span class="app-back-wide">Voltar ao painel</span><span class="app-back-short">Painel</span>
       </a>
@@ -2222,6 +2269,15 @@
     <button class="calcx" onclick="fecharCustos()" aria-label="Fechar">×</button>
   </div>
   <div class="calcbody" id="calcBody"></div>
+</div>
+
+<!-- P1.7 (20/08): central de alertas da carteira — o assistente que vigia os bairros do corretor -->
+<div id="alertasOv" hidden role="dialog" aria-modal="true" aria-label="Alertas da carteira">
+  <div class="alov-bar">
+    <span>Alertas da carteira</span>
+    <button type="button" class="lvx" onclick="toggleAlertas()" aria-label="Fechar alertas">×</button>
+  </div>
+  <div class="alov-body" id="alertasBody"></div>
 </div>
 
 <!-- MK-1 (16/07/2026): material de divulgação — card de imagem desenhado NO APARELHO
@@ -4409,6 +4465,48 @@ function painelPotencialLinhas(estadoPD,areaterr){
   if(r.taxa_ocupacao!=null)out.push(["Cada pavimento pode cobrir até "+r.taxa_ocupacao+"% do terreno","até ~"+m2(at*r.taxa_ocupacao/100)]);
   if(r.altura_max!=null)out.push(["Altura máxima do prédio",r.altura_max+" m (≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos, pé-direito de 3 m)"]);
   return out;
+}
+/* P1.7 (20/08) alertasDaCarteira(caixa,mudancas,carteira,vistos): o assistente que vigia o
+   mercado pro corretor — "o app trabalha de noite". Recebe a lista CAIXA já enriquecida
+   (descontoBairro vs mediana de OFERTAS do bairro) e as mudanças de preço VERIFICADAS
+   (/motor/mercado/mudancas — mesmo anúncio, duas coletas); devolve os alertas dos bairros
+   da carteira, cada um com o MOTIVO em 1 linha e a fonte. Réguas de honestidade:
+   - CAIXA: só entra com desconto real >= 10% abaixo da mediana (amostra n>=5 garantida pelo
+     motor — descontoBairro null/indisponível nunca vira alerta);
+   - mudança: só QUEDA verificada (para<de) — "preço caiu" é o sinal público mais honesto
+     de vendedor motivado; NUNCA inventamos motivação;
+   - vistos: Set/array de ids já vistos -> novo:false (o sino mostra só o que é novo);
+   - teto de 20 (alerta bom é alerta raro), ordenado pelo % mais relevante. PURA. */
+function alertasDaCarteira(caixa,mudancas,carteira,vistos){
+  const norm=s=>String(s||"").trim().toLowerCase();
+  const cart=new Set((carteira||[]).map(norm).filter(Boolean));
+  const vist=new Set(vistos||[]);
+  const out=[];
+  if(!cart.size)return out;
+  for(const i of ((caixa&&caixa.imoveis)||[])){
+    if(!cart.has(norm(i.b)))continue;
+    const db=i.descontoBairro;
+    if(!db||db.pctAbaixoDaMediana==null||!(db.pctAbaixoDaMediana>=10))continue;
+    out.push({id:"cx:"+i.id,tipo:"caixa-abaixo",bairro:String(i.b||""),
+      titulo:(i.t||"Imóvel")+" — "+(i.b||""),
+      linha:String(db.pctAbaixoDaMediana).replace(".",",")+"% abaixo da mediana de ofertas do bairro ("+db.nOfertas+" ofertas anunciadas, não transações)",
+      preco:i.p!=null&&+i.p>0?+i.p:null,
+      url:/^https:\/\//.test(i.u||"")?i.u:null,
+      x:i.x!=null?+i.x:null,y:i.y!=null?+i.y:null,pct:+db.pctAbaixoDaMediana});
+  }
+  for(const m of (mudancas||[])){
+    if(!cart.has(norm(m.bairro)))continue;
+    const de=+m.de,para=+m.para;
+    if(!(de>0&&para>0&&para<de))continue; /* só queda verificada — alta não é alerta de compra */
+    const pct=Math.round((1-para/de)*1000)/10;
+    out.push({id:"md:"+(m.url||(m.bairro+"|"+de+"|"+para)),tipo:"queda",bairro:String(m.bairro||""),
+      titulo:(m.tipo||"Imóvel")+" — "+(m.bairro||""),
+      linha:"Preço baixou "+String(pct).replace(".",",")+"% — de "+de.toLocaleString("pt-BR")+" para "+para.toLocaleString("pt-BR")+" (mesmo anúncio, duas coletas)",
+      preco:para,url:/^https:\/\//.test(m.url||"")?m.url:null,
+      lat:m.lat!=null?+m.lat:null,lon:m.lon!=null?+m.lon:null,pct});
+  }
+  out.sort((a,b)=>b.pct-a.pct);
+  return out.slice(0,20).map(al=>Object.assign({},al,{novo:!vist.has(al.id)}));
 }
 // RADAR_PURE_END
 
@@ -10700,6 +10798,104 @@ async function toggleCaixa(){
   }
   toast("Imóveis da Caixa à venda (lista de "+(CAIXA.gerado||"?")+"). Toque num pino dourado.");
 }
+
+/* ---------------- P1.7 (20/08): alertas da carteira — o assistente que vigia os bairros ----------------
+   O corretor escolhe os bairros (1 toque, localStorage); a cada abertura do app, cruzamos a
+   lista CAIXA enriquecida (desconto vs mediana de ofertas) e as quedas de preço VERIFICADAS
+   com a carteira — a regra é a função pura alertasDaCarteira (RADAR_PURE, testada por vm).
+   O sino mostra só o que é NOVO; o painel dá o próximo passo em 1 toque (ver no mapa /
+   mandar no WhatsApp). Nenhuma consulta nova: reusa os 2 fetches que o boot já faz. */
+let ALERTAS=[];
+function carteiraLoad(){try{const v=JSON.parse(localStorage.getItem("radar_carteira_bairros")||"[]");return Array.isArray(v)?v.filter(Boolean):[];}catch(e){return[];}}
+function carteiraSave(c){try{localStorage.setItem("radar_carteira_bairros",JSON.stringify(c));}catch(e){}}
+function alertasVistosLoad(){try{const v=JSON.parse(localStorage.getItem("radar_alertas_vistos")||"[]");return Array.isArray(v)?v:[];}catch(e){return[];}}
+function alertasVistosSave(v){try{localStorage.setItem("radar_alertas_vistos",JSON.stringify(v.slice(-400)));}catch(e){}}
+function alertasCompute(){
+  ALERTAS=alertasDaCarteira(window.CAIXA,window.__PULSO,carteiraLoad(),alertasVistosLoad());
+  const n=ALERTAS.filter(a=>a.novo).length;
+  const b=document.getElementById("alertasBadge");
+  if(b){b.hidden=!n;b.textContent=n>9?"9+":String(n);}
+}
+function toggleAlertas(){
+  const ov=document.getElementById("alertasOv");if(!ov)return;
+  if(ov.hidden){alertasRender();ov.hidden=false;trapFocus(ov);}
+  else{ov.hidden=true;untrapFocus(ov);}
+}
+function carteiraAddUI(){
+  const inp=document.getElementById("alovNovoBairro");if(!inp)return;
+  const v=String(inp.value||"").trim();
+  if(v.length<2)return;
+  const c=carteiraLoad();
+  if(c.some(b=>b.toLowerCase()===v.toLowerCase())){toast("Esse bairro já está na carteira.");return;}
+  c.push(v);carteiraSave(c);alertasCompute();alertasRender();
+  toast("Monitorando "+v+" — o radar te avisa quando aparecer oportunidade.");
+}
+function carteiraRemUI(el){
+  const b=el&&el.dataset?el.dataset.bairro:"";
+  carteiraSave(carteiraLoad().filter(x=>x!==b));
+  alertasCompute();alertasRender();
+}
+function alertasMarcarVistos(){
+  alertasVistosSave(alertasVistosLoad().concat(ALERTAS.map(a=>a.id)));
+  alertasCompute();alertasRender();
+}
+/* alertaNoMapa(el): data-idx (nunca interpolação em onclick — A-04/CR-01). Caixa: liga a camada
+   e abre o pino (mesmo caminho de abrirCaixaNoMapaUI N=1); queda: coordenada direta. */
+async function alertaNoMapa(el){
+  const al=ALERTAS[+(el&&el.dataset?el.dataset.idx:-1)];if(!al)return;
+  toggleAlertas();
+  if(isMobile())setView("mapa");
+  if(al.tipo==="caixa-abaixo"&&al.x&&al.y){
+    await garantirCaixaLayer();if(!caixaLayer)return;
+    if(!caixaOn){caixaOn=true;const bC=document.getElementById("btnCaixa");if(bC){bC.classList.add("on");bC.setAttribute("aria-pressed","true");}}
+    if(!map.hasLayer(caixaLayer))caixaLayer.addTo(map);
+    if(caixaAnelLayer&&!map.hasLayer(caixaAnelLayer))caixaAnelLayer.addTo(map);
+    const ll=toWGS(al.x,al.y);
+    map.setView(ll,18);
+    caixaLayer.eachLayer(m=>{const p=m.getLatLng();if(Math.abs(p.lat-ll[0])<1e-9&&Math.abs(p.lng-ll[1])<1e-9)m.openPopup();});
+  }else if(al.lat!=null&&al.lon!=null){
+    map.setView([al.lat,al.lon],17);
+  }
+}
+function alertaZapUrl(al){
+  const t="Oportunidade monitorada pelo radar: "+al.titulo+". "+al.linha+"."
+    +(al.preco?" Preço atual: "+brlC(al.preco)+".":"")
+    +(al.url?" Anúncio: "+al.url:"")
+    +" — Corretor Inteligente, dados públicos de Goiânia.";
+  return "https://wa.me/?text="+encodeURIComponent(t);
+}
+function alertasRender(){
+  const body=document.getElementById("alertasBody");if(!body)return;
+  const c=carteiraLoad();
+  const dl=(typeof COMBO!=="undefined"&&COMBO?COMBO:[]).map(x=>`<option value="${esc(x.disp)}">`).join("");
+  const vazia=c.length?"":`<p class="alov-vazio">Sua carteira está vazia. Adicione os bairros em que você trabalha — a partir daí o radar vigia a lista da Caixa e as quedas de preço verificadas e só te cutuca quando vale a pena.</p>`;
+  const lista=ALERTAS.length?ALERTAS.map((al,i)=>`
+    <div class="alov-card ${al.novo?"is-novo":""}">
+      <div class="t">${al.novo?"🟡 ":""}${esc(al.titulo)}</div>
+      <div class="l">${esc(al.linha)}</div>
+      ${al.preco?`<div class="p">${brlC(al.preco)}</div>`:""}
+      <div class="acts">
+        ${(al.x&&al.y)||(al.lat!=null&&al.lon!=null)?`<button type="button" data-idx="${i}" onclick="alertaNoMapa(this)">Ver no mapa</button>`:""}
+        <a href="${alertaZapUrl(al)}" target="_blank" rel="noopener">WhatsApp ↗</a>
+        ${al.url?`<a href="${esc(al.url)}" target="_blank" rel="noopener">Anúncio ↗</a>`:""}
+      </div>
+    </div>`).join(""):(c.length?`<p class="alov-vazio">Nenhum alerta agora nos seus bairros — quando um imóvel da Caixa aparecer 10%+ abaixo da mediana do bairro ou um anúncio verificado baixar de preço, ele aparece aqui e o sino avisa.</p>`:"");
+  body.innerHTML=`
+    <div class="alov-sec">Meus bairros monitorados</div>
+    <div class="alov-chips">${c.map(b=>`<span class="alov-chip">${esc(b)}<button type="button" data-bairro="${esc(b)}" onclick="carteiraRemUI(this)" aria-label="Remover ${esc(b)}">×</button></span>`).join("")}</div>
+    ${vazia}
+    <div class="alov-add">
+      <input id="alovNovoBairro" list="alovBairros" placeholder="Adicionar bairro (ex.: Jardim Goiás)" aria-label="Adicionar bairro à carteira">
+      <datalist id="alovBairros">${dl}</datalist>
+      <button type="button" onclick="carteiraAddUI()">Monitorar</button>
+    </div>
+    <div class="alov-sec">Alertas (${ALERTAS.filter(a=>a.novo).length} novos · ${ALERTAS.length} no total)</div>
+    ${lista}
+    <div class="alov-foot">
+      <small>Fontes: lista oficial da Caixa (diária) e quedas verificadas por duas coletas do mesmo anúncio. Alerta não é recomendação — confirme sempre na fonte.</small>
+      <button type="button" onclick="alertasMarcarVistos()">Marcar tudo como visto</button>
+    </div>`;
+}
 /* abrirCaixaNoMapaUI(el) (Fase 17, 17-02, TERR-07): ação em 1 toque compartilhada pelo badge do
    Caderno e pela linha do painel — lê el.dataset.bairros (CR-01: NUNCA interpola valor do endpoint
    dentro de onclick=""); garante caixaLayer/caixaAnelLayer montados e no mapa (reusa
@@ -11024,6 +11220,7 @@ if(!window.L||!window.proj4){
       if(r.ok){const d=await r.json();if(d&&d.imoveis&&d.imoveis.length)window.CAIXA={gerado:d.gerado,fonte:d.fonte,imoveis:d.imoveis,fatores:(window.CAIXA&&window.CAIXA.fatores)||{}};}
     }catch(e){/* fallback: mantém o caixa-goiania.js estático */}
     initCaixa();
+    alertasCompute(); /* P1.7: recalcula o sino com a lista fresca (idempotente) */
   };
   if(document.readyState!=="loading")bootCaixa();else document.addEventListener("DOMContentLoaded",bootCaixa);
   /* Pulso do mercado (19/07): mudanças de preço VERIFICADAS (mesmo anúncio, portal+id,
@@ -11033,6 +11230,8 @@ if(!window.L||!window.proj4){
       const r=await fetch(MOTOR_BASE+"/motor/mercado/mudancas",{signal:AbortSignal.timeout(8000)});
       if(!r.ok)return;
       const d=await r.json();
+      window.__PULSO=d.mudancas||[]; /* P1.7: alertas da carteira reusam as quedas verificadas */
+      alertasCompute(); /* idempotente: sem carteira não faz nada */
       const fmt=v=>Number(v).toLocaleString("pt-BR");
       (d.mudancas||[]).filter(m=>m.lat!=null&&m.lon!=null).forEach(m=>{
         const queda=Number(m.para)<Number(m.de);
