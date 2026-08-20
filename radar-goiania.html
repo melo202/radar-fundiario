@@ -628,6 +628,12 @@
   .dpref-copy{min-height:44px;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink);font:600 12px/1 "Archivo";border-radius:2px;padding:0 14px;cursor:pointer}
   .dpref-copy:hover{border-color:var(--ink)}
   .dpref-dica{font:500 12.5px/1.5 "Archivo";color:var(--ink);background:var(--paper-2);border-left:3px solid var(--gold);padding:8px 10px;margin:11px 0 0}
+  /* P1.6 (20/08): Raio-X 1-clique — o kit prefeitura vira entregável profissional (PDF + WhatsApp) */
+  .dpref-raiox{display:block;width:100%;min-height:48px;margin:0 0 11px;border:0;border-radius:2px;
+    background:var(--accent);color:#fff;font:700 13px/1.3 "Archivo";cursor:pointer;
+    transition:background var(--motion-fast) var(--ease-out),transform var(--motion-fast) var(--ease-out)}
+  .dpref-raiox:hover{background:var(--accent-ink)}
+  .dpref-raiox:active{transform:scale(.98)}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
@@ -954,6 +960,12 @@
     font:600 12px/1.4 "Archivo","Segoe UI",sans-serif}
   #laudoView .lvprint{border:0;background:var(--l-accent);color:#fff;font:700 14px/1 "Archivo","Segoe UI",sans-serif;
     padding:0 18px;min-height:44px;border-radius:9px;cursor:pointer}
+  /* P1.6 (20/08): CTA WhatsApp do Raio-X — mesmo peso visual do "Salvar PDF", contornado
+     (secundário); [hidden] vence o flex (só aparece quando o documento é o Raio-X). */
+  #laudoView .lvzap{display:flex;align-items:center;border:1.5px solid #fff;background:transparent;color:#fff;
+    font:700 14px/1 "Archivo","Segoe UI",sans-serif;padding:0 16px;min-height:44px;border-radius:9px;
+    text-decoration:none;cursor:pointer}
+  #laudoView .lvzap[hidden]{display:none}
   #laudoView .lvx{width:44px;height:44px;flex:none;border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}
   #laudoView .lvbody{max-width:780px;margin:0 auto;padding:22px 18px 48px;color:var(--l-text);background:var(--l-bg);
     font:400 13.5px/1.55 "Archivo","Segoe UI",system-ui,sans-serif}
@@ -2197,6 +2209,7 @@
 <div id="laudoView" hidden role="dialog" aria-modal="true" aria-label="Visualização do documento">
   <div class="lvbar">
     <button class="lvprint" onclick="imprimirLaudo()">🖨️ Salvar PDF</button>
+    <a class="lvzap" id="lvZap" hidden target="_blank" rel="noopener">WhatsApp ↗</a>
     <button class="lvx" onclick="fecharLaudoView()" aria-label="Fechar documento">×</button>
   </div>
   <div class="lvbody" id="laudoViewBody"></div>
@@ -2799,6 +2812,22 @@ function zapComprador(data){
   return `Encontrei esse imóvel ${localTxt(d.bairro)}. Pela análise do cadastro e das referências disponíveis, ${faixaFrase}.`+
     " Recomendo confirmar área privativa, estado de conservação e documentação antes de avançar."+
     assinatura(d.perfil);
+}
+
+/* P1.6 (20/08) raioXZapTexto(data): a mensagem de WhatsApp que acompanha o Raio-X em PDF.
+   Multilinha (o WhatsApp renderiza \n). CADA linha opcional some quando o dado falta —
+   nunca "undefined"/"NaN"/"null" (mesma lei dos templates ZAP-01). wa.me NÃO anexa arquivo:
+   a última linha diz honestamente que o PDF vai em seguida. PURA. */
+function raioXZapTexto(data){
+  const d=data||{},linhas=[];
+  linhas.push("*Raio-X do imóvel* — "+(d.tipoImovel||"Imóvel")+" "+localTxt(d.bairro)+(d.endereco?" — "+d.endereco:"")+".");
+  if(d.inscricao)linhas.push("Inscrição cadastral: "+d.inscricao+".");
+  const ft=faixaTxt(d.faixa);
+  if(ft)linhas.push("Referência indicativa de valor: "+ft+".");
+  if(d.urbanoLinha)linhas.push("Pode construir? "+d.urbanoLinha);
+  if(d.docsTotal>0)linhas.push("Documentos: "+(d.docsConferidos||0)+" de "+d.docsTotal+" itens conferidos pelo corretor (BIC, CND, IPTU, matrícula…).");
+  linhas.push("Segue o raio-X completo em PDF, com fontes e ressalvas.");
+  return linhas.join("\n")+assinatura(d.perfil);
 }
 
 /* zapArgumento(data): usa scoreOp (score/rotulo/porque) — sem scoreOp, variante honesta
@@ -7583,6 +7612,69 @@ function montarPacoteDiligencia(){
       <p><a href="https://www.registrodeimoveis.org.br/servicos-interno/pesquisa-de-bens">Registro de Imóveis do Brasil · pesquisa de bens por CPF/CNPJ (outros imóveis do titular — pago)</a></p>
       <p class="lmiudo">Confirme o cartório competente, a vigência, a autenticidade e o conteúdo de cada documento diretamente nas fontes oficiais e com a orientação profissional aplicável.</p></div>
     <div class="foot">RADAR FUNDIÁRIO · PACOTE DE DILIGÊNCIA · EMITIDO EM ${hoje}</div>`;
+  lvZapSet(null); /* P1.6: pacote de diligência não tem CTA WhatsApp na barra */
+  document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+  const lv=document.getElementById("laudoView");if(lv.hidden){lv.hidden=false;trapFocus(lv);}lv.scrollTop=0;
+}
+/* P1.6 (20/08) lvZapSet(url): liga/desliga o CTA WhatsApp da barra do documento (#laudoView).
+   url null -> esconde e limpa o href: o documento seguinte NUNCA herda o zap do Raio-X. */
+function lvZapSet(url){
+  const z=document.getElementById("lvZap");if(!z)return;
+  if(url){z.href=url;z.hidden=false;}
+  else{z.hidden=true;z.removeAttribute("href");}
+}
+/* P1.6 (20/08) montarRaioX(): o entregável profissional de 1 clique — identificação +
+   "pode construir?" + situação documental + referência de valor, montado SÓ com dados já em
+   memória (DCUR, VALOR_EST, __pdEstado, checklist local): zero consulta nova, zero wizard.
+   Reusa 100% do pipeline #laudo -> #laudoView -> imprimirLaudo() (guarda ec9f129 intacta).
+   Documento CLIENTE-FACING: a conta da revenda ("quanto sobra") é interna do corretor e
+   NUNCA entra aqui. O botão WhatsApp leva o TEXTO (raioXZapTexto, RADAR_PURE) — wa.me não
+   anexa arquivo; o corretor salva o PDF e anexa em seguida (a mensagem diz isso). */
+function montarRaioX(){
+  const a=DCUR;if(!a)return;
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci);
+  const tipo=unitLabel(a)||USO[a.uso]||"Imóvel";
+  const em=mercadoEstimado(a);
+  let prof=null;try{const p=JSON.parse(localStorage.getItem("radar_prof")||"{}");if(p&&p.nome)prof=p;}catch(e){}
+  const pd=a.__pdEstado||null;
+  const veredito=vereditoConstrutivo(pd);
+  const potencial=painelPotencialLinhas(pd,a.areaterr);
+  const urbLinha=linhaUrbTriade(pd,a.areaterr);
+  const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
+  const zap=raioXZapTexto({tipoImovel:tipo,bairro:clean(a.nmbairro),endereco:addrDe(a),
+    inscricao:insc||null,faixa:em?{lo:em.lo,hi:em.hi}:null,urbanoLinha:urbLinha,
+    docsConferidos:res.conferidos,docsTotal:res.total,perfil:prof});
+  const faixa=faixaTxt(em?{lo:em.lo,hi:em.hi}:null);
+  const est=VALOR_EST;
+  document.getElementById("laudo").innerHTML=`
+    <div class="lrun"><span>RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO</span><span>EMITIDO EM ${hoje}</span></div>
+    <div class="lbrand"><div class="t"><small>Corretor Inteligente · Cadastro Imobiliário de Goiânia</small>Raio-X do imóvel</div>
+      <div class="m">${prof?esc(prof.nome)+(prof.creci?" · CRECI "+esc(prof.creci):""):""}<br>Goiânia/GO · ${hoje}</div></div>
+    <div class="fr-hero">
+      <div class="fr-faixa">${faixa?esc(faixa):"Sem referência indicativa"}</div>
+      <div class="fr-faixa-lbl">Referência indicativa de valor</div>
+    </div>
+    <div class="lcard"><h3>Identificação</h3>
+      <div class="kv"><span class="k">Imóvel</span><span class="v">${esc(tipo)} — ${esc(addrDe(a))||"Endereço não cadastrado"}, ${esc(clean(a.nmbairro))||"bairro não informado"}</span></div>
+      <div class="kv"><span class="k">Inscrição cadastral</span><span class="v">${esc(insc)||"—"}${ident.ci&&ident.ci!==insc?" · lote "+esc(ident.ci):""}</span></div>
+      <div class="kv"><span class="k">Localizador</span><span class="v">${ident.quadra?"Q "+esc(ident.quadra):"Q —"} · ${ident.lote?"L "+esc(ident.lote):"L —"}</span></div>
+      ${+a.areaterr>0?`<div class="kv"><span class="k">Terreno</span><span class="v">${Math.round(a.areaterr).toLocaleString("pt-BR")} m²</span></div>`:""}
+      ${+a.areaedif>0?`<div class="kv"><span class="k">Área edificada (cadastro)</span><span class="v">${Math.round(a.areaedif).toLocaleString("pt-BR")} m²</span></div>`:""}</div>
+    ${veredito?`<div class="lcard"><h3>Pode construir?</h3>
+      <p><b>${esc(veredito.titulo)}.</b> ${esc(veredito.explicacao)}</p>
+      ${potencial.length?potencial.map(l=>`<div class="kv"><span class="k">${esc(l[0])}</span><span class="v">${esc(l[1])}</span></div>`).join(""):""}
+      <p class="lmiudo">${esc(PD_DISCLAIMER)}</p></div>`:""}
+    <div class="lcard"><h3>Situação documental</h3>
+      <p>${res.conferidos} de ${res.total} itens marcados como conferidos pelo corretor (BIC, CND, IPTU, limpeza pública, matrícula…).</p>
+      <p class="lmiudo">O nome do titular e as certidões são emitidos na hora, sem captcha, nos canais oficiais da Prefeitura de Goiânia (certidão cadastral, CND, guia do IPTU e limpeza pública). Estas são marcações locais de preparação — não substituem as certidões oficiais nem verificação de autenticidade, vigência, titularidade ou ônus.</p></div>
+    ${est&&est.valor>0?`<div class="lcard"><h3>Estimativa desta sessão</h3>
+      <p>Valor de mercado estimado: <b>${brlC(est.valor)}</b> — ${esc(est.detalhe)}.</p>
+      <p class="lmiudo">Estimativa sobre ofertas anunciadas — não é garantia de preço de venda.</p></div>`:""}
+    <div class="lcard"><h3>Ressalvas</h3><p class="lmiudo">Documento de apresentação ancorado em dados públicos do Cadastro Imobiliário de Goiânia e no Plano Diretor (quando conferido). Valores venais e referências indicativas não equivalem a preço de mercado. Não foram examinadas matrícula, certidões ou ônus reais; recomenda-se confirmar área, conservação e documentação nas fontes oficiais antes de decidir. Não substitui laudo de avaliação formal.</p></div>
+    ${prof?`<div class="fr-contato">${esc(prof.nome)}${prof.creci?" · CRECI "+esc(prof.creci):""}${(prof.contato||"").trim()?" · "+esc(prof.contato):""}</div>`:""}
+    <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
+  lvZapSet("https://wa.me/?text="+encodeURIComponent(zap));
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView");if(lv.hidden){lv.hidden=false;trapFocus(lv);}lv.scrollTop=0;
 }
@@ -9297,12 +9389,14 @@ function renderPrefeituraUI(inscRaw){
   if(d.length<6||d.length>15){
     /* honesto: sem inscrição os serviços não abrem — o bloco explica, não some em silêncio */
     el.innerHTML=`<div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
+      <button type="button" class="dpref-raiox" onclick="montarRaioX()">📄 Raio-X do imóvel — PDF pronto pra WhatsApp</button>
       <p class="dpref-dica">Este registro não trouxe a inscrição cadastral — sem ela, os serviços oficiais (BIC, CND, IPTU) não abrem. Confira o endereço no mapa oficial.</p>`;
     return;
   }
   el.dataset.insc=d; /* copyInsc(this) lê via closest("[data-insc]") */
   el.innerHTML=`
     <div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
+    <button type="button" class="dpref-raiox" onclick="montarRaioX()">📄 Raio-X do imóvel — PDF pronto pra WhatsApp</button>
     <div class="dpref-insc"><span class="dpref-num">${d}</span><button type="button" class="dpref-copy" onclick="copyInsc(this)">Copiar ⧉</button></div>
     <div class="acts">
       <a class="primary" href="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição (o clique também copia, caso precise colar em outro sistema).">Espelho do imóvel (BIC) ↗</a>
@@ -10169,6 +10263,7 @@ function montarLaudo(){
 
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo(true); /* F5 B-13: laudo já gerado — fecha sem reconfirmar descarte */
+  lvZapSet(null); /* P1.6: relatório de avaliação não tem CTA WhatsApp na barra */
   /* NÃO imprime automático: o navegador bloqueia o print sem clique do usuário
      e acaba imprimindo a página errada (o mapa). Mostramos o laudo NA TELA; o PDF
      sai do clique no botão "Salvar PDF" (gesto real). #laudo segue preenchido —
@@ -10232,6 +10327,7 @@ function renderFichaRapida(a,data,fr){
     ${data.perfil?`<div class="fr-contato">${esc(data.perfil.nome)}${data.perfil.creci?" · CRECI "+esc(data.perfil.creci):""}${(data.perfil.contato||"").trim()?" · "+esc(data.perfil.contato):""}</div>`:""}
     <div class="foot">RADAR FUNDIÁRIO · DADOS PÚBLICOS · GOIÂNIA/GO · EMITIDO EM ${hoje}</div>`;
   fecharLaudo(true); /* F5 B-13: ficha já gerada — fecha sem reconfirmar descarte */
+  lvZapSet(null); /* P1.6: ficha rápida não tem CTA WhatsApp na barra */
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView"); if(lv.hidden){lv.hidden=false;trapFocus(lv);} lv.scrollTop=0;/*B-07/D-07(20); F5 AT-03: trap só quando estava fechado — reabrir por cima não empilha trap duplicado*/
 }
@@ -10250,6 +10346,7 @@ function imprimirLaudo(){
 function fecharLaudoView(){
   const lv=document.getElementById("laudoView");
   lv.hidden=true;
+  lvZapSet(null); /* P1.6: o CTA WhatsApp pertence ao Raio-X — fecha junto, nunca vaza p/ outro documento */
   document.getElementById("laudoViewBody").innerHTML="";
   document.getElementById("laudo").innerHTML=""; /* libera as fotos da memória */
   document.body.classList.remove("print-laudo");
