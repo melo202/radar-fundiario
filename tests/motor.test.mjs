@@ -30,6 +30,32 @@ test("URL de catálogo com ordenação também é pega", () => {
   assert.equal(q.comparableGrade, false);
 });
 
+test("página-lista com título de contagem/bairro (padrões novos do P0.3) é reprovada", () => {
+  for (const titulo of [
+    "38 Apartamentos à Venda até R$ 5 milhões em Setor Marista, Goiânia, GO",
+    "Casas à venda - St Sul, Região Central - GO | OLX",
+    "27 Apartamentos com 3 quartos à venda em Setor Negrão de Lima, Goiânia, GO - 62imoveis.com",
+    "Apartamentos à venda em Goiânia - GO | Chaves na Mão",
+  ]) {
+    const q = avaliarQualidade({ url: "https://www.olx.com.br/estado-go", titulo,
+      descricao: "Encontre as melhores ofertas.", extracao: { neighborhood: "Setor Marista" } });
+    assert.equal(q.isCatalogPage, true, titulo);
+    assert.equal(q.comparableGrade, false, titulo);
+  }
+});
+
+test("anúncio individual SINGULAR nunca cai na regra de plural (falso positivo custa caro)", () => {
+  for (const titulo of [
+    "Apartamento de 164 m² com 04 suítes à venda por R$ 1.490.000 no Setor Nova Suiça - Goiânia",
+    "Casa 3 quartos à venda - Jardim Boa Esperança, Aparecida de Goiânia - GO 1350945601 | OLX",
+  ]) {
+    const q = avaliarQualidade({ url: "https://www.exemplo.com.br/imovel/xpto-123456789", titulo,
+      descricao: "Ótimo imóvel.", extracao: { neighborhood: "Setor Marista", propertyType: "apartamento",
+        privateAreaM2: 100, askingPrice: 800000 } });
+    assert.equal(q.isCatalogPage, false, titulo);
+  }
+});
+
 test("anúncio individual completo passa como comparável", () => {
   const q = avaliarQualidade({
     url: "https://www.exemplo.com.br/imovel/apartamento-setor-bueno-3-quartos-id-2345678901",

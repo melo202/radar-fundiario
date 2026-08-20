@@ -30,6 +30,11 @@ export function avaliarQualidade({ url = "", titulo = "", descricao = "", extrac
   let sinais = 0;
   const texto = `${titulo}\n${descricao}`;
   if (/\b\d{1,3}(\.\d{3})*\s+im[oó]veis?\b/i.test(texto)) { sinais += 2; razoes.push("texto anuncia contagem de imóveis (página de índice)"); }
+  /* P0.3 (20/08): padrões de título de página-lista que escapavam — "38 Apartamentos à
+     Venda até R$ 5 milhões em Setor Marista", "Casas à venda - St Sul | OLX". PLURAL
+     obrigatório: anúncio real é singular ("Apartamento de 164 m²..."), nunca "Apartamentos". */
+  if (/^\s*\d+\s+(casas|apartamentos|terrenos|coberturas|im[oó]veis)\b/i.test(titulo)) { sinais += 2; razoes.push("título abre com contagem de imóveis (página-lista)"); }
+  if (/\b(casas|apartamentos|terrenos|coberturas|im[oó]veis)\s+(à|para)\s+venda\s*[-–—|em]/i.test(titulo)) { sinais += 2; razoes.push("título de listagem por bairro/cidade (página-lista)"); }
   if (/(ordem-|orderby|sort=|pagina=|page=)/i.test(url)) { sinais++; razoes.push("URL com ordenação/paginação de catálogo"); }
   let path = "";
   try { path = new URL(url).pathname; } catch { }

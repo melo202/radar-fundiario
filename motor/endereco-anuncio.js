@@ -26,15 +26,26 @@ export function extraiEnderecoAnuncio(texto) {
   /* nome da via: para em vírgula/ponto/traço-longo/quebra ou em palavras de contexto */
   const re = new RegExp(
     `\\b(${TIPO_VIA})\\.? ((?:[A-Za-zÀ-ú0-9][A-Za-zÀ-ú0-9.'-]*)(?: [A-Za-zÀ-ú0-9][A-Za-zÀ-ú0-9.'-]*){0,4}?)` +
-    `(?:,? ?(?:n[º°o.]? ?)?(\\d{1,5})\\b)?(?= ?[,;.–—|-]| no | na | em |$)`, "i");
+    `(?:,? ?(?:n[º°o.]? ?)?(\\d{1,5})\\b)?(?= ?[,;.·•–—|-]| no | na | em |$)`, "i");
   const m = re.exec(t);
   if (!m) return null;
   let rua = m[2].trim().replace(/[.,;]+$/, "");
+  let numero = m[3] ? Number(m[3]) : null;
+  /* "Rua T 71" (letra + dígitos SEM vírgula nem "nº") em Goiânia é a RUA T-71, não a
+     rua T número 71 — junta o número ao nome. Com vírgula ou nº explícito ("Rua T, 71",
+     "Rua S 3 nº 50"), o número é número mesmo. Bug apanhado no P0.3 (20/08): Chaves na
+     Mão grava "· Rua T 71 · Setor Bueno" e a extração devolvia null. */
+  if (/^[A-Za-zÀ-ú]$/.test(rua) && numero != null && !/[,]|n[º°o.]/i.test(m[0])) {
+    rua = `${rua} ${m[3]}`; numero = null;
+  }
   /* corta caudas de contexto que a regex gulosa pode arrastar ("Bueno Goiânia") */
   rua = rua.replace(/\b(goi[âa]nia|goias|go)\b.*$/i, "").trim();
-  if (rua.length < 2) return null;
+  /* letra sozinha é nome de rua válido em Goiânia (Rua V, Rua C) quando veio com número
+     ("Rua T, 71") OU delimitada por separador forte ("Rua V | Conjunto X"); solta no fim
+     do texto não dá pra distinguir de lixo de extração */
+  const segueSeparador = /^\s*[,;.·•–—|-]/.test(t.slice(m.index + m[0].length));
+  if (rua.length < 2 && numero == null && !segueSeparador) return null;
   /* nome que é só o tipo de via de novo ("Rua Rua") ou lixo de 1 letra sem dígito */
   if (new RegExp(`^(${TIPO_VIA})$`, "i").test(rua)) return null;
-  const numero = m[3] ? Number(m[3]) : null;
   return { rua: `${m[1]} ${rua}`, numero };
 }
