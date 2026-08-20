@@ -663,6 +663,14 @@
   .urb-rural{padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:2px}
   .urb-rural .k{font:700 13px/1.2 "Archivo";color:var(--ink);margin-bottom:6px}
   .urb-rural .dnote{margin-bottom:0}
+  /* P1.5 (20/08): veredito construtivo + painel de potencial lideram o accordion Urbanístico */
+  .urb-veredito{margin:0 0 10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:2px;background:var(--paper)}
+  .urb-veredito-t{font:700 15px/1.25 "Archivo";color:var(--ink);margin-bottom:4px}
+  .urb-veredito-x{font-size:12px;line-height:1.55;color:var(--ink)}
+  .urb-veredito.is-potencial{border-color:var(--status-bom);background:color-mix(in srgb,var(--status-bom) 7%,var(--paper))}
+  .urb-veredito.is-atencao{border-color:var(--status-atencao);background:color-mix(in srgb,var(--status-atencao) 7%,var(--paper))}
+  .urb-potencial{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:2px;
+    background:var(--paper);font-size:12.5px;line-height:1.7;color:var(--ink);display:flex;flex-direction:column;gap:2px}
   .urb-retry{min-height:44px;padding:0 14px;margin:8px 0;border:1.5px solid var(--ink);
     background:var(--paper);color:var(--ink);font:600 13px/1 "Archivo";border-radius:2px;cursor:pointer}
   .urb-retry:hover{background:var(--ink);color:var(--paper-2)}
@@ -4121,7 +4129,7 @@ function fmtCA(n){return n==null?null:(Math.round(n*10)/10).toFixed(1).replace("
    (T-18-01): só emite dígito de CA quando regra.conferido===true — testado por regex de guarda.
    Todo campo textual vindo de layer (nome/sigla) passa por esc(); PD_DISCLAIMER (constante do
    app) nunca precisa de esc(). */
-function montarUrbBodyHTML(estado){
+function montarUrbBodyHTML(estado,areaterr){
   const e=estado||{};
   if(e.estado==="erro"){
     return '<div class="dnote">Não foi possível consultar o Plano Diretor para este imóvel agora.</div><button type="button" class="urb-retry" id="urbRetry">Tentar de novo</button>';
@@ -4134,6 +4142,17 @@ function montarUrbBodyHTML(estado){
     </div>` + `<div class="dnote">${PD_DISCLAIMER}</div>`;
   }
   // resolvido / resolvido_sem_unidade / parcial: monta o que houver disponível (T-18-08 do parcial: nunca some com o que já resolveu)
+  /* P1.5 (20/08): o veredito ("pode construir prédio?") e a conta do potencial LIDERAM o
+     accordion — antes a resposta ficava enterrada nas células técnicas. Veredito só traduz a
+     tabela conferida; o painel de m² só existe com regra conferida E areaterr > 0 (chamadas
+     antigas de 1 argumento simplesmente não o renderizam). */
+  const veredito=vereditoConstrutivo(e);
+  let lead="";
+  if(veredito){
+    lead=`<div class="urb-veredito is-${veredito.tom}"><div class="urb-veredito-t">${esc(veredito.titulo)}</div><div class="urb-veredito-x">${esc(veredito.explicacao)}</div></div>`;
+    const pot=painelPotencialLinhas(e,areaterr);
+    if(pot.length)lead+=`<div class="urb-potencial">${pot.map(l=>`<div class="dsobra-l"><span>${esc(l[0])}</span><b>${esc(l[1])}</b></div>`).join("")}</div>`;
+  }
   const r=e.regra||null;
   const linhas=[];
   if(e.macrozona){
@@ -4193,7 +4212,8 @@ function montarUrbBodyHTML(estado){
   if(e.estado==="parcial"){
     notaParcial='<div class="dnote">Algumas informações do Plano Diretor não carregaram — o que aparece acima já é confiável, só pode estar incompleto.</div><button type="button" class="urb-retry" id="urbRetry">Tentar de novo</button>';
   }
-  return (linhas.length?`<div class="dgrid">${linhas.join("")}</div>`:"")
+  return lead
+    + (linhas.length?`<div class="dgrid">${linhas.join("")}</div>`:"")
     + notaCA
     + notaSemCA
     + notaFonte
@@ -4279,7 +4299,9 @@ function linhaUrbTriade(estadoPD,areaterr){
   if(at>0&&r.ca_basico!=null){
     base+=" · potencial de ~"+Math.round(at*r.ca_basico).toLocaleString("pt-BR")+" m² (básico, sem outorga)";
   }
-  return base+".";
+  /* P1.5: o veredito ("Pode verticalizar" etc.) lidera a linha — linguagem de corretor antes do dado */
+  const v=vereditoConstrutivo(e);
+  return (v?v.titulo+" · ":"")+base+".";
 }
 /* P1.4 (20/08) quantoSobra({valorEstimado,precoPedido,comissaoPct,debitos}): a calculadora
    transparente da revenda — a conta INTEIRA exposta, cada parcela com sua fórmula declarada
@@ -4298,6 +4320,49 @@ function quantoSobra(o){
   const margem=est-ped;
   return {valorEstimado:est,precoPedido:ped,itbiPct:2,itbi,comissaoPct:comPct,comissao,
     debitos:deb,margem,margemPct:margem/est,sobra:margem-itbi-comissao-deb};
+}
+/* P1.5 (20/08) vereditoConstrutivo(estadoPD): a resposta de "pode construir prédio?" em
+   linguagem de corretor — {titulo,tom,explicacao} | null. Só TRADUZ o que a tabela conferida
+   já diz (rótulo oficial + aritmética de CA/altura); nunca interpreta a LUOS além do dado
+   (a interpretação fina passa pelo crivo do usuário-advogado antes de qualquer texto novo).
+   Altura traduzida em pavimentos ÷3 m é DERIVADA de regra.altura_max, nunca hardcoded.
+   Estados erro/parcial -> null (omissão honesta — o accordion mostra o retry). */
+function vereditoConstrutivo(estadoPD){
+  const e=estadoPD||{};
+  if(e.estado==="rural")return {titulo:"Fora da área urbana",tom:"neutro",
+    explicacao:"Zona rural do Plano Diretor — os índices urbanos (CA, altura) não se aplicam aqui."};
+  if(e.estado!=="resolvido"&&e.estado!=="resolvido_sem_unidade")return null;
+  const r=e.regra||null;
+  if(!r||r.conferido!==true){
+    return e.unidade?{titulo:"Zona "+e.unidade.sigla+" identificada",tom:"neutro",
+      explicacao:"Os índices de construção desta zona ainda não foram conferidos contra a LC 349/2022 — mostramos só o que vem do mapa oficial."}:null;
+  }
+  const sigla=e.unidade&&e.unidade.sigla;
+  if(sigla==="AA")return {titulo:"Pode verticalizar",tom:"potencial",
+    explicacao:"Área Adensável — o regime mais permissivo do Plano Diretor: prédio alto permitido, qualquer uso e sem altura máxima definida. Acima do CA básico, só mediante outorga onerosa ao município."};
+  if(sigla==="ADD")return {titulo:"Verticaliza, com teto menor",tom:"neutro",
+    explicacao:"Área de Desaceleração de Densidade — prédio permitido, mas o índice máximo é menor que nas Áreas Adensáveis. Acima do CA básico, só mediante outorga onerosa."};
+  if(sigla==="AOS")return {titulo:"Só construção baixa",tom:"atencao",
+    explicacao:"Área de Ocupação Sustentável — o limitante aqui não é o índice, é a altura ("
+      +r.altura_max+" m ≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos) e a cobertura de só "+r.taxa_ocupacao+"% do terreno."};
+  return {titulo:"Fora das áreas de adensamento",tom:"neutro",
+    explicacao:"Vale o CA básico de 1,0x (Art. 242, VII). Índices maiores dependem da unidade territorial específica — confirme na SEPLANH."};
+}
+/* P1.5 painelPotencialLinhas(estadoPD,areaterr): a CONTA do potencial construtivo em linhas
+   [rótulo,valor] planas — terreno × CA básico (sem outorga), terreno × CA máximo (com outorga),
+   cobertura por pavimento e altura em pavimentos. Só com regra conferida E terreno > 0; caso
+   contrário [] (nunca fabrica m²). O chamador escapa e monta o HTML. */
+function painelPotencialLinhas(estadoPD,areaterr){
+  const e=estadoPD||{},r=e.regra||null,out=[];
+  const at=+areaterr;
+  if(!r||r.conferido!==true||!(at>0))return out;
+  const m2=v=>Math.round(v).toLocaleString("pt-BR")+" m²";
+  out.push(["Terreno",m2(at)]);
+  if(r.ca_basico!=null)out.push(["Sem outorga (CA básico "+fmtCA(r.ca_basico)+"x)","até ~"+m2(at*r.ca_basico)+" de construção"]);
+  if(r.ca_maximo!=null)out.push(["No teto (CA "+fmtCA(r.ca_maximo)+"x, com outorga)","até ~"+m2(at*r.ca_maximo)]);
+  if(r.taxa_ocupacao!=null)out.push(["Cobertura do terreno por pavimento ("+r.taxa_ocupacao+"%)","até ~"+m2(at*r.taxa_ocupacao/100)]);
+  if(r.altura_max!=null)out.push(["Altura máxima",r.altura_max+" m (≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos, pé-direito de 3 m)"]);
+  return out;
 }
 // RADAR_PURE_END
 
@@ -8758,7 +8823,7 @@ function renderUrbanisticoUI(a,isRetry){
   if(isRetry){delete PDCACHE[ci];delete a.__pdEstado;renderEvidence(a);}
   pdConsultarLote(a.x_coord,a.y_coord,ci).then(estado=>{
     if(!DCUR||clean(DCUR.ci||DCUR.nrinscr)!==ci)return; /* ficha mudou enquanto a Promise resolvia */
-    body.innerHTML=montarUrbBodyHTML(estado);
+    body.innerHTML=montarUrbBodyHTML(estado,a.areaterr); /* P1.5: areaterr alimenta o painel de potencial em m² */
     if(estado.estado==="erro")toast("Não foi possível consultar o Plano Diretor para este imóvel agora.");
     const retryBtn=document.getElementById("urbRetry");
     /* handler do retry via listener (nunca onclick interpolando dado de servidor — CR-01, Fase 16); id estático, sem dado do endpoint envolvido */
