@@ -4260,7 +4260,11 @@ let SHEETGEN = 0; /* geração do sheet: invalida cleanups async de close obsole
    NÃO é culpa do proxy (e.upstream) — propaga para o retry histórico sem acionar o fallback. */
 const ARCGIS_UPSTREAM="https://portalmapa.goiania.go.gov.br";
 const ARCGIS_PROXY="https://api.corretorinteligente.tech/arcgis";
-let PROXY_DEAD=false;
+/* 20/08 (bug "zoom não carrega, só clique"): PROXY_DEAD virou trava COM TTL — antes, 1 falha de
+   transporte desligava o proxy pelo resto da SESSÃO; somada ao ESPELHO_MORTO permanente, a sessão
+   inteira caía no JSONP direto da prefeitura (lento/502 = mapa aparentemente morto). Agora a trava
+   expira em 60s e a próxima consulta reprova o proxy — deploy/restart não condena mais a sessão. */
+let PROXY_DEAD_ATE=0;
 async function arcgisFetch(params,url,signal){
   const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
   const r=await fetch(url.replace(ARCGIS_UPSTREAM,ARCGIS_PROXY)+"?"+qs,
@@ -4275,10 +4279,11 @@ async function arcgisFetch(params,url,signal){
    bater no ArcGIS deles — resposta em ms mesmo quando o portal está lento ou fora do ar.
    Mesma resposta ArcGIS-shaped, mesmos parâmetros. Qualquer falha (rede, 5xx, {error})
    cai no caminho histórico (proxy→JSONP) sem o usuário perceber; 2 falhas seguidas na
-   mesma camada desligam o espelho dela pelo resto da sessão (degradação, nunca quebra). */
+   mesma camada desligam o espelho dela por 60s (TTL — nunca o resto da sessão: restart da
+   API durante deploy não pode condenar a aba aberta; expirou, reprova automaticamente). */
 const ESPELHO_CAMADA=new Map([[SVC,"cadastro"],[LOTSVC,"lote"],[BAISVC,"bairro"]]);
 const ESPELHO_FALHAS={};
-const ESPELHO_MORTO={};
+const ESPELHO_MORTO_ATE={};
 async function espelhoFetch(params,url,signal){
   const camada=ESPELHO_CAMADA.get(url);
   const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
@@ -4297,22 +4302,22 @@ let UPSTREAM_FALHAS=0,PREFEITURA_MORTA_ATE=0;
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
 async function jsonp(params,retries=1,url=SVC,signal){
   const camada=ESPELHO_CAMADA.get(url);
-  if(camada&&!ESPELHO_MORTO[camada]){
+  if(camada&&!(ESPELHO_MORTO_ATE[camada]>Date.now())){
     try{const d=await espelhoFetch(params,url,signal);ESPELHO_FALHAS[camada]=0;return d;}
     catch(e){
       if(e.name==="AbortError")throw e; /* pan/zoom mais novo cancelou — não é falha do espelho */
       ESPELHO_FALHAS[camada]=(ESPELHO_FALHAS[camada]||0)+1;
-      if(ESPELHO_FALHAS[camada]>=2){ESPELHO_MORTO[camada]=true;console.warn("espelho "+camada+" degradado — sessão segue no ArcGIS ao vivo:",e.message);}
+      if(ESPELHO_FALHAS[camada]>=2){ESPELHO_MORTO_ATE[camada]=Date.now()+60000;ESPELHO_FALHAS[camada]=0;console.warn("espelho "+camada+" degradado por 60s — enquanto isso vai no ArcGIS ao vivo:",e.message);}
     }
   }
   if(Date.now()<PREFEITURA_MORTA_ATE)throw new Error("servidor da prefeitura instável no momento — aguarde ~1 minuto e tente de novo");
   for(;;){
     try{
-      if(!PROXY_DEAD){
+      if(!(PROXY_DEAD_ATE>Date.now())){
         try{const d=await arcgisFetch(params,url,signal);UPSTREAM_FALHAS=0;return d;}
         catch(e){
           if(e.upstream){if(++UPSTREAM_FALHAS>=3){PREFEITURA_MORTA_ATE=Date.now()+60000;console.warn("prefeitura 502 em sequência — fail-fast por 60s");}throw e;}
-          PROXY_DEAD=true;console.warn("proxy indisponível — sessão segue via JSONP:",e.message);
+          PROXY_DEAD_ATE=Date.now()+60000;console.warn("proxy indisponível por 60s — enquanto isso vai via JSONP:",e.message);
         }
       }
       const d=await jsonpOnce(params,url);UPSTREAM_FALHAS=0;return d;

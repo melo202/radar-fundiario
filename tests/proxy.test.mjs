@@ -17,8 +17,14 @@ test("item 14: proxy próprio é o transporte preferido, com JSONP de fallback",
   assert.ok(html.includes("const d=await jsonpOnce(params,url);UPSTREAM_FALHAS=0;return d;"));
 });
 
-test("item 14: erro de transporte marca PROXY_DEAD; erro do upstream propaga sem fallback", () => {
-  assert.ok(html.includes("PROXY_DEAD=true"));
+test("item 14: erro de transporte trava o proxy por 60s (TTL); erro do upstream propaga sem fallback", () => {
+  /* 20/08 (bug "zoom não carrega, só clique"): a trava do proxy tinha duração de SESSÃO —
+     somada ao ESPELHO_MORTO permanente, a aba caía no JSONP direto da prefeitura até o
+     usuário recarregar. Agora ambas as travas expiram em 60s e se reprovam sozinhas. */
+  assert.ok(html.includes("PROXY_DEAD_ATE=Date.now()+60000"));
+  assert.ok(html.includes("if(!(PROXY_DEAD_ATE>Date.now()))"), "trava do proxy expira e reprova sozinha");
+  assert.ok(html.includes("ESPELHO_MORTO_ATE[camada]=Date.now()+60000"), "espelho degradado também recupera em 60s");
+  assert.ok(html.includes("!(ESPELHO_MORTO_ATE[camada]>Date.now())"));
   /* 20/08: erro de upstream ainda propaga (throw e), mas agora conta — 3 seguidas ligam
      o fail-fast PREFEITURA_MORTA por 60s em vez de queimar 30s+30s por tentativa */
   assert.ok(html.includes("if(e.upstream){if(++UPSTREAM_FALHAS>=3)"));
