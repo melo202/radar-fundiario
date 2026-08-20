@@ -4251,8 +4251,34 @@ async function arcgisFetch(params,url){
   if(d&&d.error)throw Object.assign(new Error(d.error.message||"erro do servidor"),{upstream:true});
   return d;
 }
+/* ESPELHO LOCAL (20/08/2026): cadastro/lote/bairro consultados no NOSSO PostGIS
+   (api.corretorinteligente.tech/espelho, carga diária do portal da prefeitura) ANTES de
+   bater no ArcGIS deles — resposta em ms mesmo quando o portal está lento ou fora do ar.
+   Mesma resposta ArcGIS-shaped, mesmos parâmetros. Qualquer falha (rede, 5xx, {error})
+   cai no caminho histórico (proxy→JSONP) sem o usuário perceber; 2 falhas seguidas na
+   mesma camada desligam o espelho dela pelo resto da sessão (degradação, nunca quebra). */
+const ESPELHO_CAMADA=new Map([[SVC,"cadastro"],[LOTSVC,"lote"],[BAISVC,"bairro"]]);
+const ESPELHO_FALHAS={};
+const ESPELHO_MORTO={};
+async function espelhoFetch(params,url){
+  const camada=ESPELHO_CAMADA.get(url);
+  const qs=Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
+  const r=await fetch("https://api.corretorinteligente.tech/espelho/"+camada+"/query?"+qs,{signal:AbortSignal.timeout(12000)});
+  if(!r.ok)throw new Error("espelho http "+r.status);
+  const d=await r.json();
+  if(d&&d.error)throw new Error(d.error.message||"espelho indisponível");
+  return d;
+}
 /* o servidor da prefeitura dá 502 esporádico sob carga — 1 retry com pausa resolve a maioria */
 async function jsonp(params,retries=1,url=SVC){
+  const camada=ESPELHO_CAMADA.get(url);
+  if(camada&&!ESPELHO_MORTO[camada]){
+    try{const d=await espelhoFetch(params,url);ESPELHO_FALHAS[camada]=0;return d;}
+    catch(e){
+      ESPELHO_FALHAS[camada]=(ESPELHO_FALHAS[camada]||0)+1;
+      if(ESPELHO_FALHAS[camada]>=2){ESPELHO_MORTO[camada]=true;console.warn("espelho "+camada+" degradado — sessão segue no ArcGIS ao vivo:",e.message);}
+    }
+  }
   for(;;){
     try{
       if(!PROXY_DEAD){

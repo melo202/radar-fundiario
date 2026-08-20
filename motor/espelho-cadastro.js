@@ -29,7 +29,7 @@ export const CAMADAS = {
     mapa: (a) => [a.ESRI_OID, TXT(a.nrinscr), TXT(a.nmlogradou), TXT(a.tplogradou),
       TXT(a.nrimovel), TXT(a.nrquadra), TXT(a.nrlote), TXT(a.cdbairro), TXT(a.nmbairro),
       NUM(a.areaterr), NUM(a.areaedif), NUM(a.vlvenal), TXT(a.cdzona), TXT(a.nmedificio),
-      TXT(a.in_valido), DATA(a.dtultalter)] },
+      TXT(a.in_valido), DATA(a.dtultalter), TXT(a.ci)] },
   num_predial: { url: `${FB}/5/query`, oid: "objectid", campoData: null,
     mapa: (a) => [a.objectid, TXT(a.nrinscr), TXT(a.nm_npo)] },
 };
@@ -46,10 +46,10 @@ const SQL_INSERT = {
   lote: `INSERT INTO espelho_lote (objectid, nm_lot, id_qdr, ci_qdr, ci, nm_cond, in_cond, editado_em, geom)
          SELECT o, l, q, cq, c, nc, ic, e, ST_Multi(ST_GeomFromText(w, 4326)) FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::timestamptz[], $9::text[]) AS u(o, l, q, cq, c, nc, ic, e, w)
          ON CONFLICT (objectid) DO UPDATE SET nm_lot=EXCLUDED.nm_lot, id_qdr=EXCLUDED.id_qdr, ci_qdr=EXCLUDED.ci_qdr, ci=EXCLUDED.ci, nm_cond=EXCLUDED.nm_cond, in_cond=EXCLUDED.in_cond, editado_em=EXCLUDED.editado_em, geom=EXCLUDED.geom`,
-  cadastro: `INSERT INTO espelho_cadastro (objectid, nrinscr, nmlogradou, tplogradou, nrimovel, nrquadra, nrlote, cdbairro, nmbairro, areaterr, areaedif, vlvenal, cdzona, nmedificio, in_valido, alterado_em, geom)
-         SELECT o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, ST_Multi(ST_GeomFromText(w, 4326))
-         FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::numeric[], $11::numeric[], $12::numeric[], $13::text[], $14::text[], $15::text[], $16::timestamptz[], $17::text[]) AS u(o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, w)
-         ON CONFLICT (objectid) DO UPDATE SET nrinscr=EXCLUDED.nrinscr, nmlogradou=EXCLUDED.nmlogradou, tplogradou=EXCLUDED.tplogradou, nrimovel=EXCLUDED.nrimovel, nrquadra=EXCLUDED.nrquadra, nrlote=EXCLUDED.nrlote, cdbairro=EXCLUDED.cdbairro, nmbairro=EXCLUDED.nmbairro, areaterr=EXCLUDED.areaterr, areaedif=EXCLUDED.areaedif, vlvenal=EXCLUDED.vlvenal, cdzona=EXCLUDED.cdzona, nmedificio=EXCLUDED.nmedificio, in_valido=EXCLUDED.in_valido, alterado_em=EXCLUDED.alterado_em, geom=EXCLUDED.geom`,
+  cadastro: `INSERT INTO espelho_cadastro (objectid, nrinscr, nmlogradou, tplogradou, nrimovel, nrquadra, nrlote, cdbairro, nmbairro, areaterr, areaedif, vlvenal, cdzona, nmedificio, in_valido, alterado_em, ci, geom)
+         SELECT o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, ci, ST_Multi(ST_GeomFromText(w, 4326))
+         FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::numeric[], $11::numeric[], $12::numeric[], $13::text[], $14::text[], $15::text[], $16::timestamptz[], $17::text[], $18::text[]) AS u(o, i, lg, tl, ni, q, lt, cb, nb, at, ae, vv, cz, ne, iv, al, ci, w)
+         ON CONFLICT (objectid) DO UPDATE SET nrinscr=EXCLUDED.nrinscr, nmlogradou=EXCLUDED.nmlogradou, tplogradou=EXCLUDED.tplogradou, nrimovel=EXCLUDED.nrimovel, nrquadra=EXCLUDED.nrquadra, nrlote=EXCLUDED.nrlote, cdbairro=EXCLUDED.cdbairro, nmbairro=EXCLUDED.nmbairro, areaterr=EXCLUDED.areaterr, areaedif=EXCLUDED.areaedif, vlvenal=EXCLUDED.vlvenal, cdzona=EXCLUDED.cdzona, nmedificio=EXCLUDED.nmedificio, in_valido=EXCLUDED.in_valido, alterado_em=EXCLUDED.alterado_em, ci=EXCLUDED.ci, geom=EXCLUDED.geom`,
   num_predial: `INSERT INTO espelho_num_predial (objectid, nrinscr, nm_npo, geom)
            SELECT o, i, n, ST_GeomFromText(w, 4326) FROM unnest($1::int[], $2::text[], $3::text[], $4::text[]) AS u(o, i, n, w)
            ON CONFLICT (objectid) DO UPDATE SET nrinscr=EXCLUDED.nrinscr, nm_npo=EXCLUDED.nm_npo, geom=EXCLUDED.geom`,

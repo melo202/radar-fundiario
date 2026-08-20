@@ -87,6 +87,27 @@ http.createServer(async (req, res) => {
         .then(r => r.rows[0]).catch(() => null);
       return json(res, 200, { ok: true, db, ia, cadeia: aiProvider.status(), acervo, frescor, busca: !!process.env.BRAVE_API_KEY });
     }
+    /* ESPELHO do cadastro (20/08/2026): /espelho/<camada>/query responde no formato
+       ArcGIS REST servido do PostGIS local — o mapa deixa de depender do portal lento
+       da prefeitura. Público (só leitura do cadastro, já é dado público), com rate
+       limit generoso porque o zoom dispara dezenas de consultas por sessão. Aceita
+       callback= (JSONP) para o front reaproveitar o mesmo transporte do ArcGIS vivo. */
+    if (req.method === "GET" && /^\/espelho\/(cadastro|lote|bairro|num_predial)\/query/.test(req.url)) {
+      if (estourou(req, 120, "espelho")) return json(res, 429, { error: { code: 429, message: "muitas consultas — aguarde 1 minuto" } });
+      const m = req.url.match(/^\/espelho\/(cadastro|lote|bairro|num_predial)\/query/);
+      const u = new URL(req.url, "http://x");
+      const p = Object.fromEntries(u.searchParams.entries());
+      const { consultar, erroArcgis } = await import("./espelho-api.js");
+      let payload;
+      try { payload = await consultar(m[1], p); }
+      catch (e) { payload = erroArcgis(e); }
+      const cb = (p.callback || "").match(/^[a-zA-Z_$][\w$]{0,60}$/) ? p.callback : null;
+      if (cb) {
+        res.writeHead(200, Object.assign({ "Content-Type": "application/javascript; charset=utf-8" }, SEC, CORS));
+        return res.end(`${cb}(${JSON.stringify(payload)});`);
+      }
+      return json(res, payload.error ? (payload.error.code === 429 ? 429 : 200) : 200, payload);
+    }
     if (req.method === "GET" && req.url.startsWith("/motor/imoveis")) {
       const u = new URL(req.url, "http://x");
       const lim = Math.min(Number(u.searchParams.get("limit") || 20), 100);
