@@ -33,9 +33,11 @@ export const CAMADAS = {
   num_predial: { url: `${FB}/5/query`, oid: "objectid", campoData: null,
     mapa: (a) => [a.objectid, TXT(a.nrinscr), TXT(a.nm_npo)] },
 };
-/* Plano Diretor: camadas escolhidas (0=zonas PD2022, 31=Áreas Adensáveis, 14=APP,
-   28=Patrimônio Cultural) — atributos variam: vão todos para props jsonb */
-export const PD_CAMADAS = [0, 31, 14, 28];
+/* Plano Diretor: camadas CONSULTÁVEIS testadas ao vivo (20/08) — a 0 "Plano Diretor
+   2022" é camada-GRUPO (sem geometria, /query = 400). 33=Macrozoneamento (o nome da
+   zona), 31=Áreas Adensáveis (pode verticalizar), 14=APP, 28=Patrimônio Cultural.
+   Atributos variam: vão todos para props jsonb */
+export const PD_CAMADAS = [33, 31, 14, 28];
 
 const SQL_INSERT = {
   bairro: `INSERT INTO espelho_bairro (objectid, nm, editado_em, geom)
@@ -148,9 +150,17 @@ export async function espelharCamada(nome, { cheio = false, fetchImpl } = {}) {
       const dv = Number(f.attributes[cfg.campoData] || 0);
       if (dv > maiorMarca) maiorMarca = dv;
     }
+    /* dedup por oid DENTRO da página (1ª carga real, 20/08: cadastro e num_predial
+       trazem oid repetido — unidades empilhadas dividem o id na fonte — e o ON
+       CONFLICT não aceita afetar a mesma linha duas vezes no mesmo comando) */
+    const vistos = new Set(), linhasU = [], wktsU = [];
+    for (let i = 0; i < linhas.length; i++) {
+      if (vistos.has(linhas[i][0])) continue;
+      vistos.add(linhas[i][0]); linhasU.push(linhas[i]); wktsU.push(wkts[i]);
+    }
     /* grava em fatias de 500 — lote de 2.000 num INSERT só estoura memória à toa */
-    for (let i = 0; i < linhas.length; i += 500)
-      await gravarLote(nome, linhas.slice(i, i + 500), wkts.slice(i, i + 500));
+    for (let i = 0; i < linhasU.length; i += 500)
+      await gravarLote(nome, linhasU.slice(i, i + 500), wktsU.slice(i, i + 500));
     total += feats.length;
     offset += feats.length;
     await pool.query(
@@ -181,8 +191,14 @@ async function espelharPd({ fetchImpl } = {}) {
         linhas.push([OBJECTID, JSON.stringify(resto)]);
         wkts.push(w);
       }
-      for (let i = 0; i < linhas.length; i += 500) {
-        const fatiaL = linhas.slice(i, i + 500), fatiaW = wkts.slice(i, i + 500);
+      /* mesma trava anti-duplicata da carga principal */
+      const vistos = new Set(), linhasU = [], wktsU = [];
+      for (let i = 0; i < linhas.length; i++) {
+        if (vistos.has(linhas[i][0])) continue;
+        vistos.add(linhas[i][0]); linhasU.push(linhas[i]); wktsU.push(wkts[i]);
+      }
+      for (let i = 0; i < linhasU.length; i += 500) {
+        const fatiaL = linhasU.slice(i, i + 500), fatiaW = wktsU.slice(i, i + 500);
         await pool.query(SQL_INSERT.pd, [fatiaL.map(() => id), fatiaL.map(l => l[0]), fatiaL.map(l => l[1]), fatiaW]);
       }
       n += feats.length; offset += feats.length;
