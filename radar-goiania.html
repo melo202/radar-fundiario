@@ -4273,53 +4273,70 @@ function proximoEstadoCamada(atual,modo){
 function zonasZoomGateOk(zoom){
   return typeof zoom==="number"&&zoom>=13;
 }
-/* P1.4 (20/08) linhaUrbTriade(estadoPD,areaterr): UMA linha de status urbanístico para o card
-   "Avaliação" da tríade — traduz o MESMO objeto de resolverZonaUI para linguagem de corretor,
-   sem interpretação jurídica nova: rótulo oficial da camada + aritmética de CA já conferida.
-   REGRA DE OURO herdada (T-18-01): dígito de CA SÓ quando regra.conferido===true. Retorna
+/* P1.4/P1.5b (20/08) linhaUrbTriade(estadoPD,areaterr): UMA linha de status urbanístico para o
+   card "Avaliação" da tríade — em PORTUGUÊS DE CORRETOR (pedido do usuário: nada de "CA",
+   "teto", "outorga" na linha curta; a sigla oficial vai entre parênteses, como credencial).
+   REGRA DE OURO herdada (T-18-01): m² de potencial SÓ quando regra.conferido===true. Retorna
    string PLANA (o chamador usa textContent/esc — nunca innerHTML cru) ou null (omissão
    honesta: parcial/erro/ausente não afirmam nada — o accordion Território mostra o retry). */
 function linhaUrbTriade(estadoPD,areaterr){
   const e=estadoPD||{};
-  if(e.estado==="rural")return "Zona rural — os índices urbanos (CA) não se aplicam aqui.";
+  if(e.estado==="rural")return "Zona rural — as regras urbanas de construção não se aplicam aqui.";
   if(e.estado!=="resolvido"&&e.estado!=="resolvido_sem_unidade")return null;
   const r=e.regra||null;
   if(!r||r.conferido!==true){
-    return e.unidade?("Zona "+e.unidade.sigla+" identificada — índices de construção ainda não conferidos; ver Território."):null;
+    return e.unidade?("Zona "+e.unidade.sigla+" identificada — os limites de construção ainda não foram conferidos; ver Território."):null;
   }
+  const v=vereditoConstrutivo(e);
+  const at=+areaterr;
+  const temArea=at>0&&r.ca_basico!=null;
+  const m2=val=>Math.round(val).toLocaleString("pt-BR")+" m²";
   let base;
   if(e.unidade){
-    base="Zona "+e.unidade.sigla+" — CA básico "+fmtCA(r.ca_basico)+"x"
-      +(r.ca_maximo!=null?(" · teto "+fmtCA(r.ca_maximo)+"x"):"")
-      +(r.altura_max!=null?(" · altura máx "+r.altura_max+" m"):"");
+    base=(v?v.titulo:"Zona "+e.unidade.sigla)+" ("+e.unidade.sigla+")";
+    if(temArea){
+      base+=" · o terreno comporta ~"+m2(at*r.ca_basico)+" de construção sem custo extra";
+      if(r.ca_maximo!=null)base+=" e até ~"+m2(at*r.ca_maximo)+" no máximo que a lei permite";
+    }
+    if(r.altura_max!=null)base+=" · prédio de até "+r.altura_max+" m";
   }else{
-    base="Macrozona Construída — CA básico universal "+fmtCA(r.ca_basico)+"x";
+    base=(v?v.titulo:"Fora das áreas de adensamento");
+    if(temArea)base+=" · o terreno comporta ~"+m2(at*r.ca_basico)+" de construção (limite básico de toda a cidade)";
   }
-  const at=+areaterr;
-  if(at>0&&r.ca_basico!=null){
-    base+=" · potencial de ~"+Math.round(at*r.ca_basico).toLocaleString("pt-BR")+" m² (básico, sem outorga)";
-  }
-  /* P1.5: o veredito ("Pode verticalizar" etc.) lidera a linha — linguagem de corretor antes do dado */
-  const v=vereditoConstrutivo(e);
-  return (v?v.titulo+" · ":"")+base+".";
+  return base+".";
 }
-/* P1.4 (20/08) quantoSobra({valorEstimado,precoPedido,comissaoPct,debitos}): a calculadora
-   transparente da revenda — a conta INTEIRA exposta, cada parcela com sua fórmula declarada
-   na UI. Sobra = valorEstimado − precoPedido − ITBI − comissão − débitos: o que a revenda
-   estimada deixa depois dos custos da operação. ITBI de Goiânia: 2% sobre o preço negociado
-   (a prefeitura pode exigir base de referência própria se maior — declarado na legenda).
-   Entrada inválida/ausente -> null (NUNCA inventa número). PURA. */
+/* Tabelas oficiais TJGO 2026 (reajuste Prov. 179/2025). Coluna TOTAL (emolumento + ISSQN 5% + fundos).
+   [teto do valor declarado, total a pagar]. REGISTRO: item 76 do PDF oficial RI-GO. ESCRITURA: ato 63A notas (CNB-GO).
+   Movidas para o bloco RADAR_PURE no P1.5b (20/08): a calculadora "Quanto sobra?" passa a cobrar o
+   cartório EXATO na conta da revenda — e os testes de vm verificam os degraus. Definição ÚNICA:
+   a calculadora de custos de compra (abrirCustos) usa estas mesmas constantes. */
+const REGISTRO_GO=[[653.80,79.57],[1307.62,120.62],[2615.24,153.98],[5230.47,223.29],[10460.94,438.86],[15691.43,469.63],[26152.37,597.96],[39228.54,757.09],[52304.74,1003.46],[65380.92,1193.35],[104609.47,1673.27],[156914.21,2515.05],[261523.68,3387.62],[375536.58,4447.54],[523047.35,5240.56],[784571.03,6290.21],[1176856.54,7537.47],[1569142.07,8764.20],[Infinity,9573.97]];
+const ESCRITURA_GO=[[653.80,168.89],[1307.62,226.42],[2615.24,285.81],[5230.47,376.71],[10460.94,694.05],[15691.43,738.58],[26152.37,920.44],[39228.54,1148.69],[52304.74,1514.27],[65380.92,1787.04],[104609.47,2330.77],[156914.21,3466.45],[172643.46,4223.57],[261523.68,4281.08],[287739.06,5038.22],[392285.51,5153.33],[523047.35,5910.44],[575478.22,6292.72],[1150956.52,6407.89],[Infinity,6637.98]];
+const emolumento=(tab,v)=>{for(const[teto,tot]of tab)if((v||0)<=teto)return tot;return tab[tab.length-1][1];};
+/* P1.5b (20/08) quantoSobra({valorEstimado,precoPedido,comissaoPct,debitos,reforma,financiado}):
+   a calculadora transparente da REVENDA — a conta INTEIRA exposta, cada parcela com a fórmula
+   declarada na UI. Sobra = venda estimada − compra − ITBI − cartório − comissão − débitos − reforma.
+   ITBI de Goiânia: 2% sobre o preço da compra (STJ Tema 1.113). Cartório: escritura+registro
+   EXATOS pelas tabelas oficiais TJGO 2026 (financiado SFH: o contrato do banco dispensa a
+   escritura, paga-se só o registro). Comissão: % sobre a VENDA estimada (é na revenda que ela
+   incide). Entrada inválida/ausente -> null (NUNCA inventa número). PURA. */
 function quantoSobra(o){
   const est=+((o||{}).valorEstimado), ped=+((o||{}).precoPedido);
   if(!(est>0&&ped>0))return null;
   const comPct=o.comissaoPct==null?6:+o.comissaoPct;
   if(!(comPct>=0&&comPct<=100))return null;
   const deb=Math.max(0,+o.debitos||0);
+  const ref=Math.max(0,+o.reforma||0);
   const itbi=Math.round(ped*0.02);
-  const comissao=Math.round(ped*comPct/100);
+  const escritura=o.financiado===true?0:emolumento(ESCRITURA_GO,ped);
+  const registro=emolumento(REGISTRO_GO,ped);
+  const cartorio=Math.round(escritura+registro);
+  const comissao=Math.round(est*comPct/100);
   const margem=est-ped;
-  return {valorEstimado:est,precoPedido:ped,itbiPct:2,itbi,comissaoPct:comPct,comissao,
-    debitos:deb,margem,margemPct:margem/est,sobra:margem-itbi-comissao-deb};
+  return {valorEstimado:est,precoPedido:ped,itbiPct:2,itbi,escritura:Math.round(escritura),
+    registro:Math.round(registro),cartorio,financiado:o.financiado===true,
+    comissaoPct:comPct,comissao,debitos:deb,reforma:ref,
+    margem,margemPct:margem/est,sobra:margem-itbi-cartorio-comissao-deb-ref};
 }
 /* P1.5 (20/08) vereditoConstrutivo(estadoPD): a resposta de "pode construir prédio?" em
    linguagem de corretor — {titulo,tom,explicacao} | null. Só TRADUZ o que a tabela conferida
@@ -4335,18 +4352,18 @@ function vereditoConstrutivo(estadoPD){
   const r=e.regra||null;
   if(!r||r.conferido!==true){
     return e.unidade?{titulo:"Zona "+e.unidade.sigla+" identificada",tom:"neutro",
-      explicacao:"Os índices de construção desta zona ainda não foram conferidos contra a LC 349/2022 — mostramos só o que vem do mapa oficial."}:null;
+      explicacao:"Os limites de construção desta zona ainda não foram conferidos na lei oficial — mostramos só o que vem do mapa da prefeitura."}:null;
   }
   const sigla=e.unidade&&e.unidade.sigla;
   if(sigla==="AA")return {titulo:"Pode verticalizar",tom:"potencial",
-    explicacao:"Área Adensável — o regime mais permissivo do Plano Diretor: prédio alto permitido, qualquer uso e sem altura máxima definida. Acima do CA básico, só mediante outorga onerosa ao município."};
+    explicacao:"Zona onde a lei permite prédio alto e qualquer uso, sem limite de altura. Para construir além do básico, paga-se outorga à prefeitura (o chamado \"solo criado\")."};
   if(sigla==="ADD")return {titulo:"Verticaliza, com teto menor",tom:"neutro",
-    explicacao:"Área de Desaceleração de Densidade — prédio permitido, mas o índice máximo é menor que nas Áreas Adensáveis. Acima do CA básico, só mediante outorga onerosa."};
+    explicacao:"Zona onde prédio é permitido, mas com limite de construção menor que nas áreas adensáveis. Para passar do básico, paga-se outorga."};
   if(sigla==="AOS")return {titulo:"Só construção baixa",tom:"atencao",
-    explicacao:"Área de Ocupação Sustentável — o limitante aqui não é o índice, é a altura ("
-      +r.altura_max+" m ≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos) e a cobertura de só "+r.taxa_ocupacao+"% do terreno."};
+    explicacao:"Aqui a lei só permite construção baixa: até "+r.altura_max+" m (≈ "
+      +Math.max(1,Math.round(r.altura_max/3))+" pavimentos) e cada pavimento pode cobrir no máximo "+r.taxa_ocupacao+"% do terreno."};
   return {titulo:"Fora das áreas de adensamento",tom:"neutro",
-    explicacao:"Vale o CA básico de 1,0x (Art. 242, VII). Índices maiores dependem da unidade territorial específica — confirme na SEPLANH."};
+    explicacao:"Fora das áreas de adensamento, a lei permite construir o básico: 1× o tamanho do terreno. Limites maiores dependem da classificação exata do lote — confirme na SEPLANH."};
 }
 /* P1.5 painelPotencialLinhas(estadoPD,areaterr): a CONTA do potencial construtivo em linhas
    [rótulo,valor] planas — terreno × CA básico (sem outorga), terreno × CA máximo (com outorga),
@@ -4358,10 +4375,10 @@ function painelPotencialLinhas(estadoPD,areaterr){
   if(!r||r.conferido!==true||!(at>0))return out;
   const m2=v=>Math.round(v).toLocaleString("pt-BR")+" m²";
   out.push(["Terreno",m2(at)]);
-  if(r.ca_basico!=null)out.push(["Sem outorga (CA básico "+fmtCA(r.ca_basico)+"x)","até ~"+m2(at*r.ca_basico)+" de construção"]);
-  if(r.ca_maximo!=null)out.push(["No teto (CA "+fmtCA(r.ca_maximo)+"x, com outorga)","até ~"+m2(at*r.ca_maximo)]);
-  if(r.taxa_ocupacao!=null)out.push(["Cobertura do terreno por pavimento ("+r.taxa_ocupacao+"%)","até ~"+m2(at*r.taxa_ocupacao/100)]);
-  if(r.altura_max!=null)out.push(["Altura máxima",r.altura_max+" m (≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos, pé-direito de 3 m)"]);
+  if(r.ca_basico!=null)out.push(["Sem custo extra à prefeitura (índice básico "+fmtCA(r.ca_basico)+"x)","até ~"+m2(at*r.ca_basico)+" de construção"]);
+  if(r.ca_maximo!=null)out.push(["No máximo permitido (índice "+fmtCA(r.ca_maximo)+"x, pagando outorga)","até ~"+m2(at*r.ca_maximo)]);
+  if(r.taxa_ocupacao!=null)out.push(["Cada pavimento pode cobrir até "+r.taxa_ocupacao+"% do terreno","até ~"+m2(at*r.taxa_ocupacao/100)]);
+  if(r.altura_max!=null)out.push(["Altura máxima do prédio",r.altura_max+" m (≈ "+Math.max(1,Math.round(r.altura_max/3))+" pavimentos, pé-direito de 3 m)"]);
   return out;
 }
 // RADAR_PURE_END
@@ -7700,7 +7717,7 @@ function mercadoReset(a){
   const b=document.getElementById("dMercadoBody"); if(b)b.innerHTML=MERCADO_HINT;
   const bt=document.getElementById("btnMercado"); if(bt){bt.disabled=false;bt.textContent="Calcular valor";}
   if(MERCLAYER){MERCLAYER.clearLayers();} /* ofertas plotadas pertencem à análise anterior */
-  VALOR_EST=null;SOBRA_PEDIDO=null;SOBRA_DEBITOS=null;renderSobra(); /* P1.4: conta da revenda é deste imóvel, nunca herdada */
+  VALOR_EST=null;SOBRA_PEDIDO=null;SOBRA_DEBITOS=null;SOBRA_REFORMA=null;SOBRA_FINANCIADO=false;renderSobra(); /* P1.4/P1.5b: conta da revenda é deste imóvel, nunca herdada */
   estimativaImediata(a,MERCADO_EPOCH); /* Mercado em Movimento 17/07: o valor chega SOZINHO */
 }
 /* ESTIMATIVA IMEDIATA (projeto Mercado em Movimento, 17/07): assim que o imóvel abre,
@@ -7793,7 +7810,7 @@ function irParaAvaliacao(){
    no card de mercado, cada parcela com a fórmula declarada. Nenhuma consulta nova — tudo
    deriva de estado já existente (DCUR, __docChecklistSummary, __pdEstado, LOCAL_LAST). */
 let VALOR_EST=null; /* {valor,fonte:"bairro"|"avaliacao",detalhe} — zera a cada imóvel (mercadoReset) */
-let SOBRA_PEDIDO=null,SOBRA_DEBITOS=null;
+let SOBRA_PEDIDO=null,SOBRA_DEBITOS=null,SOBRA_REFORMA=null,SOBRA_FINANCIADO=false;
 const brlSinal=n=>(n>=0?"+":"−")+brlC(Math.abs(n));
 const brlMenos=n=>"−"+brlC(Math.abs(n));
 function sobraComissaoPct(){
@@ -7841,7 +7858,7 @@ function atualizarTriade(){
       .map(c=>c.count+" "+String(c.rotulo||"").toLowerCase());
     if(tops.length)mercS="Entorno medido: "+tops.join(" · ");
   }
-  const r=quantoSobra({valorEstimado:est&&est.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:sobraComissaoPct(),debitos:SOBRA_DEBITOS});
+  const r=quantoSobra({valorEstimado:est&&est.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:sobraComissaoPct(),debitos:SOBRA_DEBITOS,reforma:SOBRA_REFORMA,financiado:SOBRA_FINANCIADO});
   const avSobra=r?("<br>Sobra estimada na revenda: <b>"+esc(brlSinal(r.sobra))+"</b>"):"";
   box.innerHTML=`
     <button type="button" class="dtcard" onclick="triadeIr('diligencia')">
@@ -7865,35 +7882,45 @@ function renderSobra(){
     <div class="dsobra-head">Quanto sobra neste negócio? <em>(conta aberta)</em></div>
     <div class="dsobra-l" style="margin-top:8px"><span>Valor de mercado estimado<small style="display:block;font-weight:400;color:var(--muted)">${esc(est.detalhe)}</small></span><b>${brlC(est.valor)}</b></div>
     <div class="dsobra-grid">
-      <label class="dsobra-in">Preço pedido / negociado (R$)
+      <label class="dsobra-in">Preço de compra negociado (R$)
         <input id="dSobraPedido" inputmode="numeric" placeholder="ex.: 850000" value="${SOBRA_PEDIDO||""}"></label>
-      <label class="dsobra-in">Comissão (%)
+      <label class="dsobra-in">Comissão na revenda (% — sobre a venda)
         <input id="dSobraCom" inputmode="decimal" value="${String(sobraComissaoPct()).replace(".",",")}"></label>
       <label class="dsobra-in">Débitos do imóvel (R$ — ver CND)
         <input id="dSobraDeb" inputmode="numeric" placeholder="0" value="${SOBRA_DEBITOS||""}"></label>
+      <label class="dsobra-in">Reforma/preparação p/ revender (R$)
+        <input id="dSobraRef" inputmode="numeric" placeholder="0" value="${SOBRA_REFORMA||""}"></label>
+      <label class="dsobra-in" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" id="dSobraFin" ${SOBRA_FINANCIADO?"checked":""} style="width:auto;margin:0"> Compra financiada (dispensa escritura)</label>
     </div>
     <div class="dsobra-res" id="dSobraRes"></div>`;
-  ["dSobraPedido","dSobraCom","dSobraDeb"].forEach(id=>{
+  ["dSobraPedido","dSobraCom","dSobraDeb","dSobraRef"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.addEventListener("input",sobraAtualizarRes);
   });
+  const elF=document.getElementById("dSobraFin");if(elF)elF.addEventListener("change",sobraAtualizarRes);
   sobraAtualizarRes();
 }
 function sobraAtualizarRes(){
   const res=document.getElementById("dSobraRes");if(!res)return;
   const elP=document.getElementById("dSobraPedido"),elC=document.getElementById("dSobraCom"),elD=document.getElementById("dSobraDeb");
+  const elR=document.getElementById("dSobraRef"),elF=document.getElementById("dSobraFin");
   SOBRA_PEDIDO=parseMoedaInput(elP&&elP.value);
   SOBRA_DEBITOS=parseMoedaInput(elD&&elD.value);
+  SOBRA_REFORMA=parseMoedaInput(elR&&elR.value);
+  SOBRA_FINANCIADO=!!(elF&&elF.checked);
   const comPct=parseFloat(String((elC&&elC.value)||"").replace(",","."));
   try{localStorage.setItem("radar_comissao_pct",String(comPct>=0&&comPct<=100?comPct:6));}catch(e){}
-  const r=quantoSobra({valorEstimado:VALOR_EST&&VALOR_EST.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:comPct,debitos:SOBRA_DEBITOS});
-  if(!r){res.innerHTML='<p class="dmercado-hint">Informe o preço pedido para ver a conta completa: margem, ITBI, comissão e a sobra estimada da revenda.</p>';atualizarTriade();return;}
+  const r=quantoSobra({valorEstimado:VALOR_EST&&VALOR_EST.valor,precoPedido:SOBRA_PEDIDO,comissaoPct:comPct,debitos:SOBRA_DEBITOS,reforma:SOBRA_REFORMA,financiado:SOBRA_FINANCIADO});
+  if(!r){res.innerHTML='<p class="dmercado-hint">Informe o preço de compra para ver a conta completa: margem, ITBI, cartório, comissão e a sobra estimada da revenda.</p>';atualizarTriade();return;}
   res.innerHTML=`
-    <div class="dsobra-l"><span>Margem de revenda — estimado ${brlC(r.valorEstimado)} menos pedido ${brlC(r.precoPedido)}</span><b class="${r.margem<0?"is-neg":""}">${brlSinal(r.margem)} (${(r.margemPct*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%)</b></div>
-    <div class="dsobra-l"><span>ITBI — 2% do preço</span><b>${brlMenos(r.itbi)}</b></div>
-    <div class="dsobra-l"><span>Comissão — ${String(r.comissaoPct).replace(".",",")}% do preço</span><b>${brlMenos(r.comissao)}</b></div>
-    <div class="dsobra-l"><span>Débitos (CND/TLP — quitados na venda)</span><b>${brlMenos(r.debitos)}</b></div>
+    <div class="dsobra-l"><span>Margem — venda estimada ${brlC(r.valorEstimado)} menos compra ${brlC(r.precoPedido)}</span><b class="${r.margem<0?"is-neg":""}">${brlSinal(r.margem)} (${(r.margemPct*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%)</b></div>
+    <div class="dsobra-l"><span>ITBI — 2% da compra</span><b>${brlMenos(r.itbi)}</b></div>
+    <div class="dsobra-l"><span>Cartório — ${r.financiado?"só registro (financiado dispensa escritura)":"escritura "+brlC(r.escritura)+" + registro "+brlC(r.registro)+" (tabela oficial TJGO 2026)"}</span><b>${brlMenos(r.cartorio)}</b></div>
+    <div class="dsobra-l"><span>Comissão da revenda — ${String(r.comissaoPct).replace(".",",")}% da venda estimada</span><b>${brlMenos(r.comissao)}</b></div>
+    <div class="dsobra-l"><span>Débitos do imóvel (CND/TLP — quitados na venda)</span><b>${brlMenos(r.debitos)}</b></div>
+    ${r.reforma>0?`<div class="dsobra-l"><span>Reforma/preparação</span><b>${brlMenos(r.reforma)}</b></div>`:""}
     <div class="dsobra-total"><span>Sobra estimada da revenda</span><b class="${r.sobra<0?"is-neg":""}" style="${r.sobra<0?"color:var(--warning)":""}">${brlSinal(r.sobra)}</b></div>
-    <p class="dmercado-hint">Estimativa sobre ofertas anunciadas — não é garantia de preço de venda. O ITBI real pode ter base de referência do município maior que o preço negociado; os débitos exatos constam na CND e na TLP (aba Resumo).</p>`;
+    <p class="dmercado-hint">Estimativa sobre ofertas anunciadas — não é garantia de preço de venda. O ITBI real pode ter base de referência do município maior que o preço negociado; escritura e registro seguem a tabela oficial TJGO 2026 sobre o preço da compra; os débitos exatos constam na CND e na TLP (aba Resumo).</p>`;
   atualizarTriade();
 }
 
@@ -10233,12 +10260,10 @@ function fecharLaudoView(){
    ITBI é EXATO (2% sobre o valor da transação declarado — STJ Tema 1.113; C-12/F5: o cabeçalho
    descrevia a tese municipal superada "maior entre venal e negócio", mas o código sempre foi Tema 1.113).
    Cartório (escritura+registro) é tabela oficial em degraus (TJGO): campo editável + calculadora oficial. */
+/* As tabelas oficiais TJGO 2026 (REGISTRO_GO/ESCRITURA_GO) e emolumento() moram no bloco
+   RADAR_PURE desde o P1.5b (20/08) — definição ÚNICA, testada por node:vm, reutilizada pela
+   calculadora "Quanto sobra?" (cartório exato na conta da revenda). */
 const brlExato=n=>n==null?"—":Number(n).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
-/* Tabelas oficiais TJGO 2026 (reajuste Prov. 179/2025). Coluna TOTAL (emolumento + ISSQN 5% + fundos).
-   [teto do valor declarado, total a pagar]. REGISTRO: item 76 do PDF oficial RI-GO. ESCRITURA: ato 63A notas (CNB-GO). */
-const REGISTRO_GO=[[653.80,79.57],[1307.62,120.62],[2615.24,153.98],[5230.47,223.29],[10460.94,438.86],[15691.43,469.63],[26152.37,597.96],[39228.54,757.09],[52304.74,1003.46],[65380.92,1193.35],[104609.47,1673.27],[156914.21,2515.05],[261523.68,3387.62],[375536.58,4447.54],[523047.35,5240.56],[784571.03,6290.21],[1176856.54,7537.47],[1569142.07,8764.20],[Infinity,9573.97]];
-const ESCRITURA_GO=[[653.80,168.89],[1307.62,226.42],[2615.24,285.81],[5230.47,376.71],[10460.94,694.05],[15691.43,738.58],[26152.37,920.44],[39228.54,1148.69],[52304.74,1514.27],[65380.92,1787.04],[104609.47,2330.77],[156914.21,3466.45],[172643.46,4223.57],[261523.68,4281.08],[287739.06,5038.22],[392285.51,5153.33],[523047.35,5910.44],[575478.22,6292.72],[1150956.52,6407.89],[Infinity,6637.98]];
-const emolumento=(tab,v)=>{for(const[teto,tot]of tab)if((v||0)<=teto)return tot;return tab[tab.length-1][1];};
 let CALC=null;
 function abrirCustos(){
   const a=DCUR;if(!a)return;

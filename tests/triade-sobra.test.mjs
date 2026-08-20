@@ -1,4 +1,6 @@
 // P1.4 (20/08/2026): tríade visível no Resumo + calculadora "Quanto sobra?" transparente.
+// P1.5b (20/08/2026): cartório EXATO (escritura+registro TJGO 2026) entra na conta; comissão
+// passa a incidir sobre a VENDA estimada; copy urbanística em português de corretor.
 // Funções puras (linhaUrbTriade, quantoSobra) vivem no bloco RADAR_PURE de radar-goiania.html
 // e são carregadas aqui via node:vm — MESMO padrão de loader de tests/templates.test.mjs.
 // O contrato: (1) REGRA DE OURO do CA (nunca dígito quando conferido!==true), (2) quantoSobra
@@ -48,15 +50,18 @@ test("P1.4: tríade Diligência·Avaliação·Mercado existe na aba Resumo, ante
   }
 });
 
-test("P1.4: calculadora 'Quanto sobra?' vive no card de mercado e é alimentada pelas 2 estimativas", () => {
+test("P1.4/P1.5b: calculadora 'Quanto sobra?' vive no card de mercado e é alimentada pelas 2 estimativas", () => {
   assert.ok(html.includes('class="dsobra" id="dSobra"'), "container #dSobra ausente do card dMercado");
   assert.ok(html.includes("function renderSobra()"), "renderSobra ausente");
   assert.ok(html.includes("function sobraAtualizarRes()"), "sobraAtualizarRes ausente");
   /* wiring: estimativa imediata E avaliação completa alimentam VALOR_EST; reset por imóvel */
   assert.ok(html.includes('VALOR_EST={valor:d.valorEstimado,fonte:"bairro"'), "estimativa imediata não alimenta VALOR_EST");
   assert.ok(html.includes('VALOR_EST={valor:r.estimatedValue,fonte:"avaliacao"'), "avaliação completa não alimenta VALOR_EST");
-  assert.ok(html.includes("VALOR_EST=null;SOBRA_PEDIDO=null;SOBRA_DEBITOS=null;renderSobra();"),
-    "mercadoReset deve zerar a conta — nunca herda a do imóvel anterior");
+  assert.ok(html.includes("VALOR_EST=null;SOBRA_PEDIDO=null;SOBRA_DEBITOS=null;SOBRA_REFORMA=null;SOBRA_FINANCIADO=false;renderSobra();"),
+    "mercadoReset deve zerar a conta inteira — nunca herda a do imóvel anterior");
+  /* P1.5b: inputs novos — reforma e compra financiada */
+  assert.ok(html.includes('id="dSobraRef"'), "input de reforma ausente");
+  assert.ok(html.includes('id="dSobraFin"'), "checkbox de financiado ausente");
   /* atualizarTriade chamada nos 4 pontos assíncronos + abertura da ficha */
   assert.ok((html.match(/atualizarTriade\(\)/g) || []).length >= 6,
     "atualizarTriade precisa ser chamada em showDetail, estimativa, renderMercado, renderLocal e renderUrbanisticoUI (then/catch)");
@@ -64,13 +69,15 @@ test("P1.4: calculadora 'Quanto sobra?' vive no card de mercado e é alimentada 
 
 // --- linhaUrbTriade: tradução honesta do Plano Diretor -----------------------------------
 
-test("linhaUrbTriade: zona AA conferida traz CA, teto e potencial do terreno", () => {
+test("linhaUrbTriade: zona AA conferida — português de corretor, potencial do terreno em m²", () => {
   const regra = P.pdRegrasDaZona("AA");
   assert.ok(regra && regra.conferido === true, "fixture: AA precisa estar conferida na tabela");
   const s = P.linhaUrbTriade({ estado: "resolvido", unidade: { sigla: "AA", nome: regra.nome }, regra }, 300);
-  assert.ok(s.includes("Zona AA"), s);
-  assert.ok(s.includes("CA básico"), s);
-  assert.ok(s.includes("potencial de ~"), s);
+  assert.ok(s.startsWith("Pode verticalizar (AA)"), s);
+  assert.ok(s.includes("300 m²"), s);           /* 300 × CA básico 1,0 */
+  assert.ok(s.includes("1.800 m²"), s);         /* 300 × CA máximo 6,0 */
+  assert.ok(s.includes("sem custo extra"), s);
+  assert.ok(s.includes("no máximo que a lei permite"), s);
   assert.ok(s.endsWith("."), s);
 });
 
@@ -83,17 +90,18 @@ test("linhaUrbTriade: REGRA DE OURO — zona sem regra conferida NUNCA emite dí
 
 test("linhaUrbTriade: rural afirma, erro/parcial/ausente omitem (sem inventar)", () => {
   assert.equal(P.linhaUrbTriade({ estado: "rural", macrozona: "Macrozona Rural" }, 300),
-    "Zona rural — os índices urbanos (CA) não se aplicam aqui.");
+    "Zona rural — as regras urbanas de construção não se aplicam aqui.");
   assert.equal(P.linhaUrbTriade({ estado: "erro" }, 300), null);
   assert.equal(P.linhaUrbTriade({ estado: "parcial" }, 300), null);
   assert.equal(P.linhaUrbTriade(null, 300), null);
   assert.equal(P.linhaUrbTriade(undefined, undefined), null);
 });
 
-test("linhaUrbTriade: Macrozona Construída sem unidade usa o CA básico universal (1,0x conferido)", () => {
+test("linhaUrbTriade: sem unidade territorial — limite básico de toda a cidade, em m²", () => {
   const s = P.linhaUrbTriade({ estado: "resolvido_sem_unidade", regra: PD_MZC_BASICO_REF() }, 450);
-  assert.ok(s && s.includes("Macrozona Construída") && s.includes("1,0x"), s);
-  assert.ok(s.includes("450"), s); /* potencial = 450 × 1,0 */
+  assert.ok(s && s.includes("Fora das áreas de adensamento"), s);
+  assert.ok(s.includes("450 m²"), s); /* potencial = 450 × 1,0 */
+  assert.ok(s.includes("limite básico de toda a cidade"), s);
 });
 
 // PD_MZC_BASICO é const do bloco — recupero via linhaUrbTriade? Não: monto o shape equivalente
@@ -104,13 +112,32 @@ function PD_MZC_BASICO_REF() {
 
 // --- quantoSobra: a conta da revenda, completa e sem invenção -----------------------------
 
-test("quantoSobra: conta-chefe bate centavo a centavo", () => {
+test("quantoSobra: conta-chefe bate centavo a centavo (cartório TJGO 2026 exato)", () => {
   const r = P.quantoSobra({ valorEstimado: 1000000, precoPedido: 850000, comissaoPct: 6, debitos: 12000 });
   assert.equal(r.itbi, 17000);          /* 2% de 850.000 */
-  assert.equal(r.comissao, 51000);      /* 6% de 850.000 */
+  assert.equal(r.escritura, 6408);      /* tabela TJGO: faixa até 1.150.956,52 -> 6.407,89 */
+  assert.equal(r.registro, 7537);       /* tabela TJGO: faixa até 1.176.856,54 -> 7.537,47 */
+  assert.equal(r.cartorio, 13945);      /* 6.407,89 + 7.537,47 = 13.945,36 */
+  assert.equal(r.comissao, 60000);      /* P1.5b: 6% da VENDA estimada (1.000.000) */
   assert.equal(r.margem, 150000);       /* 1.000.000 − 850.000 */
-  assert.equal(r.sobra, 70000);         /* 150.000 − 17.000 − 51.000 − 12.000 */
+  assert.equal(r.sobra, 47055);         /* 150.000 − 17.000 − 13.945 − 60.000 − 12.000 */
   assert.ok(Math.abs(r.margemPct - 0.15) < 1e-9);
+});
+
+test("quantoSobra: compra financiada dispensa escritura — cartório vira só o registro", () => {
+  const r = P.quantoSobra({ valorEstimado: 1000000, precoPedido: 850000, comissaoPct: 6, debitos: 0, financiado: true });
+  assert.equal(r.financiado, true);
+  assert.equal(r.escritura, 0);
+  assert.equal(r.cartorio, 7537);       /* só o registro de 850.000 */
+  assert.equal(r.sobra, 150000 - 17000 - 7537 - 60000);
+});
+
+test("quantoSobra: reforma entra na conta e é exposta separada", () => {
+  const r = P.quantoSobra({ valorEstimado: 1000000, precoPedido: 850000, comissaoPct: 6, debitos: 0, reforma: 30000 });
+  assert.equal(r.reforma, 30000);
+  assert.equal(r.sobra, 150000 - 17000 - 13945 - 60000 - 30000);
+  const r2 = P.quantoSobra({ valorEstimado: 1000000, precoPedido: 850000, reforma: -100 });
+  assert.equal(r2.reforma, 0, "reforma negativa vira 0 (mesmo idioma dos débitos)");
 });
 
 test("quantoSobra: sem estimado ou sem pedido -> null (nunca inventa)", () => {
@@ -139,17 +166,19 @@ test("quantoSobra: sobra negativa é exposta com sinal (negócio sem margem não
 
 const BADGES_OFF = { aeis: false, apac: false, add: false, eixo: false, corredor: false };
 
-test("P1.5: vereditoConstrutivo traduz AA/ADD/AOS em linguagem de corretor", () => {
+test("P1.5/P1.5b: vereditoConstrutivo traduz AA/ADD/AOS em linguagem de corretor", () => {
   const aa = P.vereditoConstrutivo({ estado: "resolvido", unidade: { sigla: "AA", nome: "Área Adensável" }, regra: P.pdRegrasDaZona("AA"), badges: BADGES_OFF });
   assert.equal(aa.titulo, "Pode verticalizar");
   assert.equal(aa.tom, "potencial");
+  assert.ok(aa.explicacao.includes("prédio alto") && aa.explicacao.includes("solo criado"),
+    "AA em português claro: " + aa.explicacao);
   const add = P.vereditoConstrutivo({ estado: "resolvido", unidade: { sigla: "ADD", nome: "Área de Desaceleração de Densidade" }, regra: P.pdRegrasDaZona("ADD"), badges: BADGES_OFF });
   assert.equal(add.titulo, "Verticaliza, com teto menor");
   const aos = P.vereditoConstrutivo({ estado: "resolvido", unidade: { sigla: "AOS", nome: "Área de Ocupação Sustentável" }, regra: P.pdRegrasDaZona("AOS"), badges: BADGES_OFF });
   assert.equal(aos.titulo, "Só construção baixa");
   assert.equal(aos.tom, "atencao");
-  assert.ok(aos.explicacao.includes("12 m") && aos.explicacao.includes("4 pavimentos"),
-    "altura da AOS derivada do dado (12 m ÷ 3 m): " + aos.explicacao);
+  assert.ok(aos.explicacao.includes("12 m") && aos.explicacao.includes("4 pavimentos") && aos.explicacao.includes("40%"),
+    "AOS derivada do dado (12 m ÷ 3 m; cobertura 40%): " + aos.explicacao);
 });
 
 test("P1.5: vereditoConstrutivo — omissão honesta em erro/parcial; não-conferido nunca promete", () => {
@@ -167,14 +196,14 @@ test("P1.5: veredito sem unidade NUNCA usa a palavra 'universal' (pino: nota_ca 
     "o veredito não pode duplicar 'universal' — o pino do acordeão conta ocorrências");
 });
 
-test("P1.5: painelPotencialLinhas — a conta do potencial em m², só com regra conferida e terreno", () => {
+test("P1.5/P1.5b: painelPotencialLinhas — a conta do potencial em m², só com regra conferida e terreno", () => {
   const linhas = P.painelPotencialLinhas({ estado: "resolvido", unidade: { sigla: "AA" }, regra: P.pdRegrasDaZona("AA") }, 300);
   /* elemento a elemento: o import é assert/strict e arrays vindos do contexto vm têm protótipo
      próprio — deepEqual aqui É deepStrictEqual e reprovaria por referência, não por conteúdo */
   assert.equal(linhas[0][0], "Terreno");
   assert.equal(linhas[0][1], "300 m²");
-  assert.ok(linhas.some(l => l[0].includes("CA básico 1,0x") && l[1].includes("300 m²")), JSON.stringify(linhas));
-  assert.ok(linhas.some(l => l[0].includes("6,0x") && l[1].includes("1.800 m²")), "teto AA 300×6: " + JSON.stringify(linhas));
+  assert.ok(linhas.some(l => l[0].includes("índice básico 1,0x") && l[0].includes("Sem custo extra") && l[1].includes("300 m²")), JSON.stringify(linhas));
+  assert.ok(linhas.some(l => l[0].includes("6,0x") && l[0].includes("outorga") && l[1].includes("1.800 m²")), "teto AA 300×6: " + JSON.stringify(linhas));
   /* AOS: sem teto de CA, mas cobertura 40% e altura traduzida */
   const aos = P.painelPotencialLinhas({ estado: "resolvido", unidade: { sigla: "AOS" }, regra: P.pdRegrasDaZona("AOS") }, 500);
   assert.ok(aos.some(l => l[0].includes("40%") && l[1].includes("200 m²")), JSON.stringify(aos));
@@ -197,9 +226,9 @@ test("P1.5: montarUrbBodyHTML lidera com o veredito e, com areaterr, o painel de
   assert.ok(comArea.includes(P.PD_DISCLAIMER), "disclaimer SEPLANH segue presente");
 });
 
-test("P1.5: tríade carrega o veredito na linha urbanística", () => {
+test("P1.5/P1.5b: tríade carrega o veredito na linha urbanística", () => {
   const s = P.linhaUrbTriade({ estado: "resolvido", unidade: { sigla: "AA", nome: "Área Adensável" }, regra: P.pdRegrasDaZona("AA") }, 300);
-  assert.ok(s.startsWith("Pode verticalizar · Zona AA"), s);
+  assert.ok(s.startsWith("Pode verticalizar (AA)"), s);
 });
 
 test("P1.5: caller passa areaterr ao acordeão e CSS do veredito existe", () => {
