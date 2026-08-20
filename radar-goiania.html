@@ -1078,6 +1078,13 @@
   .leaflet-container{font-family:"Archivo",sans-serif}
   .leaflet-tooltip{font:500 11.5px/1.5 "Archivo";border:1.5px solid var(--ink);border-radius:2px;
     background:var(--paper-2);color:var(--ink);box-shadow:var(--elev-1)}
+  /* ROTULO-QL (20/08): número do lote no zoom>=18 (dados do espelho local, nm_lot).
+     Halo branco triplo lê sobre ruas E satélite; sem fundo/borda p/ não poluir o mapa;
+     pointer-events:none — o rótulo nunca rouba o clique do polígono embaixo dele. */
+  .lot-label{background:transparent!important;border:none!important;box-shadow:none!important;
+    font:600 11px/1 "JetBrains Mono",monospace;color:var(--ink);letter-spacing:.02em;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 6px #fff;pointer-events:none}
+  .lot-label::before{display:none}
 
   /* ---------- mobile: telas Busca⇄Mapa, bottom sheet, alvos ≥44px, safe-area ---------- */
   @media(max-width:820px){
@@ -4448,7 +4455,7 @@ const MAP_INK=mapTok("--ink","#14231d"),MAP_BRAND=mapTok("--brand","#18513e"),
       MAP_MUTED=mapTok("--muted","#68776f"),MAP_SELECT=mapTok("--focus","#2e73c7");
 const LOT_STYLE={pane:"lots",color:MAP_BRAND,weight:1,fillColor:MAP_BRAND,fillOpacity:.05,bubblingMouseEvents:false};
 const LOT_HOVER={weight:2.5,color:MAP_BRAND_STRONG,fillOpacity:.14};/* hover de lote = brand-strong Atlas */
-let lotLayer=null,LOTTOKEN=0,LOTHINT=false;
+let lotLayer=null,LOTTOKEN=0,LOTHINT=false,LOTLBL=false;
 const LOTINFO={};
 
 /* ---------------- lookup id<->cdbairro (Fase 15, TERR-02): resolve o gap entre a malha visual
@@ -4852,6 +4859,7 @@ function capCache(o,max){
 let LOTDEB=null,LOTLAST=null;
 function initLots(){
   map.createPane("lots").style.zIndex=380; /* abaixo do overlayPane (400): pinos de resultado ficam por cima */
+  map.createPane("lotlabels").style.zIndex=385; /* rótulos Q/L acima dos lotes, abaixo dos pinos */
   lotLayer=L.layerGroup();
   map.on("moveend",()=>{clearTimeout(LOTDEB);LOTDEB=setTimeout(refreshLots,250);}); /* debounce: pan/zoom rápido não refaz tudo */
 }
@@ -4881,8 +4889,10 @@ async function refreshLots(){
     if(map.hasLayer(lotLayer)){map.removeLayer(lotLayer);lotLayer.clearLayers();}
     return;
   }
-  /* se a vista atual está contida na última busca bem-sucedida, não refaz (ex.: pan curto, pick->setView) */
-  if(LOTLAST&&LOTLAST.contains(map.getBounds())&&map.hasLayer(lotLayer))return;
+  /* se a vista atual está contida na última busca bem-sucedida, não refaz (ex.: pan curto, pick->setView).
+     EXCETO se mudou o estado de rótulo (zoom cruzou 18): aí refaz p/ ligar/desligar os números de lote. */
+  const wantLbl=map.getZoom()>=18;
+  if(LOTLAST&&LOTLAST.contains(map.getBounds())&&map.hasLayer(lotLayer)&&LOTLBL===wantLbl)return;
   const tk=++LOTTOKEN;
   const b=map.getBounds();
   const p1=proj4("EPSG:4326","EPSG:31982",[b.getWest(),b.getSouth()]);
@@ -4891,7 +4901,7 @@ async function refreshLots(){
   try{
     d=await jsonp({geometry:`${p1[0].toFixed(1)},${p1[1].toFixed(1)},${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,
       geometryType:"esriGeometryEnvelope",inSR:"31982",spatialRel:"esriSpatialRelIntersects",
-      outFields:"ci",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC);
+      outFields:"ci,nm_lot",returnGeometry:"true",resultRecordCount:4000,f:"json"},0,LOTSVC);
   }catch(e){return;}
   if(tk!==LOTTOKEN)return; /* o mapa já se moveu de novo */
   /* Fase 6 Plano 03: só stagger na PRIMEIRA revelação (transição sem-lotes -> com-lotes) —
@@ -4915,10 +4925,19 @@ async function refreshLots(){
     poly.on("mouseout",()=>{clearTimeout(hv);poly.setStyle(lotStyle(ci));});
     poly.on("click",()=>loadCi(ci)); /* direto pelo ci: mais rápido que a consulta espacial */
     poly.addTo(lotLayer);
+    /* ROTULO-QL (20/08): número do lote centrado no polígono em zoom>=18. Marcador
+       divIcon (NÃO tooltip permanente) porque o polígono já tem o tooltip sticky do hover —
+       um tooltip sobrescreveria o outro. interactive:false = o clique atravessa pro lote. */
+    const nlot=clean(f.attributes&&f.attributes.nm_lot);
+    if(nlot&&wantLbl){
+      L.marker(poly.getCenter(),{pane:"lotlabels",interactive:false,
+        icon:L.divIcon({className:"lot-label",html:esc(nlot),iconSize:null})}).addTo(lotLayer);
+    }
     newPolys.push(poly);
   });
   if(!map.hasLayer(lotLayer))lotLayer.addTo(map);
   LOTLAST=map.getBounds(); /* memoriza a vista coberta — pans curtos não refazem a consulta */
+  LOTLBL=wantLbl; /* e o estado de rótulo renderizado — cruzar o zoom 18 força refazer */
   if(firstReveal&&!REDUCE&&window.Motion&&newPolys.length){
     /* pop-in dos primeiros ~12 polígonos (SVG path via getElement); canvas renderer (sem path element)
        degrada silenciosamente para o estado normal (setStyle já aplicado acima, sem stagger). */
