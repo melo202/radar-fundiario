@@ -35,8 +35,8 @@ for (const row of sem.rows) {
       `UPDATE properties SET geom=ST_SetSRID(ST_MakePoint($1,$2),4326), location_confidence=$3,
               extraction = COALESCE(extraction,'{}'::jsonb) || $4, updated_at=now() WHERE id=$5`,
       [geo.lon, geo.lat, geo.confidence,
-        JSON.stringify({ geocodificacao: { fonte: geo.precisao === "numero-oficial" || geo.precisao === "condominio"
-            ? "espelho-cadastro-2026" : "cnefe-2022",
+        JSON.stringify({ geocodificacao: { fonte: { "numero-oficial": "espelho-cadastro-2026",
+            "condominio": "espelho-cadastro-2026", "bairro": "espelho-divisas-2026" }[geo.precisao] || "cnefe-2022",
           precisao: geo.precisao, detalhe: geo.detalhe || null,
           rua: geo.ruaDetectada || null, numero: geo.numeroDetectado ?? null,
           condominio: geo.condominioDetectado || null, localidade: geo.localidadeCnefe || null } }),

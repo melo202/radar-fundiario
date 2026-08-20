@@ -66,6 +66,33 @@ export async function geocodificarCadastro({ rua, numero, bairro }) {
     detalhe: `cadastro municipal: ${cand.unidades} inscrição(ões) nº ${num}${cand.nmedificio ? " · " + cand.nmedificio : ""}` };
 }
 
+/* último degrau: SÓ o bairro → centroide do polígono oficial do bairro (espelho da
+   camada de divisas). Nome no anúncio ("Setor Marista") casa com o espelho ("Marista")
+   por token significativo nos DOIS sentidos, e só com candidato ÚNICO — ambíguo = null.
+   precisao "bairro" / confidence 0.2: o pino existe p/ contexto de preço, e o front
+   declara "posição aproximada" no tooltip. */
+let BAIRROS_CACHE = null;
+export async function geocodificarBairro({ bairro }) {
+  if (!bairro) return null;
+  if (!BAIRROS_CACHE) {
+    const r = await pool.query(
+      `SELECT nm, ST_Y(ST_Centroid(geom)) AS lat, ST_X(ST_Centroid(geom)) AS lon FROM espelho_bairro WHERE nm IS NOT NULL AND nm <> ''`);
+    BAIRROS_CACHE = r.rows;
+    setTimeout(() => { BAIRROS_CACHE = null; }, 6 * 3600e3).unref?.(); /* espelho é diário — cache de 6h basta */
+  }
+  const alvo = semAcento(bairro).toUpperCase().trim();
+  const exato = BAIRROS_CACHE.filter(b => semAcento(b.nm).toUpperCase() === alvo);
+  let cand;
+  if (exato.length === 1) cand = exato;
+  else {
+    const porToken = BAIRROS_CACHE.filter(b => localidadeCasa(b.nm, bairro) && localidadeCasa(bairro, b.nm));
+    if (porToken.length !== 1) return null; /* zero ou ambíguo ("Setor Sul" × Sul/Sul II) — não inventa */
+    cand = porToken;
+  }
+  return { lat: cand[0].lat, lon: cand[0].lon, precisao: "bairro", confidence: 0.2,
+    detalhe: `centroide do bairro "${cand[0].nm}" (espelho da divisas oficial)` };
+}
+
 /* nome do condomínio → centroide das unidades cadastradas com aquele nmedificio */
 export async function geocodificarCondominio({ nome, bairro }) {
   const alvo = normEdificio(nome);

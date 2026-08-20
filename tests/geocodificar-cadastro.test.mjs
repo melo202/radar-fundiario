@@ -44,6 +44,16 @@ test("backfill em massa: requalifica antes, pula páginas-lista, registra audito
   assert.ok(src.includes("geocodificacao-massa"), "estatística registrada em audit_log");
 });
 
+test("degrau bairro: último da cadeia, confiança 0.2 declarada, pino aproximado no front", () => {
+  const geo = readFileSync(new URL("../motor/geo-anuncio.js", import.meta.url), "utf-8");
+  assert.ok(geo.includes('"bairro": 0.2'), "confiança do centroide de bairro é 0.2");
+  assert.ok(geo.indexOf("geocodificarCondominio") < geo.indexOf("geocodificarBairro"),
+    "bairro é o ÚLTIMO degrau (nunca rouba um match mais preciso)");
+  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  assert.ok(html.includes("posição aproximada: centro do bairro"), "pino de bairro se declara no tooltip");
+  assert.ok(html.includes('dashArray:aprox?"3":null'), "pino de bairro é tracejado (nunca disfarçado de exato)");
+});
+
 test("extração de endereço: separadores reais de portal (·, •, |) não quebram mais", () => {
   /* "Rua T 71" sem vírgula/nº = a RUA T-71 (letra-número de Goiânia), não rua T nº 71 */
   const e1 = extraiEnderecoAnuncio("A partir de · Rua T 71 · Setor Bueno, Goiânia/GO · 144m²");

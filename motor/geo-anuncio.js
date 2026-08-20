@@ -4,11 +4,11 @@
    compatível (senão uma "Rua 3" de outro setor viraria coordenada errada). */
 import { geocodificar } from "./geocodificar.js";
 import { extraiEnderecoAnuncio, localidadeCasa } from "./endereco-anuncio.js";
-import { geocodificarCadastro, geocodificarCondominio, extraiCondominioAnuncio } from "./geocodificar-cadastro.js";
+import { geocodificarCadastro, geocodificarCondominio, geocodificarBairro, extraiCondominioAnuncio } from "./geocodificar-cadastro.js";
 
 /* confiança pela precisão do degrau (fato declarado, nunca peso de valor) */
 const CONFIANCA = { "numero": 0.9, "numero-proximo": 0.6, "logradouro": 0.35,
-  "numero-oficial": 0.92, "condominio": 0.75 };
+  "numero-oficial": 0.92, "condominio": 0.75, "bairro": 0.2 };
 
 export async function geocodificarAnuncio({ titulo, descricao, neighborhood }) {
   const texto = `${titulo || ""}\n${descricao || ""}`;
@@ -36,6 +36,11 @@ export async function geocodificarAnuncio({ titulo, descricao, neighborhood }) {
   if (cond) {
     const g = await geocodificarCondominio({ nome: cond, bairro: neighborhood });
     if (g) return { ...g, condominioDetectado: cond };
+  }
+  /* P0.3, último degrau: só o bairro → centroide oficial, precisão declarada "bairro" */
+  if (neighborhood) {
+    const g = await geocodificarBairro({ bairro: neighborhood });
+    if (g) return g;
   }
   return null;
 }
