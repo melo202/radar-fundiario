@@ -2881,6 +2881,9 @@ function raioXZapTexto(data){
   const ft=faixaTxt(d.faixa);
   if(ft)linhas.push("Referência indicativa de valor: "+ft+".");
   if(d.urbanoLinha)linhas.push("Pode construir? "+d.urbanoLinha);
+  if(d.titular)linhas.push("Titular registrado: "+d.titular+".");
+  if(d.cndSituacao==="negativa")linhas.push("CND do imóvel: NEGATIVA — sem débitos imobiliários.");
+  else if(d.cndSituacao==="positiva")linhas.push("CND do imóvel: POSITIVA — há débitos a verificar.");
   if(d.docsTotal>0)linhas.push("Documentos: "+(d.docsConferidos||0)+" de "+d.docsTotal+" itens conferidos pelo corretor (BIC, CND, IPTU, matrícula…).");
   linhas.push("Segue o raio-X completo em PDF, com fontes e ressalvas.");
   return linhas.join("\n")+assinatura(d.perfil);
@@ -7740,9 +7743,10 @@ function montarRaioX(){
   const potencial=painelPotencialLinhas(pd,a.areaterr);
   const urbLinha=linhaUrbTriade(pd,a.areaterr);
   const reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
-  const zap=raioXZapTexto({tipoImovel:tipo,bairro:clean(a.nmbairro),endereco:addrDe(a),
+  const zapDados={tipoImovel:tipo,bairro:clean(a.nmbairro),endereco:addrDe(a),
     inscricao:insc||null,faixa:em?{lo:em.lo,hi:em.hi}:null,urbanoLinha:urbLinha,
-    docsConferidos:res.conferidos,docsTotal:res.total,perfil:prof});
+    docsConferidos:res.conferidos,docsTotal:res.total,perfil:prof};
+  const zap=raioXZapTexto(zapDados);
   const faixa=faixaTxt(em?{lo:em.lo,hi:em.hi}:null);
   const est=VALOR_EST;
   document.getElementById("laudo").innerHTML=`
@@ -7759,6 +7763,8 @@ function montarRaioX(){
       <div class="kv"><span class="k">Localizador</span><span class="v">${ident.quadra?"Q "+esc(ident.quadra):"Q —"} · ${ident.lote?"L "+esc(ident.lote):"L —"}</span></div>
       ${+a.areaterr>0?`<div class="kv"><span class="k">Terreno</span><span class="v">${Math.round(a.areaterr).toLocaleString("pt-BR")} m²</span></div>`:""}
       ${+a.areaedif>0?`<div class="kv"><span class="k">Área edificada (cadastro)</span><span class="v">${Math.round(a.areaedif).toLocaleString("pt-BR")} m²</span></div>`:""}</div>
+    ${insc?`<div class="lcard" id="rxKitPref"><h3>Kit oficial da prefeitura</h3>
+      <p class="lmiudo">Emitindo nos sistemas da prefeitura: espelho do imóvel (BIC), certidão do titular e CND de débitos — leva alguns segundos…</p></div>`:""}
     ${veredito?`<div class="lcard"><h3>Pode construir?</h3>
       <p><b>${esc(veredito.titulo)}.</b> ${esc(veredito.explicacao)}</p>
       ${potencial.length?potencial.map(l=>`<div class="kv"><span class="k">${esc(l[0])}</span><span class="v">${esc(l[1])}</span></div>`).join(""):""}
@@ -7775,6 +7781,86 @@ function montarRaioX(){
   lvZapSet("https://wa.me/?text="+encodeURIComponent(zap));
   document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
   const lv=document.getElementById("laudoView");if(lv.hidden){lv.hidden=false;trapFocus(lv);}lv.scrollTop=0;
+  /* P1.6b (20/08 — "tem que sair o kit completo!"): o documento abre NA HORA com o que já
+     está em memória; o kit oficial (espelho BIC + certidão do titular + CND) chega
+     assíncrono do motor (/motor/kitpref emite server-side nos sistemas da prefeitura).
+     RAIOX_EPOCH invalida resposta atrasada de um raio-X anterior; se a view foi fechada,
+     #rxKitPref não existe mais e a atualização é descartada (nunca escreve em doc morto). */
+  if(insc){
+    const epoch=++RAIOX_EPOCH;
+    fetch(MOTOR_BASE+"/motor/kitpref?insc="+encodeURIComponent(insc),{signal:AbortSignal.timeout(45000)})
+      .then(r=>r.ok?r.json():null)
+      .then(kit=>{
+        if(epoch!==RAIOX_EPOCH)return;
+        const alvo=document.getElementById("rxKitPref");if(!alvo)return;
+        alvo.outerHTML=kitPrefHTML(kit,insc);
+        document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+        /* o texto do WhatsApp ganha titular + CND quando a prefeitura respondeu */
+        const c=kit&&kit.docs?kit.docs.certidao:null, n=kit&&kit.docs?kit.docs.cnd:null;
+        if((c&&c.ok&&c.dados&&c.dados.titular)||(n&&n.ok&&n.dados)){
+          const d2=Object.assign({},zapDados);
+          if(c&&c.ok&&c.dados&&c.dados.titular)d2.titular=c.dados.titular;
+          if(n&&n.ok&&n.dados&&n.dados.situacao!=="indeterminada")d2.cndSituacao=n.dados.situacao;
+          lvZapSet("https://wa.me/?text="+encodeURIComponent(raioXZapTexto(d2)));
+        }
+      })
+      .catch(()=>{
+        if(epoch!==RAIOX_EPOCH)return;
+        const alvo=document.getElementById("rxKitPref");if(!alvo)return;
+        alvo.outerHTML=kitPrefHTML(null,insc);
+        document.getElementById("laudoViewBody").innerHTML=document.getElementById("laudo").innerHTML;
+      });
+  }
+}
+/* P1.6b kitPrefHTML(kit,insc): a seção "Kit oficial da prefeitura" do raio-X — per-doc
+   honesto (o que falhou vira linha de erro + link pro canal oficial, nunca silêncio).
+   CPF já vem mascarado do motor (LGPD). IPTU/TLP entram como deep-link (SPA, GET não
+   resolve) com o aviso de que TLP não aparece na CND. */
+let RAIOX_EPOCH=0;
+function kitPrefHTML(kit,insc){
+  const d=String(insc||"").replace(/\D/g,"");
+  const urlEsp="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc="+encodeURIComponent(d);
+  const urlCer="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu="+encodeURIComponent(d);
+  const urlCnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(d);
+  if(!kit||!kit.ok){
+    return `<div class="lcard"><h3>Kit oficial da prefeitura</h3>
+      <p class="lmiudo">Não foi possível emitir os documentos agora${kit&&kit.erro?" ("+esc(kit.erro)+")":""}. Os canais oficiais abrem preenchidos a partir do bloco Prefeitura do app:
+      <a href="${urlEsp}">espelho</a> · <a href="${urlCer}">titular</a> · <a href="${urlCnd}">CND</a>.</p></div>`;
+  }
+  const partes=[`<div class="lcard"><h3>Kit oficial da prefeitura</h3>`];
+  const c=kit.docs&&kit.docs.certidao;
+  if(c&&c.ok&&c.dados){
+    partes.push(`<div class="kv"><span class="k">Titular registrado</span><span class="v"><b>${esc(c.dados.titular||"—")}</b>${c.dados.cpfCnpj?" · CPF/CNPJ "+esc(c.dados.cpfCnpj):""}</span></div>`);
+    if(c.dados.valorVenal)partes.push(`<div class="kv"><span class="k">Valor venal (certidão)</span><span class="v">R$ ${esc(c.dados.valorVenal)}</span></div>`);
+    partes.push(`<div class="kv"><span class="k">Certidão cadastral</span><span class="v">Nº ${esc(c.dados.numero||"—")}${c.dados.validade?" · válida até "+esc(c.dados.validade):""}${c.dados.emitidaEm?" · emitida em "+esc(String(c.dados.emitidaEm).toLowerCase()):""}</span></div>`);
+  }else{
+    partes.push(`<p class="lmiudo">⚠ Certidão cadastral (titular): ${esc(c&&c.erro||"indisponível")} — <a href="${urlCer}">emitir no canal oficial ↗</a></p>`);
+  }
+  const n=kit.docs&&kit.docs.cnd;
+  if(n&&n.ok&&n.dados){
+    const s=n.dados.situacao;
+    partes.push(`<div class="kv"><span class="k">CND do imóvel</span><span class="v">${s==="negativa"?"✅ <b>NEGATIVA</b> — sem débitos imobiliários":s==="positiva"?"⚠️ <b>POSITIVA</b> — há débitos; veja a certidão oficial":"<b>Situação não lida</b> — confira a certidão oficial"}${n.dados.numero?" · Nº "+esc(n.dados.numero):""}${n.dados.validadeDias?" · válida por "+n.dados.validadeDias+" dias":""}${n.dados.emitidaEm?" · emitida em "+esc(String(n.dados.emitidaEm).toLowerCase()):""}</span></div>`);
+  }else{
+    partes.push(`<p class="lmiudo">⚠ CND de débitos: ${esc(n&&n.erro||"indisponível")} — <a href="${urlCnd}">emitir no canal oficial ↗</a></p>`);
+  }
+  const e=kit.docs&&kit.docs.espelho;
+  if(e&&e.ok&&e.dados){
+    const esp=e.dados,linhas=[];
+    if(esp.matricula)linhas.push(["Matrícula",esp.matricula]);
+    if(esp.posFiscal)linhas.push(["Posição fiscal",esp.posFiscal]);
+    if(esp.areaTerreno)linhas.push(["Terreno",esp.areaTerreno]);
+    if(esp.areaEdificada)linhas.push(["Edificado",esp.areaEdificada]);
+    if(esp.pavimentos)linhas.push(["Pavimentos",esp.pavimentos]);
+    if(esp.conservacao)linhas.push(["Conservação",esp.conservacao]);
+    if(esp.ultAlteracao)linhas.push(["Últ. alteração cadastral",esp.ultAlteracao]);
+    partes.push(`<div class="kv"><span class="k">Espelho oficial (BIC)</span><span class="v">${linhas.length?linhas.map(l=>esc(l[0])+": <b>"+esc(l[1])+"</b>").join(" · "):"—"}</span></div>`);
+  }else{
+    partes.push(`<p class="lmiudo">⚠ Espelho do imóvel (BIC): ${esc(e&&e.erro||"indisponível")} — <a href="${urlEsp}">abrir no canal oficial ↗</a></p>`);
+  }
+  partes.push(`<p class="lmiudo">Faltam neste kit: ${(kit.pendentes||[]).map(p=>`<a href="${esc(p.url)}">${esc(p.nome)}</a>`).join(" · ")||"—"} — abrem já preenchidos.</p>`);
+  partes.push(`<p class="lmiudo">${esc(kit.fonte||"Prefeitura de Goiânia")} · consultado em ${kit.geradoEm?new Date(kit.geradoEm).toLocaleString("pt-BR"):"—"}. A certidão oficial emitida no portal é o documento que vale — este kit é a conferência rápida.</p>`);
+  partes.push(`</div>`);
+  return partes.join("");
 }
 
 /* Fase 9 FICHA-01: renderiza os 2 <button class="score"> de #dScores — chamado por showDetail()

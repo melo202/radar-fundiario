@@ -108,3 +108,32 @@ test("raioXZapTexto: urbanoLinha vem de linhaUrbTriade (mesma REGRA DE OURO do C
   const t = P.raioXZapTexto({ bairro: "Centro", urbanoLinha: linha });
   assert.ok(linha === null ? !t.includes("Pode construir?") : !/\d/.test(t.split("Pode construir?")[1] || ""), t);
 });
+
+// --- P1.6b: kit oficial da prefeitura DENTRO do raio-X ------------------------------------
+
+test("raioXZapTexto: titular e CND entram quando a prefeitura respondeu; omitem quando não", () => {
+  const t = P.raioXZapTexto({ bairro: "Setor Marista", titular: "FULANO FICTÍCIO", cndSituacao: "negativa" });
+  assert.ok(t.includes("Titular registrado: FULANO FICTÍCIO."), t);
+  assert.ok(t.includes("CND do imóvel: NEGATIVA"), t);
+  const t2 = P.raioXZapTexto({ bairro: "Centro", cndSituacao: "positiva" });
+  assert.ok(t2.includes("POSITIVA — há débitos a verificar"), t2);
+  const t3 = P.raioXZapTexto({ bairro: "Centro" });
+  assert.ok(!t3.includes("Titular") && !t3.includes("CND do imóvel"), t3);
+  assert.ok(!/undefined|NaN/.test(P.raioXZapTexto({ titular: null, cndSituacao: null })));
+});
+
+test("P1.6b: montarRaioX emite o kit oficial assíncrono e atualiza doc + zap", () => {
+  const i = html.indexOf("function montarRaioX()");
+  const fim = html.indexOf("\nfunction ", i + 10);
+  const corpo = html.slice(i, fim > i ? fim : i + 9000);
+  assert.ok(corpo.includes('id="rxKitPref"'), "placeholder do kit ausente no documento");
+  assert.ok(corpo.includes('MOTOR_BASE+"/motor/kitpref?insc="'), "montarRaioX deve emitir o kit no motor");
+  assert.ok(corpo.includes("RAIOX_EPOCH"), "guarda de época contra resposta atrasada ausente");
+  assert.ok(corpo.includes("kitPrefHTML(kit"), "o kit chegado deve renderizar no documento");
+  assert.ok(corpo.includes("lvZapSet("), "o zap deve ser atualizado com titular/CND");
+  assert.ok(html.includes("function kitPrefHTML(kit,insc)"), "kitPrefHTML ausente");
+  /* per-doc honesto: o que falha vira linha de erro + link, nunca silêncio */
+  const k = html.indexOf("function kitPrefHTML(kit,insc)");
+  const trecho = html.slice(k, k + 6000);
+  assert.ok((trecho.match(/canal oficial/g) || []).length >= 3, "cada doc falho deve apontar o canal oficial");
+});

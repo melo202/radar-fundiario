@@ -220,6 +220,16 @@ http.createServer(async (req, res) => {
       const { listarOportunidades } = await import("./oportunidades.js");
       return json(res, 200, await listarOportunidades());
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/kitpref")) {
+      /* Kit prefeitura COMPLETO (20/08): emite espelho BIC + certidão cadastral (titular)
+         + CND imobiliária server-side — os 3 que a prefeitura emite na hora via GET.
+         Per-doc honesto; cache 12h protege o servidor municipal. Leitura pública
+         (o app chama ao gerar o Raio-X). */
+      if (estourou(req, 10, "kitpref")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const insc = new URL(req.url, "http://x").searchParams.get("insc");
+      const { emitirKitPrefeitura } = await import("./kitpref-emissao.js");
+      return json(res, 200, await emitirKitPrefeitura(insc));
+    }
     if (req.method === "GET" && req.url === "/motor/mercado/mudancas") {
       /* pulso do mapa (19/07): mudanças de preço VERIFICADAS dos últimos 7 dias, com a
          coordenada do anúncio quando existir. Só o termômetro honesto (portal+id, duas
