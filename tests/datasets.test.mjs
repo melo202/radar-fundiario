@@ -112,14 +112,14 @@ test("logradouros-goiania.json: >9000 registros, todos com nome/tipo/localidades
 
 // ---------------------------------------------------------------- caixa-goiania.js -------------
 
-test("caixa-goiania.js: parseia (window.CAIXA), 173 imóveis, x/y presente-ou-null COERENTE (nunca só uma das coordenadas)", () => {
+test("caixa-goiania.js: parseia (window.CAIXA), 170 imóveis, x/y presente-ou-null COERENTE (nunca só uma das coordenadas)", () => {
   const src = readFileSync(raiz("caixa-goiania.js"), "utf-8");
   const sandbox = { window: {} };
   vm.createContext(sandbox);
   new vm.Script(src, { filename: "caixa-goiania.js" }).runInContext(sandbox);
   const CAIXA = sandbox.window.CAIXA;
   assert.ok(CAIXA && Array.isArray(CAIXA.imoveis), "window.CAIXA.imoveis ausente/inválido");
-  assert.equal(CAIXA.imoveis.length, 173, "contagem de imóveis divergiu do snapshot auditado (atualizado em 2026-08-20; a lista da CAIXA muda conforme vendem/abrem edital — ao atualizar o dataset, atualize este pino)");
+  assert.equal(CAIXA.imoveis.length, 170, "contagem de imóveis divergiu do snapshot auditado (atualizado em 2026-08-24; a lista da CAIXA muda conforme vendem/abrem edital — ao atualizar o dataset, atualize este pino)");
   assert.match(String(CAIXA.gerado || ""), /^\d{4}-\d{2}-\d{2}$/, "CAIXA.gerado deveria ser data ISO (yyyy-mm-dd)");
   let semXY = 0;
   const ids = new Set();
@@ -137,8 +137,8 @@ test("caixa-goiania.js: parseia (window.CAIXA), 173 imóveis, x/y presente-ou-nu
       assert.ok(i.x > 600000 && i.x < 800000 && i.y > 8000000 && i.y < 8300000, `imóvel ${i.id} com coordenada fora da faixa UTM de Goiânia (x=${i.x}, y=${i.y})`);
     }
   }
-  // 63/173 (36%) sem coordenada no snapshot de 2026-08-20: métrica de qualidade da FONTE,
+  // 64/170 (38%) sem coordenada no snapshot de 2026-08-24: métrica de qualidade da FONTE,
   // documentada e já coberta pelo guard i.x&&i.y do cruzamento (diff-caixa.test.mjs) —
   // aqui só travamos o valor medido (ao atualizar o dataset, atualize este pino).
-  assert.equal(semXY, 63, `imóveis sem x/y divergiu do snapshot auditado (63/173): ${semXY}`);
+  assert.equal(semXY, 64, `imóveis sem x/y divergiu do snapshot auditado (64/170): ${semXY}`);
 });

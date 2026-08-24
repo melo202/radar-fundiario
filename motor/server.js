@@ -171,6 +171,12 @@ http.createServer(async (req, res) => {
       const u = new URL(req.url, "http://x");
       const lat = Number(u.searchParams.get("lat")), lon = Number(u.searchParams.get("lon"));
       if (!isFinite(lat) || !isFinite(lon)) return json(res, 400, { erro: "lat e lon obrigatórios" });
+      if (u.pathname === "/motor/localizacao/pois") {
+        /* P1.8: os estabelecimentos com nome/distância — branch ANTES do entorno genérico
+           (startsWith casaria os dois no mesmo handler) */
+        const { entornoPois } = await import("./localizacao.js");
+        return json(res, 200, await entornoPois({ lat, lon }));
+      }
       const { entorno } = await import("./localizacao.js");
       return json(res, 200, await entorno({ lat, lon }));
     }

@@ -1547,6 +1547,12 @@
   /* Pulso do mercado (19/07): pinos que respiram onde o radar VERIFICOU mudança de preço
      nos últimos 7 dias — o mapa mostra o mercado vivo, sem inventar nada */
   .pulso-preco{position:relative;width:18px;height:18px}
+  /* P1.8 (24/08): pontos de estabelecimento no mapa — pequenos, não competem com os pinos */
+  .poi-dot{width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid #fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .poi-dot.at{background:var(--warning)}
+  .dlocal-poigrupo{margin-top:8px}
+  .dlocal-poigrupo>b{font:700 12.5px/1.3 "Archivo";color:var(--ink)}
   .pulso-preco::before{content:"";position:absolute;inset:0;border-radius:50%;animation:pulso-onda 2s ease-out infinite}
   .pulso-preco::after{content:"";position:absolute;inset:5px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .pulso-preco.queda::before{background:rgba(16,150,72,.45)}
@@ -8367,6 +8373,7 @@ function localReset(a,ll){
   if(!p&&a&&a.x_coord&&a.y_coord){try{const w=toWGS(+a.x_coord,+a.y_coord);p={lat:w[0],lng:w[1]};}catch(e){}}
   LOCAL_LL=p;
   LOCAL_LAST=null; /* MK-1: medição do imóvel anterior nunca vaza para a divulgação deste */
+  if(POI_LAYER){map.removeLayer(POI_LAYER);POI_LAYER=null;} POI_DADOS=null; POI_ON=false; /* P1.8: pontos do imóvel anterior saem do mapa */
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
   const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Medir o entorno";delete bt.dataset.rodou;}
 }
@@ -8400,7 +8407,7 @@ function renderLocal(d){
     ${(q.warnings&&q.warnings.length)?`<div class="dmercado-warn">${q.warnings.map(esc).join("<br>")}</div>`:""}
     ${pos.length?`<ul class="dmercado-list">${pos.join("")}</ul>`:'<p class="dmercado-hint">Nenhuma amenidade mapeada nos raios pesquisados.</p>'}
     ${at.length?`<div style="margin-top:8px"><b style="font-size:12px">Pontos de atenção</b><ul class="dmercado-list">${at.join("")}</ul></div>`:""}
-    ${pos.length||at.length?`<div class="dmercado-parecer" id="dLocalResumo"><button type="button" class="dmercado-iabtn" onclick="resumirEntorno()">Resumir o entorno</button></div>`:""}
+    ${pos.length||at.length?`<div class="dmercado-parecer" id="dLocalResumo"><button type="button" class="dmercado-iabtn" onclick="resumirEntorno()">Resumir o entorno</button> <button type="button" class="dmercado-iabtn" onclick="verPoisNoMapa(this)">Ver estabelecimentos no mapa</button></div>`:""}
     <p class="dmercado-hint">Cobertura ${esc(q.coverageConfidence||"?")} · extrato de ${esc(q.extractDate||"?")} · ${esc(q.attribution||"© OpenStreetMap contributors")}.</p>`;
   atualizarTriade(); /* P1.4: card Mercado do Resumo reflete a medição na hora */
 }
@@ -8420,6 +8427,68 @@ async function resumirEntorno(){
   }catch(e){
     box.innerHTML=`<p class="dmercado-hint">Resumo indisponível agora (${esc(e.message)}). As medições acima seguem valendo.</p>`;
   }
+}
+
+/* ---------------- P1.8 (24/08): estabelecimentos no mapa ----------------
+   A medição (/motor/localizacao) entrega os NÚMEROS "pra gente"; este botão entrega os
+   NOMES "pro cliente" (/motor/localizacao/pois — os mais próximos por categoria) e plota
+   os pontos no mapa. Toggle: 2º clique desliga e restaura a lista de números. Estado é
+   DESTA ficha — localReset() zera junto com LOCAL_LAST (nunca vaza pro imóvel seguinte). */
+let POI_LAYER=null, POI_DADOS=null, POI_ON=false;
+async function verPoisNoMapa(bt){
+  const ll=LOCAL_LL;if(!ll)return;
+  if(POI_ON){
+    if(POI_LAYER){map.removeLayer(POI_LAYER);POI_LAYER=null;}
+    POI_ON=false;
+    const sec=document.getElementById("dLocalPois");if(sec)sec.remove();
+    if(bt)bt.textContent="Ver estabelecimentos no mapa";
+    return;
+  }
+  if(bt){bt.disabled=true;bt.textContent="Carregando…";}
+  try{
+    if(!POI_DADOS||POI_DADOS.lat!==ll.lat||POI_DADOS.lon!==ll.lng){
+      const r=await fetch(`${MOTOR_BASE}/motor/localizacao/pois?lat=${ll.lat}&lon=${ll.lng}`,{signal:AbortSignal.timeout(20000)});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.erro||("http "+r.status));
+      POI_DADOS={lat:ll.lat,lon:ll.lng,grupos:d.grupos||{},fonte:d.fonte||""};
+    }
+    plotarPois();
+    POI_ON=true;
+    if(bt)bt.textContent="Ocultar estabelecimentos";
+    renderLocalPoisNomes();
+  }catch(e){
+    toast("Estabelecimentos indisponíveis agora ("+e.message+").");
+    if(bt)bt.textContent="Ver estabelecimentos no mapa";
+  }finally{if(bt)bt.disabled=false;}
+}
+function plotarPois(){
+  if(POI_LAYER){map.removeLayer(POI_LAYER);POI_LAYER=null;}
+  if(!POI_DADOS)return;
+  POI_LAYER=L.layerGroup();
+  let n=0;
+  for(const g of Object.values(POI_DADOS.grupos)){
+    for(const it of g.itens){
+      if(it.lat==null||it.lon==null)continue;
+      n++;
+      const icon=L.divIcon({className:"",html:`<div class="poi-dot ${g.sinal==="atencao"?"at":""}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
+      L.marker([it.lat,it.lon],{icon,zIndexOffset:630})
+        .bindPopup(`<b>${esc(it.nome||"(sem nome no mapa)")}</b><br>${esc(g.rotulo)} · ${it.dist<1000?it.dist+" m":(it.dist/1000).toFixed(1).replace(".",",")+" km"} do imóvel`)
+        .addTo(POI_LAYER);
+    }
+  }
+  if(n){POI_LAYER.addTo(map);if(isMobile())setView("mapa");toast(n+" estabelecimentos próximos no mapa — toque num ponto.");}
+  else toast("Nenhum estabelecimento com posição neste entorno.");
+}
+function renderLocalPoisNomes(){
+  const body=document.getElementById("dLocalBody");if(!body||!POI_DADOS)return;
+  const old=document.getElementById("dLocalPois");if(old)old.remove();
+  const grupos=Object.values(POI_DADOS.grupos);
+  if(!grupos.length)return;
+  const sec=document.createElement("div");sec.id="dLocalPois";
+  sec.innerHTML=`<p class="dmercado-hint" style="margin-top:10px"><b>Estabelecimentos mais próximos</b> — nomes do OpenStreetMap, pra mostrar ao cliente:</p>`+
+    grupos.map(g=>`<div class="dlocal-poigrupo"><b>${esc(g.rotulo)}</b><ul class="dmercado-list">${g.itens.map(it=>`<li>${esc(it.nome||"(sem nome no mapa)")} <small>· ${it.dist<1000?it.dist+" m":(it.dist/1000).toFixed(1).replace(".",",")+" km"}</small></li>`).join("")}</ul></div>`).join("")+
+    `<p class="dmercado-hint">${esc(POI_DADOS.fonte)}</p>`;
+  body.appendChild(sec);
 }
 
 /* LAUDO-MERCADO (curto prazo do roadmap): a ACM entra como SEÇÃO do Relatório de Referência

@@ -59,3 +59,42 @@ export async function entorno({ lat, lon }) {
   cache.set(chave, { t: Date.now(), v });
   return v;
 }
+
+/* P1.8 (24/08): entornoPois — os ESTABELECIMENTOS com nome e distância (a medição entrega
+   os números "pra gente"; isto entrega os nomes "pro cliente"). Por categoria, os `limite`
+   mais próximos dentro do raio próprio dela (KNN pelo índice gist; a distância exata em
+   metros vai calculada no SELECT). Sem nome no OSM -> nome:null (honesto, nunca inventa). */
+const cachePois = new Map();
+export async function entornoPois({ lat, lon, limite = 6 }) {
+  if (!(lat >= -17.2 && lat <= -16.1 && lon >= -49.8 && lon <= -48.7)) {
+    throw new Error("coordenada fora da região coberta (Goiânia/Aparecida)");
+  }
+  const lim = Math.min(Math.max(1, limite | 0 || 6), 10); /* teto duro: 10 por categoria */
+  const chave = `${lat.toFixed(4)},${lon.toFixed(4)}|${lim}`;
+  const hit = cachePois.get(chave);
+  if (hit && Date.now() - hit.t < TTL) return { fromCache: true, ...hit.v };
+
+  const grupos = {};
+  for (const [cat, raio] of Object.entries(RAIOS_M)) {
+    const r = await pool.query(
+      `SELECT nome,
+              ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($1,$2),4326)::geography)::int AS d,
+              ST_Y(geom) AS lat, ST_X(geom) AS lon
+       FROM pois WHERE categoria=$3
+         AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1,$2),4326)::geography, $4)
+       ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1,$2),4326)
+       LIMIT $5`,
+      [lon, lat, cat, raio, lim]);
+    const itens = r.rows.map(x => ({
+      nome: x.nome || null, dist: x.d,
+      lat: x.lat != null ? Number(x.lat) : null, lon: x.lon != null ? Number(x.lon) : null,
+    }));
+    if (itens.length) grupos[cat] = { rotulo: ROTULO[cat], raioM: raio, sinal: SINAL[cat] || "positivo", itens };
+  }
+
+  const v = { lat, lon, grupos,
+    fonte: "OpenStreetMap (extrato Geofabrik processado localmente) · © OpenStreetMap contributors (ODbL)" };
+  if (cachePois.size > 2000) cachePois.clear();
+  cachePois.set(chave, { t: Date.now(), v });
+  return v;
+}
