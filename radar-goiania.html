@@ -6,6 +6,9 @@
 <!-- CSP: contém o raio de dano de um XSS. JSONP exige o host da prefeitura em script-src; tiles/imagens do CARTO e do Esri (satélite) em img-src. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' https://api.corretorinteligente.tech; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#F5F8F8">
+<!-- P1.9 (24/08): modo noturno — aplica o tema ANTES do primeiro paint (sem flash claro).
+     Fonte da verdade: localStorage radar_tema; na 1ª visita segue o SO (prefers-color-scheme). -->
+<script>try{var __t=localStorage.getItem("radar_tema");if(!__t)__t=(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";document.documentElement.dataset.theme=__t;}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Corretor">
@@ -130,6 +133,79 @@
     --zone-ooau:#ffff73;    --zone-ooau-line:#6e6e6e;
     --zone-none:#d8d3c4;    --zone-none-line:#57503f;   /* = --muted, engenharia própria */
   }
+  /* ===== P1.9 (24/08): MODO NOTURNO =====
+     Override SÓ de variáveis + do acento-uso-TEXTO. --accent NÃO muda: é fundo de botão com
+     texto branco (7,60:1 AA ✓) — clareá-lo quebraria os botões; o que se clareia é o acento
+     quando usado como COR DE TEXTO (grupo de seletores abaixo → --accent-2 mais luminoso).
+     --lot/--gold/--status-* também ficam: são fundos de badge/pino com texto branco.
+     O laudo (--l-*) continua claro porque é documento de imprimir/PDF; a central de alertas
+     (chrome do app) herda o escuro via override LOCAL das --l-*. O MAPA não recebe filtro:
+     as cores das zonas do Plano Diretor carregam significado (inverteria zona com risco). */
+  [data-theme="dark"]{
+    --ink:#e8e3d6;        /* o papel claro vira tinta */
+    --paper:#141a1f;      /* o nanquim vira papel */
+    --paper-2:#1e262e;
+    --line:#3d4650;
+    --grid:#2b333c;
+    --muted:#aaa189;      /* ~4,6:1 sobre --paper escuro (AA texto) */
+    --accent-2:#5aa9c8;   /* petróleo claro mais luminoso — SÓ texto (~6:1 sobre --paper); nunca fundo c/ texto branco */
+    --elev-1:0 2px 6px rgba(0,0,0,.45);
+    --elev-2:0 6px 18px rgba(0,0,0,.55);
+    --elev-3:0 10px 28px rgba(0,0,0,.65);
+    --zone-none:#3a4149;
+  }
+  /* acento-uso-TEXTO sobre papel escuro — mesmos seletores do tema claro (color:var(--accent)) */
+  [data-theme="dark"] .brand .eyebrow,[data-theme="dark"] .brand .stamp,
+  [data-theme="dark"] .modemore:hover,[data-theme="dark"] .modemore.on,
+  [data-theme="dark"] .hint b,[data-theme="dark"] .count .csv:hover,[data-theme="dark"] .mais:hover,
+  [data-theme="dark"] .oqf-lista button,[data-theme="dark"] #breadcrumb .crumb.city,
+  [data-theme="dark"] #breadcrumb .crumb.verterr,[data-theme="dark"] .onb-skip:hover,
+  [data-theme="dark"] .detail .backlist:hover,[data-theme="dark"] .detail .insc,
+  [data-theme="dark"] .detail .dgrid .cell.hl .v,[data-theme="dark"] .chooser .chrow .val,
+  [data-theme="dark"] .idcheck-kicker,[data-theme="dark"] .cmp .pos b,
+  [data-theme="dark"] .sattoggle.on,[data-theme="dark"] .cxp .pr,[data-theme="dark"] .cxp a,
+  [data-theme="dark"] .cxp-bairro b{color:var(--accent-2)}
+  [data-theme="dark"] button:focus-visible,[data-theme="dark"] .card:focus-visible,
+  [data-theme="dark"] summary:focus-visible,[data-theme="dark"] a:focus-visible,
+  [data-theme="dark"] select:focus-visible,[data-theme="dark"] input:focus-visible,
+  [data-theme="dark"] [tabindex]:focus-visible{outline-color:var(--accent-2)}
+  [data-theme="dark"] #alertasOv{--l-bg:var(--paper);--l-text:var(--ink);--l-card:var(--paper-2);--l-border:var(--line);--l-hair:var(--grid);--l-label:var(--muted)}
+  /* P1.9 (24/08): skeleton loading — brilho varre p/ a direita usando --grid (visível nos 2
+     temas); REDUCE: fica estático (mesma regra global de movimento). */
+  .skel{position:relative;overflow:hidden;background:var(--paper-2);border:1px solid var(--line);border-radius:4px;min-height:12px}
+  .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+    background:linear-gradient(90deg,transparent,var(--grid),transparent);animation:skelvarre 1.4s infinite}
+  @keyframes skelvarre{100%{transform:translateX(100%)}}
+  @media (prefers-reduced-motion: reduce){.skel::after{animation:none}}
+  /* ===== P1.9 (24/08): MODO APRESENTAÇÃO — tela limpa pra virar o celular pro cliente =====
+     SEMPRE escura (palco), independente do tema do app: paleta própria fixa. CLIENTE-FACING:
+     nada de número interno — sem score, sem mediana, sem "quanto sobra" (a conta da revenda
+     é do corretor, regra já valendo no Raio-X). Mesma família visual da marca (papel/tinta
+     invertidos, petróleo). */
+  #apresOv{position:fixed;inset:0;z-index:2100;background:#10161b;overflow-y:auto;-webkit-overflow-scrolling:touch;color:#e8e3d6}
+  #apresOv[hidden]{display:none}
+  #apresOv .apr-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:rgba(16,22,27,.94);border-bottom:1px solid #2b333c}
+  #apresOv .apr-marca{font:600 10.5px/1.4 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa8c2}
+  #apresOv .apr-acoes{display:flex;gap:8px}
+  #apresOv .apr-acoes a,#apresOv .apr-acoes button{min-height:44px;display:inline-flex;align-items:center;padding:0 16px;border-radius:9px;border:1.5px solid #3d4650;background:transparent;color:#e8e3d6;font:700 13px/1 "Archivo";cursor:pointer;text-decoration:none}
+  #apresOv .apr-acoes a.apr-zap{background:#2c5545;border-color:#2c5545;color:#fff}
+  #apresOv .apr-body{max-width:640px;margin:0 auto;padding:28px 20px 64px}
+  #apresOv .apr-hero{border:1px solid #2b333c;border-radius:14px;padding:26px 22px;background:linear-gradient(160deg,#17222a,#10161b)}
+  #apresOv .apr-tipo{font:600 11px/1.4 "JetBrains Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:#5aa9c8;margin-bottom:10px}
+  #apresOv .apr-end{font:800 26px/1.25 "Archivo";color:#f4f1e8}
+  #apresOv .apr-bairro{font:600 15px/1.4 "Archivo";color:#aaa189;margin-top:6px}
+  #apresOv .apr-faixa{margin-top:18px;font:800 30px/1.15 "Archivo";color:#f4f1e8}
+  #apresOv .apr-faixa-lbl{font:600 11px/1.5 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#7fa8c2;margin-top:4px}
+  #apresOv .apr-sec{margin-top:26px}
+  #apresOv .apr-sec-t{font:600 11px/1.4 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:#7fa8c2;margin-bottom:10px}
+  #apresOv .apr-urb{border-left:3px solid #3f7a63;padding:10px 14px;background:#17222a;border-radius:0 9px 9px 0;font:500 14.5px/1.55 "Archivo"}
+  #apresOv .apr-pois{list-style:none;margin:0;padding:0}
+  #apresOv .apr-pois li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #22303a;padding:8px 2px;font:500 14.5px/1.4 "Archivo"}
+  #apresOv .apr-pois li b{font-weight:600;color:#f4f1e8}
+  #apresOv .apr-pois li span{color:#aaa189;white-space:nowrap}
+  #apresOv .apr-poigrupo{font:600 10.5px/1.4 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:#5aa9c8;margin:14px 0 2px}
+  #apresOv .apr-foot{margin-top:34px;font:500 12px/1.6 "Archivo";color:#6f7a84;text-align:center}
+  #apresOv .apr-vazio{font:500 14px/1.6 "Archivo";color:#aaa189}
   /* Fase 6 (Motion): kill-switch global de acessibilidade — zera/encurta animation/transition
      quando o usuário/SO pede menos movimento. Presente desde o 1º commit de motion (não retrofit). */
   @media (prefers-reduced-motion: reduce) {
@@ -634,6 +710,11 @@
     transition:background var(--motion-fast) var(--ease-out),transform var(--motion-fast) var(--ease-out)}
   .dpref-raiox:hover{background:var(--accent-ink)}
   .dpref-raiox:active{transform:scale(.98)}
+  /* P1.9: "Apresentar ao cliente" é o 2º botão do bloco — contornado (secundário), nunca
+     compete com o Raio-X (CTA primário). No modo noturno o acento-texto é o --accent-2. */
+  .dpref-raiox.apresbtn{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+  .dpref-raiox.apresbtn:hover{background:var(--paper-2)}
+  [data-theme="dark"] .dpref-raiox.apresbtn{color:var(--accent-2);border-color:var(--accent-2)}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
@@ -975,6 +1056,10 @@
   .bell-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;
     background:var(--accent);color:#fff;font:700 11px/20px "Archivo";text-align:center;padding:0 5px}
   .bell-badge[hidden]{display:none}
+  /* P1.9: o botão de tema mostra a lua no modo dia (clique → noite) e o sol no modo noturno */
+  #btnTema .ic-sol{display:none}
+  [data-theme="dark"] #btnTema .ic-sol{display:block}
+  [data-theme="dark"] #btnTema .ic-lua{display:none}
   #alertasOv{position:fixed;inset:0;z-index:2090;background:var(--l-bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
   #alertasOv[hidden]{display:none}
   #alertasOv .alov-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;
@@ -1714,6 +1799,10 @@
     </div>
     <div class="atlas-meta">
       <span class="atlas-source" id="atlasSource" role="status">Cadastro público · fontes rastreáveis</span>
+      <button type="button" class="bell" id="btnTema" onclick="toggleTema()" aria-label="Alternar modo noturno" aria-pressed="false" title="Modo noturno — descanso pros olhos na planta à noite">
+        <svg class="ic-lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <svg class="ic-sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5 5l1.8 1.8M17.2 17.2 19 19M19 5l-1.8 1.8M6.8 17.2 5 19"/></svg>
+      </button>
       <button type="button" class="bell" id="btnAlertas" onclick="toggleAlertas()" aria-label="Alertas da carteira" title="Alertas da carteira — imóveis abaixo da mediana e quedas de preço nos seus bairros">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4 16h16l-2-3.8V9a6 6 0 0 0-6-6Zm-2 14a2 2 0 0 0 4 0"/></svg>
         <span class="bell-badge" id="alertasBadge" hidden>0</span>
@@ -2284,6 +2373,19 @@
     <button type="button" class="lvx" onclick="toggleAlertas()" aria-label="Fechar alertas">×</button>
   </div>
   <div class="alov-body" id="alertasBody"></div>
+</div>
+
+<!-- P1.9 (24/08): MODO APRESENTAÇÃO — tela limpa pra virar o celular pro cliente.
+     CLIENTE-FACING: sem score, sem mediana, sem "quanto sobra" (conta interna do corretor). -->
+<div id="apresOv" hidden role="dialog" aria-modal="true" aria-label="Modo apresentação — visão do cliente">
+  <div class="apr-bar">
+    <span class="apr-marca">Corretor Inteligente · Goiânia</span>
+    <div class="apr-acoes">
+      <a href="#" id="aprZap" target="_blank" rel="noopener" class="apr-zap">Enviar pro cliente ↗</a>
+      <button type="button" onclick="toggleApresentacao()" aria-label="Sair do modo apresentação">Sair ✕</button>
+    </div>
+  </div>
+  <div class="apr-body" id="apresBody"></div>
 </div>
 
 <!-- MK-1 (16/07/2026): material de divulgação — card de imagem desenhado NO APARELHO
@@ -4516,6 +4618,34 @@ function alertasDaCarteira(caixa,mudancas,carteira,vistos){
   }
   out.sort((a,b)=>b.pct-a.pct);
   return out.slice(0,20).map(al=>Object.assign({},al,{novo:!vist.has(al.id)}));
+}
+/* P1.9 (24/08) dadosApresentacao(o): monta o conteúdo do MODO APRESENTAÇÃO — a tela limpa que
+   o corretor vira pro cliente. CLIENTE-FACING, mesma régua do Raio-X: NADA de número interno
+   (sem score, sem mediana, sem "quanto sobra" — a conta da revenda é do corretor). Entrada
+   (tudo opcional, função nunca lança): {tipoImovel,endereco,bairro,faixa:{lo,hi},faixaTxt,
+   urbanoLinha,pois(grupos do /motor/localizacao/pois),perfil:{nome,creci}}. POIs sem nome no
+   mapa NÃO aparecem (pro cliente, pino sem nome não informa nada — diferente da visão interna,
+   que mostra "(sem nome no mapa)"). Saída: strings SIMPLES (nunca HTML — o render escapa). */
+function dadosApresentacao(o){
+  o=o||{};
+  const d={
+    tipo:String(o.tipoImovel||"Imóvel"),
+    endereco:String(o.endereco||""),
+    bairro:String(o.bairro||""),
+    faixaTxt:o.faixaTxt?String(o.faixaTxt):null,
+    urbanoLinha:o.urbanoLinha?String(o.urbanoLinha):null,
+    grupos:[],
+    perfil:o.perfil&&o.perfil.nome?{nome:String(o.perfil.nome),creci:o.perfil.creci?String(o.perfil.creci):null}:null
+  };
+  const grupos=(o.pois&&o.pois.grupos)||{};
+  for(const k of Object.keys(grupos)){
+    const g=grupos[k]||{};
+    if(g.sinal==="atencao")continue; /* pro cliente só o que VALORIZA — posto/indústria fica na visão interna */
+    const itens=((g.itens)||[]).filter(x=>x&&x.nome).slice(0,3).map(x=>({
+      nome:String(x.nome),dist:x.dist!=null&&isFinite(+x.dist)?Math.round(+x.dist):null}));
+    if(itens.length)d.grupos.push({rotulo:String(g.rotulo||k),itens});
+  }
+  return d;
 }
 // RADAR_PURE_END
 
@@ -8445,6 +8575,13 @@ async function verPoisNoMapa(bt){
     return;
   }
   if(bt){bt.disabled=true;bt.textContent="Carregando…";}
+  /* P1.9: skeleton na ficha enquanto o endpoint responde — some no render ou no catch */
+  const body0=document.getElementById("dLocalBody");
+  if(body0&&!document.getElementById("dLocalPois")){
+    const sk=document.createElement("div");sk.id="dLocalPois";
+    sk.innerHTML=`<div class="skel" style="height:14px;margin:10px 0 8px"></div><div class="skel" style="height:14px;margin:0 0 8px;width:82%"></div><div class="skel" style="height:14px;width:64%"></div>`;
+    body0.appendChild(sk);
+  }
   try{
     if(!POI_DADOS||POI_DADOS.lat!==ll.lat||POI_DADOS.lon!==ll.lng){
       const r=await fetch(`${MOTOR_BASE}/motor/localizacao/pois?lat=${ll.lat}&lon=${ll.lng}`,{signal:AbortSignal.timeout(20000)});
@@ -8457,6 +8594,7 @@ async function verPoisNoMapa(bt){
     if(bt)bt.textContent="Ocultar estabelecimentos";
     renderLocalPoisNomes();
   }catch(e){
+    const sk=document.getElementById("dLocalPois");if(sk)sk.remove();
     toast("Estabelecimentos indisponíveis agora ("+e.message+").");
     if(bt)bt.textContent="Ver estabelecimentos no mapa";
   }finally{if(bt)bt.disabled=false;}
@@ -9643,6 +9781,7 @@ function renderPrefeituraUI(inscRaw){
     /* honesto: sem inscrição os serviços não abrem — o bloco explica, não some em silêncio */
     el.innerHTML=`<div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
       <button type="button" class="dpref-raiox" onclick="montarRaioX()">📄 Raio-X do imóvel — PDF pronto pra WhatsApp</button>
+      <button type="button" class="dpref-raiox apresbtn" onclick="toggleApresentacao()">✨ Apresentar ao cliente — tela limpa pro celular</button>
       <p class="dpref-dica">Este registro não trouxe a inscrição cadastral — sem ela, os serviços oficiais (BIC, CND, IPTU) não abrem. Confira o endereço no mapa oficial.</p>`;
     return;
   }
@@ -9650,6 +9789,7 @@ function renderPrefeituraUI(inscRaw){
   el.innerHTML=`
     <div class="dpref-head">Prefeitura de Goiânia · serviços oficiais</div>
     <button type="button" class="dpref-raiox" onclick="montarRaioX()">📄 Raio-X do imóvel — PDF pronto pra WhatsApp</button>
+    <button type="button" class="dpref-raiox apresbtn" onclick="toggleApresentacao()">✨ Apresentar ao cliente — tela limpa pro celular</button>
     <div class="dpref-insc"><span class="dpref-num">${d}</span><button type="button" class="dpref-copy" onclick="copyInsc(this)">Copiar ⧉</button></div>
     <div class="acts">
       <a class="primary" href="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição (o clique também copia, caso precise colar em outro sistema).">Espelho do imóvel (BIC) ↗</a>
@@ -11050,6 +11190,57 @@ function alertasRender(){
       <small>Fontes: lista oficial da Caixa (diária) e quedas verificadas por duas coletas do mesmo anúncio. Alerta não é recomendação — confirme sempre na fonte.</small>
       <button type="button" onclick="alertasMarcarVistos()">Marcar tudo como visto</button>
     </div>`;
+}
+/* ---------------- P1.9 (24/08): modo noturno + modo apresentação ---------------- */
+function toggleTema(){
+  const el=document.documentElement;
+  const novo=el.dataset.theme==="dark"?"light":"dark";
+  el.dataset.theme=novo;
+  try{localStorage.setItem("radar_tema",novo);}catch(e){}
+  const b=document.getElementById("btnTema");
+  if(b)b.setAttribute("aria-pressed",novo==="dark"?"true":"false");
+  toast(novo==="dark"?"Modo noturno ligado — descanso pros olhos na planta.":"Modo dia ligado.");
+}
+/* estado inicial do botão de tema (o data-theme já foi aplicado no <head>, antes do paint) */
+try{const __bt=document.getElementById("btnTema");if(__bt)__bt.setAttribute("aria-pressed",document.documentElement.dataset.theme==="dark"?"true":"false");}catch(e){}
+function toggleApresentacao(){
+  const ov=document.getElementById("apresOv");if(!ov)return;
+  if(ov.hidden){if(!apresRender())return;ov.hidden=false;trapFocus(ov);}
+  else{ov.hidden=true;untrapFocus(ov);}
+}
+/* apresRender(): a tela limpa pro cliente, montada SÓ com o que já está em memória (DCUR,
+   mercadoEstimado, __pdEstado, POI_DADOS do P1.8) — zero consulta nova. CLIENTE-FACING
+   (dadosApresentacao, RADAR_PURE): sem score, sem mediana, sem "quanto sobra". Tudo escapado.
+   Retorna false (com toast honesto) quando não há ficha aberta. */
+function apresRender(){
+  const body=document.getElementById("apresBody");if(!body)return false;
+  const a=DCUR;
+  if(!a){toast("Abra a ficha do imóvel primeiro — a apresentação nasce dela.");return false;}
+  const tipo=unitLabel(a)||USO[a.uso]||"Imóvel";
+  const em=mercadoEstimado(a);
+  const fx=faixaTxt(em?{lo:em.lo,hi:em.hi}:null);
+  let prof=null;try{const p=JSON.parse(localStorage.getItem("radar_prof")||"{}");if(p&&p.nome)prof=p;}catch(e){}
+  const d=dadosApresentacao({tipoImovel:tipo,endereco:addrDe(a),bairro:clean(a.nmbairro),
+    faixaTxt:fx||null,urbanoLinha:linhaUrbTriade(a.__pdEstado||null,a.areaterr)||null,
+    pois:POI_DADOS,perfil:prof});
+  const zap=dadosFicha();
+  const link=document.getElementById("aprZap");
+  if(link&&zap)link.href="https://wa.me/?text="+encodeURIComponent(zapResumo(zap));
+  const end=d.endereco||("Quadra "+(clean(a.nrquadra)||"—")+" · Lote "+(clean(a.nrlote)||"—"));
+  const poisHtml=d.grupos.length?d.grupos.map(g=>
+    `<div class="apr-poigrupo">${esc(g.rotulo)}</div><ul class="apr-pois">${g.itens.map(it=>
+      `<li><b>${esc(it.nome)}</b><span>${it.dist!=null?it.dist+" m a pé":""}</span></li>`).join("")}</ul>`).join("")
+    :`<p class="apr-vazio">Na ficha, toque em "Ver estabelecimentos no mapa" — os nomes do entorno aparecem aqui, prontos pra mostrar ao cliente.</p>`;
+  body.innerHTML=`
+    <div class="apr-hero">
+      <div class="apr-tipo">${esc(d.tipo)}${d.bairro?" · "+esc(d.bairro):""}</div>
+      <div class="apr-end">${esc(end)}</div>
+      ${d.faixaTxt?`<div class="apr-faixa">${esc(d.faixaTxt)}</div><div class="apr-faixa-lbl">Referência indicativa de valor — anúncios da região, não transações</div>`:""}
+    </div>
+    ${d.urbanoLinha?`<div class="apr-sec"><div class="apr-sec-t">Pode construir?</div><div class="apr-urb">${esc(d.urbanoLinha)}</div></div>`:""}
+    <div class="apr-sec"><div class="apr-sec-t">No entorno, a pé</div>${poisHtml}</div>
+    <div class="apr-foot">${d.perfil?esc(d.perfil.nome)+(d.perfil.creci?" · CRECI "+esc(d.perfil.creci):"")+"<br>":""}Corretor Inteligente · dados públicos de Goiânia · valores de referência, confirme na fonte</div>`;
+  return true;
 }
 /* abrirCaixaNoMapaUI(el) (Fase 17, 17-02, TERR-07): ação em 1 toque compartilhada pelo badge do
    Caderno e pela linha do painel — lê el.dataset.bairros (CR-01: NUNCA interpola valor do endpoint
