@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- CSP: contém o raio de dano de um XSS. JSONP exige o host da prefeitura em script-src; tiles/imagens do CARTO e do Esri (satélite) em img-src. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' https://api.corretorinteligente.tech; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://portalmapa.goiania.go.gov.br; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' https://api.corretorinteligente.tech; frame-src https://maps.google.com https://www.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#F5F8F8">
 <!-- P1.9 (24/08): modo noturno — aplica o tema ANTES do primeiro paint (sem flash claro).
      Fonte da verdade: localStorage radar_tema; na 1ª visita segue o SO (prefers-color-scheme). -->
@@ -715,6 +715,16 @@
   .dpref-raiox.apresbtn{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
   .dpref-raiox.apresbtn:hover{background:var(--paper-2)}
   [data-theme="dark"] .dpref-raiox.apresbtn{color:var(--accent-2);border-color:var(--accent-2)}
+  /* P2.1a (25/08): fachada da rua — Street View EMBUTIDO (iframe oficial, sem chave), carregado
+     SÓ no clique (lazy consentido: não pesa a ficha nem chama o Google a cada abertura). */
+  .dfach-card{border:1.5px solid var(--line);border-radius:2px;background:var(--paper);padding:11px 12px;margin:0 0 11px}
+  .dfach-head{font:600 13px/1.4 "Archivo";color:var(--ink);margin-bottom:9px}
+  .dfach-head small{display:block;font:500 11px/1.4 "Archivo";color:var(--muted);margin-top:2px}
+  .dfach-btn{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:2px;background:var(--paper-2);
+    color:var(--ink);font:600 13px/1 "Archivo";cursor:pointer;transition:border-color var(--motion-fast) var(--ease-out)}
+  .dfach-btn:hover{border-color:var(--accent)}
+  .dfach-frame{position:relative;aspect-ratio:16/9;border-radius:2px;overflow:hidden;border:1px solid var(--line)}
+  .dfach-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
@@ -2063,6 +2073,8 @@
         <div class="acts" id="dActsPrim"></div>
         <!-- UX-M1 (18/08, auditoria UX): kit Prefeitura VISÍVEL na aba Resumo — renderPrefeituraUI() -->
         <div class="dpref" id="dPref"></div>
+        <!-- P2.1a (25/08): fachada da rua (Street View embutido) — renderFachada(), chamada do localReset -->
+        <div class="dfach" id="dFach"></div>
       </section>
 
       <section class="dossier-view" id="dViewTerritorio" role="tabpanel" aria-labelledby="dTabTerritorio" hidden>
@@ -4646,6 +4658,19 @@ function dadosApresentacao(o){
     if(itens.length)d.grupos.push({rotulo:String(g.rotulo||k),itens});
   }
   return d;
+}
+/* P2.1a (25/08) streetViewUrl(lat,lon): URL do embed OFICIAL do Google Street View
+   (output=svembed — mecanismo público de incorporação do Google Maps, sem chave, sem custo,
+   sem burlar nada). A câmera encaixa no panorama mais próximo da coordenada; pode ficar
+   alguns metros ao lado e com orientação qualquer — por isso o embed é INTERATIVO (o usuário
+   arrasta e mira a fachada) e a UI diz isso. Coordenada inválida -> null (guard honesto).
+   Upgrade futuro (P2.1b): Street View Static API com chave + heading calculado -> foto
+   estática da fachada no modo apresentação e no Raio-X. */
+function streetViewUrl(lat,lon){
+  if(lat==null||lon==null||lat===""||lon==="")return null; /* +null/+"": vira 0 e enganaria o isFinite */
+  if(!isFinite(+lat)||!isFinite(+lon))return null;
+  if(+lat<-90||+lat>90||+lon<-180||+lon>180)return null;
+  return "https://maps.google.com/maps?q=&layer=c&cbll="+(+lat).toFixed(6)+","+(+lon).toFixed(6)+"&output=svembed";
 }
 // RADAR_PURE_END
 
@@ -8504,6 +8529,7 @@ function localReset(a,ll){
   LOCAL_LL=p;
   LOCAL_LAST=null; /* MK-1: medição do imóvel anterior nunca vaza para a divulgação deste */
   if(POI_LAYER){map.removeLayer(POI_LAYER);POI_LAYER=null;} POI_DADOS=null; POI_ON=false; /* P1.8: pontos do imóvel anterior saem do mapa */
+  renderFachada(); /* P2.1a: fachada DESTE imóvel (ou some, se não há coordenada) — nunca herda a do anterior */
   const b=document.getElementById("dLocalBody"); if(b)b.innerHTML=LOCAL_HINT;
   const bt=document.getElementById("btnLocal"); if(bt){bt.disabled=false;bt.textContent="Medir o entorno";delete bt.dataset.rodou;}
 }
@@ -11241,6 +11267,26 @@ function apresRender(){
     <div class="apr-sec"><div class="apr-sec-t">No entorno, a pé</div>${poisHtml}</div>
     <div class="apr-foot">${d.perfil?esc(d.perfil.nome)+(d.perfil.creci?" · CRECI "+esc(d.perfil.creci):"")+"<br>":""}Corretor Inteligente · dados públicos de Goiânia · valores de referência, confirme na fonte</div>`;
   return true;
+}
+/* ---------------- P2.1a (25/08): fachada da rua — Street View embutido na ficha ----------------
+   Chamado pelo localReset (toda abertura de ficha). Sem coordenada -> bloco some (honesto,
+   sem teaser quebrado). O iframe SÓ entra no clique (abrirFachada): a ficha não chama o
+   Google a cada abertura — lazy consentido, mesma filosofia offline-first do app. */
+function renderFachada(){
+  const el=document.getElementById("dFach");if(!el)return;
+  if(!LOCAL_LL){el.innerHTML="";return;}
+  el.innerHTML=`<div class="dfach-card">
+    <div class="dfach-head">🏙️ Fachada da rua<small>Google Street View — abre só quando você tocar; arraste pra olhar em volta</small></div>
+    <button type="button" class="dfach-btn" onclick="abrirFachada(this)">Ver a fachada agora</button>
+  </div>`;
+}
+function abrirFachada(bt){
+  if(!LOCAL_LL||!bt)return;
+  const url=streetViewUrl(LOCAL_LL.lat,LOCAL_LL.lng);
+  if(!url)return;
+  const card=bt.closest(".dfach-card");if(!card)return;
+  card.innerHTML=`<div class="dfach-head">🏙️ Fachada da rua<small>Câmera no ponto mais próximo do lote — pode estar alguns metros ao lado; arraste pra mirar a fachada</small></div>
+    <div class="dfach-frame"><iframe src="${url}" loading="lazy" referrerpolicy="no-referrer" title="Fachada da rua — Google Street View" allowfullscreen></iframe></div>`;
 }
 /* abrirCaixaNoMapaUI(el) (Fase 17, 17-02, TERR-07): ação em 1 toque compartilhada pelo badge do
    Caderno e pela linha do painel — lê el.dataset.bairros (CR-01: NUNCA interpola valor do endpoint
