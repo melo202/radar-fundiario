@@ -109,7 +109,10 @@ export function repararMojibake(texto) {
     if (gen) return gen;
     return palavra; /* desconhecida: honesta, fica o � visível */
   });
-  /* 2) � isolado entre espaços/pontuação: nestes documentos é sempre "é/É"
+  /* 2) ordinal quebrado depois de dígito: "parágrafo 1�" -> "1º", "7�" -> "7º"
+        (nos textos legais das certidões é sempre o ordinal masculino) */
+  t = t.replace(/(\d)�/g, "$1º");
+  /* 3) � isolado entre espaços/pontuação: nestes documentos é sempre "é/É"
         ("ESTA CERTID�O � GRATUITA", "a Certid�o � de 90 dias") */
   t = t.replace(/(^|[\s>(])�(?=[\s<),.;]|$)/g, (m, antes, off, str) => {
     const prev = str.slice(0, off).match(/([A-Za-zÀ-ÿ�]+)[\s>(]*$/);

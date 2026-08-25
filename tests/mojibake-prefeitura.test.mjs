@@ -44,6 +44,11 @@ test("isolado vira é/É conforme o caso da palavra anterior", () => {
   assert.equal(repararMojibake(`a Certid${F}o ${F} de 90`), "a Certidão é de 90");
 });
 
+test("ordinal quebrado depois de dígito vira º (parágrafo 1º, artigo 7º)", () => {
+  assert.equal(repararMojibake(`parágrafo 1${F}, inciso I, e parágrafo 2${F} e 7${F}`),
+    "parágrafo 1º, inciso I, e parágrafo 2º e 7º");
+});
+
 test("texto sem U+FFFD passa intacto", () => {
   assert.equal(repararMojibake("Certidão já correta"), "Certidão já correta");
 });
