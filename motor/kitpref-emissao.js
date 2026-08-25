@@ -20,6 +20,7 @@
 
 import { linksPrefeitura, soDigitos } from "./links-prefeitura.js";
 import { emitirCndEstadual } from "./cnd-estadual.js";
+import { decodificarPrefeitura } from "./mojibake-prefeitura.js";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const TTL_MS = 12 * 3600 * 1000;
@@ -177,7 +178,7 @@ async function buscaDoc(url, parser, { fetchImpl = fetch } = {}) {
     const r = await fetchImpl(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
     if (!r.ok) return { ok: false, erro: "prefeitura respondeu HTTP " + r.status };
     const buf = await r.arrayBuffer();
-    const html = new TextDecoder("iso-8859-1").decode(buf); /* páginas são Latin-1 */
+    const html = decodificarPrefeitura(buf); /* Latin-1 OU UTF-8 c/ U+FFFD reparado (25/08) */
     const dados = parser(html);
     if (!dados) return { ok: false, erro: "a página não veio no formato esperado (a prefeitura pode ter mudado ou pedido captcha)" };
     return { ok: true, dados };
@@ -194,7 +195,7 @@ async function buscaHtml(url, { fetchImpl = fetch } = {}) {
     const r = await fetchImpl(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
     if (!r.ok) return { ok: false, erro: "prefeitura respondeu HTTP " + r.status };
     const buf = await r.arrayBuffer();
-    return { ok: true, html: new TextDecoder("iso-8859-1").decode(buf) };
+    return { ok: true, html: decodificarPrefeitura(buf) };
   } catch (e) {
     return { ok: false, erro: "falha na consulta — tente de novo ou abra o canal oficial" };
   }

@@ -8026,7 +8026,7 @@ function diligenciaDocumentoHTML(a){
 function montarPacoteDiligencia(){
   const a=DCUR;if(!a)return;
   const hoje=new Date().toLocaleDateString("pt-BR"),reg=checklistRegistro(a),res=resumoChecklistDocumental(reg.estados,reg.datas);
-  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci),cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(insc.replace(/\D/g,""));
+  const ident=identidadeFatos(a),insc=clean(a.nrinscr||a.ci),cnd="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=cnd&insc="+encodeURIComponent(insc.replace(/\D/g,""));
   const situacao=[res.conferidos+" de "+res.total+" itens marcados como conferidos pelo usuário"];
   if(res.emCurso)situacao.push(res.emCurso+" em andamento");
   if(res.revisoesAtrasadas)situacao.push(res.revisoesAtrasadas+" "+(res.revisoesAtrasadas===1?"revisão atrasada":"revisões atrasadas"));
@@ -8159,9 +8159,9 @@ function montarRaioX(){
 let RAIOX_EPOCH=0;
 function kitPrefHTML(kit,insc){
   const d=String(insc||"").replace(/\D/g,"");
-  const urlEsp="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc="+encodeURIComponent(d);
-  const urlCer="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu="+encodeURIComponent(d);
-  const urlCnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(d);
+  const urlEsp="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=espelho&insc="+encodeURIComponent(d);
+  const urlCer="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=certidao&insc="+encodeURIComponent(d);
+  const urlCnd="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=cnd&insc="+encodeURIComponent(d);
   if(!kit||!kit.ok){
     return `<div class="lcard"><h3>Kit oficial da prefeitura</h3>
       <p class="lmiudo">Não foi possível emitir os documentos agora${kit&&kit.erro?" ("+esc(kit.erro)+")":""}. Os canais oficiais abrem preenchidos a partir do bloco Prefeitura do app:
@@ -9290,7 +9290,7 @@ function renderChecklistDocumental(a){
     '<option value="'+esc(status)+'" '+(status===it.status?"selected":"")+'>'+esc(DOC_STATUS_LBL[status])+'</option>'
   ).join("");
   const insc=clean(a.nrinscr||a.ci).replace(/\D/g,"");
-  const cnd="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu="+encodeURIComponent(insc);
+  const cnd="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=cnd&insc="+encodeURIComponent(insc);
   const atualizado=reg.updatedAt?fmtVisita(reg.updatedAt).replace("consultado","atualizado"):"Ainda sem marcações";
   const alertaHtml=(res.revisoesAtrasadas||res.revisoesProximas)
     ?'<div class="doc-alert '+(res.revisoesAtrasadas?'has-late':'')+'">'+esc(revResumo.join(" · "))+'. Datas escolhidas pelo usuário; confirme vigência e conteúdo nas fontes oficiais.</div>'
@@ -10006,9 +10006,9 @@ function renderPrefeituraUI(inscRaw){
     <button type="button" class="dpref-raiox apresbtn" onclick="toggleApresentacao()">✨ Apresentar ao cliente — tela limpa pro celular</button>
     <div class="dpref-insc"><span class="dpref-num">${d}</span><button type="button" class="dpref-copy" onclick="copyInsc(this)">Copiar ⧉</button></div>
     <div class="acts">
-      <a class="primary" href="https://www.goiania.go.gov.br/sistemas/siptu/asp/siptu00020a0.asp?ninsc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição (o clique também copia, caso precise colar em outro sistema).">Espelho do imóvel (BIC) ↗</a>
-      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00202w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: a Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado, valor venal e área. É onde o titular aparece.">Titular (certidão cadastral) ↗</a>
-      <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: Certidão Negativa/Positiva de Débitos do imóvel (regularidade fiscal imobiliária).">CND de débitos ↗</a>
+      <a class="primary" href="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=espelho&insc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Boletim de Informações Cadastrais — o 'espelho' oficial do imóvel. Abre JÁ PREENCHIDO com a inscrição (o clique também copia, caso precise colar em outro sistema).">Espelho do imóvel (BIC) ↗</a>
+      <a href="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=certidao&insc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: a Certidão de Dados Cadastrais mostra o NOME e o CPF do titular registrado, valor venal e área. É onde o titular aparece.">Titular (certidão cadastral) ↗</a>
+      <a href="https://api.corretorinteligente.tech/motor/prefeitura/doc?tipo=cnd&insc=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: Certidão Negativa/Positiva de Débitos do imóvel (regularidade fiscal imobiliária).">CND de débitos ↗</a>
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — é só clicar em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.">Guia do IPTU ↗</a>
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida. ATENÇÃO: débito de limpeza pública NÃO aparece na CND do imóvel — confira sempre antes de fechar.">Limpeza pública (TLP) ↗</a>
       <a href="https://www.sefaz.go.gov.br/Certidao/Emissao/" target="_blank" rel="noopener" title="CND da PESSOA (vendedor) no Estado: dívida ativa GO por CPF/CNPJ, emitida na hora e sem captcha na SEFAZ-GO. ATALHO: no Raio-X (botão acima) ela já sai EMITIDA automaticamente para o titular registrado; e no seu painel dá pra emitir digitando qualquer CPF/CNPJ.">CND estadual (titular) ↗</a>

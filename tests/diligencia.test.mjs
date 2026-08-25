@@ -164,7 +164,10 @@ test("dossiê e os dois documentos compartilham histórico e checklist sem prome
 });
 
 test("checklist oferece somente canais oficiais e a trilha registral continua não verificada", () => {
-  assert.ok(html.includes("https://www.goiania.go.gov.br/sistemas/sccer/"));
+  /* 25/08: a CND sai pelo proxy do motor (/motor/prefeitura/doc) — a prefeitura
+     serve o GET com acentos corrompidos na fonte; o motor repara e serve o MESMO
+     documento oficial, legível. O canal oficial continua sendo a prefeitura. */
+  assert.ok(html.includes("/motor/prefeitura/doc?tipo=cnd&insc="));
   assert.ok(html.includes("https://www.registrodeimoveis.org.br/servicos-interno/certidao-de-matricula"));
   const start = html.indexOf('rows.push({id:"registral"');
   const end = html.indexOf("return rows;", start);

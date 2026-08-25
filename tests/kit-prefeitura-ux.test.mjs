@@ -25,7 +25,20 @@ test("UX-M: bloco Prefeitura visível na aba Resumo, logo após as ações princ
 });
 
 test("UX-M: os 5 serviços oficiais no mapa, URLs idênticas às do motor (sincronia pregada)", () => {
-  for (const trecho of ["siptu00020a0.asp?ninsc=", "sccer00202w0.asp?txt_nr_iptu=", "sccer00201w0.asp?txt_nr_iptu=", "ConsultaTributos?InscricaoCadastral=", "TaxaLimpezaPublica?InscricaoCadastral="]) {
+  /* 25/08: as 3 certidões saem pelo PROXY do motor (/motor/prefeitura/doc?tipo=...)
+     porque a prefeitura serve o GET com os acentos corrompidos na fonte (U+FFFD) —
+     o motor busca nos MESMOS endpoints oficiais (links-prefeitura.js segue a fonte
+     única de verdade) e devolve o documento íntegro e legível. IPTU/TLP seguem
+     deep-link direto (SPA do PortalTributos). */
+  for (const [proxyTrecho, oficialTrecho] of [
+    ["/motor/prefeitura/doc?tipo=espelho&insc=", "siptu00020a0.asp?ninsc="],
+    ["/motor/prefeitura/doc?tipo=certidao&insc=", "sccer00202w0.asp?txt_nr_iptu="],
+    ["/motor/prefeitura/doc?tipo=cnd&insc=", "sccer00201w0.asp?txt_nr_iptu="],
+  ]) {
+    assert.ok(html.includes(proxyTrecho), `mapa tem o proxy ${proxyTrecho}`);
+    assert.ok(links.includes(oficialTrecho), `motor tem ${oficialTrecho} (fonte única de verdade)`);
+  }
+  for (const trecho of ["ConsultaTributos?InscricaoCadastral=", "TaxaLimpezaPublica?InscricaoCadastral="]) {
     assert.ok(html.includes(trecho), `mapa tem ${trecho}`);
     assert.ok(links.includes(trecho), `motor tem ${trecho} (fonte única de verdade)`);
   }
@@ -51,11 +64,12 @@ test("UX-M: inscrição copiável em chip mono + cópia automática ao abrir ser
   assert.ok(html.includes('class="dpref-num"'), "chip mono destacado, não frase cinza");
   assert.ok(html.includes("el.dataset.insc=d"), "copyInsc lê via closest data-insc (A-04)");
   assert.match(html, /class="dpref-copy" onclick="copyInsc\(this\)"/, "copiar de 1 toque");
-  /* os 5 abrem preenchidos (deep-link; as certidões EMITEM na hora); o clique
-     ainda copia a inscrição — sobra para qualquer outro sistema do corretor */
-  assert.match(html, /siptu00020a0\.asp\?ninsc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
-  assert.match(html, /sccer00202w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
-  assert.match(html, /sccer00201w0\.asp\?txt_nr_iptu=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  /* os 5 abrem preenchidos (as 3 certidões via proxy do motor — 25/08, reparo de
+     encoding da fonte — e EMITEM na hora); o clique ainda copia a inscrição —
+     sobra para qualquer outro sistema do corretor */
+  assert.match(html, /\/motor\/prefeitura\/doc\?tipo=espelho&insc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  assert.match(html, /\/motor\/prefeitura\/doc\?tipo=certidao&insc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
+  assert.match(html, /\/motor\/prefeitura\/doc\?tipo=cnd&insc=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /ConsultaTributos\?InscricaoCadastral=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
   assert.match(html, /TaxaLimpezaPublica\?InscricaoCadastral=[^"]*"[^>]*onclick="copyInsc\(this\)"/);
 });

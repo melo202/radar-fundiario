@@ -269,6 +269,19 @@ http.createServer(async (req, res) => {
       const { emitirKitPrefeitura } = await import("./kitpref-emissao.js");
       return json(res, 200, await emitirKitPrefeitura(insc));
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/prefeitura/doc")) {
+      /* Certidão LEGÍVEL da prefeitura (25/08): os endpoints sccer servem o GET com
+         os acentos corrompidos na fonte (U+FFFD) e sem charset — no navegador saía
+         "CERTID¿½O". O motor busca, repara o encoding e serve a MESMA certidão
+         oficial, íntegra. tipo=cnd|certidao|espelho; cache 12h. Leitura pública. */
+      if (estourou(req, 20, "pref-doc")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const u = new URL(req.url, "http://x");
+      const { servirDocPrefeitura } = await import("./prefeitura-doc.js");
+      const r = await servirDocPrefeitura(u.searchParams.get("tipo"), u.searchParams.get("insc"));
+      if (!r.ok) return json(res, r.status || 502, { erro: r.erro });
+      res.writeHead(200, Object.assign({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, max-age=3600" }, SEC, CORS));
+      return res.end(r.html);
+    }
     if (req.method === "POST" && req.url === "/motor/cnd-estadual") {
       /* CND ESTADUAL (Dívida Ativa GO, SEFAZ) por CPF/CNPJ — a "CND da pessoa (vendedor)"
          que o Bruno pediu (19/08): "tem como fazer uma busca direto por cpf/cnpj?".
