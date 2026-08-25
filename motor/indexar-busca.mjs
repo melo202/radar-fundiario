@@ -82,6 +82,8 @@ async function main() {
   }
 
   console.log("trocando os índices (swap atômico)…");
+  /* o swap exige os DOIS índices — na 1ª indexação o "imoveis" ainda não existe: cria vazio */
+  await meili(`/indexes`, { method: "POST", body: JSON.stringify({ uid: IDX, primaryKey: "id" }) }).catch(() => null);
   const swap = await meili(`/swap-indexes`, { method: "POST", body: JSON.stringify([{ indexes: [IDX, IDX_NEW] }]) });
   await esperarTarefa(swap.taskUid, "swap");
   /* após o swap, o índice antigo (agora em IDX_NEW) é apagado — a próxima reindexação recria */
