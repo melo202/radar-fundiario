@@ -4,7 +4,7 @@
 // Sem rede, sem banco (funções puras).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { traduzirWhere, traduzirOutFields, traduzirGeometria, geojsonParaRings, erroArcgis } from "../motor/espelho-api.js";
+import { traduzirWhere, traduzirOutFields, traduzirGeometria, geojsonParaRings, erroArcgis, colsComCoordenada } from "../motor/espelho-api.js";
 
 /* ---------- traduzirWhere: padrões reais do front ---------- */
 
@@ -107,6 +107,36 @@ test("outFields: lista específica e alias com AS", () => {
 
 test("outFields: campo desconhecido é rejeitado", () => {
   assert.throws(() => traduzirOutFields("cadastro", "nrinscr, password"), /whitelist/);
+});
+
+/* ---------- COORD-FICHA (25/08): x_coord/y_coord que a ficha precisa (fachada, entorno) ---------- */
+
+test("coordenada: SELECT do cadastro ganha x_coord/y_coord em 31982 (ponto DENTRO do lote)", () => {
+  const cols = colsComCoordenada("cadastro", traduzirOutFields("cadastro", "*"), false);
+  const x = cols.find(c => c.includes("AS x_coord")), y = cols.find(c => c.includes("AS y_coord"));
+  assert.ok(x && y, "sem x_coord/y_coord a ficha aberta via espelho perde a fachada");
+  assert.match(x, /PointOnSurface/); /* centróide pode cair FORA de lote em "L" */
+  assert.match(x, /31982/); /* mesmo SR que o front espera (toWGS) */
+});
+
+test("coordenada: NUNCA em DISTINCT (lista de ruas/bairros manteria cardinalidade)", () => {
+  const cols = colsComCoordenada("cadastro", traduzirOutFields("cadastro", "nmlogradou"), true);
+  assert.equal(cols.length, 1);
+  assert.ok(!cols.some(c => c.includes("x_coord")));
+});
+
+test("coordenada: só o cadastro tem geom de lote — lote/bairro não ganham", () => {
+  const cols = colsComCoordenada("lote", traduzirOutFields("lote", "*"), false);
+  assert.ok(!cols.some(c => c.includes("x_coord")));
+});
+
+test("coordenada: pedida explícita funciona no cadastro e é rejeitada nas outras", () => {
+  const cols = traduzirOutFields("cadastro", "ci, x_coord");
+  assert.ok(cols.some(c => c.includes("AS x_coord")));
+  assert.throws(() => traduzirOutFields("bairro", "x_coord"), /whitelist/);
+  /* sem duplicar quando o pedido explícito já trouxe */
+  const deNovo = colsComCoordenada("cadastro", cols, false);
+  assert.equal(deNovo.filter(c => c.includes("AS x_coord")).length, 1);
 });
 
 /* ---------- traduzirGeometria (o front fala 31982, o espelho guarda 4326) ---------- */

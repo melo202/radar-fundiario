@@ -67,11 +67,34 @@ export function traduzirWhere(camada, where = "1=1") {
   return { sql, vals };
 }
 
+/* COORD-FICHA (25/08): o front ancora a ficha (fachada Street View, medir o entorno,
+   centralizar no mapa) em a.x_coord/a.y_coord — atributos que a camada da PREFEITURA
+   traz em 31982, mas a nossa tabela não guarda como coluna (só geom 4326). Sem eles,
+   TODA ficha aberta via espelho ficava "sem coordenada" e a fachada sumia em silêncio
+   (achado do Bruno, 25/08). Devolvemos o ponto-de-superfície do lote (sempre DENTRO do
+   polígono — melhor que centróide em lote em "L") já em 31982, no mesmo contrato. */
+const COORD_SQL = {
+  x_coord: "ST_X(ST_PointOnSurface(ST_Transform(geom, 31982)))::float8 AS x_coord",
+  y_coord: "ST_Y(ST_PointOnSurface(ST_Transform(geom, 31982)))::float8 AS y_coord",
+};
+
+/* inclui as coordenadas no SELECT do cadastro — NUNCA em DISTINCT (mudaria a
+   cardinalidade da lista de ruas/bairros) e só onde existe geom (cadastro). */
+export function colsComCoordenada(camada, cols, distinct) {
+  if (camada !== "cadastro" || distinct) return cols;
+  const falta = [COORD_SQL.x_coord, COORD_SQL.y_coord].filter(c => !cols.includes(c));
+  return [...cols, ...falta];
+}
+
 export function traduzirOutFields(camada, outFields = "*") {
   if (outFields === "*") return [...CAMPOS[camada]];
   const pedidos = String(outFields).split(",").map(s => s.trim()).filter(Boolean);
   if (!pedidos.length || pedidos.length > 20) erro("outFields inválido");
   return pedidos.map(f => {
+    if (COORD_SQL[f]) {
+      if (camada !== "cadastro") erro(`outField fora da whitelist: ${f}`);
+      return COORD_SQL[f];
+    }
     const real = (ALIAS[camada]?.[f]) || f;
     if (!CAMPOS[camada].has(real)) erro(`outField fora da whitelist: ${f}`);
     return real === f ? real : `${real} AS ${f}`;
@@ -135,8 +158,8 @@ export async function consultar(camada, p) {
     const r = await pool.query(`SELECT count(*)::int AS n FROM ${tabela} WHERE ${whereSql}`, vals);
     return { count: r.rows[0].n };
   }
-  const cols = traduzirOutFields(camada, p.outFields);
   const distinct = p.returnDistinctValues === "true";
+  const cols = colsComCoordenada(camada, traduzirOutFields(camada, p.outFields), distinct);
   const comGeom = p.returnGeometry === "true";
   let ordem = "";
   if (p.orderByFields) {

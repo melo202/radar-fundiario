@@ -44,7 +44,10 @@ test("P2.1a CSP: frame-src libera SÓ o Google Maps pro iframe", () => {
 
 test("P2.1a ficha: bloco na aba Resumo, render no localReset, iframe SÓ no clique", () => {
   assert.ok(html.includes('id="dFach"'), "bloco #dFach ausente da ficha");
-  assert.ok(html.indexOf('id="dFach"') > html.indexOf('id="dPref"'), "fachada logo após o kit Prefeitura");
+  /* UX 25/08 (achado do Bruno "não achei a fachada"): dFach no TOPO do Resumo, antes do valor —
+     ver o imóvel é a primeira coisa da ficha, não um cartão escondido embaixo do kit. */
+  assert.ok(html.indexOf('id="dFach"') < html.indexOf('id="dValor"'), "fachada no topo do Resumo, antes do valor");
+  assert.ok(html.indexOf('id="dFach"') < html.indexOf('id="dPref"'), "fachada antes do kit Prefeitura");
   assert.ok(html.includes("function renderFachada()"), "renderFachada ausente");
   assert.ok(html.includes("renderFachada(); /* P2.1a"), "localReset não chama renderFachada — herda fachada do imóvel anterior");
   assert.ok(html.includes("function abrirFachada(bt)"), "abrirFachada ausente");
@@ -53,7 +56,10 @@ test("P2.1a ficha: bloco na aba Resumo, render no localReset, iframe SÓ no cliq
   const fim = html.indexOf("function abrirFachada", i);
   assert.ok(!html.slice(i, fim).includes("<iframe"), "renderFachada não pode montar iframe — só o clique");
   assert.ok(html.slice(html.indexOf("function abrirFachada")).includes("<iframe"), "abrirFachada monta o iframe");
-  assert.ok(html.includes('if(!LOCAL_LL){el.innerHTML="";return;}'), "sem coordenada o bloco some (honesto)");
+  /* sem coordenada o card NÃO some em silêncio: aviso honesto (dfach-vazio) — o sumiço foi o que
+     fez o Bruno achar que o recurso não existia (25/08). */
+  assert.ok(html.includes("dfach-vazio"), "estado honesto sem coordenada ausente");
+  assert.ok(html.includes("sem localização no cadastro"), "texto do estado sem coordenada ausente");
 });
 
 test("P2.1a UX: o texto avisa que a câmera pode estar ao lado (nunca promete a fachada exata)", () => {

@@ -725,6 +725,9 @@
   .dfach-btn:hover{border-color:var(--accent)}
   .dfach-frame{position:relative;aspect-ratio:16/9;border-radius:2px;overflow:hidden;border:1px solid var(--line)}
   .dfach-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  /* estado honesto sem coordenada (raro depois do COORD-FICHA): mais discreto que o card normal */
+  .dfach-vazio{border-style:dashed;opacity:.75}
+  .dfach-vazio .dfach-head{margin-bottom:0}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
@@ -2062,6 +2065,11 @@
       </nav>
 
       <section class="dossier-view" id="dViewResumo" role="tabpanel" aria-labelledby="dTabResumo">
+        <!-- P2.1a (25/08): fachada da rua (Street View embutido) — renderFachada(), chamada do localReset.
+             UX (25/08, achado do Bruno "não achei a fachada"): no TOPO do Resumo — ver o imóvel é a
+             primeira coisa da ficha, não um cartão escondido embaixo do kit. Sem coordenada, o card
+             fica com aviso honesto em vez de sumir em silêncio. -->
+        <div class="dfach" id="dFach"></div>
         <div class="dvalor" id="dValor"></div>
         <div class="dscores" id="dScores"></div>
         <div class="dleitura" id="dLeitura"></div>
@@ -2073,8 +2081,6 @@
         <div class="acts" id="dActsPrim"></div>
         <!-- UX-M1 (18/08, auditoria UX): kit Prefeitura VISÍVEL na aba Resumo — renderPrefeituraUI() -->
         <div class="dpref" id="dPref"></div>
-        <!-- P2.1a (25/08): fachada da rua (Street View embutido) — renderFachada(), chamada do localReset -->
-        <div class="dfach" id="dFach"></div>
       </section>
 
       <section class="dossier-view" id="dViewTerritorio" role="tabpanel" aria-labelledby="dTabTerritorio" hidden>
@@ -11410,12 +11416,15 @@ function apresRender(){
   return true;
 }
 /* ---------------- P2.1a (25/08): fachada da rua — Street View embutido na ficha ----------------
-   Chamado pelo localReset (toda abertura de ficha). Sem coordenada -> bloco some (honesto,
-   sem teaser quebrado). O iframe SÓ entra no clique (abrirFachada): a ficha não chama o
-   Google a cada abertura — lazy consentido, mesma filosofia offline-first do app. */
+   Chamado pelo localReset (toda abertura de ficha). O iframe SÓ entra no clique (abrirFachada):
+   a ficha não chama o Google a cada abertura — lazy consentido, mesma filosofia offline-first.
+   Sem coordenada o card NÃO some mais em silêncio (o Bruno procurou e não achou, 25/08): fica
+   um aviso honesto e raro — depois do COORD-FICHA o espelho devolve o ponto do lote sempre. */
 function renderFachada(){
   const el=document.getElementById("dFach");if(!el)return;
-  if(!LOCAL_LL){el.innerHTML="";return;}
+  if(!LOCAL_LL){el.innerHTML=`<div class="dfach-card dfach-vazio">
+    <div class="dfach-head">🏙️ Fachada da rua<small>Este registro está sem localização no cadastro da prefeitura — sem o ponto no mapa não dá pra abrir a câmera aqui.</small></div>
+  </div>`;return;}
   el.innerHTML=`<div class="dfach-card">
     <div class="dfach-head">🏙️ Fachada da rua<small>Google Street View — abre só quando você tocar; arraste pra olhar em volta</small></div>
     <button type="button" class="dfach-btn" onclick="abrirFachada(this)">Ver a fachada agora</button>
