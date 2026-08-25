@@ -704,6 +704,14 @@
   .dpref-copy{min-height:44px;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink);font:600 12px/1 "Archivo";border-radius:2px;padding:0 14px;cursor:pointer}
   .dpref-copy:hover{border-color:var(--ink)}
   .dpref-dica{font:500 12.5px/1.5 "Archivo";color:var(--ink);background:var(--paper-2);border-left:3px solid var(--gold);padding:8px 10px;margin:11px 0 0}
+  /* P2.11b (25/08): kit oficial EMITIDO direto no card — status de cada doc, sem gerar Raio-X */
+  .dpref-kit{margin:11px 0 0;border-top:1.5px solid var(--line);padding-top:10px}
+  .dpref-kit:empty{display:none} /* antes da emissão o bloco não ocupa espaço */
+  .dpref-kitstat{font:500 12px/1.5 "Archivo";color:var(--muted);margin:4px 0}
+  .dpref-kitstat a{color:var(--accent)}
+  .dpref-kitrow{font:500 12.5px/1.6 "Archivo";color:var(--ink);margin:3px 0}
+  .dpref-kitrow b{font-weight:700}
+  .dpref-kitfonte{font-size:11px;margin-top:7px}
   /* P1.6 (20/08): Raio-X 1-clique — o kit prefeitura vira entregável profissional (PDF + WhatsApp) */
   .dpref-raiox{display:block;width:100%;min-height:48px;margin:0 0 11px;border:0;border-radius:2px;
     background:var(--accent);color:#fff;font:700 13px/1.3 "Archivo";cursor:pointer;
@@ -4688,6 +4696,27 @@ function streetViewUrl(lat,lon){
   if(!isFinite(+lat)||!isFinite(+lon))return null;
   if(+lat<-90||+lat>90||+lon<-180||+lon>180)return null;
   return "https://maps.google.com/maps?q=&layer=c&cbll="+(+lat).toFixed(6)+","+(+lon).toFixed(6)+"&cbp=11,0,0,0,0&output=svembed"; /* cbp OBRIGATÓRIO (25/08, Bruno: "abriu o mapa-múndi"): sem ele o Google descarta o cbll e devolve embed vazio (pb=!1m0 = mundo); com cbp o pb sai com a coordenada (verificado ao vivo no redirect) */
+}
+/* P2.11b (25/08, Bruno: "tem que sair igual a CND municipal, de forma direta")
+   kitStatusFichaHTML(kit): as linhas de status do kit oficial EMITIDO, direto no card da
+   ficha — titular, CND do imóvel (municipal), CND estadual do titular e espelho (BIC),
+   cada doc com o próprio destino (falha vira ⚠ honesto, nunca derruba os outros).
+   Pura: esc() vem do escopo; CPF/CNPJ já chega mascarado do motor (LGPD). Nunca lança. */
+function kitStatusFichaHTML(kit){
+  if(!kit||!kit.ok)return `<p class="dpref-kitstat">⚠ Não foi possível emitir o kit agora — os botões acima abrem os canais oficiais já preenchidos.</p>`;
+  const L=[],d=kit.docs||{};
+  const c=d.certidao,n=d.cnd,se=d.cndEstadual,e=d.espelho;
+  if(c&&c.ok&&c.dados)L.push(`<div class="dpref-kitrow">👤 Titular: <b>${esc(c.dados.titular||"—")}</b>${c.dados.cpfCnpj?" · "+esc(c.dados.cpfCnpj):""}</div>`);
+  else if(c)L.push(`<div class="dpref-kitrow">⚠️ Titular (certidão cadastral): ${esc(c.erro||"indisponível")}</div>`);
+  if(n&&n.ok&&n.dados){const s=n.dados.situacao;
+    L.push(`<div class="dpref-kitrow">${s==="negativa"?"✅":"⚠️"} CND do imóvel: <b>${s==="negativa"?"NEGATIVA — sem débitos":s==="positiva"?"POSITIVA — há débitos":"situação não lida"}</b>${n.dados.numero?" · Nº "+esc(n.dados.numero):""}</div>`);
+  }else if(n)L.push(`<div class="dpref-kitrow">⚠️ CND do imóvel: ${esc(n.erro||"indisponível")}</div>`);
+  if(se&&se.ok){const s=se.situacao;
+    L.push(`<div class="dpref-kitrow">${s==="negativa"?"✅":"⚠️"} CND estadual do titular: <b>${s==="negativa"?"NEGATIVA — sem dívida ativa no Estado":s==="positiva_com_efeito"?"POSITIVA COM EFEITO DE NEGATIVA":s==="positiva"?"POSITIVA — há dívida ativa":"situação não lida"}</b>${se.numero?" · Nº "+esc(se.numero):""}${se.validadeDias?" · "+se.validadeDias+" dias":""}</div>`);
+  }else if(se)L.push(`<div class="dpref-kitrow">⚠️ CND estadual: ${esc(se.erro||"indisponível")}</div>`);
+  if(e&&e.ok&&e.dados&&e.dados.matricula)L.push(`<div class="dpref-kitrow">📜 Espelho (BIC): matrícula <b>${esc(e.dados.matricula)}</b>${e.dados.posFiscal?" · "+esc(e.dados.posFiscal):""}</div>`);
+  L.push(`<p class="dpref-kitstat dpref-kitfonte">${esc(kit.fonte||"Sistemas oficiais")} · ${kit.geradoEm?new Date(kit.geradoEm).toLocaleString("pt-BR"):""}${kit.cache?" · cache":""}</p>`);
+  return L.join("");
 }
 /* P2.2 (25/08) mesclarSugestoesRemotas(locaisNorm,hits,limite): quais sugestões REMOTAS
    (Meilisearch — tolerantes a erro, cobrem todas as ruas/edifícios do cadastro) entram no
@@ -9984,7 +10013,36 @@ function renderPrefeituraUI(inscRaw){
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida. ATENÇÃO: débito de limpeza pública NÃO aparece na CND do imóvel — confira sempre antes de fechar.">Limpeza pública (TLP) ↗</a>
       <a href="https://www.sefaz.go.gov.br/Certidao/Emissao/" target="_blank" rel="noopener" title="CND da PESSOA (vendedor) no Estado: dívida ativa GO por CPF/CNPJ, emitida na hora e sem captcha na SEFAZ-GO. ATALHO: no Raio-X (botão acima) ela já sai EMITIDA automaticamente para o titular registrado; e no seu painel dá pra emitir digitando qualquer CPF/CNPJ.">CND estadual (titular) ↗</a>
     </div>
+    <div class="dpref-kit" id="dPrefKit" data-insc="${d}"></div>
     <p class="dpref-dica">💡 Procurando o titular? A <b>certidão cadastral</b> (2º botão) mostra NOME e CPF registrados — emitida na hora, sem captcha. E a <b>CND estadual</b> dele sai pronta no Raio-X, sem digitar nada.</p>`;
+  /* P2.11b (25/08, Bruno: "tem que sair igual a CND municipal, de forma direta"): o kit é
+     EMITIDO ao abrir a ficha e o status de cada doc aparece no card — sem gerar Raio-X. */
+  emitirKitNaFicha(d);
+}
+/* P2.11b: emissão do kit direto na ficha. Assíncrona (nunca trava a abertura), epoch
+   contra resposta atrasada da ficha anterior, 429/erro viram linha honesta com retry.
+   O retry lê a inscrição do data-insc (A-04: valor do endpoint NUNCA interpolado em onclick). */
+let KIT_EPOCH=0;
+async function emitirKitNaFicha(insc){
+  const epoch=++KIT_EPOCH;
+  const st=document.getElementById("dPrefKit");if(!st)return;
+  st.innerHTML=`<p class="dpref-kitstat">Emitindo nos sistemas oficiais: espelho (BIC), titular, CND do imóvel e CND estadual…</p>`;
+  try{
+    const r=await fetch(MOTOR_BASE+"/motor/kitpref?insc="+encodeURIComponent(insc),{signal:AbortSignal.timeout(45000)});
+    if(epoch!==KIT_EPOCH)return;
+    if(r.status===429){st.innerHTML=`<p class="dpref-kitstat">Muitas emissões seguidas — aguarde 1 minuto e <a href="#" onclick="retryKitFicha(this);return false">toque para tentar de novo</a>.</p>`;return;}
+    const kit=r.ok?await r.json():null;
+    if(epoch!==KIT_EPOCH)return;
+    st.innerHTML=kitStatusFichaHTML(kit);
+  }catch(e){
+    if(epoch!==KIT_EPOCH)return;
+    st.innerHTML=`<p class="dpref-kitstat">Não consegui emitir agora — os botões acima abrem os canais oficiais. <a href="#" onclick="retryKitFicha(this);return false">Tentar de novo</a>.</p>`;
+  }
+}
+function retryKitFicha(x){
+  const box=x&&x.closest?x.closest("[data-insc]"):null;
+  const insc=box?box.dataset.insc:"";
+  if(insc)emitirKitNaFicha(insc);
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
 function copyLink(x){
