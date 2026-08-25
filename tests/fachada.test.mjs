@@ -63,6 +63,18 @@ test("P2.1a ficha: bloco na aba Resumo, render no localReset, iframe SÓ no cliq
   assert.ok(html.includes("sem localização no cadastro"), "texto do estado sem coordenada ausente");
 });
 
+test("P2.1a pano preto (25/08, print do Bruno): sem no-referrer no iframe + escape pro Maps", () => {
+  const abrir = html.slice(html.indexOf("function abrirFachada"));
+  /* referrerpolicy="no-referrer" removido DO IFRAME: sem Referer o Google pode recusar os TILES
+     do panorama — a UI abre mas a imagem fica preta (sintoma exato do print). (O comentário da
+     função CITA o atributo ao explicar — por isso o pino mira a tag, não o texto solto.) */
+  const tagIframe = abrir.slice(abrir.indexOf("<iframe"), abrir.indexOf("</iframe>"));
+  assert.ok(!tagIframe.includes("referrerpolicy"), "iframe da fachada NÃO pode ir sem Referer (tiles preto)");
+  /* rua sem cobertura de foto é fora do nosso alcance — escape de 1 toque pro Maps completo */
+  assert.ok(abrir.includes("map_action=pano"), "fallback pro Google Maps (pano) ausente");
+  assert.ok(abrir.includes("dfach-maps"), "link de escape estilizado ausente");
+});
+
 test("P2.1a UX: o texto avisa que a câmera pode estar ao lado (nunca promete a fachada exata)", () => {
   assert.ok(html.includes("pode estar alguns metros ao lado"), "aviso de honestidade da câmera ausente");
   assert.ok(html.includes("arraste pra mirar a fachada"), "instrução de interação ausente");

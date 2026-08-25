@@ -728,6 +728,9 @@
   /* estado honesto sem coordenada (raro depois do COORD-FICHA): mais discreto que o card normal */
   .dfach-vazio{border-style:dashed;opacity:.75}
   .dfach-vazio .dfach-head{margin-bottom:0}
+  /* escape do pano preto/sem cobertura (25/08): link discreto embaixo do frame */
+  .dfach-maps{display:block;margin-top:6px;font:500 11px/1.4 "Archivo";color:var(--muted);text-decoration:none}
+  .dfach-maps:hover{color:var(--accent)}
 
   .maisopcoes{padding:0;border-top:0;margin-bottom:12px}
   .maisopcoes>summary{cursor:pointer;font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.07em;
@@ -11435,8 +11438,15 @@ function abrirFachada(bt){
   const url=streetViewUrl(LOCAL_LL.lat,LOCAL_LL.lng);
   if(!url)return;
   const card=bt.closest(".dfach-card");if(!card)return;
+  /* PANO PRETO (25/08, print do Bruno — R 225, Set Coimbra): a UI do Street View abria mas a
+     IMAGEM ficava preta. Dois suspeitos: (1) referrerpolicy="no-referrer" — sem Referer o Google
+     pode recusar os tiles do panorama; REMOVIDO (o padrão strict-origin-when-cross-origin manda a
+     origem, que é o que o embed oficial espera). (2) rua sem cobertura de foto — fora do nosso
+     alcance, então fica o escape de 1 toque pro Maps completo (map_action=pano, formato oficial). */
+  const maps="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+(+LOCAL_LL.lat).toFixed(6)+","+(+LOCAL_LL.lng).toFixed(6);
   card.innerHTML=`<div class="dfach-head">🏙️ Fachada da rua<small>Câmera no ponto mais próximo do lote — pode estar alguns metros ao lado; arraste pra mirar a fachada</small></div>
-    <div class="dfach-frame"><iframe src="${url}" loading="lazy" referrerpolicy="no-referrer" title="Fachada da rua — Google Street View" allowfullscreen></iframe></div>`;
+    <div class="dfach-frame"><iframe src="${url}" loading="lazy" title="Fachada da rua — Google Street View" allowfullscreen></iframe></div>
+    <a class="dfach-maps" href="${maps}" target="_blank" rel="noopener">Imagem preta ou sem foto nesta rua? Abrir no Google Maps ↗</a>`;
 }
 /* abrirCaixaNoMapaUI(el) (Fase 17, 17-02, TERR-07): ação em 1 toque compartilhada pelo badge do
    Caderno e pela linha do painel — lê el.dataset.bairros (CR-01: NUNCA interpola valor do endpoint
