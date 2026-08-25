@@ -1,86 +1,89 @@
-// GOOGLE-BUSCA (18/08/2026) — o motor tolerante da caixa de busca: Levenshtein com corte,
-// score fuzzy de vocabulário e ranker de "você quis dizer?". Funções PURAS extraídas do
-// bloco RADAR_PURE de radar-goiania.html via node:vm (mesma técnica de busca.test.mjs —
-// testa exatamente o código que roda no app, nunca uma cópia).
+// Harness de teste Node puro (node:test + node:assert/strict), sem framework/bundler.
+// P2.2 (25/08): busca "Google" — Meilisearch no motor (sugestões tolerantes a erro,
+// todas as ruas/edifícios do cadastro) mescladas no dropdown DEPOIS das locais.
+// Régua: chave SEARCH-ONLY no endpoint (nunca a mestra); saída higienizada (4 campos
+// públicos, sem inscrição/coordenada); falha da remota NUNCA quebra a busca local.
+// ATENÇÃO: arquivo é CRLF — pinar strings de UMA linha (includes), nunca com \n.
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-function loadPure() {
-  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+const server = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
+const indexer = readFileSync(new URL("../motor/indexar-busca.mjs", import.meta.url), "utf-8");
+
+function loadMesclar() {
   const iStart = html.indexOf("RADAR_PURE_START");
   const iEnd = html.indexOf("RADAR_PURE_END");
-  assert.ok(iStart > -1 && iEnd > iStart, "marcadores RADAR_PURE ausentes");
+  assert.ok(iStart > -1 && iEnd > iStart, "marcadores RADAR_PURE ausentes ou fora de ordem");
   const src = html.slice(html.indexOf("\n", iStart) + 1, html.lastIndexOf("\n", iEnd));
-  const sandbox = {};
+  assert.ok(src.includes("function mesclarSugestoesRemotas"), "mesclarSugestoesRemotas ausente do RADAR_PURE (P2.2)");
+  const sandbox = { esc: (v) => (v == null ? "" : String(v)) };
   vm.createContext(sandbox);
-  new vm.Script(
-    src + "\n;globalThis.__exports = {levDist,scoreVocab,ranquearVocab,vocabTokens};",
-    { filename: "radar-pure.js" }
-  ).runInContext(sandbox);
-  return sandbox.__exports;
+  new vm.Script(src + "\n;globalThis.__exports={mesclarSugestoesRemotas};", { filename: "radar-pure-p22.js" }).runInContext(sandbox);
+  return sandbox.__exports.mesclarSugestoesRemotas;
 }
-const P = loadPure();
 
-test("levDist: typos reais de corretor com pressa", () => {
-  assert.equal(P.levDist("PORTUGAL", "PORTUGAL", 2), 0, "exato");
-  assert.equal(P.levDist("PORTUGUAL", "PORTUGAL", 2), 1, "letra a mais");
-  assert.equal(P.levDist("CECILO", "CECILIO", 2), 1, "letra a menos");
-  assert.equal(P.levDist("BOCAIUVA", "BOCAYUVA", 2), 1, "troca i/y");
-  assert.equal(P.levDist("PERI", "PIER", 2), 2, "transposição conta 1x (Damerau) — duas trocas adjacentes");
-  assert.ok(P.levDist("MANGA", "MANGALO", 1) > 1, "acima do limiar estoura (early-exit)");
-  assert.ok(P.levDist("X", "ABCD", 2) > 2, "tamanho muito diferente nem calcula");
-  assert.equal(P.levDist("", "ABC", 2), 3, "vazio = tamanho do outro");
+// ------------------------------------------------------------- endpoint (motor) ------
+
+test("P2.2 endpoint: rota pública, rate limit próprio, chave SEARCH-ONLY (nunca a mestra)", () => {
+  assert.ok(server.includes('req.url.startsWith("/motor/busca/sugere")'), "rota /motor/busca/sugere ausente");
+  assert.ok(server.includes('estourou(req, 60, "busca-sugere")'), "rate limit próprio ausente");
+  assert.ok(server.includes("process.env.MEILI_SEARCH_KEY"), "endpoint deveria usar a chave SEARCH-ONLY");
+  assert.ok(!server.includes("MEILI_MASTER_KEY"), "a chave MESTRA nunca pode aparecer no servidor web");
 });
 
-test("scoreVocab: a frase burra casa a grafia oficial", () => {
-  assert.ok(P.scoreVocab("portugual", "PORTUGAL") >= 0.85, "typo de 1 letra em palavra longa");
-  assert.ok(P.scoreVocab("avenida portugual", "AV PORTUGAL") >= 0.85, "tipo de via não derruba o score");
-  assert.equal(P.scoreVocab("bocaiuva quintino", "QUINTINO BOCAIUVA"), 1, "ordem livre: cada token acha seu par");
-  assert.ok(P.scoreVocab("jamel cecilo", "JAMEL CECILIO") >= 0.85, "typo no 2º token");
-  assert.equal(P.scoreVocab("flamboyant", "FLAMBOYANT"), 1, "condomínio exato");
-  assert.equal(P.scoreVocab("riviera", "FLAMBOYANT"), 0, "sem par = zero, nunca 'mais ou menos'");
-  assert.equal(P.scoreVocab("", "PORTUGAL"), 0, "vazio não sugere");
+test("P2.2 endpoint: saída higienizada — só 4 campos públicos, sem vazar Meilisearch cru", () => {
+  const i = server.indexOf('req.url.startsWith("/motor/busca/sugere")');
+  const bloco = server.slice(i, server.indexOf("catch (e)", i));
+  for (const campo of ["tipo", "nome", "tipovia", "bairro"]) assert.ok(bloco.includes(campo), `campo ${campo} ausente`);
+  for (const proibido of ["nrinscr", "x_coord", "geom", "_rankingScore", "attributesToHighlight"]) {
+    assert.ok(!bloco.includes(proibido), `endpoint não pode devolver ${proibido}`);
+  }
+  assert.ok(server.includes("q.length < 3"), "consulta mínima de 3 caracteres ausente");
 });
 
-test("vocabTokens: genéricos de prédio e tipos de via saem da comparação", () => {
-  assert.equal(P.vocabTokens("residencial sumer park").join("|"), "SUMER|PARK");
-  assert.equal(P.vocabTokens("av. t-63").join("|"), "63", "via sai, hífen vira espaço, 'T' solta é curta demais");
-  assert.equal(P.vocabTokens("rua").length, 0, "tipo de via isolado não é identidade");
+test("P2.2 indexador: swap atômico, typo tolerance, só rua/edifício do espelho", () => {
+  assert.ok(indexer.includes("/swap-indexes"), "reindexação sem swap atômico");
+  assert.ok(indexer.includes('typoTolerance: { enabled: true'), "typo tolerance desligada");
+  assert.ok(indexer.includes('searchableAttributes: ["nome", "bairro"]'), "atributos de busca");
+  assert.ok(indexer.includes('tipo: "rua"') && indexer.includes('tipo: "predio"'), "dois tipos de documento");
+  assert.ok(indexer.includes("MEILI_MASTER_KEY"), "indexação exige a mestra (só no VPS, fora do servidor web)");
 });
 
-test("ranquearVocab: top-N por score, limiar e deduplicação pelo núcleo", () => {
-  const cand = ["AV PORTUGAL", "R  JOAQUIM PORTUGAL", "AV PORTO ALEGRE", "R  PORTO DAS FLORES"];
-  const r = P.ranquearVocab("portugual", cand, "nmlogradou");
-  assert.equal(r[0].valor, "AV PORTUGAL", "a grafia oficial da rua certa vem primeiro");
-  assert.ok(r.every(s => s.score >= 0.66), "limiar respeitado");
-  assert.ok(r.length <= 2, "PORTO ALEGRE/FLORES ficam de fora ou atrás — não poluem");
-  const dup = P.ranquearVocab("portugal", ["AV PORTUGAL", "AV PORTUGAL   ", "R  PORTUGAL"], "nmlogradou");
-  const cores = dup.map(s => s.core);
-  assert.equal(new Set(cores).size, cores.length, "padding do cadastro não duplica sugestão");
-  assert.equal(P.ranquearVocab("xiquita", cand, "nmlogradou").length, 0, "nada parecido = nada sugerido (honesto)");
+// ------------------------------------------------------------------ front ------------
+
+test("P2.2 front: fetch debounced + token + confirma input; falha silenciosa (local segue)", () => {
+  assert.ok(html.includes("function meiliSugere(qtext)"), "meiliSugere ausente");
+  assert.ok(html.includes("if(tok!==MEILI.tok)return;"), "sem guarda de resposta fora de ordem");
+  assert.ok(html.includes("String(inp.value).trim()!==q"), "não confirma que o input não mudou");
+  assert.ok(html.includes("ruaCore(q)||q"), "deveria mandar o NÚCLEO da frase (sem tipo de via/número)");
+  assert.ok(html.includes("meiliSugere(val); /* P2.2"), "não disparou no mesmo fluxo do updateCaixaList");
 });
 
-test("integração no HTML: o beco do 'Sem resultado' virou 'Você quis dizer?'", () => {
-  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
-  assert.ok(html.includes("async function sugerirVocab(campo,frase)"), "suggester de runtime existe");
-  assert.ok(html.includes("returnDistinctValues"), "vocabulário vem de DISTINCT no ArcGIS (1 query leve)");
-  assert.ok(html.includes("finish(items,false,sug)"), "buscar() passa as sugestões ao finish");
-  assert.ok(html.includes("Você quis dizer?"), "o rótulo do Google-caseiro");
-  assert.ok(html.includes("onclick=\"aplicarSugestao(this)\""), "chip clicável que rebusca");
-  assert.ok(html.includes("data-campo=\"${esc(s.campo)}\""), "chip via data-* escapado (CR-01), nunca JS inline");
-  assert.ok(html.includes("function aplicarSugestao(btn)"), "handler lê .dataset");
-  assert.ok(html.includes("qualquer ordem"), "fallback de rua em ordem livre existe");
-  const linhaVia = html.split("\n").find(l => l.includes("VIA_TOKEN_RE=new RegExp"));
-  assert.ok(linhaVia && linhaVia.includes("TIPOVIA_WORDS"), "tipos de via reusam TIPOVIA_WORDS (fonte única)");
+test("P2.2 front: remotas DEPOIS das locais, marcadas com ≈, rua cai no fluxo de rua", () => {
+  assert.ok(html.includes("mesclarSugestoesRemotas(ruaHits.map"), "remotas sem dedupe contra as locais");
+  assert.ok(html.includes('data-kind="meili" data-tipo='), "item remoto sem kind/tipo");
+  assert.ok(html.includes('"Prédio":"Rua"} ≈'), "sem o selo ≈ de aproximado");
+  assert.ok(html.includes('kind==="meili"&&el.dataset.tipo==="predio"'), "ramo de prédio remoto ausente");
+  assert.ok(html.includes("!hits.length&&!meiliItens.length"), "estado vazio ignorando as remotas");
 });
 
-test("segurança do suggester: prefixo vem de token forte, nunca da frase crua", () => {
-  const html = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
-  assert.ok(html.includes("toks.sort((a,b)=>b.length-a.length)[0].slice(0,3)"), "prefixo = 3 letras do token mais longo");
-  assert.ok(html.includes("VOCAB_CACHE"), "cache de sessão: falha repetida não refaz rede");
-  /* o prefixo é derivado de vocabTokens() (só [A-Z0-9]) — aspas/percentuais do usuário
-     jamais chegam ao LIKE do servidor por este caminho */
-  assert.match(html, /if\(!toks\.length\)return \[\]/, "sem token forte = sem sugestão, nunca inventa");
+test("P2.2 mesclarSugestoesRemotas (pura): dedupe dos 2 lados, teto, tipo, nunca lança", () => {
+  const f = loadMesclar();
+  assert.ok(Array.isArray(f()) && f().length === 0, "vazio -> array vazio (vm cross-realm: nunca deepEqual)");
+  const rem = [
+    { tipo: "rua", nome: "PORTUGAL", bairro: "SET OESTE" },          // dup do local (norm maiúsculo)
+    { tipo: "rua", nome: "T 25", bairro: "SET BUENO" },
+    { tipo: "predio", nome: "RES.SUMER PARK", bairro: "SET BUENO" },
+    { tipo: "rua", nome: "T 25", bairro: "SET BUENO" },              // dup interna da remota
+    { nome: "", bairro: "X" },                                       // sem nome: fora
+    { tipo: "rua", nome: "C 100", bairro: "" },                      // sem bairro: fora
+  ];
+  const out = f(["portugal"], rem, 6);
+  assert.equal(out.length, 2, `esperava 2 (dedupe local+interno+guards), veio ${out.length}`);
+  assert.equal(out[0].nome, "T 25");
+  assert.equal(out[1].tipo, "predio", "tipo predio preservado");
+  assert.equal(f([], rem, 1).length, 1, "teto respeitado");
 });

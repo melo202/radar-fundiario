@@ -4672,6 +4672,26 @@ function streetViewUrl(lat,lon){
   if(+lat<-90||+lat>90||+lon<-180||+lon>180)return null;
   return "https://maps.google.com/maps?q=&layer=c&cbll="+(+lat).toFixed(6)+","+(+lon).toFixed(6)+"&output=svembed";
 }
+/* P2.2 (25/08) mesclarSugestoesRemotas(locaisNorm,hits,limite): quais sugestões REMOTAS
+   (Meilisearch — tolerantes a erro, cobrem todas as ruas/edifícios do cadastro) entram no
+   dropdown DEPOIS das locais — sem duplicar o que o índice local (CNEFE/bairros) já cobriu
+   (match exato do nome normalizado: minúsculo, sem acento, trim). Nunca lança. */
+function mesclarSugestoesRemotas(locaisNorm,hits,limite){
+  /* normaliza os DOIS lados igual (minúsculo, sem acento, trim) — o caller pode passar o
+     norm() do app (maiúsculo) ou cru, a comparação é sempre justa */
+  const nn=s=>String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+  const vistos=new Set((Array.isArray(locaisNorm)?locaisNorm:[]).map(nn));
+  const out=[];
+  for(const h of (Array.isArray(hits)?hits:[])){
+    if(!h||!h.nome||!h.bairro)continue;
+    const chave=nn(h.nome);
+    if(!chave||vistos.has(chave))continue;
+    vistos.add(chave);
+    out.push({tipo:h.tipo==="predio"?"predio":"rua",nome:String(h.nome),tipovia:h.tipovia||null,bairro:String(h.bairro)});
+    if(out.length>=(limite||6))break;
+  }
+  return out;
+}
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
@@ -5641,6 +5661,11 @@ function updateCaixaList(qtext){
   let hits=setorHits.concat(ruaHits);
   hits.sort((a,b)=>a.pos-b.pos||a.label.localeCompare(b.label,"pt"));
   hits=hits.slice(0,50);
+  /* P2.2 (25/08): sugestões REMOTAS (Meilisearch — tolerantes a erro de digitação, cobrem
+     TODAS as ruas/edifícios do cadastro) entram DEPOIS das locais. mesclarSugestoesRemotas
+     (RADAR_PURE) remove as que o índice local já cobriu. Só valem se a resposta chegou para
+     ESTE texto (MEILI.q) — nunca de uma digitação anterior. */
+  const meiliItens=(MEILI.q===String(qtext).trim())?mesclarSugestoesRemotas(ruaHits.map(r=>norm(r.__nome)),MEILI.hits,6):[];
   caixaActive=-1;
   inp.setAttribute("aria-expanded","true");
   /* F5 EST-06: mesmo fix do combo de setor — aviso de vazio como option desabilitada, semântica
@@ -5648,7 +5673,7 @@ function updateCaixaList(qtext){
      AUD-01: "nenhuma sugestão" seco era beco sem saída — a detecção do chip pode estar válida
      mesmo sem sugestão no índice (rua fora do CNEFE, inscrição, quadra/lote). Quando LASTDETECT
      tem modo e confiança ≥ média, o item vazio vira AÇÃO de busca (mesmo caminho do Enter). */
-  if(!hits.length){
+  if(!hits.length&&!meiliItens.length){
     if(LASTDETECT&&LASTDETECT.mode&&LASTDETECT.confidence!=="baixa"){
       list.innerHTML=`<div class="combo-item" role="option" id="opt-buscar-direto" aria-selected="false"
         data-kind="buscar" onclick="pickCaixaItem(this)">
@@ -5659,8 +5684,36 @@ function updateCaixaList(qtext){
   list.innerHTML=hits.map(h=>`<div class="combo-item" role="option" id="${h.id}" aria-selected="false"
       data-kind="${h.kind}" data-code="${esc(h.code||"")}" data-nome="${esc(h.__nome||"")}"
       onclick="pickCaixaItem(this)">
-    <span class="code">${h.kind==="setor"?"Setor":"Rua"}</span>${esc(h.label)}<span class="raw">${esc(h.sub)}</span></div>`).join("");
+    <span class="code">${h.kind==="setor"?"Setor":"Rua"}</span>${esc(h.label)}<span class="raw">${esc(h.sub)}</span></div>`).join("")
+    +meiliItens.map((m,i)=>`<div class="combo-item" role="option" id="opt-meili-${i}" aria-selected="false"
+      data-kind="meili" data-tipo="${m.tipo}" data-nome="${esc(m.nome)}"
+      onclick="pickCaixaItem(this)">
+    <span class="code">${m.tipo==="predio"?"Prédio":"Rua"} ≈</span>${esc(titano(m.nome))}<span class="raw">${esc(m.bairro)}</span></div>`).join("");
   list.classList.add("show");
+}
+/* ---------------- P2.2 (25/08): sugestões "Google" — Meilisearch no motor ----------------
+   Tolerante a erro de digitação e cobre TODAS as ruas/edifícios do cadastro (o índice local
+   CNEFE é só logradouro). Disciplina: debounce próprio (300 ms), token contra resposta fora
+   de ordem, confirma que o input NÃO mudou antes de re-renderizar; manda o NÚCLEO da frase
+   (ruaCore — sem tipo de via nem número, que só atrapalham o match). Falha de rede some em
+   silêncio: as sugestões locais seguem valendo (degradação honesta, nunca quebra a busca). */
+let MEILI={tok:0,q:"",hits:[]};
+function meiliSugere(qtext){
+  clearTimeout(meiliSugere._t);
+  const q=String(qtext||"").trim();
+  if(q.length<3){MEILI.q="";MEILI.hits=[];return;}
+  meiliSugere._t=setTimeout(async()=>{
+    const tok=++MEILI.tok;
+    try{
+      const r=await fetch(`${MOTOR_BASE}/motor/busca/sugere?q=${encodeURIComponent(ruaCore(q)||q)}`,{signal:AbortSignal.timeout(6000)});
+      const d=await r.json();
+      if(tok!==MEILI.tok)return;
+      const inp=document.getElementById("caixaInput");
+      if(!inp||String(inp.value).trim()!==q)return;
+      MEILI.q=q;MEILI.hits=Array.isArray(d.hits)?d.hits:[];
+      updateCaixaList(inp.value);
+    }catch(e){/* sem remota: a local segue valendo */}
+  },300);
 }
 /* F5 D-13: anuncia a detecção no nó aria-live IRMÃO do chip (#detectLive, sr-only) — o chip em si
    é role="button" (controle); status e controle nunca no mesmo nó. Texto vazio limpa o anúncio. */
@@ -5681,6 +5734,16 @@ function pickCaixaItem(el){
     pickBairro(el.dataset.code);
     const disp=COMBO.find(x=>String(x.code)===String(el.dataset.code));
     if(disp)document.getElementById("caixaInput").value=disp.disp;
+  }else if(kind==="meili"&&el.dataset.tipo==="predio"){
+    /* P2.2: sugestão REMOTA de prédio — preenche o modo bd como o chip de detecção faria;
+       o usuário confirma com Enter/Buscar (mesma disciplina da rua: nunca dispara sozinho).
+       A rua remota cai no ramo de rua abaixo — mesmo data-nome, número digitado preservado. */
+    const nomeP=el.dataset.nome;
+    document.getElementById("caixaInput").value=nomeP;
+    LASTDETECT={mode:"bd",predio:nomeP,confidence:"alta",label:`Prédio · ${nomeP}`};
+    document.getElementById("detectChip").textContent=LASTDETECT.label;
+    document.getElementById("detectChip").hidden=false;document.getElementById("detectChip").classList.add("show");
+    detectAnunciar(LASTDETECT.label);
   }else{
     const nome=el.dataset.nome;
     /* AUD-01: o número de porta digitado ("rua portugal 582") não pode se perder ao tocar a
@@ -11984,6 +12047,7 @@ function loadCnefe(){
     r=applyLastBairroIfNeeded(r);
     if(r.confidence==="baixa")renderAmbig(r);else renderChip(r);
     if(typeof updateCaixaList==="function")updateCaixaList(val);
+    meiliSugere(val); /* P2.2: dispara a busca remota (debounce próprio) no mesmo fluxo */
   }
   inp.addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(runDetect,150);});
   inp.addEventListener("focus",()=>{loadCnefe();if(inp.value&&typeof updateCaixaList==="function")updateCaixaList(inp.value);});
