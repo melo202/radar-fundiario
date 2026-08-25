@@ -484,6 +484,15 @@ export async function painel(req, res) {
     const { requalificarAcervo } = await import("./requalificar.js");
     return json(res, 200, await requalificarAcervo());
   }
+  if (req.method === "POST" && req.url === "/painel/api/cnd-estadual") {
+    /* CND ESTADUAL (Dívida Ativa GO, SEFAZ) por CPF/CNPJ — a "CND da pessoa (vendedor)"
+       pedida pelo Bruno (19/08), uso exclusivo do painel. O formulário oficial NÃO tem
+       captcha (descoberta 25/08, teste real com CNPJ público); DV validado ANTES de
+       viajar; cache de 12h no módulo. */
+    const { doc } = JSON.parse(await readBody(req) || "{}");
+    const { emitirCndEstadual } = await import("./cnd-estadual.js");
+    return json(res, 200, await emitirCndEstadual(doc));
+  }
   if (req.method === "POST" && /^\/painel\/api\/avaliacoes\/[0-9a-f-]{36}\/revisar$/.test(req.url)) {
     /* §14: exclusões do corretor SEMPRE registradas (manual_change na avaliação
        original) + recálculo como VERSÃO nova encadeada — nada é sobrescrito */

@@ -269,6 +269,16 @@ http.createServer(async (req, res) => {
       const { emitirKitPrefeitura } = await import("./kitpref-emissao.js");
       return json(res, 200, await emitirKitPrefeitura(insc));
     }
+    if (req.method === "POST" && req.url === "/motor/cnd-estadual") {
+      /* CND ESTADUAL (Dívida Ativa GO, SEFAZ) por CPF/CNPJ — a "CND da pessoa (vendedor)"
+         que o Bruno pediu (19/08): "tem como fazer uma busca direto por cpf/cnpj?".
+         O formulário oficial NÃO tem captcha (descoberta 25/08, teste real com CNPJ
+         público) — emissão server-side honesta. DV validado ANTES de viajar; cache 12h. */
+      if (estourou(req, 10, "cnd-estadual")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const { doc } = JSON.parse(await readBody(req) || "{}");
+      const { emitirCndEstadual } = await import("./cnd-estadual.js");
+      return json(res, 200, await emitirCndEstadual(doc));
+    }
     if (req.method === "GET" && req.url === "/motor/mercado/mudancas") {
       /* pulso do mapa (19/07): mudanças de preço VERIFICADAS dos últimos 7 dias, com a
          coordenada do anúncio quando existir. Só o termômetro honesto (portal+id, duas

@@ -8154,6 +8154,15 @@ function kitPrefHTML(kit,insc){
   }else{
     partes.push(`<p class="lmiudo">⚠ CND de débitos: ${esc(n&&n.erro||"indisponível")} — <a href="${urlCnd}">emitir no canal oficial ↗</a></p>`);
   }
+  /* P2.11 (25/08): CND ESTADUAL (dívida ativa GO, SEFAZ) do TITULAR — 4º doc do kit,
+     emitida server-side a partir do documento que veio na certidão cadastral. */
+  const se=kit.docs&&kit.docs.cndEstadual;
+  if(se&&se.ok){
+    const s=se.situacao;
+    partes.push(`<div class="kv"><span class="k">CND estadual do titular</span><span class="v">${s==="negativa"?"✅ <b>NEGATIVA</b> — sem dívida ativa no Estado":s==="positiva_com_efeito"?"⚠️ <b>POSITIVA COM EFEITO DE NEGATIVA</b> — há débitos com exigibilidade suspensa":s==="positiva"?"⚠️ <b>POSITIVA</b> — há dívida ativa no Estado":"<b>Situação não lida</b> — confira a certidão oficial"}${se.documento?" · doc "+esc(se.documento):""}${se.numero?" · Nº "+esc(se.numero):""}${se.validadeDias?" · válida por "+se.validadeDias+" dias":""}</span></div>`);
+  }else{
+    partes.push(`<p class="lmiudo">⚠ CND estadual (dívida ativa GO) do titular: ${esc(se&&se.erro||"indisponível")} — <a href="https://www.sefaz.go.gov.br/Certidao/Emissao/" target="_blank" rel="noopener">emitir no canal oficial ↗</a></p>`);
+  }
   const e=kit.docs&&kit.docs.espelho;
   if(e&&e.ok&&e.dados){
     const esp=e.dados,linhas=[];

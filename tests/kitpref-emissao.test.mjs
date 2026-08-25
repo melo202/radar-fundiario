@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   htmlTexto, pegaCampo, parseEspelho, parseCertidao, parseCnd, mascaraCpf, emitirKitPrefeitura,
+  extrairDocTitular,
 } from "../motor/kitpref-emissao.js";
 
 /* fixtures mínimas no formato real (tabela label/valor com </td></tr> e \n entre células) */
@@ -125,6 +126,36 @@ test("emitirKitPrefeitura: per-doc honesto — a falha de 1 doc não derruba os 
   assert.ok(kit.docs.cnd.erro.length > 10);
   assert.equal(kit.pendentes.length, 2, "IPTU e TLP seguem como deep-link (SPA)");
   assert.ok(kit.pendentes.every(p => /^https:\/\//.test(p.url)));
+  /* CND estadual (25/08): o doc fictício da fixture tem DV INVÁLIDO de propósito —
+     a SEFAZ nem é chamada, e o kit segue com doc honesto (nunca derruba os outros 3) */
+  assert.equal(kit.docs.cndEstadual.ok, false);
+  assert.match(kit.docs.cndEstadual.erro, /verificador/);
+});
+
+const XML_SEFAZ_FAKE = `<?xml version='1.0' encoding='ISO-8859-1'?><NWS><titulolin>CERTIDAO DE DEBITO INSCRITO EM DIVIDA ATIVA - NEGATIVA</titulolin><numerocert>90000002</numerocert><tipopessoa>PESSOA FISICA</tipopessoa><nomerazao>PESSOA FICTICIA DE TESTE</nomerazao><numerodoc>529.982.247-25</numerodoc><despacho>NAO CONSTA DEBITO</despacho></NWS>`;
+
+test("extrairDocTitular: documento COMPLETO só existe server-side (pra CND estadual)", () => {
+  assert.equal(extrairDocTitular(CERTIDAO_FAKE), "123.456.789-00");
+  assert.equal(extrairDocTitular("<html>nada</html>"), null);
+});
+
+test("emitirKitPrefeitura: titular com DV válido -> 4º doc (CND estadual) emitido e MASCARADO", async () => {
+  const certComCpfValido = CERTIDAO_FAKE.replace("123.456.789-00", "529.982.247-25"); /* CPF de exemplo clássico, DV válido */
+  const fetchFake = async (url) => {
+    if (url.includes("siptu00020a0")) return { ok: true, arrayBuffer: async () => Buffer.from(ESPELHO_FAKE, "latin1").buffer };
+    if (url.includes("sccer00202")) return { ok: true, arrayBuffer: async () => Buffer.from(certComCpfValido, "latin1").buffer };
+    if (url.includes("sccer00201")) return { ok: true, arrayBuffer: async () => Buffer.from(CND_NEG, "latin1").buffer };
+    if (url.includes("sefaz.go.gov.br")) return { ok: true, arrayBuffer: async () => Buffer.from(XML_SEFAZ_FAKE, "latin1").buffer };
+    return { ok: true, arrayBuffer: async () => Buffer.from("<html>pediu captcha</html>", "latin1").buffer };
+  };
+  const insc = "999888777" + String(Date.now() % 900000 + 100000);
+  const kit = await emitirKitPrefeitura(insc, { fetchImpl: fetchFake });
+  assert.equal(kit.docs.cndEstadual.ok, true, "CND estadual do titular é o 4º doc do kit");
+  assert.equal(kit.docs.cndEstadual.situacao, "negativa");
+  assert.equal(kit.docs.cndEstadual.documento, "529.***.***-25", "documento sempre mascarado");
+  /* LGPD: o CPF completo NÃO vaza em NENHUMA parte do pacote (nem cache, nem docs) */
+  const vazamento = JSON.stringify(kit);
+  assert.ok(!vazamento.includes("52998224725") && !vazamento.includes("529.982.247-25"), "CPF completo NUNCA no pacote");
 });
 
 test("emitirKitPrefeitura: inscrição inválida -> ok:false (mesma régua de linksPrefeitura)", async () => {
@@ -138,4 +169,19 @@ test("rota /motor/kitpref existe no server com rate limit", () => {
   assert.ok(srv.includes('req.url.startsWith("/motor/kitpref")'), "rota ausente");
   assert.ok(srv.includes('estourou(req, 10, "kitpref")'), "sem rate limit a prefeitura vira alvo de abuso");
   assert.ok(srv.includes('emitirKitPrefeitura'), "rota deve chamar a emissão");
+});
+
+test("CND estadual (25/08): rotas server + painel e card do painel existem e são protegidos", () => {
+  const srv = readFileSync(new URL("../motor/server.js", import.meta.url), "utf-8");
+  assert.ok(srv.includes('req.url === "/motor/cnd-estadual"'), "rota pública ausente");
+  assert.ok(srv.includes('estourou(req, 10, "cnd-estadual")'), "sem rate limit a SEFAZ vira alvo de abuso");
+  const pnl = readFileSync(new URL("../motor/painel.js", import.meta.url), "utf-8");
+  assert.ok(pnl.includes('req.url === "/painel/api/cnd-estadual"'), "rota do painel ausente (uso exclusivo do Bruno)");
+  const html = readFileSync(new URL("../motor/painel.html", import.meta.url), "utf-8");
+  assert.ok(html.includes('id="formCndEst"'), "card de emissão ausente do painel");
+  assert.ok(html.includes('id="cndDoc"'), "campo de CPF/CNPJ ausente");
+  /* o Raio-X mostra o 4º documento do kit */
+  const app = readFileSync(new URL("../radar-goiania.html", import.meta.url), "utf-8");
+  assert.ok(app.includes("cndEstadual"), "Raio-X sem a linha da CND estadual do titular");
+  assert.ok(app.includes("CND estadual do titular"), "rótulo do 4º doc ausente no Raio-X");
 });

@@ -107,6 +107,15 @@
       <p style="font-size:11.5px;color:var(--muted);margin-top:10px">Toda exclusão fica registrada com motivo e autor na avaliação original; o recálculo cria uma VERSÃO nova encadeada — nada é sobrescrito.</p>
     </div>
     <div class="card">
+      <h2>CND estadual — dívida ativa GO (SEFAZ)</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">A "CND da pessoa": digite o <b>CPF ou CNPJ do vendedor</b> e a certidão de dívida ativa do Estado sai na hora, emitida no sistema oficial da SEFAZ-GO (sem captcha). O documento fica mascarado na tela — a certidão oficial é a que vale.</p>
+      <form id="formCndEst" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="cndDoc" placeholder="CPF ou CNPJ (com ou sem pontuação)" required maxlength="18" style="flex:1;min-width:220px;font:inherit;padding:9px 12px;border:1px solid var(--linha);border-radius:9px">
+        <button type="submit">Emitir certidão</button>
+      </form>
+      <div id="cndEstRes" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
       <h2>Vendas — acompanhamento do cliente</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Crie um link e o cliente acompanha a compra como rastreio de encomenda (menos "e aí, como tá?"). Use um <b>apelido do imóvel</b> ("Apto Bueno 302") — <b>nunca o nome do cliente</b>: nenhum dado pessoal vai ao servidor.</p>
       <form id="formVenda" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -377,6 +386,23 @@ $("formVenda").addEventListener("submit",async ev=>{
     copia(d.mensagem,"Link criado — a mensagem de boas-vindas já está copiada, é só colar no WhatsApp do cliente.");
     vendasCarrega();
   }catch(e2){$("vendaStat").textContent=e2.message;}
+});
+/* CND ESTADUAL (25/08): a "CND da pessoa" por CPF/CNPJ, emitida na SEFAZ-GO sem captcha. */
+$("formCndEst").addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  const res=$("cndEstRes");
+  res.innerHTML="<p style='color:var(--muted);font-size:13px'>Emitindo na SEFAZ-GO — leva alguns segundos…</p>";
+  try{
+    const r=await fetch("/painel/api/cnd-estadual",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":CSRF},body:JSON.stringify({doc:$("cndDoc").value})});
+    const d=await r.json();
+    if(!d.ok){res.innerHTML=`<p style='color:#c0392b;font-size:13px'>⚠ ${esc(d.erro||"não foi possível emitir")} — <a href="https://www.sefaz.go.gov.br/Certidao/Emissao/" target="_blank" rel="noopener">emitir no canal oficial ↗</a></p>`;return;}
+    const s=d.situacao==="negativa"?"✅ <b>NEGATIVA</b> — sem dívida ativa no Estado"
+      :d.situacao==="positiva_com_efeito"?"⚠️ <b>POSITIVA COM EFEITO DE NEGATIVA</b> — débitos com exigibilidade suspensa"
+      :d.situacao==="positiva"?"⚠️ <b>POSITIVA</b> — há dívida ativa no Estado":"<b>Situação não lida</b> — confira a certidão oficial";
+    res.innerHTML=`<div style="font-size:14px;line-height:1.7">${s}<br>
+      <span style="color:var(--muted);font-size:12.5px">${d.titular?esc(d.titular)+" · ":""}doc ${esc(d.documento||"—")} · certidão Nº ${esc(d.numero||"—")} · válida por ${d.validadeDias||120} dias${d.cache?" · (do cache de 12h)":""}</span><br>
+      <span style="color:var(--muted);font-size:12px">${esc(d.fonte||"")}</span></div>`;
+  }catch(e2){res.innerHTML="<p style='color:#c0392b;font-size:13px'>Falha na emissão — tente de novo.</p>";}
 });
 $("vendas").addEventListener("click",async e=>{
   const b=e.target.closest("button[data-acao]");if(!b)return;

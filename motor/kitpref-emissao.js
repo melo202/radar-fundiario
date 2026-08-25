@@ -19,6 +19,7 @@
      oficial (link) — o PDF que circula no WhatsApp não carrega documento alheio inteiro. */
 
 import { linksPrefeitura, soDigitos } from "./links-prefeitura.js";
+import { emitirCndEstadual } from "./cnd-estadual.js";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const TTL_MS = 12 * 3600 * 1000;
@@ -102,8 +103,10 @@ export function mascaraCpf(v) {
   return v ? "***" : null;
 }
 
-/* certidão de dados cadastrais (sccer00202): titular registrado + valor venal. */
-export function parseCertidao(html) {
+/* camposCertidao(html): mapa RÓTULO->valor das linhas dados_contribuinte da certidão
+   (sccer00202). null quando a página não é a certidão (nunca finge). Base do parse
+   mascarado E da extração server-side do documento do titular (CND estadual, 25/08). */
+export function camposCertidao(html) {
   const t = String(html || "");
   if (!/CERTID.{0,3}O DE DADOS CADASTRAIS/i.test(t)) return null;
   const campos = {};
@@ -115,6 +118,14 @@ export function parseCertidao(html) {
     const v = txt.slice(i + 1).trim();
     if (v) campos[k] = v;
   }
+  return campos;
+}
+
+/* certidão de dados cadastrais (sccer00202): titular registrado + valor venal. */
+export function parseCertidao(html) {
+  const campos = camposCertidao(html);
+  if (!campos) return null;
+  const t = String(html || "");
   const chave = (re) => { for (const k of Object.keys(campos)) if (re.test(k)) return campos[k]; return null; };
   const numero = NUM_CERT.exec(t);
   const validade = /Validade:\s*at.{0,3}\s*(\d{2}\/\d{2}\/\d{4})/i.exec(t);
@@ -131,6 +142,16 @@ export function parseCertidao(html) {
     tipo: chave(/^TIPO/i),
     valorVenal: venal ? venal[1] : null,
   };
+}
+
+/* extrairDocTitular(html): CPF/CNPJ COMPLETO do titular — uso EXCLUSIVO server-side
+   (emitir a CND estadual de dívida ativa do titular, 25/08). NUNCA vai na resposta:
+   o kit expõe só a máscara (mascaraCpf) — régua LGPD do cabeçalho. */
+export function extrairDocTitular(html) {
+  const campos = camposCertidao(html);
+  if (!campos) return null;
+  for (const k of Object.keys(campos)) if (/^CPF/i.test(k)) return campos[k];
+  return null;
 }
 
 /* CND imobiliária (sccer00201): NEGATIVA/POSITIVA — e NUNCA afirmar quando não leu. */
@@ -165,6 +186,20 @@ async function buscaDoc(url, parser, { fetchImpl = fetch } = {}) {
   }
 }
 
+/* buscaHtml(url): HTML cru — usado SÓ quando o mesmo HTML alimenta dois caminhos
+   (a certidão cadastral: parse mascarado + extração server-side do doc do titular).
+   O HTML cru NUNCA vai pra resposta (carrega CPF completo — LGPD). */
+async function buscaHtml(url, { fetchImpl = fetch } = {}) {
+  try {
+    const r = await fetchImpl(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return { ok: false, erro: "prefeitura respondeu HTTP " + r.status };
+    const buf = await r.arrayBuffer();
+    return { ok: true, html: new TextDecoder("iso-8859-1").decode(buf) };
+  } catch (e) {
+    return { ok: false, erro: "falha na consulta — tente de novo ou abra o canal oficial" };
+  }
+}
+
 /* emitirKitPrefeitura(inscricao): o kit COMPLETO de uma vez. Per-doc honesto; cache 12h. */
 export async function emitirKitPrefeitura(inscricao, deps = {}) {
   const d = soDigitos(inscricao);
@@ -174,17 +209,33 @@ export async function emitirKitPrefeitura(inscricao, deps = {}) {
   if (hit && Date.now() - hit.em < TTL_MS) return { ...hit.pacote, cache: true };
   const espelho = await buscaDoc(links.espelhoBic, parseEspelho, deps);
   await pausa(400);
-  const certidao = await buscaDoc(links.dadosCadastrais, parseCertidao, deps);
+  /* certidão cadastral: o MESMO HTML alimenta o parse (mascarado) e a extração
+     server-side do documento do titular — sem dobrar requisição na prefeitura */
+  const certHtml = await buscaHtml(links.dadosCadastrais, deps);
+  const certDados = certHtml.ok ? parseCertidao(certHtml.html) : null;
+  const certidao = certDados ? { ok: true, dados: certDados }
+    : { ok: false, erro: certHtml.ok ? "a página não veio no formato esperado (a prefeitura pode ter mudado ou pedido captcha)" : certHtml.erro };
   await pausa(400);
   const cnd = await buscaDoc(links.cnd, parseCnd, deps);
+  /* CND ESTADUAL (25/08): dívida ativa do TITULAR na SEFAZ-GO — 4º documento do kit.
+     O documento sai do HTML da certidão (server-side, NUNCA exposto); SEFAZ fora ou
+     titular sem documento registrado = doc honesto, nunca derruba os outros 3. */
+  let cndEstadual;
+  const docTitular = certHtml.ok ? extrairDocTitular(certHtml.html) : null;
+  if (!docTitular) {
+    cndEstadual = { ok: false, erro: "certidão cadastral sem CPF/CNPJ do titular — emita no painel digitando o documento" };
+  } else {
+    await pausa(400);
+    cndEstadual = await emitirCndEstadual(docTitular, deps);
+  }
   const pacote = {
     ok: true, inscricao: d, geradoEm: new Date().toISOString(),
-    docs: { espelho, certidao, cnd },
+    docs: { espelho, certidao, cnd, cndEstadual },
     pendentes: [
       { nome: "Guia do IPTU (DUAM)", url: links.guiaIptu },
       { nome: "Limpeza pública (TLP) — débito que NÃO aparece na CND", url: links.limpezaPublica },
     ],
-    fonte: "Emitido na hora nos sistemas oficiais da Prefeitura de Goiânia (siptu/sccer)",
+    fonte: "Emitido na hora nos sistemas oficiais da Prefeitura de Goiânia (siptu/sccer) e da SEFAZ-GO (dívida ativa estadual do titular)",
   };
   if (CACHE.size > 500) CACHE.clear();
   CACHE.set(d, { em: Date.now(), pacote });
