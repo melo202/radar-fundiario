@@ -180,6 +180,39 @@ http.createServer(async (req, res) => {
       const { entorno } = await import("./localizacao.js");
       return json(res, 200, await entorno({ lat, lon }));
     }
+    if (req.method === "GET" && req.url.startsWith("/motor/busca/sugere")) {
+      /* P2.2 (25/08): sugestões "Google" — Meilisearch local (ruas + edifícios do espelho do
+         cadastro, ~33 mil docs), tolerante a erro de digitação. Público: só lê nome de rua/
+         prédio/bairro (dado público, sem inscrição, sem coordenada, sem lote). A chave usada
+         é SEARCH-ONLY (não escreve); se o Meilisearch cair, o front segue só com as sugestões
+         locais (CNEFE/bairros) — degradação honesta, nunca quebra a busca. */
+      if (estourou(req, 60, "busca-sugere")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
+      const u = new URL(req.url, "http://x");
+      const q = String(u.searchParams.get("q") || "").trim();
+      if (q.length < 3 || q.length > 80) return json(res, 200, { hits: [] });
+      const key = process.env.MEILI_SEARCH_KEY;
+      if (!key) return json(res, 503, { erro: "busca remota não configurada" });
+      try {
+        const r = await fetch((process.env.MEILI_URL || "http://127.0.0.1:7700") + "/indexes/imoveis/search", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ q, limit: 8, attributesToRetrieve: ["tipo", "nome", "tipovia", "bairro"] }),
+          signal: AbortSignal.timeout(4000),
+        });
+        if (!r.ok) throw new Error("http " + r.status);
+        const d = await r.json();
+        /* higiene de saída: só os 4 campos públicos, strings cortadas — nada do Meilisearch vaza cru */
+        const hits = (d.hits || []).map(h => ({
+          tipo: h.tipo === "predio" ? "predio" : "rua",
+          nome: String(h.nome || "").slice(0, 80),
+          tipovia: h.tipovia ? String(h.tipovia).slice(0, 20) : null,
+          bairro: String(h.bairro || "").slice(0, 60),
+        })).filter(h => h.nome && h.bairro);
+        return json(res, 200, { hits });
+      } catch (e) {
+        return json(res, 503, { erro: "sugestões remotas indisponíveis (" + e.message + ")" });
+      }
+    }
     if (req.method === "GET" && req.url.startsWith("/motor/geocodificar")) {
       /* determinístico (CNEFE local, zero cota): público, mesmo espírito do localizacao */
       if (estourou(req, 30, "geocodificar")) return json(res, 429, { erro: "muitas consultas — aguarde 1 minuto" });
