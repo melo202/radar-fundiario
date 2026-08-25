@@ -34,6 +34,10 @@ test("UX-M: os 5 serviços oficiais no mapa, URLs idênticas às do motor (sincr
   assert.ok(html.includes("Guia do IPTU ↗") && html.includes("CND de débitos ↗"));
   assert.ok(html.includes("Limpeza pública (TLP) ↗"), "a pendência invisível entrou no kit");
   assert.ok(html.includes("NÃO aparece na CND"), "o aviso da TLP nasce junto com o botão");
+  /* P2.11 (25/08): 6º espaço — CND estadual (dívida ativa GO da PESSOA) no grid,
+     com o atalho explicado (Raio-X emite automático; painel emite por CPF/CNPJ) */
+  assert.ok(html.includes("CND estadual (titular) ↗"), "o espaço da CND estadual no grid (print do Bruno)");
+  assert.ok(html.includes("sefaz.go.gov.br/Certidao/Emissao/"), "deep-link do canal oficial da SEFAZ-GO");
 });
 
 test("UX-M: a dica de ouro existe no mapa, como callout — e o rótulo-jargão morreu", () => {

@@ -9982,8 +9982,9 @@ function renderPrefeituraUI(inscRaw){
       <a href="https://www.goiania.go.gov.br/sistemas/sccer/asp/sccer00201w0.asp?txt_nr_iptu=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="EMITE na hora, sem captcha: Certidão Negativa/Positiva de Débitos do imóvel (regularidade fiscal imobiliária).">CND de débitos ↗</a>
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/ConsultaTributos?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida — é só clicar em Consultar. A guia (DUAM) traz o nome do contribuinte: plano B para achar o titular.">Guia do IPTU ↗</a>
       <a href="https://tributos.goiania.go.gov.br/PortalTributos/TaxaLimpezaPublica?InscricaoCadastral=${encodeURIComponent(d)}" target="_blank" rel="noopener" onclick="copyInsc(this)" title="Abre já com a inscrição preenchida. ATENÇÃO: débito de limpeza pública NÃO aparece na CND do imóvel — confira sempre antes de fechar.">Limpeza pública (TLP) ↗</a>
+      <a href="https://www.sefaz.go.gov.br/Certidao/Emissao/" target="_blank" rel="noopener" title="CND da PESSOA (vendedor) no Estado: dívida ativa GO por CPF/CNPJ, emitida na hora e sem captcha na SEFAZ-GO. ATALHO: no Raio-X (botão acima) ela já sai EMITIDA automaticamente para o titular registrado; e no seu painel dá pra emitir digitando qualquer CPF/CNPJ.">CND estadual (titular) ↗</a>
     </div>
-    <p class="dpref-dica">💡 Procurando o titular? A <b>certidão cadastral</b> (2º botão) mostra NOME e CPF registrados — emitida na hora, sem captcha.</p>`;
+    <p class="dpref-dica">💡 Procurando o titular? A <b>certidão cadastral</b> (2º botão) mostra NOME e CPF registrados — emitida na hora, sem captcha. E a <b>CND estadual</b> dele sai pronta no Raio-X, sem digitar nada.</p>`;
 }
 /* BUSCA-09: copiar link deste imovel (deep-link ?insc=) — mesmo padrao de toast de copyInsc */
 function copyLink(x){
