@@ -28,6 +28,7 @@ test("P2.1a streetViewUrl (pura): embed oficial, coordenada formatada, guard hon
   assert.ok(u.startsWith("https://maps.google.com/maps?"), "embed oficial do Google Maps");
   assert.ok(u.includes("layer=c"), "camada streetview (layer=c)");
   assert.ok(u.includes("cbll=-16.680123,-49.253468"), "coordenada com 6 casas");
+  assert.ok(u.includes("cbp=11,0,0,0,0"), "sem cbp o Google ignora o cbll e abre o MAPA-MÚNDI (regressão 25/08)");
   assert.ok(u.includes("output=svembed"), "saída svembed (incorporação pública)");
   assert.equal(f(null, -49.25), null, "lat inválida -> null");
   assert.equal(f(-16.68, "x"), null, "lon inválida -> null");

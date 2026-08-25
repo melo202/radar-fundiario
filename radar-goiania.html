@@ -4684,7 +4684,7 @@ function streetViewUrl(lat,lon){
   if(lat==null||lon==null||lat===""||lon==="")return null; /* +null/+"": vira 0 e enganaria o isFinite */
   if(!isFinite(+lat)||!isFinite(+lon))return null;
   if(+lat<-90||+lat>90||+lon<-180||+lon>180)return null;
-  return "https://maps.google.com/maps?q=&layer=c&cbll="+(+lat).toFixed(6)+","+(+lon).toFixed(6)+"&output=svembed";
+  return "https://maps.google.com/maps?q=&layer=c&cbll="+(+lat).toFixed(6)+","+(+lon).toFixed(6)+"&cbp=11,0,0,0,0&output=svembed"; /* cbp OBRIGATÓRIO (25/08, Bruno: "abriu o mapa-múndi"): sem ele o Google descarta o cbll e devolve embed vazio (pb=!1m0 = mundo); com cbp o pb sai com a coordenada (verificado ao vivo no redirect) */
 }
 /* P2.2 (25/08) mesclarSugestoesRemotas(locaisNorm,hits,limite): quais sugestões REMOTAS
    (Meilisearch — tolerantes a erro, cobrem todas as ruas/edifícios do cadastro) entram no
