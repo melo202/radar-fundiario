@@ -2686,8 +2686,16 @@ function detectMode(textoBruto,combo){
   const _qSolto=mQL&&!/^Q(?:D|UADRA)/.test(n.slice(mQL.index));
   const _viaN=(mQL&&_qSolto)?n.match(TIPOVIA_DETECT):null;
   if(mQL&&!(_qSolto&&_viaN&&_viaN.index<mQL.index)){
-    return attachSetor({mode:"ql",quadra:mQL[1],lote:mQL[2]||"",confidence:"alta",
-      label:mQL[2]?`Quadra ${mQL[1]} · Lote ${mQL[2]}`:`Quadra ${mQL[1]}`});
+    /* P2.3 (25/08 — dor real do pai: "escrevo a rua, a quadra e o lote e não acha"): a RUA
+       no início da frase não pode mais sumir — com ela, buscar() faz a QL PELA RUA e o setor
+       deixa de ser obrigatório (antes a rua era jogada fora e o setor errado herdado escondia
+       o imóvel). Só vira campo se tiver cara de logradouro (tipo de via OU identidade de rua)
+       — "bueno quadra 12" não inventa rua. O índice é medido no RAW (norm() muda o comprimento). */
+    const _mRaw=raw.match(/\bQ(?:D|UADRA)?\.?\s*\d/i);
+    const _antes=_mRaw?raw.slice(0,_mRaw.index).replace(/[\s,–-]+$/,""):"";
+    const _ruaQL=(_antes&&(_antes.match(TIPOVIA_DETECT)||temIdentidadeRua(_antes)))?_antes:"";
+    return attachSetor({mode:"ql",quadra:mQL[1],lote:mQL[2]||"",rua:_ruaQL,confidence:"alta",
+      label:(_ruaQL?_ruaQL+" · ":"")+(mQL[2]?`Quadra ${mQL[1]} · Lote ${mQL[2]}`:`Quadra ${mQL[1]}`)});
   }
   // 2b. Quadra/Lote em formato "cru" (bare), SEM nenhuma palavra Q/QUADRA/L/LOTE — ex.: "128/5".
   // WR-01 (08-REVIEW.md): docstring e SEARCH.md §2 prometem isso desde sempre, mas o regex acima
@@ -4695,6 +4703,7 @@ function mesclarSugestoesRemotas(locaisNorm,hits,limite){
 // RADAR_PURE_END
 
 let MODE='addr', BAIRROS=[], LAST=[], markers=[], map, layerGroup, sel=null;
+let QL_RUA=""; /* P2.3: a rua capturada na frase QL ("rua x quadra 12 lote 5") — escopo que dispensa o setor */
 /* Fase 12 (12-02): 1 entrada por ci — {criterio:"padrao", provaveis:false, busca:""} — nunca
    persistido, resetado a cada finish() novo (mesma filosofia de sel/CMP). */
 let BLDGSTATE={};
@@ -5715,6 +5724,32 @@ function meiliSugere(qtext){
     }catch(e){/* sem remota: a local segue valendo */}
   },300);
 }
+/* ---------------- P2.3c (25/08): última busca — cache + repetir em 1 toque ---------------- */
+function ultimaBuscaLoad(){
+  try{const v=JSON.parse(localStorage.getItem("radar_ultimabusca")||"null");return (v&&typeof v.t==="string"&&v.t.trim().length>=3)?v.t.trim():null;}
+  catch(e){return null;}
+}
+/* boot: o texto da última busca já volta preenchido (NUNCA dispara a busca sozinho —
+   restaurar é conveniência, disparar seria surpresa: rede e mapa se movendo sem pedido). */
+function restaurarUltimaBusca(){
+  const t=ultimaBuscaLoad();if(!t)return;
+  const inp=document.getElementById("caixaInput");
+  if(inp&&!inp.value)inp.value=t;
+  const top=document.getElementById("atlasSearchInput");
+  if(top&&!top.value)top.value=t;
+}
+/* foco na caixa VAZIA: oferece repetir a última busca em 1 toque (↺) */
+function mostrarUltimaBusca(){
+  const list=document.getElementById("caixaList");
+  const inp=document.getElementById("caixaInput");
+  const t=ultimaBuscaLoad();
+  if(!list||!inp||inp.value||!t)return;
+  inp.setAttribute("aria-expanded","true");
+  list.innerHTML=`<div class="combo-item" role="option" id="opt-ultima" aria-selected="false"
+      data-kind="ultima" data-texto="${esc(t)}" onclick="pickCaixaItem(this)">
+    <span class="code">↺ Repetir</span>${esc(t)}<span class="raw">última busca</span></div>`;
+  list.classList.add("show");
+}
 /* F5 D-13: anuncia a detecção no nó aria-live IRMÃO do chip (#detectLive, sr-only) — o chip em si
    é role="button" (controle); status e controle nunca no mesmo nó. Texto vazio limpa o anúncio. */
 function detectAnunciar(txt){const el=document.getElementById("detectLive");if(el)el.textContent=txt||"";}
@@ -5728,6 +5763,16 @@ function pickCaixaItem(el){
     if(!LASTDETECT||LASTDETECT.confidence==="baixa")return;
     closeCaixaList();
     applyDetectAndSearch(LASTDETECT.mode,LASTDETECT);
+    return;
+  }
+  /* P2.3c: ↺ repetir a última busca — restaura o texto e re-roda a detecção pelo MESMO
+     caminho da digitação (evento input), nunca um atalho paralelo que pudesse divergir */
+  if(kind==="ultima"){
+    const t=el.dataset.texto||"";
+    closeCaixaList();
+    const inpU=document.getElementById("caixaInput");
+    inpU.value=t;
+    inpU.dispatchEvent(new Event("input",{bubbles:true}));
     return;
   }
   if(kind==="setor"){
@@ -6912,6 +6957,10 @@ async function buscar(){
   loading(true,MOTION_MSG.localizando);
   mostrarSkeleton();
   limparAncoraEnd(); /* busca nova apaga o alvo CNEFE da anterior (early-returns inclusos) */
+  /* P2.3c (25/08): a última busca fica salva — no próximo acesso o texto já está na caixa
+     e dá pra repetir em 1 toque (↺). Só a frase digitada, nunca dado do imóvel. */
+  try{const _ub=String(document.getElementById("caixaInput").value||"").trim();
+    if(_ub.length>=3)localStorage.setItem("radar_ultimabusca",JSON.stringify({t:_ub,ts:Date.now()}));}catch(e){}
   try{
     let items=[],aviso=null,geoAncora=null;
     if(MODE==="insc"){
@@ -7032,29 +7081,58 @@ async function buscar(){
       const b=document.getElementById("bairro").value;
       const q=clean(document.getElementById("quadra").value);
       const l=clean(document.getElementById("lote").value);
-      if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
       if(!q&&!l){
         /* só o bairro: mostra o setor no mapa em vez de bloquear */
-        if(await mostrarBairro(b))return;
+        if(b&&await mostrarBairro(b))return;
         toast("Digite ao menos a quadra.");return;
       }
       loading(true,MOTION_MSG.cadastro);
-      let whereQ=`cdbairro=${b} AND vlvenal>0`;
-      if(q)whereQ+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
-      if(l)whereQ+=` AND UPPER(nrlote) LIKE '%${likeTerm(l)}%'`;
-      const all=await fetchWhere(whereQ);
-      const qU=q.toUpperCase(), lU=l.toUpperCase();
-      items=all.filter(a=>{
-        const nq=clean(a.nrquadra).toUpperCase();
-        const nl=clean(a.nrlote).toUpperCase();
-        const scoreQ=matchScoreQ(nq,qU), scoreL=matchScoreL(nl,lU);
-        if(scoreQ==null||scoreL==null)return false;
-        // scoreQ/scoreL SO valem 0 (nao null) quando o filtro esta VAZIO, e este filtro
-        // (scoreQ==null||scoreL==null) roda ANTES do Math.max — nao trocar o retorno do
-        // caso "sem filtro" (0) sem revisar esta ordem, ou o pior componente deixa de decidir.
-        a.__matchScore=Math.max(scoreQ,scoreL);
-        return true;
-      });
+      /* P2.3 (25/08): com RUA na frase ("rua portugal quadra 12 lote 5"), ELA é o escopo —
+         o setor deixa de ser obrigatório e o último setor usado NÃO é mais herdado às cegas
+         (era o "não acha" do pai: a rua sumia da frase e a quadra/lote era procurada no
+         bairro errado). Sem rua: o fluxo de sempre, com setor. */
+      const ruaQL=ruaCore(QL_RUA||"");
+      if(ruaQL){
+        const letrasQ=ruaQL.replace(/[^A-Z]/g,""),digQ=ruaQL.replace(/\D/g,"");
+        const likeRuaQL=(letrasQ&&digQ)?`%${letrasQ}%${digQ}%`:`%${ruaQL}%`;
+        let whereQS=digQ?`vlvenal>0 AND nmlogradou LIKE '${likeRuaQL}'`:`vlvenal>0 AND UPPER(nmlogradou) LIKE '%${ruaQL}%'`;
+        if(q)whereQS+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
+        if(l)whereQS+=` AND UPPER(nrlote) LIKE '%${likeTerm(l)}%'`;
+        const allS=await fetchWhere(whereQS);
+        const qU=q.toUpperCase(), lU=l.toUpperCase();
+        items=allS.filter(a=>{
+          const nq=clean(a.nrquadra).toUpperCase();
+          const nl=clean(a.nrlote).toUpperCase();
+          const scoreQ=matchScoreQ(nq,qU), scoreL=matchScoreL(nl,lU);
+          const scoreR=matchScoreRua(ruaCore(a.nmlogradou),ruaQL,digQ);
+          if(scoreQ==null||scoreL==null||scoreR==null)return false;
+          a.__matchScore=Math.max(scoreQ,scoreL,scoreR);
+          return true;
+        });
+        if(items.length)aviso="Achado pela rua, sem precisar do setor — confira o endereço na lista.";
+      }
+      if(!items.length&&ruaQL&&!b){
+        toast("Não achei essa quadra/lote nessa rua — confira os números ou escolha o setor.");return;
+      }
+      if(!items.length){
+        if(!okB||!b){toast("Escolha o setor na lista (digite e clique).");return;}
+        let whereQ=`cdbairro=${b} AND vlvenal>0`;
+        if(q)whereQ+=` AND UPPER(nrquadra) LIKE '%${likeTerm(q)}%'`;
+        if(l)whereQ+=` AND UPPER(nrlote) LIKE '%${likeTerm(l)}%'`;
+        const all=await fetchWhere(whereQ);
+        const qU=q.toUpperCase(), lU=l.toUpperCase();
+        items=all.filter(a=>{
+          const nq=clean(a.nrquadra).toUpperCase();
+          const nl=clean(a.nrlote).toUpperCase();
+          const scoreQ=matchScoreQ(nq,qU), scoreL=matchScoreL(nl,lU);
+          if(scoreQ==null||scoreL==null)return false;
+          // scoreQ/scoreL SO valem 0 (nao null) quando o filtro esta VAZIO, e este filtro
+          // (scoreQ==null||scoreL==null) roda ANTES do Math.max — nao trocar o retorno do
+          // caso "sem filtro" (0) sem revisar esta ordem, ou o pior componente deixa de decidir.
+          a.__matchScore=Math.max(scoreQ,scoreL);
+          return true;
+        });
+      }
     }
     /* GOOGLE-BUSCA: resultado zero NUNCA é beco sem saída — antes do finish, busca grafias
        parecidas no vocabulário oficial (sugerirVocab) e o finish renderiza "você quis dizer?".
@@ -11659,7 +11737,7 @@ if(!window.L||!window.proj4){
   document.getElementById("results").innerHTML='<div class="empty"><div class="big">Bibliotecas do mapa não carregaram</div>Verifique a conexão com a internet e recarregue a página.</div>';
   bootSplashOff(); /* a mensagem de erro tem que aparecer — splash nunca a esconde */
 }else{
-  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();avisoFollowups();loadBairros();loadBairroPolys();loadLimite();loadAreasMercado();
+  initMap();setView(isMobile()?"mapa":"busca");initCoach();capaVivaInit();initOnboard();avisoFollowups();loadBairros();loadBairroPolys();loadLimite();loadAreasMercado();restaurarUltimaBusca();
   bootSplashOff(); /* mapa criado e view definida = interface interativa */
   /* F5 EST-04: caixa-goiania.js agora é defer (executa DEPOIS deste bloco inline, antes do
      DOMContentLoaded) — chamar initCaixa() direto aqui cairia no guard !window.CAIXA e o botão
@@ -11876,7 +11954,7 @@ function closeCaixaList(){
 function applyDetectAndSearch(mode,fields){
   setMode(mode);
   fields=fields||{};
-  if(mode==="ql"){document.getElementById("quadra").value=fields.quadra||"";document.getElementById("lote").value=fields.lote||"";}
+  if(mode==="ql"){document.getElementById("quadra").value=fields.quadra||"";document.getElementById("lote").value=fields.lote||"";QL_RUA=fields.rua||"";}
   else if(mode==="addr"){document.getElementById("rua").value=fields.rua||"";document.getElementById("numero").value=fields.numero||"";}
   else if(mode==="bd"){document.getElementById("predio").value=fields.predio||document.getElementById("caixaInput").value||"";} /* BUSCA-01 (F5): ramo bd ausente — Enter em nome de prédio nunca preenchia #predio; espelha forceMode() */
   else if(mode==="insc"){document.getElementById("insc").value=fields.value||"";}
@@ -12050,7 +12128,7 @@ function loadCnefe(){
     meiliSugere(val); /* P2.2: dispara a busca remota (debounce próprio) no mesmo fluxo */
   }
   inp.addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(runDetect,150);});
-  inp.addEventListener("focus",()=>{loadCnefe();if(inp.value&&typeof updateCaixaList==="function")updateCaixaList(inp.value);});
+  inp.addEventListener("focus",()=>{loadCnefe();if(inp.value&&typeof updateCaixaList==="function")updateCaixaList(inp.value);else mostrarUltimaBusca(); /* P2.3c: caixa vazia oferece repetir a última */});
   inp.addEventListener("keydown",e=>{
     const list=document.getElementById("caixaList");
     const open=list.classList.contains("show");

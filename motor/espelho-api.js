@@ -38,6 +38,13 @@ function clausula(camada, c, vals) {
     if (!VALOR_SEGURO.test(m[2])) erro("valor LIKE fora do alfabeto seguro");
     vals.push(m[2]); return `upper(${col(m[1])}) LIKE '%' || $${vals.length} || '%'`;
   }
+  /* P2.3 (25/08): LIKE de quadra/lote — a busca "rua + quadra + lote SEM setor" (e a QL com
+     setor) usam UPPER(nrquadra/nrlote) LIKE; sem esta cláusula o front caía no ArcGIS ao
+     vivo (lento) toda vez. Mínimo 1 caractere: lote de 1 dígito ("5") é legítimo. */
+  if ((m = c.match(/^UPPER\((nrquadra|nrlote)\) LIKE '%([^']{1,20})%'$/))) {
+    if (!VALOR_SEGURO.test(m[2])) erro("valor LIKE fora do alfabeto seguro");
+    vals.push(m[2]); return `upper(${col(m[1])}) LIKE '%' || $${vals.length} || '%'`;
+  }
   if ((m = c.match(/^UPPER\((nm_bai|nmlogradou|nmedificio)\)='([^']{2,60})'$/))) {
     if (!VALOR_SEGURO.test(m[2])) erro("valor fora do alfabeto seguro");
     vals.push(m[2]); return `upper(${col(m[1])}) = $${vals.length}`;

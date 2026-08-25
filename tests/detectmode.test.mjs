@@ -338,4 +338,33 @@ test("detectMode (F5 BUSCA-06) — controles pre-existentes intactos (via/insc/q
   assert.notEqual(b.mode, "addr");
 });
 
+// ---------------------------------------------------------------- P2.3 (25/08) -------
+// Dor real (pai do Bruno): "rua + quadra + lote" perdia a rua e exigia setor — a rua
+// agora é CAPTURADA (vira escopo da busca) e só quando tem cara de logradouro.
+
+test("detectMode (P2.3) — 'rua portugal quadra 12 lote 5' captura a rua (antes ela sumia)", () => {
+  const r = P.detectMode("rua portugal quadra 12 lote 5", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.quadra, "12");
+  assert.equal(r.lote, "5");
+  assert.equal(r.rua, "rua portugal", "a rua NÃO pode mais ser jogada fora da frase");
+  assert.ok(r.label.includes("rua portugal"), "o chip mostra a rua");
+});
+
+test("detectMode (P2.3) — rua sem tipo de via também vale ('avenida t-63 quadra 8')", () => {
+  const r = P.detectMode("avenida t-63 quadra 8 lote 2", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.rua, "avenida t-63");
+});
+
+test("detectMode (P2.3) — 'bueno quadra 12' NÃO inventa rua (setor extraído, rua vazia)", () => {
+  const r = P.detectMode("bueno quadra 12", COMBO_FIXTURE);
+  assert.equal(r.mode, "ql");
+  assert.equal(r.bairroCode, "106");
+  assert.ok(!r.rua, "setor no início não pode virar campo rua");
+  const r2 = P.detectMode("quadra 128 lote 5", COMBO_FIXTURE);
+  assert.equal(r2.mode, "ql");
+  assert.ok(!r2.rua, "sem texto antes da quadra, sem rua");
+});
+
 export { loadPureBlock, COMBO_FIXTURE };

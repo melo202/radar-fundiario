@@ -38,6 +38,15 @@ test("where: LIKE tolerante de logradouro (busca estilo Google)", () => {
   assert.deepEqual(vals, ["T-63"]);
 });
 
+test("where (P2.3): LIKE de quadra/lote — a QL pela rua não cai mais no ArcGIS ao vivo", () => {
+  const { sql, vals } = traduzirWhere("cadastro",
+    "vlvenal>0 AND UPPER(nmlogradou) LIKE '%PORTUGAL%' AND UPPER(nrquadra) LIKE '%12%' AND UPPER(nrlote) LIKE '%5%'");
+  assert.equal(sql, "vlvenal > 0 AND upper(nmlogradou) LIKE '%' || $1 || '%' AND upper(nrquadra) LIKE '%' || $2 || '%' AND upper(nrlote) LIKE '%' || $3 || '%'");
+  assert.deepEqual(vals, ["PORTUGAL", "12", "5"]);
+  // lote de 1 caractere é legítimo (mínimo 1); campo fora da dupla segue rejeitado
+  assert.throws(() => traduzirWhere("cadastro", "UPPER(nrinscr) LIKE '%1%'"), /whitelist|alfabeto|cláusula/);
+});
+
 test("where: UPPER(nm_bai)='X' usa o alias nm_bai→nm na camada bairro", () => {
   const { sql, vals } = traduzirWhere("bairro", "UPPER(nm_bai)='JARDIM GOIÁS'");
   assert.equal(sql, "upper(nm) = $1");
