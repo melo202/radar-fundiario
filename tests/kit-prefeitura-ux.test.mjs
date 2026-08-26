@@ -117,3 +117,22 @@ test("UX-P: CSS do callout e do chip existe no design system do painel", () => {
   assert.ok(css.includes(".pref-acts{"), "grade 2 colunas vira 1 no mobile");
   assert.match(css, /@media\(max-width:520px\)\{\.pref-acts\{grid-template-columns:1fr\}\}/);
 });
+
+const painel = readFileSync(new URL("../motor/painel.html", import.meta.url), "utf-8");
+
+test("UX-P: TJGO — busca processual oficial por nome/CPF, captcha honesto, dado copiado (26/08)", () => {
+  /* Estudo ao vivo (26/08): Projudi (busca pública do TJGO) exige reCAPTCHA —
+     NUNCA burlado; DataJud (CNJ) não expõe nomes de partes; see.tjgo é selo de
+     verificação. O caminho honesto: o painel abre a busca oficial e copia o dado
+     (zero digitação, zero erro de grafia) — o captcha e a consulta são do usuário. */
+  assert.ok(painel.includes("Processos do vendedor — TJGO"), "card existe no painel");
+  assert.ok(painel.includes('id="formTjgo"') && painel.includes('id="tjgoNome"'), "mini-form presente");
+  assert.ok(painel.includes("projudi.tjgo.jus.br/BuscaProcesso?PaginaAtual=4&TipoConsultaProcesso=24"),
+    "abre a busca oficial pública (1º e 2º grau)");
+  assert.ok(painel.includes("marque o captcha"), "o captcha é declarado como ação do usuário");
+  assert.match(painel, /window\.open\("https:\/\/projudi\.tjgo\.jus\.br[^"]*","_blank","noopener"\)/,
+    "nova aba com noopener");
+  assert.ok(painel.includes("copia(v,"), "o dado vai copiado — sem digitação");
+  assert.ok(painel.includes("pesquise também o cônjuge"), "dica do cônjuge");
+  assert.ok(!html.includes("projudi.tjgo.jus.br"), "busca de processos de PESSOA fica fora do mapa público");
+});

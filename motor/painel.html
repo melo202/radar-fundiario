@@ -116,6 +116,16 @@
       <div id="cndEstRes" style="margin-top:12px"></div>
     </div>
     <div class="card">
+      <h2>Processos do vendedor — TJGO</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Antes de fechar, veja se o vendedor tem processo (execução fiscal, ação sobre o imóvel pesam na venda). Digite o <b>nome completo como está na certidão cadastral</b> — ou o CPF/CNPJ. O botão abre a <b>busca oficial do TJGO</b> e já deixa o dado copiado: é só colar no campo, marcar o captcha e pesquisar.</p>
+      <form id="formTjgo" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="tjgoNome" placeholder="Nome completo ou CPF/CNPJ do vendedor" required maxlength="60" style="flex:1;min-width:220px;font:inherit;padding:9px 12px;border:1px solid var(--linha);border-radius:9px">
+        <button type="submit">Abrir busca oficial ↗</button>
+      </form>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">Por que não sai automático? A consulta pública do TJGO exige captcha — a resposta é sua, em 5 segundos. Nenhum sistema honesto emite isso sem você; aqui o dado já vai copiado, sem erro de digitação. <b>Dica:</b> pesquise também o cônjuge.</p>
+      <span id="tjgoStat" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+    <div class="card">
       <h2>Vendas — acompanhamento do cliente</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Crie um link e o cliente acompanha a compra como rastreio de encomenda (menos "e aí, como tá?"). Use um <b>apelido do imóvel</b> ("Apto Bueno 302") — <b>nunca o nome do cliente</b>: nenhum dado pessoal vai ao servidor.</p>
       <form id="formVenda" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -388,8 +398,7 @@ $("formVenda").addEventListener("submit",async ev=>{
   }catch(e2){$("vendaStat").textContent=e2.message;}
 });
 /* CND ESTADUAL (25/08): a "CND da pessoa" por CPF/CNPJ, emitida na SEFAZ-GO sem captcha. */
-$("formCndEst").addEventListener("submit",async ev=>{
-  ev.preventDefault();
+$("formCndEst").addEventListener("submit",async ev=>{  ev.preventDefault();
   const res=$("cndEstRes");
   res.innerHTML="<p style='color:var(--muted);font-size:13px'>Emitindo na SEFAZ-GO — leva alguns segundos…</p>";
   try{
@@ -403,6 +412,18 @@ $("formCndEst").addEventListener("submit",async ev=>{
       <span style="color:var(--muted);font-size:12.5px">${d.titular?esc(d.titular)+" · ":""}doc ${esc(d.documento||"—")} · certidão Nº ${esc(d.numero||"—")} · válida por ${d.validadeDias||120} dias${d.cache?" · (do cache de 12h)":""}</span><br>
       <span style="color:var(--muted);font-size:12px">${esc(d.fonte||"")}</span></div>`;
   }catch(e2){res.innerHTML="<p style='color:#c0392b;font-size:13px'>Falha na emissão — tente de novo.</p>";}
+});
+/* TJGO (26/08): a consulta processual oficial (Projudi) exige captcha — a resposta
+   é do usuário, nunca burlada. A gente abre a busca oficial e já deixa o dado
+   copiado: zero digitação, zero erro de grafia. Verificado ao vivo: o formulário
+   tem os campos NomeParte e CpfCnpjParte; URL não pré-preenche; DataJud (CNJ) não
+   expõe nomes de partes — por isso o caminho honesto é este. */
+$("formTjgo").addEventListener("submit",ev=>{
+  ev.preventDefault();
+  const v=$("tjgoNome").value.trim();
+  if(v.length<3){$("tjgoStat").textContent="Digite o nome completo (ou o CPF/CNPJ) — mínimo 3 caracteres.";return;}
+  window.open("https://projudi.tjgo.jus.br/BuscaProcesso?PaginaAtual=4&TipoConsultaProcesso=24","_blank","noopener");
+  copia(v,"Copiado — na página do TJGO: cole em “Nome da Parte” (ou “CPF/CNPJ da Parte”), marque o captcha e clique em Pesquisar.");
 });
 $("vendas").addEventListener("click",async e=>{
   const b=e.target.closest("button[data-acao]");if(!b)return;
