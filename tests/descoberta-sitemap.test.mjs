@@ -62,3 +62,21 @@ test("FIO PEGADO: o caminho do preço existe de ponta a ponta (sitemap → pági
     "revisita tenta a página direto ANTES de gastar busca");
   assert.ok(svc.includes("ingerir-pagina.js"), "descoberta encadeia o enriquecimento no systemd");
 });
+
+test("enriquecimento tem ORÇAMENTO DE TEMPO — nunca mais SIGTERM do systemd (26/08)", () => {
+  /* bug real de 26/08: com a cadeia de IA degradada (Groq 429 + NVIDIA 410), o lote de
+     150 esticou 6h e o systemd MATOU o ExecStartPost por timeout. O laço agora para
+     sozinho no orçamento (default 40 min) — progresso parcial já estava commitado. */
+  const ip = readFileSync(new URL("../motor/ingerir-pagina.js", import.meta.url), "utf-8");
+  assert.ok(ip.includes("ENRIQ_ORCAMENTO_MIN"), "orçamento configurável por env");
+  assert.ok(ip.includes("Date.now() - inicio > orcamentoMs"), "o laço para sozinho no orçamento");
+  assert.ok(ip.includes("resumo.parcial = true"), "saída parcial declarada no resumo (auditoria honesta)");
+});
+
+test("config de IA nunca mais referencia modelo APOSENTADO do provedor (26/08)", () => {
+  /* NVIDIA aposentou o z-ai/glm-5.2 (410 Gone em produção) e derrubou o degrau 2
+     inteiro. O .env.example é a memória operacional — modelo morto não pode voltar. */
+  const ex = readFileSync(new URL("../motor/.env.example", import.meta.url), "utf-8");
+  assert.ok(!/^AI_REMOTE2_MODEL_\w+=z-ai\/glm-5\.2$/m.test(ex), "glm-5.2 aposentado fora das linhas ativas");
+  assert.ok(ex.includes("openai/gpt-oss-20b"), "modelo vivo testado em produção (26/08) documentado");
+});

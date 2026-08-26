@@ -49,6 +49,13 @@ export async function ingerirPagina({ url, tier = "fast", fetchImpl } = {}) {
    IA e portal não são infinitos; amanhã continua de onde parou (quem já tem property
    sai da fila sozinho). */
 export async function enriquecerPendentes({ teto = 60, tier = "fast" } = {}) {
+  /* ORÇAMENTO DE TEMPO (26/08 — bug real: com a cadeia de IA degradada o lote de 150
+     esticou 6h e o systemd MATOU o ExecStartPost ("start-post operation timed out")).
+     O lote agora para sozinho e limpo no orçamento (default 40 min, env ENRIQ_ORCAMENTO_MIN):
+     progresso parcial já está commitado página a página — sair cedo nunca perde trabalho,
+     amanhã o timer continua de onde parou. */
+  const orcamentoMs = Math.max(1, Number(process.env.ENRIQ_ORCAMENTO_MIN || 40)) * 60 * 1000;
+  const inicio = Date.now();
   const alvos = await pool.query(
     `SELECT DISTINCT l.url FROM listings l
      WHERE l.raw_payload->>'fonte' = 'sitemap'
@@ -59,6 +66,7 @@ export async function enriquecerPendentes({ teto = 60, tier = "fast" } = {}) {
   const resumo = { alvos: alvos.rows.length, ok: 0, robots: 0, bloqueados: 0,
     extraidos: 0, comparaveis: 0, falhas: 0 };
   for (const a of alvos.rows) {
+    if (Date.now() - inicio > orcamentoMs) { resumo.parcial = true; resumo.orcamentoMin = Math.round(orcamentoMs / 60000); break; }
     try {
       const d = await ingerirPagina({ url: a.url, tier });
       if (d.ok) { resumo.ok++; resumo.extraidos += d.stats.extraidos || 0; resumo.comparaveis += d.stats.comparaveis || 0; }
@@ -67,6 +75,7 @@ export async function enriquecerPendentes({ teto = 60, tier = "fast" } = {}) {
     } catch { resumo.falhas++; }
     await dormir(PAUSA_MS);
   }
+  resumo.processados = (resumo.ok + resumo.robots + resumo.bloqueados + resumo.falhas);
   await pool.query(
     "INSERT INTO audit_log (entity, entity_id, action, detail) VALUES ('enriquecimento','sitemap','executada',$1)",
     [JSON.stringify(resumo)]).catch(() => {});
