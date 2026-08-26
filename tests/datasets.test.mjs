@@ -137,8 +137,9 @@ test("caixa-goiania.js: parseia (window.CAIXA), 164 imóveis, x/y presente-ou-nu
       assert.ok(i.x > 600000 && i.x < 800000 && i.y > 8000000 && i.y < 8300000, `imóvel ${i.id} com coordenada fora da faixa UTM de Goiânia (x=${i.x}, y=${i.y})`);
     }
   }
-  // 63/164 (38%) sem coordenada no snapshot de 2026-08-25: métrica de qualidade da FONTE,
-  // documentada e já coberta pelo guard i.x&&i.y do cruzamento (diff-caixa.test.mjs) —
-  // aqui só travamos o valor medido (ao atualizar o dataset, atualize este pino).
-  assert.equal(semXY, 63, `imóveis sem x/y divergiu do snapshot auditado (63/164): ${semXY}`);
+  // 64/164 (39%) sem coordenada no snapshot de 2026-08-26 (era 63 em 2026-08-25 — a
+  // lista gira todo dia): métrica de qualidade da FONTE, documentada e já coberta pelo
+  // guard i.x&&i.y do cruzamento (diff-caixa.test.mjs) — aqui só travamos o valor medido
+  // (ao atualizar o dataset, atualize este pino).
+  assert.equal(semXY, 64, `imóveis sem x/y divergiu do snapshot auditado (64/164): ${semXY}`);
 });
